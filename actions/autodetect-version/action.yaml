@@ -1,0 +1,24 @@
+# This workflow tries to automatically generate current app version
+# It uses two sources of truth:
+#   * GitHub Workflow Action context;
+#   * Current git repository state (see 'git describe');
+#
+# The action does not mutate any files in repository or affect application builds.
+# It only sets 'output.version' the user can then pass to another workflows.
+
+name: Autodetect application version
+description: |
+  Automatically detect version number from current Action context or
+  generate the new one from git repository state (see 'git describe')
+
+outputs:
+  version:
+    description: 'Automatically detected (generated) version number'
+    value: ${{ steps.version_generator.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: version_generator
+      shell: bash
+      run: ${{ github.action_path }}/detect-version.sh
