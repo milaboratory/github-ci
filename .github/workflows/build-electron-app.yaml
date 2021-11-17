@@ -63,12 +63,12 @@ jobs:
         uses: actions/upload-artifact@v2
         if: runner.os == 'macOS'
         with:
-          name: ${{ inputs.app-name-slug }}-mac
+          name: ${{ inputs.app_name_slug }}-mac
           path: dist_electron/*.dmg
 
       - name: Save artifact with app for Linux
         uses: actions/upload-artifact@v2
         if: runner.os == 'Linux'
         with:
-          name: ${{ inputs.app-name-slug }}-linux
+          name: ${{ inputs.app_name_slug }}-linux
           path: dist_electron/*.AppImage
