@@ -8,7 +8,7 @@ set -o nounset
 script_path="$(dirname "${0}")"
 version_number=""
 
-source "${script_path}/lib/ghwa-commands.sh"
+source "${script_path}/../lib/ghwa-commands.sh"
 
 function git_generate_version() {
   git describe --tags |
