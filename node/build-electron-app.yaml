@@ -8,17 +8,21 @@ on:
     inputs:
       node_version:
         description: 'Node version to use'
-        default: '14.x'
-        required: false
         type: string
+        required: true
       os:
         description: 'OS to build for'
-        required: true
         type: string
+        required: true
       app_name_slug:
         description: 'Application name slug (affects release file name)'
-        required: true
         type: string
+        required: true
+      npm_build_script:
+        description: 'Name of script for application build'
+        type: string
+        required: false
+        default: 'electron:build'
 
 jobs:
   build:
@@ -54,9 +58,10 @@ jobs:
           restore-keys: |
             ${{ runner.OS }}-cache-v1-node_modules-
 
-      - run: npm install
+      - name: Install node packages with npm
+        run: npm install
 
-      - run: npm run electron:build
+      - run: npm run ${{ inputs.npm_build_script }}
       #    - run: npm run test:unit
 
       - name: Save artifact with app for Mac OS X
