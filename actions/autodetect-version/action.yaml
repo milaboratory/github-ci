@@ -22,3 +22,5 @@ runs:
     - id: version_generator
       shell: bash
       run: ${{ github.action_path }}/detect-version.sh
+      env:
+        CONTEXT_GITHUB: ${{ toJSON(github) }}
