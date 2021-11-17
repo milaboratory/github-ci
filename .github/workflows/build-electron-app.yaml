@@ -6,7 +6,7 @@ name: Build Electron Application
 on:
   workflow_call:
     inputs:
-      node-version:
+      node_version:
         description: 'Node version to use'
         default: '14.x'
         required: false
@@ -15,7 +15,7 @@ on:
         description: 'OS to build for'
         required: true
         type: string
-      app-name-slug:
+      app_name_slug:
         description: 'Application name slug (affects release file name)'
         required: true
         type: string
