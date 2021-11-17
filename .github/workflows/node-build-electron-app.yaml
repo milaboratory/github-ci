@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: 'electron:build'
+      app_version:
+        description: 'Force application version to given value before building'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build:
