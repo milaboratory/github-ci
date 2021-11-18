@@ -36,7 +36,7 @@ function _ghwa_command() {
 
   # when _act_argument is omitted 'shift 2' has no effect and does
   # not skip _act_name param at all. That is why we have to call 'shift 1' twice.
-  shift 1; shift 1
+  { shift 1; shift 1; } || true
 
   local _act_options
   _act_options="$(_ghwa_join ',' "${@}")"
