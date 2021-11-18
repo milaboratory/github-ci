@@ -20,7 +20,7 @@ inputs:
 outputs:
   version:
     description: 'Automatically detected (generated) version number'
-    value: ${{ toJSON(steps.version-generator) }}
+    value: ${{ steps.version-generator.outputs.version }}
 
 runs:
   using: "composite"
