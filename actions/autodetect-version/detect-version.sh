@@ -29,6 +29,12 @@ function context_detect_version() {
   fi
 }
 
+echo "Current directory: ${PWD}"
+echo "Current environment: "
+env | awk '{print "                     "$0}'
+echo "Current dir contents: "
+ls -A | awk '{print "                      "$0}'
+
 if [ -z "${CONTEXT_GITHUB:+"not set"}" ]; then
   # We have JSON-encoded github context. Let's use it for version generation
   version_number="$(context_detect_version)"

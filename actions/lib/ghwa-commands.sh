@@ -10,6 +10,7 @@
 #      _ghwa_command <command-name> [<value> [<opt1=val1> [<opt2>=<val2> [<optN>=...]]]]
 
 # Joins list of arguments into ${1}-separated line
+#
 # Usage:
 #   _ghwa_join , 1 2 3 4
 #   # the line above produces '1,2,3,4' string
@@ -25,6 +26,7 @@ function _ghwa_join() {
 }
 
 # Formats command line for github workflow's action
+#
 # Usage:
 #   _ghwa_command notice "Notice text message" "file=filename.txt" "line=123" "col=11"
 #
@@ -47,6 +49,7 @@ function _ghwa_command() {
 }
 
 # GitHub Workflow command 'set-output'
+#
 # Usage:
 #   ghwa_set_output <output_name> <output_value>
 #
@@ -59,6 +62,7 @@ function ghwa_set_output() {
 }
 
 # GitHub Workflow command 'notice'
+#
 # Usage:
 #   ghwa_notice "Some message text" ["file=awesomefile.txt" ["line=123" ["col=12" [...]]]]
 #
@@ -70,6 +74,7 @@ function ghwa_notice() {
 }
 
 # GitHub Workflow command 'warning'
+#
 # Usage:
 #   ghwa_warning "Some message text" ["file=awesomefile.txt" ["line=123" ["col=12" [...]]]]
 #
@@ -81,6 +86,7 @@ function ghwa_warning() {
 }
 
 # GitHub Workflow command 'error'
+#
 # Usage:
 #   ghwa_error "Some message text" ["file=awesomefile.txt" ["line=123" ["col=12" [...]]]]
 #
@@ -92,6 +98,7 @@ function ghwa_error() {
 }
 
 # GitHub Workflow command 'debug'
+#
 # Usage:
 #   ghwa_debug "Some message text"
 #
@@ -102,6 +109,7 @@ function ghwa_debug() {
 }
 
 # GitHub Workflow command 'group' start
+#
 # Usage:
 #   ghwa_group_start "Group title"
 #
@@ -112,6 +120,7 @@ function ghwa_group() {
 }
 
 # GitHub Workflow command 'group' end
+#
 # Usage:
 #   ghwa_endgroup
 #
@@ -120,6 +129,7 @@ function ghwa_endgroup() {
 }
 
 # GitHub Workflow command 'add-mask'
+#
 # Usage:
 #   ghwa_add_mask "Text to mask"
 #
@@ -129,6 +139,7 @@ function ghwa_add_mask() {
 }
 
 # Helper for 'stop-commands' workflow command
+#
 # Usage:
 #   token=$(ghwa_uniq_token)
 #   ghwa_stop_commands "${_token}"
@@ -140,6 +151,7 @@ function ghwa_uniq_token() {
 }
 
 # GitHub Workflow command 'stop-commands'
+#
 # Usage:
 #   ghwa_stop_commands "<uniq textual token>"
 #
@@ -151,6 +163,7 @@ function ghwa_stop_commands() {
 }
 
 # Resume GitHub Workflow Commands interpretation
+#
 # Usage:
 #   ghwa_resume_commands "<uniq textual token>"
 #
@@ -163,6 +176,7 @@ function ghwa_resume_commands() {
 
 
 # GitHub Workflow command 'echo'
+#
 # Usage:
 #   ghwa_set_echo "on"
 #   ghwa_set_echo "off"
@@ -170,4 +184,35 @@ function ghwa_resume_commands() {
 function ghwa_set_echo() {
   local _mode="${1:-on}"
   _ghwa_command "echo" "${_mode}"
+}
+
+# Set environment variable for all next steps in a job.
+# It always uses 'multiline' mode.
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions#environment-files
+#
+# Usage:
+#   ghwa_set_env "<var name>" "<var value>"
+#   ghwa_set_env "<var name>" "<var value>" "EndOfValue"
+#
+function ghwa_set_env() {
+  local _name="${1}"
+  local _value="${2}"
+  local _eof_marker="${3:-EOV}"
+
+  {
+    echo "${_name}<<${_eof_marker}"
+    echo "${_value}"
+    echo "${_eof_marker}"
+  } >> "${GITHUB_ENV}"
+}
+
+# Set environment variable for all next steps in a job.
+#
+# Usage:
+#   ghwa_set_env "<var name>" "<var value>"
+#
+function ghwa_add_to_path() {
+  local _path="${1}"
+
+  echo "${_path}" >> "${GITHUB_PATH}"
 }
