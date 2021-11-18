@@ -20,14 +20,15 @@ inputs:
 outputs:
   version:
     description: 'Automatically detected (generated) version number'
-    value: ${{ steps.version_generator.outputs.version }}
+    value: ${{ toJSON(steps.version-generator) }}
 
 runs:
   using: "composite"
   steps:
     - uses: actions/checkout@v2
-    - id: version_generator
-      shell: bash
+
+    - id: version-generator
       run: ${{ github.action_path }}/detect-version.sh ${{ inputs.fetch-depth }}
+      shell: bash
       env:
         CONTEXT_GITHUB: ${{ toJSON(github) }}
