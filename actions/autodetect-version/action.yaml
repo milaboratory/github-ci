@@ -11,6 +11,12 @@ description: |
   Automatically detect version number from current Action context or
   generate the new one from git repository state (see 'git describe')
 
+inputs:
+  fetch-depth:
+    description: 'The number of commits of git history from current HEAD to fetch'
+    required: false
+    default: '100'
+
 outputs:
   version:
     description: 'Automatically detected (generated) version number'
@@ -19,6 +25,9 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
     - id: version_generator
       shell: bash
       run: ${{ github.action_path }}/detect-version.sh
