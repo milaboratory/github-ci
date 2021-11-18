@@ -26,10 +26,8 @@ runs:
   using: "composite"
   steps:
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }}
     - id: version_generator
       shell: bash
-      run: ${{ github.action_path }}/detect-version.sh
+      run: ${{ github.action_path }}/detect-version.sh ${{ inputs.fetch-depth }}
       env:
         CONTEXT_GITHUB: ${{ toJSON(github) }}
