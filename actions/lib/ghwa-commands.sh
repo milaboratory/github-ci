@@ -57,8 +57,7 @@ function ghwa_set_output() {
   local _name="${1}"
   local _value="${2}"
 
-  _ghwa_command "set-output" "${_value}" \
-    "name=${_name}"
+  _ghwa_command "set-output" "${_value}" "name=${_name}"
 }
 
 # GitHub Workflow command 'notice'

@@ -78,4 +78,5 @@ if [ -z "${version_number}" ]; then
   ghwa_endgroup
 fi
 
+ghwa_set_echo "on"
 ghwa_set_output "version" "${version_number}"
