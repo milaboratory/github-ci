@@ -170,7 +170,7 @@ function ghwa_stop_commands() {
 #
 function ghwa_resume_commands() {
   local _token="${1}"
-  _ghwa_command "${_token}"
+  _ghwa_command "${_token}" >&2
 }
 
 

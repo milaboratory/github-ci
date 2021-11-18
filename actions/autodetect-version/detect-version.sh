@@ -80,3 +80,4 @@ fi
 
 ghwa_set_echo "on"
 ghwa_set_output "version" "${version_number}"
+ghwa_set_echo "off"
