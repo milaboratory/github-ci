@@ -15,8 +15,6 @@ function git_fetch_history() {
   local _depth="${1}"
   local _current_sha
 
-  ghwa_debug "Fetching repository git history with depth '${_depth}'..."
-
   _current_sha="$(git rev-parse HEAD)"
 
   # Fetch all git tags first. We don't need their history,
@@ -31,8 +29,6 @@ function git_fetch_history() {
 }
 
 function git_generate_version() {
-  ghwa_debug "Generating app version from git history and tags..."
-
   git describe --tags |
     awk '{sub("-", ".", $0); print $0}' | # v1.0-2-g<hash> -> v1.0.2-g<hash>
     sed -E 's/^v//;
@@ -42,8 +38,6 @@ function git_generate_version() {
 function context_detect_version() {
   local _ref_type
   local _ref_name
-
-  ghwa_debug "Getting version number from current Action Context..."
 
   _ref_type=$(jq ".ref_type" <<<"${CONTEXT_GITHUB}")
   _ref_name=$(jq ".ref_name" <<<"${CONTEXT_GITHUB}")
