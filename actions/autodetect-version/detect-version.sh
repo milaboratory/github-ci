@@ -60,29 +60,28 @@ fi
 
 fetch_depth="${1}"
 
-#echo "Current directory: ${PWD}"
-#echo "Git remotes: $(git remote -v)"
-#echo "Current environment: "
-#env | awk '{print "                     "$0}'
-#echo "Current dir contents: "
-#ls -A | awk '{print "                      "$0}'
-
 ghwa_debug "Fetch depth for version autodetection: ${fetch_depth}"
 
 if [ -z "${CONTEXT_GITHUB:+"not set"}" ]; then
+  ghwa_group "Action Context version load"
+
   # We have JSON-encoded github context. Let's use it for version generation
   version_number="$(context_detect_version)"
-
   ghwa_notice "Version, loaded from Action Context: ${version_number}"
+
+  ghwa_endgroup
 fi
 
 if [ -z "${version_number}" ]; then
   # We failed to determine version number from action context here.
   # Generate version number from current git repository state
+  ghwa_group "Git History version generation"
+
   git_fetch_history "${fetch_depth}"
   version_number="$(git_generate_version)"
-
   ghwa_notice "Version, generated from git history: ${version_number}"
+
+  ghwa_endgroup
 fi
 
 ghwa_set_output "version" "${version_number}"
