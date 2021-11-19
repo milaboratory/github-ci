@@ -76,31 +76,31 @@ const countOccurrencesTests = [
   },
   {
     testName: 'no occurrences',
-    str: 'asdfqwiouhsqwiub123dasjio',
+    str: 'some random string with no newline symbols inside',
     substr: '\n',
     expect: 0
   },
   {
     testName: 'has occurrences at the start',
-    str: 'asdfqwi o uhsqw iub12 3dsjio',
+    str: 'a string begins with the only corresponding symbol',
     substr: 'a',
     expect: 1
   },
   {
     testName: 'has occurrences at the end',
-    str: 'asdfqwi o uhsqw iub12 3dsjio!',
-    substr: 'o!',
+    str: 'the string that matches only at the end!',
+    substr: 'd!',
     expect: 1
   },
   {
     testName: 'has occurrences in the middle',
-    str: 'asdfqwi o uhsqw\niub12 3dsjio',
+    str: 'two lines of text\nwith only one newline symbol between',
     substr: '\n',
     expect: 1
   },
   {
     testName: 'all occurrences found',
-    str: 'asdfqwi o uhsqw iub12 3dsjio',
+    str: 'simple text with four paces',
     substr: ' ',
     expect: 4
   },
