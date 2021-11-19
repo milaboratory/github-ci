@@ -32,6 +32,8 @@ jobs:
       - uses: actions/checkout@v2
       - id: version-detector
         uses: milaboratory/github-ci/actions/autodetect-version@v1
+        with:
+          canonize: 'true'
 
     outputs:
       version: ${{ steps.version-detector.outputs.version }}
