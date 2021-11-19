@@ -67,7 +67,7 @@ function getVersion() {
         if (versionString.startsWith('v')) {
             versionString = versionString.substring(1); // v1.0.2 -> 1.0.2
         }
-        return versionString;
+        return versionString.trim();
     });
 }
 function generateVersionFromGit(depth) {

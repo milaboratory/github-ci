@@ -13,9 +13,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 function generateVersionFromCtx() {
     const refName = process.env.GITHUB_REF_NAME; // github.context does not support this data yet
     if (refName.startsWith('v')) {
-        return refName.substring(1); // v1.0.1 -> 1.0.1
+        return refName.substring(1).trim(); // v1.0.1 -> 1.0.1
     }
-    return refName;
+    return refName.trim();
 }
 exports.default = generateVersionFromCtx;
 
@@ -95,7 +95,7 @@ function getVersion() {
         if (versionString.startsWith('v')) {
             versionString = versionString.substring(1); // v1.0.2 -> 1.0.2
         }
-        return versionString;
+        return versionString.trim();
     });
 }
 function generateVersionFromGit(depth) {
