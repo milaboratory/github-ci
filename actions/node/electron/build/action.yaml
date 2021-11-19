@@ -8,9 +8,6 @@ inputs:
   node_version:
     description: 'Node version to use'
     required: true
-  os:
-    description: 'OS to build for'
-    required: true
   app_name_slug:
     description: 'Application name slug (affects release file name)'
     required: true
@@ -48,7 +45,7 @@ runs:
   steps:
     - uses: actions/checkout@v2
 
-    - name: Use Node.js ${{ inputs.node-version }} on ${{ inputs.os }}
+    - name: Use Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@v2
       with:
         node-version: ${{ inputs.node-version }}
