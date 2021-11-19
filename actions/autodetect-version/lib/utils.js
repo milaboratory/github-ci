@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.canonizeVersion = void 0;
+exports.countOccurrences = exports.canonizeVersion = void 0;
 /**
  * Converts shortened version number to its canonical 'semver' version:
  *        1 -> 1.0.0
@@ -22,3 +22,18 @@ function canonizeVersion(version) {
     return parts.join('.');
 }
 exports.canonizeVersion = canonizeVersion;
+function countOccurrences(str, substr) {
+    let index = 0;
+    let startIndex = 0;
+    const searchStrLen = substr.length;
+    if (searchStrLen === 0) {
+        return 0;
+    }
+    let count = 0;
+    while ((index = str.indexOf(substr, startIndex)) > -1) {
+        count = count + 1;
+        startIndex = index + searchStrLen;
+    }
+    return count;
+}
+exports.countOccurrences = countOccurrences;

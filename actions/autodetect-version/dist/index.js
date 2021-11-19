@@ -58,13 +58,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const exec = __importStar(__nccwpck_require__(1514));
 const github = __importStar(__nccwpck_require__(5438));
+const utils_1 = __nccwpck_require__(918);
 function git(...args) {
     return __awaiter(this, void 0, void 0, function* () {
         const execResult = yield exec.getExecOutput('git', args);
         if (execResult.exitCode !== 0) {
             const cmd = `git '${args.join("' '")}'`;
             const exitCode = execResult.exitCode.toString();
-            const stderr = execResult.stderr.toString();
+            const stderr = execResult.stderr;
             throw Error(`Command "${cmd}" failed with code '${exitCode}': ${stderr}`);
         }
         return execResult;
@@ -72,14 +73,23 @@ function git(...args) {
 }
 function fetchHistory(depth) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield git('fetch', '--depth=1', '--tags', 'origin');
-        yield git('fetch', `--depth=${depth}`, 'origin', github.context.sha);
+        // Fetch all tags without their history.
+        // We don't need almost the full repo to be fetched.
+        yield git('fetch', '--depth=1', 'origin', 'refs/tags/*:refs/tags/*');
+        // Check the size of already fetched history from current commit.
+        // We need to fetch more only if the current history is shorter than we want.
+        const revListResult = yield git('rev-list', `--max-count=${depth}`, 'HEAD');
+        const revList = revListResult.stdout.trim();
+        const fetchedLength = (0, utils_1.countOccurrences)(revList, '\n') + 1;
+        if (fetchedLength < depth) {
+            yield git('fetch', `--depth=${depth}`, 'origin', github.context.sha);
+        }
     });
 }
 function getVersion() {
     return __awaiter(this, void 0, void 0, function* () {
         const describeResult = yield git('describe', '--tags');
-        let versionString = describeResult.stdout.toString();
+        let versionString = describeResult.stdout;
         versionString = versionString.replace('-', '.'); // v1.0-2-g<hash> -> v1.0.2-g<hash>
         versionString = versionString.split('-', 2)[0]; // v1.0.2-g<hash> -> v1.0.2
         if (versionString.startsWith('v')) {
@@ -198,7 +208,7 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.canonizeVersion = void 0;
+exports.countOccurrences = exports.canonizeVersion = void 0;
 /**
  * Converts shortened version number to its canonical 'semver' version:
  *        1 -> 1.0.0
@@ -220,6 +230,21 @@ function canonizeVersion(version) {
     return parts.join('.');
 }
 exports.canonizeVersion = canonizeVersion;
+function countOccurrences(str, substr) {
+    let index = 0;
+    let startIndex = 0;
+    const searchStrLen = substr.length;
+    if (searchStrLen === 0) {
+        return 0;
+    }
+    let count = 0;
+    while ((index = str.indexOf(substr, startIndex)) > -1) {
+        count = count + 1;
+        startIndex = index + searchStrLen;
+    }
+    return count;
+}
+exports.countOccurrences = countOccurrences;
 
 
 /***/ }),
