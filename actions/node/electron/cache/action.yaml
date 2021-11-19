@@ -4,7 +4,7 @@ description: |
   Cache Electon modules and (optionally) local node_modules
 
 inputs:
-  local_cache:
+  local-cache:
     description: enable/disable local 'node_modules' cache
     required: false
     default: 'off'
@@ -35,7 +35,7 @@ runs:
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
 
     - name: Cache local 'node_modules'
-      if: inputs.local_cache == 'on'
+      if: inputs.local-cache == 'on'
       uses: actions/cache@v2
       with:
         path: node_modules

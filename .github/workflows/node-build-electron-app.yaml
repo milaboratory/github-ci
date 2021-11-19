@@ -1,4 +1,4 @@
-# This workflow will do a clean install of node dependencies,
+# This workflow will do a clean prepare of node dependencies,
 # cache/restore them, build the source code and run tests across different OS
 
 name: Build Electron Application
@@ -44,9 +44,33 @@ jobs:
       - detect-version
 
     steps:
-      - uses: milaboratory/github-ci/actions/node/electron/build@v1
+      - uses: actions/checkout@v2
+
+      - name: Prepare env for Node application build
+        uses: milaboratory/github-ci/actions/node/prepare@v1
         with:
-          node-version: ${{ inputs.node_version }}
-          app-name-slug: ${{ inputs.app-name-slug }}
-          npm-build-script: ${{ inputs.npm-build-script }}
-          app-version: ${{ needs.detect-version.outputs.version }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: 'v1'
+
+      - name: Patch package version
+        uses: milaboratory/github-ci/actions/node/patch-version@v1
+        with:
+          version: ${{ inputs.app-version }}
+
+      - name: Build application
+        run: npm run ${{ inputs.npm-build-script }}
+        shell: bash
+
+      - name: Save artifact with Mac OS X application
+        uses: actions/upload-artifact@v2
+        if: runner.os == 'macOS'
+        with:
+          name: ${{ inputs.app-name-slug }}-mac
+          path: dist_electron/*.dmg
+
+      - name: Save artifact with Linux application
+        uses: actions/upload-artifact@v2
+        if: runner.os == 'Linux'
+        with:
+          name: ${{ inputs.app-name-slug }}-linux
+          path: dist_electron/*.AppImage
