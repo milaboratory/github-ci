@@ -32,4 +32,3 @@ runs:
         tmp_package_json="$(mktemp)"
         jq '.version = "${{ inputs.version }}"' '${{ inputs.package_json }}' > "${tmp_package_json}"
         mv "${tmp_package_json}" '${{ inputs.package_json }}'
-        rm "${tmp_package_json}"
