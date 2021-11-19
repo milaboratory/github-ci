@@ -55,7 +55,7 @@ jobs:
       - name: Patch package version
         uses: milaboratory/github-ci/actions/node/patch-version@v1
         with:
-          version: ${{ inputs.app-version }}
+          version: ${{ needs.detect-version.outputs.version }}
 
       - name: Build application
         run: npm run ${{ inputs.npm-build-script }}
