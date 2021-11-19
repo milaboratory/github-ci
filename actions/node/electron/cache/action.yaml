@@ -9,7 +9,7 @@ inputs:
     required: false
     default: 'off'
 
-  cache_version:
+  cache-version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
 
@@ -30,9 +30,9 @@ runs:
           ~/.cache/electron/
           ~/Library/Caches/electron/
 
-        key: ${{ runner.OS }}-cache-${{ inputs.cache_version }}-electron-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.OS }}-cache-${{ inputs.cache_version }}-electron-
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
 
     - name: Cache local 'node_modules'
       if: inputs.local_cache == 'on'
@@ -40,6 +40,6 @@ runs:
       with:
         path: node_modules
 
-        key: ${{ runner.OS }}-cache-${{ inputs.cache_version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.OS }}-cache-${{ inputs.cache_version }}-node_modules-
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
