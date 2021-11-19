@@ -7,6 +7,7 @@
 # It only sets 'output.version' the user can then pass to another workflows.
 
 name: Autodetect application version
+author: 'MiLaboratories'
 description: |
   Automatically detect version number from current Action context or
   generate the new one from git repository state (see 'git describe')
@@ -16,20 +17,29 @@ inputs:
     description: 'The number of commits of git history from current HEAD to fetch'
     required: false
     default: '100'
+  canonize:
+    description: |
+      Canonize version number (<major>.<minor>.<bugfix>).
+      This makes git tag 'v1.1' to produce version '1.1.0' instead of '1.1'.
+    required: false
+    default: 'false'
+  append-hash:
+    description: |
+      Add commit short SHA to the version number as suffix: 1.0.0-<hash>.
+      This option is ignored when 'append-build-id' is set.
+    required: false
+    default: 'false'
+  append-build-id:
+    description: |
+      Append build ID to the version number: 1.0.0-<build ID>.
+      When 'append-hash' is set, only 'append-build-id' is used.
+    required: false
+    default: 'false'
 
 outputs:
   version:
     description: 'Automatically detected (generated) version number'
-    value: ${{ steps.version-generator.outputs.version }}
 
 runs:
-  using: "composite"
-
-  steps:
-    - uses: actions/checkout@v2
-
-    - id: version-generator
-      run: ${{ github.action_path }}/detect-version.sh ${{ inputs.fetch-depth }}
-      shell: bash
-      env:
-        CONTEXT_GITHUB: ${{ toJSON(github) }}
+  using: 'node12'
+  main: 'dist/index.js'
