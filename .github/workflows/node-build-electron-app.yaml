@@ -6,7 +6,7 @@ name: Build Electron Application
 on:
   workflow_call:
     inputs:
-      node_version:
+      node-version:
         description: 'Node version to use'
         type: string
         required: true
@@ -14,11 +14,11 @@ on:
         description: 'OS to build for'
         type: string
         required: true
-      app_name_slug:
+      app-name-slug:
         description: 'Application name slug (affects release file name)'
         type: string
         required: true
-      npm_build_script:
+      npm-build-script:
         description: 'Name of script for application build'
         type: string
         required: false
@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/actions/node/electron/build@v1
         with:
-          node-version: ${{ inputs.node-version }}
-          app_name_slug: ${{ inputs.app_name_slug }}
-          npm_build_script: ${{ inputs.npm_build_script }}
-          app_version: ${{ needs.detect-version.outputs.version }}
+          node-version: ${{ inputs.node_version }}
+          app-name-slug: ${{ inputs.app-name-slug }}
+          npm-build-script: ${{ inputs.npm-build-script }}
+          app-version: ${{ needs.detect-version.outputs.version }}
