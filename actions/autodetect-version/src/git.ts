@@ -55,6 +55,10 @@ async function generateVersionFromGit(
   depth: number,
   exactMatch: boolean
 ): Promise<string> {
+  if (exactMatch) {
+    // We don't need history at all to find exact match. Single commit is enough.
+    depth = 1
+  }
   await fetchHistory(depth)
   return getVersion(exactMatch)
 }

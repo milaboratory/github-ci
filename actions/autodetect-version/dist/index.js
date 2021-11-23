@@ -104,6 +104,10 @@ function getVersion(exactMatch) {
 }
 function generateVersionFromGit(depth, exactMatch) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (exactMatch) {
+            // We don't need history at all to find exact match. Single commit is enough.
+            depth = 1;
+        }
         yield fetchHistory(depth);
         return getVersion(exactMatch);
     });
