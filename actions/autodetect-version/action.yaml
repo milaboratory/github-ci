@@ -10,6 +10,11 @@ description: |
   It only sets 'output.version' the user can then pass to another workflows.
 
 inputs:
+  required:
+    description: |
+      Fail workflow with error when failed to detect version number.
+    required: false
+    default: 'false'
   exact-match:
     description: |
       Use '--exact-match' option when running 'git describe' to obtain version

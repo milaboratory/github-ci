@@ -197,12 +197,19 @@ function generateVersion() {
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        const required = core.getBooleanInput('required');
         try {
             yield generateVersion();
         }
         catch (error) {
-            if (error instanceof Error)
-                core.setFailed(error.message);
+            if (error instanceof Error) {
+                if (required) {
+                    core.setFailed(error.message);
+                }
+                else {
+                    core.warning('Failed to detect application version from git history or action run info');
+                }
+            }
         }
     });
 }

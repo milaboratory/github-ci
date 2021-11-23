@@ -46,10 +46,20 @@ async function generateVersion(): Promise<void> {
 }
 
 async function run(): Promise<void> {
+  const required: boolean = core.getBooleanInput('required')
+
   try {
     await generateVersion()
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) {
+      if (required) {
+        core.setFailed(error.message)
+      } else {
+        core.warning(
+          'Failed to detect application version from git history or action run info'
+        )
+      }
+    }
   }
 }
 
