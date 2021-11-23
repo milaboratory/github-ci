@@ -1,11 +1,13 @@
 name: Prepare environment for Node project
 author: 'MiLaboratories'
 description: |
-  Do clean install of node dependencies (using cache)
+  Prepare environment: get specific version of Node, download package caches and so on.
 
 inputs:
   node-version:
-    description: 'Node version to use'
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
     required: true
 
   cache-version:
@@ -33,7 +35,3 @@ runs:
       with:
         cache-version: ${{ inputs.cache-version }}
         local-cache: 'on'
-
-    - name: Install node packages with npm
-      run: npm install
-      shell: bash
