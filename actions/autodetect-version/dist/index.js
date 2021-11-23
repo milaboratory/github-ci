@@ -86,9 +86,13 @@ function fetchHistory(depth) {
         }
     });
 }
-function getVersion() {
+function getVersion(exactMatch) {
     return __awaiter(this, void 0, void 0, function* () {
-        const describeResult = yield git('describe', '--tags');
+        const cmd = ['describe', '--tags'];
+        if (exactMatch) {
+            cmd.push('--exact-match');
+        }
+        const describeResult = yield git(...cmd);
         let versionString = describeResult.stdout;
         versionString = versionString.replace('-', '.'); // v1.0-2-g<hash> -> v1.0.2-g<hash>
         versionString = versionString.split('-', 2)[0]; // v1.0.2-g<hash> -> v1.0.2
@@ -98,10 +102,10 @@ function getVersion() {
         return versionString.trim();
     });
 }
-function generateVersionFromGit(depth) {
+function generateVersionFromGit(depth, exactMatch) {
     return __awaiter(this, void 0, void 0, function* () {
         yield fetchHistory(depth);
-        return getVersion();
+        return getVersion(exactMatch);
     });
 }
 exports.default = generateVersionFromGit;
@@ -153,6 +157,7 @@ const git_1 = __importDefault(__nccwpck_require__(3374));
 function generateVersion() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
+        const exactMatch = core.getBooleanInput('exact-match');
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
         const canonize = core.getBooleanInput('canonize');
         const appendHash = core.getBooleanInput('append-hash');
@@ -166,7 +171,7 @@ function generateVersion() {
         if (version === '') {
             // We failed to get version number from Action Context here.
             // Generate version number from current git repository state.
-            version = yield (0, git_1.default)(fetchDepth);
+            version = yield (0, git_1.default)(fetchDepth, exactMatch);
         }
         // Canonize version number to always have <major>.<minor>.<bugfix> format
         if (canonize) {
@@ -189,7 +194,7 @@ function generateVersion() {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            return generateVersion();
+            yield generateVersion();
         }
         catch (error) {
             if (error instanceof Error)

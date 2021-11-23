@@ -38,6 +38,7 @@ const git_1 = __importDefault(require("./git"));
 function generateVersion() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
+        const exactMatch = core.getBooleanInput('exact-match');
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
         const canonize = core.getBooleanInput('canonize');
         const appendHash = core.getBooleanInput('append-hash');
@@ -51,7 +52,7 @@ function generateVersion() {
         if (version === '') {
             // We failed to get version number from Action Context here.
             // Generate version number from current git repository state.
-            version = yield (0, git_1.default)(fetchDepth);
+            version = yield (0, git_1.default)(fetchDepth, exactMatch);
         }
         // Canonize version number to always have <major>.<minor>.<bugfix> format
         if (canonize) {
@@ -74,7 +75,7 @@ function generateVersion() {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            return generateVersion();
+            yield generateVersion();
         }
         catch (error) {
             if (error instanceof Error)

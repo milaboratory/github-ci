@@ -6,6 +6,7 @@ import generateVersionFromGit from './git'
 
 async function generateVersion(): Promise<void> {
   // Read inputs
+  const exactMatch: boolean = core.getBooleanInput('exact-match')
   const fetchDepth: number = parseInt(core.getInput('fetch-depth'))
   const canonize: boolean = core.getBooleanInput('canonize')
   const appendHash: boolean = core.getBooleanInput('append-hash')
@@ -22,7 +23,7 @@ async function generateVersion(): Promise<void> {
   if (version === '') {
     // We failed to get version number from Action Context here.
     // Generate version number from current git repository state.
-    version = await generateVersionFromGit(fetchDepth)
+    version = await generateVersionFromGit(fetchDepth, exactMatch)
   }
 
   // Canonize version number to always have <major>.<minor>.<bugfix> format
@@ -46,7 +47,7 @@ async function generateVersion(): Promise<void> {
 
 async function run(): Promise<void> {
   try {
-    return generateVersion()
+    await generateVersion()
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

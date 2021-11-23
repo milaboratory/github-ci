@@ -33,8 +33,13 @@ async function fetchHistory(depth: number): Promise<void> {
   }
 }
 
-async function getVersion(): Promise<string> {
-  const describeResult = await git('describe', '--tags')
+async function getVersion(exactMatch: boolean): Promise<string> {
+  const cmd: string[] = ['describe', '--tags']
+  if (exactMatch) {
+    cmd.push('--exact-match')
+  }
+
+  const describeResult = await git(...cmd)
   let versionString: string = describeResult.stdout
 
   versionString = versionString.replace('-', '.') // v1.0-2-g<hash> -> v1.0.2-g<hash>
@@ -46,9 +51,12 @@ async function getVersion(): Promise<string> {
   return versionString.trim()
 }
 
-async function generateVersionFromGit(depth: number): Promise<string> {
+async function generateVersionFromGit(
+  depth: number,
+  exactMatch: boolean
+): Promise<string> {
   await fetchHistory(depth)
-  return getVersion()
+  return getVersion(exactMatch)
 }
 
 export default generateVersionFromGit
