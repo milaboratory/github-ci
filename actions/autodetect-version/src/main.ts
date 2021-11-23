@@ -42,6 +42,9 @@ async function generateVersion(): Promise<void> {
     version = `${version}-${sha.substring(0, 6)}`
   }
 
+  if (version !== '') {
+    core.notice(`[autodetect-version]: detected version is ${version}`)
+  }
   core.setOutput('version', version)
 }
 

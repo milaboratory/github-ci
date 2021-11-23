@@ -192,6 +192,9 @@ function generateVersion() {
             const sha = process.env.GITHUB_SHA;
             version = `${version}-${sha.substring(0, 6)}`;
         }
+        if (version !== '') {
+            core.notice(`[autodetect-version]: detected version is ${version}`);
+        }
         core.setOutput('version', version);
     });
 }
