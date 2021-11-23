@@ -6,14 +6,26 @@ name: Build Electron Application
 on:
   workflow_call:
     inputs:
+      #
+      # Version detection control
+      #
       version-tag-exact-match:
         description: |
           Use '--exact-match' option when running 'git describe' to obtain
           application version number from git tag
-        type: string
+        type: boolean
         required: false
-        default: 'true'
+        default: true
+      version-canonize:
+        description: |
+          Canonize version number to make it look like regular semver: <major>.<minor>.<bugfix>
+        type: boolean
+        required: false
+        default: false
 
+      #
+      # Environment control
+      #
       node-version:
         description: 'Node version to use'
         type: string
@@ -26,11 +38,20 @@ on:
         description: 'Application name slug (affects release file name)'
         type: string
         required: true
-      npm-build-script:
+
+      #
+      # Build control
+      #
+      build-script-name:
         description: 'Name of script for application build'
         type: string
         required: false
         default: 'electron:build'
+      vue-project:
+        description: "This is vue-based project. Use 'vue-cli' toolkit"
+        type: boolean
+        required: false
+        default: true
 
 jobs:
   detect-version:
@@ -76,11 +97,12 @@ jobs:
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.github_token }}
+          use_vue_cli: ${{ inputs.vue-project }}
+          build_script_name: ${{ inputs.build-script-name }}
 
           # If the commit is tagged with a version (e.g. "v1.0.0"),
           # release the app after building
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          use_vue_cli: true
 
 #      - name: Save artifact with Mac OS X application
 #        uses: actions/upload-artifact@v2
