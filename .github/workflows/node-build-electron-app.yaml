@@ -6,6 +6,14 @@ name: Build Electron Application
 on:
   workflow_call:
     inputs:
+      version-tag-exact-match:
+        description: |
+          Use '--exact-match' option when running 'git describe' to obtain
+          application version number from git tag
+        type: string
+        required: false
+        default: 'true'
+
       node-version:
         description: 'Node version to use'
         type: string
@@ -33,6 +41,7 @@ jobs:
       - id: version-detector
         uses: milaboratory/github-ci/actions/autodetect-version@v1
         with:
+          exact-match: ${{ inputs.version-tag-exact-match }}
           canonize: 'true'
 
     outputs:
@@ -54,25 +63,34 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: 'v1'
 
+      - name: Install node packages with npm
+        run: npm install
+        shell: bash
+
       - name: Patch package version
         uses: milaboratory/github-ci/actions/node/patch-version@v1
         with:
           version: ${{ needs.detect-version.outputs.version }}
 
       - name: Build application
-        run: npm run ${{ inputs.npm-build-script }}
-        shell: bash
-
-      - name: Save artifact with Mac OS X application
-        uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
+        uses: samuelmeuli/action-electron-builder@v1
         with:
-          name: ${{ inputs.app-name-slug }}-mac
-          path: dist_electron/*.dmg
+          github_token: ${{ secrets.github_token }}
 
-      - name: Save artifact with Linux application
-        uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
-        with:
-          name: ${{ inputs.app-name-slug }}-linux
-          path: dist_electron/*.AppImage
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+#      - name: Save artifact with Mac OS X application
+#        uses: actions/upload-artifact@v2
+#        if: runner.os == 'macOS'
+#        with:
+#          name: ${{ inputs.app-name-slug }}-mac
+#          path: dist_electron/*.dmg
+#
+#      - name: Save artifact with Linux application
+#        uses: actions/upload-artifact@v2
+#        if: runner.os == 'Linux'
+#        with:
+#          name: ${{ inputs.app-name-slug }}-linux
+#          path: dist_electron/*.AppImage
