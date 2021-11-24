@@ -53,16 +53,6 @@ function previousTag() {
             abbrev: 0,
             ref: 'HEAD^'
         });
-        // while (!tag.startsWith('v')) {
-        //   // Dive into history until we find first 'v'-prefixed tag
-        //   tag = await describe({
-        //     tags: true,
-        //     abbrev: 0,
-        //     ref: `${tag}^`
-        //   })
-        // }
-        //
-        // return tag
     });
 }
 function commitsCount(startRef, endRef) {
@@ -71,10 +61,10 @@ function commitsCount(startRef, endRef) {
         return commits.length;
     });
 }
-function genDevVersion(baseVersion) {
+function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
-        const revisionNumber = yield commitsCount(baseVersion, 'HEAD');
+        const revisionNumber = yield commitsCount(baseRef, 'HEAD');
         return `${baseVersion}-${currentRefName}-${revisionNumber}`;
     });
 }
@@ -99,7 +89,7 @@ function detectVersions() {
                 throw error;
             }
             core.warning(`Failed to get current version from git tags: ${error.message}`);
-            curVersion = yield genDevVersion(prevVersion);
+            curVersion = yield genDevVersion(prevVersion, prevTag);
         }
         // Canonize version number so it always has <major>.<minor>.<patch> format
         if (canonize) {

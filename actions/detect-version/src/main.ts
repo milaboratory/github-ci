@@ -29,9 +29,12 @@ async function commitsCount(startRef: string, endRef: string): Promise<number> {
   return commits.length
 }
 
-async function genDevVersion(baseVersion: string): Promise<string> {
+async function genDevVersion(
+  baseVersion: string,
+  baseRef: string
+): Promise<string> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
-  const revisionNumber = await commitsCount(baseVersion, 'HEAD')
+  const revisionNumber = await commitsCount(baseRef, 'HEAD')
 
   return `${baseVersion}-${currentRefName}-${revisionNumber}`
 }
@@ -61,7 +64,7 @@ async function detectVersions(): Promise<void> {
     core.warning(
       `Failed to get current version from git tags: ${error.message}`
     )
-    curVersion = await genDevVersion(prevVersion)
+    curVersion = await genDevVersion(prevVersion, prevTag)
   }
 
   // Canonize version number so it always has <major>.<minor>.<patch> format
