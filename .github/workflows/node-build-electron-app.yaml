@@ -26,31 +26,62 @@ on:
       # Environment control
       #
       node-version:
-        description: 'Node version to use'
+        description: |
+          Node version to use
         type: string
         required: true
       os:
-        description: 'OS to build for'
-        type: string
-        required: true
-      app-name-slug:
-        description: 'Application name slug (affects release file name)'
+        description: |
+          OS to build for.
+          Examples: ubuntu-latest, macos-latest, windows-latest
+
+          Check labels of GitHub-hosted runners for more info:
+          https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#github-hosted-runners
         type: string
         required: true
 
       #
       # Build control
       #
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+      artifacts-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
       build-script-name:
-        description: 'Name of script for application build'
+        description: |
+          Name of script for application build
         type: string
         required: false
         default: 'electron:build'
       vue-project:
-        description: "This is vue-based project. Use 'vue-cli' toolkit"
+        description: |
+          This is vue-based project. Use 'vue-cli' toolkit
         type: boolean
         required: false
         default: true
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
 
 jobs:
   detect-version:
@@ -61,11 +92,17 @@ jobs:
       - id: version-detector
         uses: milaboratory/github-ci/actions/detect-version@v1
         with:
-          exact-match: ${{ inputs.version-tag-exact-match }}
           canonize: 'true'
+          fetch-depth: ${{ inputs.version-fetch-depth }}
 
     outputs:
       version: ${{ steps.version-detector.outputs.version }}
+      tag: ${{ steps.version-detector.outputs.tag }}
+      sha: ${{ steps.version-detector.outputs.sha }}
+
+      prev-version: ${{ steps.version-detector.outputs.prev-version }}
+      prev-tag: ${{ steps.version-detector.outputs.prev-tag }}
+      prev-sha: ${{ steps.version-detector.outputs.prev-sha }}
 
   build:
 
@@ -94,27 +131,44 @@ jobs:
 
       - name: Build application
         run: |
-          npx electron-builder build
-        uses: samuelmeuli/action-electron-builder@v1
+          npm run ${{ inputs.build-script-name }}
+
+      - name: Save artifact with Mac OS X application
+        uses: actions/upload-artifact@v2
+        if: runner.os == 'macOS'
         with:
-          github_token: ${{ secrets.github_token }}
-          use_vue_cli: ${{ inputs.vue-project }}
-          build_script_name: ${{ inputs.build-script-name }}
+          name: ${{ inputs.app-name-slug }}-mac
+          path: dist_electron/*.dmg
+          retention-days: ${{ inputs.artifacts-retention }}
 
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      - name: Save artifact with Linux application
+        uses: actions/upload-artifact@v2
+        if: runner.os == 'Linux'
+        with:
+          name: ${{ inputs.app-name-slug }}-linux
+          path: dist_electron/*.AppImage
+          retention-days: ${{ inputs.artifacts-retention }}
 
-#      - name: Save artifact with Mac OS X application
-#        uses: actions/upload-artifact@v2
-#        if: runner.os == 'macOS'
-#        with:
-#          name: ${{ inputs.app-name-slug }}-mac
-#          path: dist_electron/*.dmg
-#
-#      - name: Save artifact with Linux application
-#        uses: actions/upload-artifact@v2
-#        if: runner.os == 'Linux'
-#        with:
-#          name: ${{ inputs.app-name-slug }}-linux
-#          path: dist_electron/*.AppImage
+      - name: Generate changelog
+        id: changelog
+        if: needs.detect-version.outputs.tag != ''
+        uses: loopwerk/tag-changelog@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          exclude_types: ${{ inputs.changelog-exclude-types }}
+
+      - name: Create release
+        if: needs.detect-version.outputs.tag != ''
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ needs.detect-version.outputs.version }}
+          tag: ${{ needs.detect-version.outputs.tag }}
+          body: ${{ steps.changelog.outputs.changes }}
+
+          allowUpdates: true
+          draft: true
+          prerelease: true
+          artifacts: |
+            dist_electron/*.dmg,
+            dist_electron/*.AppImage
