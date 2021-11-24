@@ -9,16 +9,15 @@ on:
       #
       # Version detection control
       #
-      version-tag-exact-match:
+      version-fetch-depth:
         description: |
-          Use '--exact-match' option when running 'git describe' to obtain
-          application version number from git tag
-        type: boolean
+          Fetch at least N commits during version detection from tags
+        type: string
         required: false
-        default: true
+        default: 100
       version-canonize:
         description: |
-          Canonize version number to make it look like regular semver: <major>.<minor>.<bugfix>
+          Canonize version number to make it always look like regular semver: <major>.<minor>.<bugfix>
         type: boolean
         required: false
         default: false
@@ -60,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: version-detector
-        uses: milaboratory/github-ci/actions/autodetect-version@v1
+        uses: milaboratory/github-ci/actions/detect-version@v1
         with:
           exact-match: ${{ inputs.version-tag-exact-match }}
           canonize: 'true'
@@ -94,6 +93,8 @@ jobs:
           version: ${{ needs.detect-version.outputs.version }}
 
       - name: Build application
+        run: |
+          npx electron-builder build
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.github_token }}

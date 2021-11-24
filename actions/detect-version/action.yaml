@@ -1,0 +1,50 @@
+name: Detect application version
+author: 'MiLaboratories'
+description: |
+  This action tries to get current code version from git tags:
+    * When git tag directly points to the current commit, it is used as
+      current version number (v-prefix is trimmed)
+    * When no git tag for current commit was found, the version number is
+      generated with the following template: '<prev vesrsion>-<branch name>-<ahead commits count>'
+      E.g. when the latest tag in repo is v1.3.2 and 'master' branch is ahead of that tag
+      by 3 commits, the version for 'master' would be: 1.3.2-master-3
+
+  The action does not mutate any files in repository or affect application builds.
+  It only sets outputs the user can then pass to other workflows/jobs/steps.
+
+inputs:
+  fetch-depth:
+    description: |
+      The number of commits of git history from current HEAD to fetch
+    required: false
+    default: '100'
+  canonize:
+    description: |
+      Canonize version number to make it always look like regular semver: '<major>.<minor>.<patch>'.
+      This makes git tag 'v1.1' to produce version '1.1.0' instead of '1.1'.
+    required: false
+    default: 'false'
+
+outputs:
+  version:
+    description: |
+      Version number read from git tags
+  tag:
+    description: |
+      Tag used for version detection 'as-is'
+  sha:
+    description: |
+      Full hash of git commit the version belongs to
+  prev-version:
+    description: |
+      Previous version number read from git tags
+  prev-tag:
+    description: |
+      Previous version tag 'as-is'
+  prev-sha:
+    description: |
+      Full hash of git commit the previous version belongs to
+
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

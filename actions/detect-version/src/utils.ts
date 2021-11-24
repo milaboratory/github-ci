@@ -24,6 +24,14 @@ export function canonizeVersion(version: string): string {
   return parts.join('.')
 }
 
+export function sanitizeVersion(version: string): string {
+  if (version.startsWith('v')) {
+    return version.substring(1) // v1.0.2 -> 1.0.2
+  }
+
+  return version
+}
+
 export function countOccurrences(str: string, substr: string): number {
   let index = 0
   let startIndex = 0
