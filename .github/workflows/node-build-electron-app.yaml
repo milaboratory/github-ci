@@ -167,8 +167,8 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
 
           allowUpdates: true
-          draft: true
-          prerelease: true
+          draft: false
+          prerelease: false
           artifacts: |
             dist_electron/*.dmg,
             dist_electron/*.AppImage
