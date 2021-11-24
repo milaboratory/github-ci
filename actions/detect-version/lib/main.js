@@ -100,11 +100,10 @@ function detectVersions() {
                 prevVersion = (0, utils_1.canonizeVersion)(prevVersion);
             }
         }
-        core.notice(`[autodetect-version]: 
-      current version: '${curVersion}'
-      current tag: '${curTag}'
-      previous version: '${prevVersion}'
-      previous tag: '${prevTag}'`);
+        core.debug(`current version: '${curVersion}'
+current tag: '${curTag}'
+previous version: '${prevVersion}'
+previous tag: '${prevTag}'`);
         core.setOutput('version', curVersion);
         core.setOutput('tag', curTag);
         core.setOutput('sha', curSha);

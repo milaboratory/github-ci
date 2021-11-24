@@ -77,12 +77,11 @@ async function detectVersions(): Promise<void> {
     }
   }
 
-  core.notice(
-    `[autodetect-version]: 
-      current version: '${curVersion}'
-      current tag: '${curTag}'
-      previous version: '${prevVersion}'
-      previous tag: '${prevTag}'`
+  core.debug(
+    `current version: '${curVersion}'
+current tag: '${curTag}'
+previous version: '${prevVersion}'
+previous tag: '${prevTag}'`
   )
 
   core.setOutput('version', curVersion)

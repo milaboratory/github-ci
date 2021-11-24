@@ -1,14 +1,16 @@
 import * as exec from '@actions/exec'
 
 export async function git(...args: string[]): Promise<exec.ExecOutput> {
-  const execResult = await exec.getExecOutput('git', args)
+  const execResult = await exec.getExecOutput('git', args, {
+    ignoreReturnCode: true
+  })
 
   if (execResult.exitCode !== 0) {
     const cmd = `git '${args.join("' '")}'`
     const exitCode = execResult.exitCode.toString()
     const stderr = execResult.stderr
 
-    throw Error(`Command "${cmd}" failed with code '${exitCode}': ${stderr}`)
+    throw Error(`command "${cmd}" failed with code '${exitCode}':\n\n${stderr}`)
   }
 
   return execResult
@@ -88,7 +90,7 @@ export async function ensureHistorySize(
   }
 
   await fetch({
-    depth: minCommits,
+    deepen: minCommits,
     remote,
     refSpec: ref
   })
@@ -114,21 +116,3 @@ export async function describe(opts?: describeOptions): Promise<string> {
 
   return versionString.trim()
 }
-
-// async function generateVersionFromGit(
-//   depth: number,
-//   findClosestTag: boolean,
-//   onlyExactMatch: boolean
-// ): Promise<string> {
-//   if (onlyExactMatch) {
-//     // We don't need history at all to find exact match. Single commit is enough.
-//     depth = 1
-//   }
-//   await fetchHistory(depth)
-//   return getVersion({
-//     findClosestTag,
-//     onlyExactMatch
-//   })
-// }
-//
-// export default generateVersionFromGit

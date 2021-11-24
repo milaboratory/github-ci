@@ -32,12 +32,14 @@ exports.describe = exports.ensureHistorySize = exports.fetchTags = exports.resol
 const exec = __importStar(require("@actions/exec"));
 function git(...args) {
     return __awaiter(this, void 0, void 0, function* () {
-        const execResult = yield exec.getExecOutput('git', args);
+        const execResult = yield exec.getExecOutput('git', args, {
+            ignoreReturnCode: true
+        });
         if (execResult.exitCode !== 0) {
             const cmd = `git '${args.join("' '")}'`;
             const exitCode = execResult.exitCode.toString();
             const stderr = execResult.stderr;
-            throw Error(`Command "${cmd}" failed with code '${exitCode}': ${stderr}`);
+            throw Error(`command "${cmd}" failed with code '${exitCode}':\n\n${stderr}`);
         }
         return execResult;
     });
@@ -109,7 +111,7 @@ function ensureHistorySize(minCommits, remote = 'origin', ref = 'HEAD') {
             return;
         }
         yield fetch({
-            depth: minCommits,
+            deepen: minCommits,
             remote,
             refSpec: ref
         });
@@ -133,20 +135,3 @@ function describe(opts) {
     });
 }
 exports.describe = describe;
-// async function generateVersionFromGit(
-//   depth: number,
-//   findClosestTag: boolean,
-//   onlyExactMatch: boolean
-// ): Promise<string> {
-//   if (onlyExactMatch) {
-//     // We don't need history at all to find exact match. Single commit is enough.
-//     depth = 1
-//   }
-//   await fetchHistory(depth)
-//   return getVersion({
-//     findClosestTag,
-//     onlyExactMatch
-//   })
-// }
-//
-// export default generateVersionFromGit
