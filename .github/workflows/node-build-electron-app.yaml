@@ -103,6 +103,12 @@ on:
           Empty value disables Telegram notifications
         required: false
         type: number
+        default: 0
+      notify-telegram-token:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+        type: string
         default: ''
 
 jobs:
@@ -127,8 +133,11 @@ jobs:
       prev-sha: ${{ steps.version-detector.outputs.prev-sha }}
 
   build:
+    strategy:
+      matrix:
+        os: ${{ fromJSON( inputs.os ) }}
 
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ matrix.os }}
 
     needs:
       - detect-version
@@ -197,7 +206,7 @@ jobs:
   notify-telegram:
     runs-on: ubuntu-latest
 
-    if: inputs.notify-telegram-target != ''
+    if: inputs.notify-telegram-target
 
     needs:
       - detect-version
@@ -209,7 +218,7 @@ jobs:
         uses: milaboratory/github-ci/actions/notify/templates/dev-build-ready@v1
         with:
           telegram-target: ${{ inputs.notify-telegram-target }}
-          telegram-token: ${{ secrets.TG_CI_BOT_TOKEN }}
+          telegram-token: ${{ inputs.notify-telegram-token }}
 
           product-name: ${{ inputs.app-name }}
           build-version: ${{ needs.detect-version.outputs.version }}
@@ -220,7 +229,7 @@ jobs:
         uses: milaboratory/github-ci/actions/notify/templates/release-ready@v1
         with:
           telegram-target: ${{ inputs.notify-telegram-target }}
-          telegram-token: ${{ secrets.TG_CI_BOT_TOKEN }}
+          telegram-token: ${{ inputs.notify-telegram-token }}
 
           product-name: ${{ inputs.app-name }}
           release-tag: ${{ needs.detect-version.outputs.tag }}
