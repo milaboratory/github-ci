@@ -12,6 +12,11 @@ inputs:
       Telegram Bot token
     required: true
 
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
   build-version:
     description: |
       Build version to display in message
@@ -32,7 +37,10 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         message: |
-          New ${{ inputs.build-category }} build '${{ inputs.build-version }}' in ${{ github.repository }}.
+          [${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
+
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
 
           [View build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
           [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
