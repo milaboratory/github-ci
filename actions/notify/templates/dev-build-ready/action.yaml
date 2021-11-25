@@ -37,10 +37,10 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         message: |
-          \[${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
+          🚧 \[${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
 
           Branch: ${{ github.ref_name }}
           Commit: ${{ github.sha }}
 
-          - [Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
+          - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
           - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})

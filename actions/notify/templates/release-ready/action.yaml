@@ -32,8 +32,8 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         message: |
-          \[${{ inputs.product-name }}] New version was released: ${{ inputs.release-tag }}
+          🔖 \[${{ inputs.product-name }}] New version was released: ${{ inputs.release-tag }}
 
-          - [Release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
+          - [View Release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
           - [Source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
           - [All releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
