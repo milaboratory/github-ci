@@ -7,6 +7,22 @@ on:
   workflow_call:
     inputs:
       #
+      # Common settings
+      #
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in texts
+        type: string
+        required: false
+        default: ${{ github.repository }}
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
+      #
       # Version detection control
       #
       version-fetch-depth:
@@ -43,11 +59,6 @@ on:
       #
       # Build control
       #
-      app-name-slug:
-        description: |
-          Application name slug (part of release file name)
-        type: string
-        required: true
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
@@ -82,6 +93,17 @@ on:
         type: string
         required: false
         default: doc,chore
+
+      #
+      # Notifications
+      #
+      notify-telegram-target:
+        description: |
+          ID of Telegram Channel or User to notify on build results
+          Empty value disables Telegram notifications
+        required: false
+        type: number
+        default: ''
 
 jobs:
   detect-version:
@@ -149,7 +171,11 @@ jobs:
           path: dist_electron/*.AppImage
           retention-days: ${{ inputs.artifacts-retention }}
 
+      #
+      # Release-only steps
+      #
       - name: Create release
+        id: create-release
         if: startsWith( needs.detect-version.outputs.tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
@@ -163,3 +189,38 @@ jobs:
             dist_electron/*.AppImage
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-url: ${{ steps.create-release.outputs.html_url }}
+
+  notify-telegram:
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram-target != ''
+
+    needs:
+      - detect-version
+      - build
+
+    steps:
+      - name: Report dev build is ready
+        if: needs.build.release-id == ''
+        uses: milaboratory/github-ci/actions/notify/templates/dev-build-ready@v1
+        with:
+          telegram-target: ${{ inputs.notify-telegram-target }}
+          telegram-token: ${{ secrets.TG_CI_BOT_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
+          build-version: ${{ needs.detect-version.outputs.version }}
+          build-category: dev
+
+      - name: Report release is ready
+        if: needs.build.release-id != ''
+        uses: milaboratory/github-ci/actions/notify/templates/release-ready@v1
+        with:
+          telegram-target: ${{ inputs.notify-telegram-target }}
+          telegram-token: ${{ secrets.TG_CI_BOT_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
+          release-tag: ${{ needs.detect-version.outputs.tag }}
