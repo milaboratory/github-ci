@@ -149,26 +149,17 @@ jobs:
           path: dist_electron/*.AppImage
           retention-days: ${{ inputs.artifacts-retention }}
 
-      - name: Generate changelog
-        id: changelog
-        if: needs.detect-version.outputs.tag != ''
-        uses: loopwerk/tag-changelog@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          exclude_types: ${{ inputs.changelog-exclude-types }}
-
       - name: Create release
-        if: needs.detect-version.outputs.tag != ''
-        uses: ncipollo/release-action@v1
+        if: startsWith( needs.detect-version.outputs.tag, 'v')
+        uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
           name: ${{ needs.detect-version.outputs.version }}
           tag: ${{ needs.detect-version.outputs.tag }}
-          body: ${{ steps.changelog.outputs.changes }}
 
-          allowUpdates: true
-          draft: false
-          prerelease: false
-          artifacts: |
-            dist_electron/*.dmg,
+          assets: |
+            dist_electron/*.dmg
             dist_electron/*.AppImage
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
