@@ -240,7 +240,7 @@ function detectVersions() {
             if (!(error instanceof Error)) {
                 throw error;
             }
-            core.warning(`Failed to get current version from git tags: ${error.message}`);
+            core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
         // Canonize version number so it always has <major>.<minor>.<patch> format
