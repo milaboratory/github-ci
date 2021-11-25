@@ -154,6 +154,7 @@ jobs:
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
           name: ${{ needs.detect-version.outputs.version }}
           tag: ${{ needs.detect-version.outputs.tag }}
 
