@@ -16,6 +16,11 @@ inputs:
     description: |
       Build version to display in message
     required: true
+  build-category:
+    description: |
+      Build category: 'dev', 'nigtly', 'whatever' :)
+    required: false
+    default: 'dev'
 
 runs:
   using: "composite"
@@ -27,7 +32,7 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         message: |
-          New build '${{ inputs.build-version }}' in ${{ github.repository }}.
+          New ${{ inputs.build-category }} build '${{ inputs.build-version }}' in ${{ github.repository }}.
 
           [View build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
           [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})

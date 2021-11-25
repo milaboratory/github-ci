@@ -12,10 +12,25 @@ inputs:
       Telegram Bot token
     required: true
 
+  product-name:
+    description: |
+      Name of product that was released
+    required: false
+    default: ${{ github.repository }}
+  release-name:
+    description: |
+      Name of release to put in message
+    required: true
+  release-tag:
+    description: |
+      Release tag. Optional, defaults to github.sha
+    required: true
+
   release-version:
     description: |
-      Build version to display in message
-    required: true
+      Release version number
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -27,8 +42,9 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         message: |
-          Version '${{ inputs.release-version }}' in ${{ github.repository }} released.
+          New version of ${{ inputs.product-name }} was released: ${{ inputs.release-name }} (${{ inputs.release-version || inputs.release-tag }})
 
-          [View release on GitHub](${{steps.create-release.outputs.html-url}})
-          [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+          [View release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
+          [View source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
+          [View all releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
 
