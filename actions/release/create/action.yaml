@@ -14,10 +14,11 @@ inputs:
       '\n' or ','-delimited list of assets to upload to release.
       Globbing is supported.
       Example:
-        dir1/*.txt
-        dir2/file1.exe
-        dir2/file2.dmg
-        dir3/**
+        assets: |
+          dir1/*.txt
+          dir2/file1.exe
+          dir2/file2.dmg
+          dir3/**
     required: true
 
   name:
@@ -120,5 +121,6 @@ runs:
         allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
-        artifacts: ${{ inputs.assets }}
+        artifacts: |
+          ${{ inputs.assets }}
         commit: ${{ inputs.commit }}
