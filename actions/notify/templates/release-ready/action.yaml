@@ -1,0 +1,34 @@
+name: Telegram Message
+description: |
+  Notify User or Channel about successful release in repository
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  release-version:
+    description: |
+      Build version to display in message
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: appleboy/telegram-action@master
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        message: |
+          Version '${{ inputs.release-version }}' in ${{ github.repository }} released.
+
+          [View release on GitHub](${{steps.create-release.outputs.html-url}})
+          [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+

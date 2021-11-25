@@ -17,32 +17,6 @@ inputs:
       Build version to display in message
     required: true
 
-outputs:
-  #
-  # Release info
-  #
-  id:
-    description: "ID of created/updated release"
-    value: ${{ steps.create.outputs.id }}
-  html-url:
-    description: "HTML URL of the release"
-    value: ${{ steps.create.outputs.html_url }}
-  upload-url:
-    description: The URL for uploading assets to the release.
-    value: ${{ steps.create.outputs.upload_url }}
-
-  #
-  # Changelog info
-  #
-  changelog:
-    description: |
-      Changelog for the latest tag, including the version/date header (suitable for prepending to a CHANGELOG.md file).
-    value: ${{ steps.changelog.outputs.changelog }}
-  changes:
-    description: |
-      Changelog for the latest tag, without the version/date header (suitable for GitHub Releases).
-    value: ${{ steps.changelog.outputs.changes }}
-
 runs:
   using: "composite"
 
