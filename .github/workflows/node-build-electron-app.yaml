@@ -159,7 +159,7 @@ jobs:
           tag: ${{ needs.detect-version.outputs.tag }}
 
           assets: |
-            dist_electron/*.dmg
+            dist_electron/*.dmg,
             dist_electron/*.AppImage
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
