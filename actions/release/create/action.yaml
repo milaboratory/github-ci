@@ -6,7 +6,7 @@ inputs:
   token:
     description: |
       Secret for access to GitHub REST API to control builds:
-        ${{ '${{secrets.GITHUB_TOKEN}}' }}
+        secrets.GITHUB_TOKEN
     required: true
 
   assets:
