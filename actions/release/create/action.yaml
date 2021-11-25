@@ -104,14 +104,14 @@ runs:
   steps:
     - name: Generate changelog
       id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: loopwerk/tag-changelog@6730d9b2742044f6cedff39324e8179f5867c6d4
       with:
         token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
 
     - name: Create release
       id: create
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@8aada7312c9f5689a1ae07ebf652fa65e1b0e5bf
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
