@@ -64,8 +64,8 @@ function commitsCount(startRef, endRef) {
 function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
-        const revisionNumber = yield commitsCount(baseRef, 'HEAD');
-        return `${baseVersion}-${currentRefName}-${revisionNumber}`;
+        const count = yield commitsCount(baseRef, 'HEAD');
+        return `${baseVersion}-${count}-${currentRefName}`;
     });
 }
 function detectVersions() {

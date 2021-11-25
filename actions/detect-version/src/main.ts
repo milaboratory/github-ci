@@ -34,9 +34,9 @@ async function genDevVersion(
   baseRef: string
 ): Promise<string> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
-  const revisionNumber = await commitsCount(baseRef, 'HEAD')
+  const count = await commitsCount(baseRef, 'HEAD')
 
-  return `${baseVersion}-${currentRefName}-${revisionNumber}`
+  return `${baseVersion}-${count}-${currentRefName}`
 }
 
 async function detectVersions(): Promise<void> {
