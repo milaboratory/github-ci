@@ -1,0 +1,60 @@
+name: Telegram Message
+description: |
+  Notify User or Channel about successful release in repository
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  build-version:
+    description: |
+      Build version to display in message
+    required: true
+
+outputs:
+  #
+  # Release info
+  #
+  id:
+    description: "ID of created/updated release"
+    value: ${{ steps.create.outputs.id }}
+  html-url:
+    description: "HTML URL of the release"
+    value: ${{ steps.create.outputs.html_url }}
+  upload-url:
+    description: The URL for uploading assets to the release.
+    value: ${{ steps.create.outputs.upload_url }}
+
+  #
+  # Changelog info
+  #
+  changelog:
+    description: |
+      Changelog for the latest tag, including the version/date header (suitable for prepending to a CHANGELOG.md file).
+    value: ${{ steps.changelog.outputs.changelog }}
+  changes:
+    description: |
+      Changelog for the latest tag, without the version/date header (suitable for GitHub Releases).
+    value: ${{ steps.changelog.outputs.changes }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: appleboy/telegram-action@master
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        message: |
+          Version '${{ needs.detect-version.outputs.version }}' in ${{ github.repository }} released.
+
+          [View release on GitHub](${{steps.create-release.outputs.html-url}})
+          [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+
