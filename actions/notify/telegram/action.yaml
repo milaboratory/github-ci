@@ -1,0 +1,86 @@
+name: 'Telegram Message Notify'
+description: |
+  Sending a Telegram message
+  This action is a wrapper for third-party action with strong bind
+  to git commit (revision hardening)
+author: 'Bo-Yi Wu'
+
+inputs:
+  to:
+    description: 'telegram user'
+    required: false
+  token:
+    description: 'telegram token'
+    required: false
+  message:
+    description: 'telegram message'
+    required: false
+  message_file:
+    description: 'overwrite the default message template with the contents of the specified file'
+    required: false
+  socks5:
+    description: 'support socks5 proxy URL'
+    required: false
+  photo:
+    description: 'send the photo message.'
+    required: false
+  document:
+    description: 'send the document message.'
+    required: false
+  sticker:
+    description: 'send the sticker message.'
+    required: false
+  audio:
+    description: 'send the audio message.'
+    required: false
+  voice:
+    description: 'send the voice message.'
+    required: false
+  location:
+    description: 'send the location message.'
+    required: false
+  venue:
+    description: 'send the venue message.'
+    required: false
+  video:
+    description: 'send the video message.'
+    required: false
+  debug:
+    description: 'enable debug mode.'
+    required: false
+  format:
+    description: 'message format: markdown or html'
+    required: false
+  disable_web_page_preview:
+    description: 'disables link previews for links in this message'
+    required: false
+  disable_notification:
+    description: 'disables notifications for this message, supports sending a message without notification,'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - uses: appleboy/telegram-action@2e9996f96e095a537aa4442da4af41ca7b594fba
+      with:
+        to: ${{ inputs.to }}
+        token: ${{ inputs.token }}
+        message: ${{ inputs.message }}
+        message_file: ${{ inputs.message_file }}
+        socks5: ${{ inputs.socks5 }}
+        photo: ${{ inputs.photo }}
+        document: ${{ inputs.document }}
+        sticker: ${{ inputs.sticker }}
+        audio: ${{ inputs.audio }}
+        voice: ${{ inputs.voice }}
+        location: ${{ inputs.location }}
+        venue: ${{ inputs.venue }}
+        video: ${{ inputs.video }}
+        debug: ${{ inputs.debug }}
+        format: ${{ inputs.format }}
+        disable_web_page_preview: ${{ inputs.disable_web_page_preview }}
+        disable_notification: ${{ inputs.disable_notification }}
+
+branding:
+  icon: 'message-square'
+  color: 'blue'
