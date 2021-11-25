@@ -3,6 +3,11 @@ description: |
   Create release and upload assets to it.
 
 inputs:
+  token:
+    description: |
+      ${{ secrets.GITHUB_TOKEN }}
+    required: true
+
   assets:
     description: |
       '\n' or ','-delimited list of assets to upload to release.
@@ -99,19 +104,19 @@ runs:
       id: changelog
       uses: loopwerk/tag-changelog@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
 
     - name: Create release
       id: create
       uses: ncipollo/release-action@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ inputs.token }}
         name: ${{ inputs.name }}
         tag: ${{ inputs.tag }}
         body: ${{ steps.changelog.outputs.changes }}
 
-        allowUpdates: ${{ allow-updates }}
+        allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
         artifacts: ${{ inputs.assets }}
