@@ -34,7 +34,6 @@ runs:
         message: |
           \[${{ inputs.product-name }}] New version was released: ${{ inputs.release-tag }}
 
-          [View release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
-          [View source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
-          [View all releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
-
+          - [Release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
+          - [Source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
+          - [All releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)

@@ -42,5 +42,5 @@ runs:
           Branch: ${{ github.ref_name }}
           Commit: ${{ github.sha }}
 
-          [View build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          [View source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+          - [Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
+          - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
