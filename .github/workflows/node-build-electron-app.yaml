@@ -97,22 +97,21 @@ on:
       #
       # Notifications
       #
-      notify-telegram-target:
+      notify-telegram:
         description: |
-          ID of Telegram Channel or User to notify on build results
-          Empty value disables Telegram notifications
+          Enable Telegram notifications
         required: false
-        type: number
-        default: 0
-      notify-telegram-token:
-        description: |
-          Telegram Bot API authorization token
-        required: false
-        type: string
-        default: ''
+        type: boolean
+        default: true
 
     secrets:
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
       TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
         required: false
 
 jobs:
@@ -210,7 +209,7 @@ jobs:
   notify-telegram:
     runs-on: ubuntu-latest
 
-    if: inputs.notify-telegram-target
+    if: inputs.notify-telegram
 
     needs:
       - detect-version
@@ -221,7 +220,7 @@ jobs:
         if: needs.build.release-id == ''
         uses: milaboratory/github-ci/actions/notify/templates/dev-build-ready@v1
         with:
-          telegram-target: ${{ inputs.notify-telegram-target }}
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
@@ -232,7 +231,7 @@ jobs:
         if: needs.build.release-id != ''
         uses: milaboratory/github-ci/actions/notify/templates/release-ready@v1
         with:
-          telegram-target: ${{ inputs.notify-telegram-target }}
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
