@@ -202,12 +202,6 @@ jobs:
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
-      - name: echo create-release info
-        env:
-          CREATE_RELEASE_INFO: ${{ toJSON(steps.create-release) }}
-        run: |
-          echo "${CREATE_RELEASE_INFO}"
-
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
@@ -223,7 +217,7 @@ jobs:
 
     steps:
       - name: Report dev build is ready
-        if: needs.build.release-id == ''
+        if: needs.build.outputs.release-id == ''
         uses: milaboratory/github-ci/actions/notify/templates/dev-build-ready@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -234,7 +228,7 @@ jobs:
           build-category: dev
 
       - name: Report release is ready
-        if: needs.build.release-id != ''
+        if: needs.build.outputs.release-id != ''
         uses: milaboratory/github-ci/actions/notify/templates/release-ready@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
