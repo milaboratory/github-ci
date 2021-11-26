@@ -202,6 +202,12 @@ jobs:
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
+      - name: echo create-release info
+        env:
+          CREATE_RELEASE_INFO: ${{ toJSON(steps.create-release) }}
+        run: |
+          echo "${CREATE_RELEASE_INFO}"
+
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
