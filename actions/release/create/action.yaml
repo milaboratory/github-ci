@@ -111,7 +111,7 @@ runs:
 
     - name: Create release
       id: create
-      uses: ncipollo/release-action@8aada7312c9f5689a1ae07ebf652fa65e1b0e5bf
+      uses: ncipollo/release-action@c4bf6c1ab090090498fb7f3ddc9f99ba5ab619b9
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
