@@ -2,7 +2,7 @@
   "name": "detect-version",
   "version": "1.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "MiLaboratory code version detector",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -15,14 +15,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/milaboratory/github-ci.git"
   },
   "keywords": [
     "actions",
     "node",
     "setup"
   ],
-  "author": "",
+  "author": "DenKoren <denkoren@yandex.ru>",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.6.0",
