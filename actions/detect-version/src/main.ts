@@ -8,22 +8,6 @@ async function prepareRepository(depth: number): Promise<void> {
   return git.ensureHistorySize(depth)
 }
 
-async function currentTag(): Promise<string> {
-  return git.describe({
-    tags: true,
-    abbrev: 0,
-    exactMatch: true
-  })
-}
-
-async function previousTag(): Promise<string> {
-  return await git.describe({
-    tags: true,
-    abbrev: 0,
-    ref: 'HEAD^'
-  })
-}
-
 async function commitsCount(startRef: string, endRef: string): Promise<number> {
   const commits = await git.revList({ref: `${startRef}..${endRef}`})
   return commits.length
@@ -46,7 +30,7 @@ async function detectVersions(): Promise<void> {
 
   await prepareRepository(fetchDepth)
 
-  const prevTag = await previousTag()
+  const prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
   let prevVersion = sanitizeVersion(prevTag)
 
@@ -54,7 +38,7 @@ async function detectVersions(): Promise<void> {
   let curTag = ''
   let curVersion = ''
   try {
-    curTag = await currentTag()
+    curTag = await git.currentTag()
     curVersion = sanitizeVersion(curTag)
   } catch (error) {
     if (!(error instanceof Error)) {
