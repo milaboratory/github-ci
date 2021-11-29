@@ -29,17 +29,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(require("@actions/core"));
-const git = __importStar(require("./git"));
 const utils_1 = require("./utils");
+const milib_1 = require("milib");
 function prepareRepository(depth) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield git.fetchTags();
-        return git.ensureHistorySize(depth);
+        yield milib_1.git.fetchTags();
+        return milib_1.git.ensureHistorySize(depth);
     });
 }
 function currentTag() {
     return __awaiter(this, void 0, void 0, function* () {
-        return git.describe({
+        return milib_1.git.describe({
             tags: true,
             abbrev: 0,
             exactMatch: true
@@ -48,7 +48,7 @@ function currentTag() {
 }
 function previousTag() {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield git.describe({
+        return yield milib_1.git.describe({
             tags: true,
             abbrev: 0,
             ref: 'HEAD^'
@@ -57,7 +57,7 @@ function previousTag() {
 }
 function commitsCount(startRef, endRef) {
     return __awaiter(this, void 0, void 0, function* () {
-        const commits = yield git.revList({ ref: `${startRef}..${endRef}` });
+        const commits = yield milib_1.git.revList({ ref: `${startRef}..${endRef}` });
         return commits.length;
     });
 }
@@ -75,9 +75,9 @@ function detectVersions() {
         const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
         const prevTag = yield previousTag();
-        const prevSha = yield git.resolveRef(prevTag);
+        const prevSha = yield milib_1.git.resolveRef(prevTag);
         let prevVersion = (0, utils_1.sanitizeVersion)(prevTag);
-        const curSha = yield git.resolveRef('HEAD');
+        const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion = '';
         try {

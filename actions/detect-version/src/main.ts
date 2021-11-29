@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 
-import * as git from './git'
 import {canonizeVersion, sanitizeVersion} from './utils'
+import {git} from 'milib'
 
 async function prepareRepository(depth: number): Promise<void> {
   await git.fetchTags()
