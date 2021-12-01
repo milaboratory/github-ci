@@ -1,0 +1,32 @@
+name: Read Gradle project properties
+author: 'MiLaboratories'
+description: |
+  Read all gradle project properties and export them as outputs
+
+inputs:
+  gradle-cmd:
+    description: |
+      Gradle command to run for properties dumping.
+
+    required: false
+    default: |
+      ./gradlew --quiet :properties
+
+# Feel free to add more properties here.
+# The underlying script supports all properties by default, but there is no way to pass
+# them all to action's outputs. We have to explicitly list props we're interested in.
+outputs:
+  buildDir:
+    description: buildDir property
+    value: ${{ steps.props.outputs.buildDir }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Read and print properties
+      id: props
+      shell: bash
+      run: |
+        ${{ inputs.gradle-cmd }} |
+          ${{ github.action_path }}/dump-props.sh
