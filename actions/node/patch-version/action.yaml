@@ -19,7 +19,7 @@ inputs:
       By default, 'package.json' at repository root is used as target.
 
     required: false
-    default: 'package.json'
+    default: './package.json'
 
 runs:
   using: "composite"
