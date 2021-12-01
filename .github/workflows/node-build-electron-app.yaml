@@ -71,13 +71,6 @@ on:
         type: string
         required: false
         default: 'electron:build'
-      project-dir:
-        description: |
-          Path to project root within repository.
-          Defaults to repository root
-        type: string
-        required: false
-        default: './'
       vue-project:
         description: |
           This is vue-based project. Use 'vue-cli' toolkit
@@ -157,25 +150,20 @@ jobs:
 
       - name: Prepare env for Node application build
         uses: milaboratory/github-ci/actions/node/prepare@v1
-        working-directory: ${{ inputs.project-dir }}
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: 'v1'
 
       - name: Install node packages with npm
-        shell: bash
-        working-directory: ${{ inputs.project-dir }}
         run: npm install
+        shell: bash
 
       - name: Patch package version
         uses: milaboratory/github-ci/actions/node/patch-version@v1
         with:
           version: ${{ needs.detect-version.outputs.version }}
-          package_json: ${{ inputs.project-dir }}/package.json
 
       - name: Build application
-        shell: bash
-        working-directory: ${{ inputs.project-dir }}
         run: |
           npm run ${{ inputs.build-script-name }}
 
@@ -184,7 +172,7 @@ jobs:
         if: runner.os == 'macOS'
         with:
           name: ${{ inputs.app-name-slug }}-mac
-          path: ${{ inputs.project-dir }}/dist_electron/*.dmg
+          path: dist_electron/*.dmg
           retention-days: ${{ inputs.artifacts-retention }}
 
       - name: Save artifact with Linux application
@@ -192,7 +180,7 @@ jobs:
         if: runner.os == 'Linux'
         with:
           name: ${{ inputs.app-name-slug }}-linux
-          path: ${{ inputs.project-dir }}/dist_electron/*.AppImage
+          path: dist_electron/*.AppImage
           retention-days: ${{ inputs.artifacts-retention }}
 
       #
@@ -209,8 +197,8 @@ jobs:
           tag: ${{ needs.detect-version.outputs.tag }}
 
           assets: |
-            ${{ inputs.project-dir }}/dist_electron/*.dmg,
-            ${{ inputs.project-dir }}/dist_electron/*.AppImage
+            dist_electron/*.dmg,
+            dist_electron/*.AppImage
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
