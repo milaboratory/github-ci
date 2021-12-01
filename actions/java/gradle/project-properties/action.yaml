@@ -9,13 +9,11 @@ inputs:
       Gradle project root (with settings.gradle file)
     required: false
     default: ./
-
-  gradle-cmd:
+  project-name:
     description: |
-      Gradle command to run for properties dumping.
-
+      Project to get properties (gradle :<project>:properties)
     required: false
-    default: ./gradlew --quiet :properties
+    default: ''
 
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
@@ -34,5 +32,5 @@ runs:
       shell: bash
       working-directory: ${{ inputs.project-dir }}
       run: |
-        ${{ inputs.gradle-cmd }} |
-          ${{ github.action_path }}/dump-props.sh
+        ./gradlew --quiet ":${{ inputs.project-name }}:properties" |
+          "${{ github.action_path }}/dump-props.sh"
