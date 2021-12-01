@@ -1,0 +1,27 @@
+name: Run shell script
+author: 'MiLaboratories'
+description: |
+  Run shell script with MiLib loaded and error handling on
+
+inputs:
+  run:
+    description: |
+      Shell script body
+    required: true
+
+outputs: ${{ steps.script.outputs }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Read and print properties
+      id: script
+      shell: bash
+      run: |
+        source "${{ github.action_path }}../lib/sh/ghwa-commands.sh"
+
+        set -o errexit
+        set -o nounset
+
+        ${{ inputs.run }}
