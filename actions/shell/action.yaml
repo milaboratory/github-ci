@@ -9,7 +9,11 @@ inputs:
       Shell script body
     required: true
 
-outputs: ${{ steps.script.outputs }}
+outputs:
+  data:
+    description: |
+      All outputs from script in JSON string. Use fromJSON() to decode.
+    value: ${{ toJSON(steps.script.outputs) }}
 
 runs:
   using: "composite"
