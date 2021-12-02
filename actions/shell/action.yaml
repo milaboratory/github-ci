@@ -10,6 +10,10 @@ inputs:
     required: true
 
 outputs:
+  stdout:
+    description: Script's stdout. Saved only on script's zero exit code
+    value: ${{ steps.script.outputs.stdout }}
+
   data:
     description: |
       All outputs from script in JSON string. Use fromJSON() to decode.
@@ -23,6 +27,29 @@ runs:
       id: script
       shell: bash
       run: |
+        # Generate and run script, saving full STDOUT to step's output
+
+        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+
+        tmp_script_path="${{ github.action_path }}/tmp-script.sh"
+        tmp_script_output="${{ github.action_path }}/tmp-script.stdout"
+
+        echo "Generating tmp script at '${tmp_script_path}'..."
+
+        end_marker="$(date "+%s%N" | shasum -a 256 | awk '{print $1}')"
+        cat >"${tmp_script_path}" <<"EndOfTmpScript-${end_marker}"
+        #!/usr/bin/env bash
+
         source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
 
         ${{ inputs.run }}
+
+        EndOfTmpScript-${end_marker}
+
+        echo "Running script..."
+
+        chmod u+x "${tmp_script_path}"
+        set -o pipefail # its important for us to not mask script exit code with 'tee'
+        "${tmp_script_path}" | tee "${tmp_script_output}"
+
+        ghwa_set_output "stdout" "$(cat "${tmp_script_output}")"
