@@ -239,7 +239,7 @@ jobs:
           inputs.build-docker ||
             ( inputs.build-docker-releases
               && startsWith( needs.detect-version.outputs.tag, 'v') )
-        uses: milaboratory/github-ci/actions/docker/push-github@v1
+        uses: milaboratory/github-ci/actions/docker/push@v1
         with:
           auth-token: ${{ secrets.GITHUB_TOKEN }}
           source: ${{ steps.gradle-props.outputs.name }}:${{ needs.detect-version.outputs.version }}
