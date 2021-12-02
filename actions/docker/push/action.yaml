@@ -1,0 +1,113 @@
+name: Publish docker image to GitHub Docker registry
+author: 'MiLaboratories'
+description: |
+  Publish given docker tag into GitHub Docker registry
+
+inputs:
+  source:
+    description: |
+      Source tag to push, including version part: <tag-name>:<tag-version>
+      E.g.:
+        myapp:v0.1.0
+    required: true
+
+  targets:
+    description: |
+      Push target tags without registry name.
+      Newline-separated list of tags to push into target registry.
+      E.g.:
+        milaboratory/example/myapp:v0.1.0
+        milaboratory/example/myapp:latest
+
+      Defaults to {{github.repository}}/{{inputs.source}}
+
+    required: false
+    default: ''
+
+  #
+  # Docker Registry Configuration
+  #
+  registry:
+    description: |
+      Target Docker registry.
+      Defaults to ghcr.io (GitHub Docker registry)
+    required: false
+    default: 'ghcr.io'
+  auth-user:
+    description: |
+      Authentication user for docker registry.
+    required: false
+    default: ${{ github.actor }}
+  auth-token:
+    description: |
+      Authentication token for docker registry.
+      Use secrets.GITHUB_TOKEN
+    required: true
+
+outputs:
+  pushed-tags:
+    description: |
+      Newline separated list of full tag names
+    value: ${{ steps.target-tags.outputs.versioned }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Auth in docker registry
+      shell: bash
+      env:
+        TARGET_REGISTRY: ${{ inputs.registry }}
+        AUTH_TOKEN: ${{ inputs.auth-token }}
+        AUTH_USER: ${{ inputs.auth-user }}
+      run: |
+        docker login \
+          "${TARGET_REGISTRY}" \
+          --username "${AUTH_USER}" \
+          --password-stdin <<<"${AUTH_TOKEN}"
+
+    - name: Render target tag names
+      id: target-tags
+      shell: bash
+      env:
+        SOURCE_TAG: ${{ inputs.source }}
+        TARGET_REGISTRY: ${{ inputs.registry }}
+        TARGET_TAGS: ${{ inputs.targets }}
+      run: |
+        # Render full target tags (<registry>/<path>:<version>)
+
+        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+
+        if [ -z "${TARGET_TAGS}" ]; then
+          TARGET_TAGS="${{ GITHUB_REPOSITORY }}/${SOURCE_TAG}"
+        fi
+
+        result="$(
+          while read -r target_tag; do
+            echo "${TARGET_REGISTRY}/${target_tag}"
+          done <<<"${TARGET_TAGS}"
+        )"
+
+        ghwa_set_env "PUSH_TARGETS" "${result}"
+
+    - name: Pushing tags to '${{ inputs.registry }}'
+      id: push-version
+      shell: bash
+      env:
+        SOURCE_TAG: ${{ inputs.source }}
+        TARGET_REGISTRY: ${{ inputs.registry }}
+      run: |
+        # Pushing tags to '${TARGET_REGISTRY}'
+
+        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+
+        while read -r push_target; do
+          ghwa_group "Pushing '${push_target}'..."
+
+          docker tag "${SOURCE_TAG}" "${push_target}"
+          docker push "${push_target}"
+
+          ghwa_endgroup
+        done <<<"${PUSH_TARGETS}"
+
+        ghwa_notice "Pushed Docker tags:\n${PUSH_TARGETS}"

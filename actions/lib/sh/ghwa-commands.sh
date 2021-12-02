@@ -196,7 +196,7 @@ function ghwa_set_echo() {
 function ghwa_set_env() {
   local _name="${1}"
   local _value="${2}"
-  local _eof_marker="${3:-EOV}"
+  local _eof_marker="${3:-EndOfValue}"
 
   {
     echo "${_name}<<${_eof_marker}"
