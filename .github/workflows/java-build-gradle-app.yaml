@@ -195,7 +195,7 @@ jobs:
         uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
         with:
           project-dir: ${{ inputs.build-project-dir }}
-          project-name: ${{ inputs.build-project-name }}
+          project-name: ${{ inputs.build-project }}
 
       - name: Build tar distribution
         if: inputs.build-tar
