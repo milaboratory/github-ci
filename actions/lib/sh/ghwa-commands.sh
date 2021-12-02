@@ -82,7 +82,7 @@ function ghwa_notice() {
   local _message="${1}"
   shift
 
-  _ghwa_command "notice" "${_message}" "${@}"
+  _ghwa_command "notice" "$(ghwa_escape "${_message}")" "${@}"
 }
 
 # GitHub Workflow command 'warning'
@@ -94,7 +94,7 @@ function ghwa_warning() {
   local _message="${1}"
   shift
 
-  _ghwa_command "warning" "${_message}" "${@}"
+  _ghwa_command "warning" "$(ghwa_escape "${_message}")" "${@}"
 }
 
 # GitHub Workflow command 'error'
@@ -106,7 +106,7 @@ function ghwa_error() {
   local _message="${1}"
   shift
 
-  _ghwa_command "error" "${_message}" "${@}"
+  _ghwa_command "error" "$(ghwa_escape "${_message}")" "${@}"
 }
 
 # GitHub Workflow command 'debug'
@@ -117,7 +117,7 @@ function ghwa_error() {
 function ghwa_debug() {
   local _message="${1}"
 
-  _ghwa_command "debug" "${_message}"
+  _ghwa_command "debug" "$(ghwa_escape "${_message}")"
 }
 
 # GitHub Workflow command 'group' start
