@@ -48,6 +48,17 @@ function _ghwa_command() {
   echo "::${_act_name}${_act_options}::${_act_argument}"
 }
 
+# Escape newlines and other symbols that could break commands
+function ghwa_escape() {
+  local _data="${1}"
+  local _escaped
+  _escaped="${_data//'%'/'%25'}"
+  _escaped="${_escaped//$'\n'/'%0A'}"
+  _escaped="${_escaped//$'\r'/'%0D'}"
+
+  printf "%s" "${_escaped}"
+}
+
 # GitHub Workflow command 'set-output'
 #
 # Usage:
@@ -55,7 +66,9 @@ function _ghwa_command() {
 #
 function ghwa_set_output() {
   local _name="${1}"
-  local _value="${2}"
+
+  local _value
+  _value="$(ghwa_escape "${2}")"
 
   _ghwa_command "set-output" "${_value}" "name=${_name}"
 }

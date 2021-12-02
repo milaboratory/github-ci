@@ -47,8 +47,9 @@ inputs:
 outputs:
   pushed-tags:
     description: |
-      Newline separated list of full tag names
-    value: ${{ steps.target-tags.outputs.versioned }}
+      Newline separated list of full tag names pushed to target registry
+      (including registry name prefix).
+    value: ${{ steps.push.outputs.pushed }}
 
 runs:
   using: "composite"
@@ -67,7 +68,7 @@ runs:
           --password-stdin <<<"${AUTH_TOKEN}"
 
     - name: Render target tag names
-      id: target-tags
+      id: targets
       shell: bash
       env:
         SOURCE_TAG: ${{ inputs.source }}
@@ -91,7 +92,7 @@ runs:
         ghwa_set_env "PUSH_TARGETS" "${result}"
 
     - name: Pushing tags to '${{ inputs.registry }}'
-      id: push-version
+      id: push
       shell: bash
       env:
         SOURCE_TAG: ${{ inputs.source }}
@@ -111,3 +112,4 @@ runs:
         done <<<"${PUSH_TARGETS}"
 
         ghwa_notice "Pushed Docker tags:\n${PUSH_TARGETS}"
+        ghwa_set_output "pushed" "${PUSH_TARGETS}"
