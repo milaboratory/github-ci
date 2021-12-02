@@ -94,7 +94,7 @@ runs:
           "${{ steps.target-tags.outputs.versioned }}"
 
         echo docker push "${{ steps.target-tags.outputs.versioned }}"
-        ghwa_notice "Published docker tag: ${{ steps.target-tags.outputs.versioned }}"
+        ghwa_notice "Versioned Docker Tag: ${{ steps.target-tags.outputs.versioned }}"
 
     - name: Publish to GitHub registry (:latest)
       id: push-latest
@@ -111,4 +111,4 @@ runs:
           "${{ steps.target-tags.outputs.latest }}"
 
         echo docker push "${{ steps.target-tags.outputs.latest }}"
-        ghwa_notice "Published docker tag: ${{ steps.target-tags.outputs.latest }}"
+        ghwa_notice "Latest Docker Tag: ${{ steps.target-tags.outputs.latest }}"
