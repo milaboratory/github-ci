@@ -196,6 +196,7 @@ jobs:
 
       - name: Build dist tar
         if: inputs.build-tar
+        working-directory: ${{ inputs.build-project-dir }}
         run: |
           ./gradlew \
             --project-prop "version=${{ needs.detect-version.outputs.version }}" \
@@ -214,6 +215,7 @@ jobs:
           inputs.build-docker ||
             ( inputs.build-docker-releases
               && startsWith( needs.detect-version.outputs.tag, 'v') )
+        working-directory: ${{ inputs.build-project-dir }}
         run: |
           ./gradlew \
             --project-prop "version=${{ needs.detect-version.outputs.version }}" \
