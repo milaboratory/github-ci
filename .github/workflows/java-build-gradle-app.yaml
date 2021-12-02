@@ -141,7 +141,7 @@ on:
 
 jobs:
   versions:
-    name: Detection versions
+    name: Detect versions
     runs-on: ubuntu-latest
 
     steps:
@@ -280,7 +280,7 @@ jobs:
 
   notify-telegram:
 
-    name: Telegram Notifications
+    name: Telegram
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram

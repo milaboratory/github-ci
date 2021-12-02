@@ -116,7 +116,7 @@ on:
 
 jobs:
   versions:
-    name: Versions Detection
+    name: Detect Versions
     runs-on: ubuntu-latest
 
     steps:
@@ -145,6 +145,7 @@ jobs:
       matrix:
         os: ${{ fromJSON( inputs.os ) }}
 
+    name: Build application
     runs-on: ${{ matrix.os }}
 
     needs:
@@ -212,6 +213,8 @@ jobs:
       release-url: ${{ steps.create-release.outputs.html_url }}
 
   notify-telegram:
+
+    name: Telegram
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram
