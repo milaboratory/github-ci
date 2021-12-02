@@ -89,7 +89,7 @@ runs:
       run: |
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
-        ghwa_group "Pushing tag..."
+        ghwa_group "Pushing tag '${{ steps.target-tags.outputs.versioned }}'..."
 
         docker tag \
           "${TAG_NAME}:${TAG_VERSION}" \
@@ -110,7 +110,7 @@ runs:
       run: |
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
-        ghwa_group "Pushing tag..."
+        ghwa_group "Pushing tag '${{ steps.target-tags.outputs.latest }}'..."
 
         docker tag \
           "${TAG_NAME}:${TAG_VERSION}" \
