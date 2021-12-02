@@ -184,6 +184,7 @@ jobs:
         env:
           GRADLE_PROPS: ${{ secrets.GRADLE_PROPERTIES }}
         run: |
+          mkdir -p ~/.gradle/
           printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
 
       - name: Read actual project properties
