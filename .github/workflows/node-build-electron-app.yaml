@@ -128,9 +128,9 @@ jobs:
           fetch-depth: ${{ inputs.version-fetch-depth }}
 
     outputs:
-      current-version: ${{ steps.versions.outputs.curent-version }}
-      current-tag: ${{ steps.versions.outputs.curent-tag }}
-      current-sha: ${{ steps.versions.outputs.curent-sha }}
+      current-version: ${{ steps.versions.outputs.current-version }}
+      current-tag: ${{ steps.versions.outputs.current-tag }}
+      current-sha: ${{ steps.versions.outputs.current-sha }}
 
       previous-version: ${{ steps.versions.outputs.previous-version }}
       previous-tag: ${{ steps.versions.outputs.previous-tag }}

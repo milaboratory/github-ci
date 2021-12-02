@@ -68,20 +68,17 @@ on:
 
       build-docker:
         description: |
-          Build and push docker image (gradle :<project>:dockerBuildImage) for each run
+          Build and push docker image (gradle :<project>:dockerBuildImage) for each run.
+          Each 'branch' build is stored
         type: boolean
         required: false
         default: false
-      build-docker-releases:
-        description: |
-          Build and push docker image (gradle :<project>:dockerBuildImage) only for releases
-        type: boolean
-        required: false
-        default: true
+
       build-tar:
         description: |
           Create .tar archive with all jars required for application
-          and startup script (gradle :<project>:distTar
+          and startup script (gradle :<project>:distTar).
+          The archive is saved as artifact with <artifact-retention> TTL.
         type: boolean
         required: false
         default: true
@@ -156,9 +153,9 @@ jobs:
           fetch-depth: ${{ inputs.version-fetch-depth }}
 
     outputs:
-      current-version: ${{ steps.versions.outputs.curent-version }}
-      current-tag: ${{ steps.versions.outputs.curent-tag }}
-      current-sha: ${{ steps.versions.outputs.curent-sha }}
+      current-version: ${{ steps.versions.outputs.current-version }}
+      current-tag: ${{ steps.versions.outputs.current-tag }}
+      current-sha: ${{ steps.versions.outputs.current-sha }}
 
       previous-version: ${{ steps.versions.outputs.previous-version }}
       previous-tag: ${{ steps.versions.outputs.previous-tag }}
@@ -217,10 +214,8 @@ jobs:
           retention-days: ${{ inputs.artifacts-retention }}
 
       - name: Build docker image
-        if: |
-          inputs.build-docker ||
-            ( inputs.build-docker-releases
-              && startsWith( needs.versions.outputs.current-tag, 'v') )
+        if: inputs.build-docker
+
         working-directory: ${{ inputs.build-project-dir }}
         run: |
           ./gradlew \
@@ -229,13 +224,12 @@ jobs:
 
       - name: Generate push targets list
         id: push-targets
-        if: |
-          inputs.build-docker ||
-            ( inputs.build-docker-releases
-              && startsWith( needs.versions.outputs.current-tag, 'v') )
+        if: inputs.build-docker
 
         uses: milaboratory/github-ci/actions/shell@v1
         env:
+          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+          IS_LATEST_RELESE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
           BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
           BUILD_VERSION: ${{ needs.versions.outputs.current-version }}
         with:
@@ -243,11 +237,19 @@ jobs:
             # Always push '<tag name>:<version>' 'as is'
             echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:${BUILD_VERSION}"
 
+            if [ "${IS_RELEASE}" = 'true' ]; then
+              if [ "${IS_LATEST_RELEASE}" = 'true' ]; then
+                # For latest releases also update :latest tag
+                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest"
+              fi
+            else
+              # For branch builds update :latest-<branch> tag
+              echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
+            fi
+
       - name: Publish docker image to GitHub registry
-        if: |
-          inputs.build-docker ||
-            ( inputs.build-docker-releases
-              && startsWith( needs.versions.outputs.current-tag, 'v') )
+        if: inputs.build-docker
+
         uses: milaboratory/github-ci/actions/docker/push@v1
         with:
           auth-token: ${{ secrets.GITHUB_TOKEN }}
