@@ -191,7 +191,7 @@ jobs:
         id: gradle-props
         uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
         with:
-          project-dir: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project-name }}
 
       - name: Build dist tar
