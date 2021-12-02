@@ -89,12 +89,16 @@ runs:
       run: |
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
-        echo docker tag \
+        ghwa_group "Pushing tag..."
+
+        docker tag \
           "${TAG_NAME}:${TAG_VERSION}" \
           "${{ steps.target-tags.outputs.versioned }}"
+        docker push "${{ steps.target-tags.outputs.versioned }}"
 
-        echo docker push "${{ steps.target-tags.outputs.versioned }}"
-        ghwa_notice "Versioned Docker Tag: ${{ steps.target-tags.outputs.versioned }}"
+        ghwa_endgroup
+
+        ghwa_notice "Pushed docker tag: ${{ steps.target-tags.outputs.versioned }}"
 
     - name: Publish to GitHub registry (:latest)
       id: push-latest
@@ -106,9 +110,13 @@ runs:
       run: |
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
-        echo docker tag \
+        ghwa_group "Pushing tag..."
+
+        docker tag \
           "${TAG_NAME}:${TAG_VERSION}" \
           "${{ steps.target-tags.outputs.latest }}"
+        docker push "${{ steps.target-tags.outputs.latest }}"
 
-        echo docker push "${{ steps.target-tags.outputs.latest }}"
-        ghwa_notice "Latest Docker Tag: ${{ steps.target-tags.outputs.latest }}"
+        ghwa_endgroup
+
+        ghwa_notice "Pushed docker tag: ${{ steps.target-tags.outputs.latest }}"
