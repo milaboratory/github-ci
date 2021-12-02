@@ -1,0 +1,113 @@
+name: Publish docker image to GitHub Docker registry
+author: 'MiLaboratories'
+description: |
+  Publish given docker tag into GitHub Docker registry
+
+inputs:
+  tag-name:
+    description: |
+      Name of tag to publish: <tag-name>:<tag-version>
+    required: true
+  tag-version:
+    description: |
+      Version of tag to publish: <tag-name>:<tag-version>
+    required: true
+
+  auth-token:
+    description: |
+      Authentication token for docker registry.
+      Use secrets.GITHUB_TOKEN
+    required: true
+  auth-user:
+    description: |
+      Authentication user for docker registry.
+    required: false
+    default: ${{ github.actor }}
+
+  update-latest:
+    description: |
+      Update :latest tag as well
+    required: false
+    default: 'false'
+
+  target-repository:
+    description: |
+      Target registry GitHub repository: github.com/<organization>/<repository>
+    required: false
+    default: ${{ github.repository }}
+
+outputs:
+  versioned-tag:
+    description: |
+      Tag with unique version number: <tag name>:<tag verison>
+    value: ${{ steps.target-tags.outputs.versioned }}
+  latest-tag:
+    description: |
+      'latest' tag: <tag name>:latest.
+    value: ${{ steps.target-tags.outputs.latest }}
+  latest-tag-pushed:
+    description: |
+      'True' when ':latest' tag was pushed.
+      This just duplicates input.update-latest for usability reasons.
+    value: ${{ inputs.update-latest }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Auth in docker registry
+      shell: bash
+      env:
+        DOCKER_AUTH_TOKEN: ${{ inputs.auth-token }}
+        DOCKER_AUTH_USER: ${{ inputs.auth-user }}
+      run: |
+        docker login \
+          ghcr.io \
+          --username "${DOCKER_AUTH_USER}" \
+          --password-stdin <<<"${DOCKER_AUTH_TOKEN}"
+
+    - name: Render target tag name
+      id: target-tags
+      shell: bash
+      env:
+        TARGET_REPO: ${{ inputs.target-repository }}
+        TAG_NAME: ${{ inputs.tag-name }}
+        TAG_VERSION: ${{ inputs.tag-version }}
+      run: |
+        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+
+        ghwa_set_output "versioned" "ghcr.io/${TARGET_REPO}/${TAG_NAME}:${TAG_VERSION}"
+        ghwa_set_output "latest" "ghcr.io/${TARGET_REPO}/${TAG_NAME}:latest"
+
+    - name: Publish to GitHub registry (:${{ inputs.tag-version }})
+      id: push-version
+      shell: bash
+      env:
+        TAG_NAME: ${{ inputs.tag-name }}
+        TAG_VERSION: ${{ inputs.tag-version }}
+      run: |
+        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+
+        echo docker tag \
+          "${TAG_NAME}:${TAG_VERSION}" \
+          "${{ steps.target-tags.outputs.versioned }}"
+
+        echo docker push "${{ steps.target-tags.outputs.versioned }}"
+        ghwa_notice "Published docker tag: ${{ steps.target-tags.outputs.versioned }}"
+
+    - name: Publish to GitHub registry (:latest)
+      id: push-latest
+      shell: bash
+      env:
+        TAG_NAME: ${{ inputs.tag-name }}
+        TAG_VERSION: ${{ inputs.tag-version }}
+      if: inputs.update-latest
+      run: |
+        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+
+        echo docker tag \
+          "${TAG_NAME}:${TAG_VERSION}" \
+          "${{ steps.target-tags.outputs.latest }}"
+
+        echo docker push "${{ steps.target-tags.outputs.latest }}"
+        ghwa_notice "Published docker tag: ${{ steps.target-tags.outputs.latest }}"
