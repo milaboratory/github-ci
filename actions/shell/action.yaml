@@ -23,7 +23,7 @@ runs:
       id: script
       shell: bash
       run: |
-        source "${{ github.action_path }}../lib/sh/ghwa-commands.sh"
+        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
 
         set -o errexit
         set -o nounset
