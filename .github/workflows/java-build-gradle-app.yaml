@@ -44,9 +44,9 @@ on:
       java-version:
         description: |
           Version of JAVA to use for build
-
         type: string
         required: true
+
       java-distribution:
         description: |
           Java distribution to use.
@@ -60,18 +60,46 @@ on:
       #
       # Build control
       #
+      build-project:
+        description: |
+          Gradle project name to build: gradle :<project>:<command>
+        type: string
+        required: true
+
+      build-docker:
+        description: |
+          Build and push docker image (gradle :<project>:dockerBuildImage) for each run
+        type: boolean
+        required: false
+        default: false
+      build-docker-releases:
+        description: |
+          Build and push docker image (gradle :<project>:dockerBuildImage) only for releases
+        type: boolean
+        required: false
+        default: true
+      build-tar:
+        description: |
+          Create .tar archive with all jars required for application
+          and startup script (gradle :<project>:distTar
+        type: boolean
+        required: false
+        default: true
+
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
         type: number
         required: false
         default: 7
-      build-script-name:
+
+      build-project-dir:
         description: |
-          Name of script for application build
+          Path to project root directory
+          Defaults to repository root
         type: string
         required: false
-        default: 'electron:build'
+        default: './'
 
       #
       # Release control
@@ -152,42 +180,77 @@ jobs:
           java-version: ${{ inputs.java-version }}
           cache: 'gradle'
 
-#      - name: Patch package version
-#        uses: milaboratory/github-ci/actions/node/patch-version@v1
-#        with:
-#          version: ${{ needs.detect-version.outputs.version }}
-
       - name: Set gradle.properties
+        env:
+          GRADLE_PROPS: ${{ secrets.GRADLE_PROPERTIES }}
         run: |
-          printf "${{ secrets.GRADLE_PROPERTIES }}" >> ~/.gradle/gradle.properties
+          printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
 
-      - name: Build application
+      - name: Read actual project properties
+        id: gradle-props
+        uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
+        with:
+          project-dir: ${{ inputs.build-project }}
+          project-name: ${{ inputs.build-project-name }}
+
+      - name: Build dist tar
+        if: inputs.build-tar
         run: |
-          ./gradlew :api-for-gui:dockerBuildImage
+          ./gradlew \
+            --project-prop "version=${{ needs.detect-version.outputs.version }}" \
+            :${{ inputs.build-project }}:distTar
 
-#      - name: Save artifact with Mac OS X application
-#        uses: actions/upload-artifact@v2
-#        if: runner.os == 'macOS'
-#        with:
-#          name: ${{ inputs.app-name-slug }}-mac
-#          path: dist_electron/*.dmg
-#          retention-days: ${{ inputs.artifacts-retention }}
-#
-#      - name: Save artifact with Linux application
-#        uses: actions/upload-artifact@v2
-#        if: runner.os == 'Linux'
-#        with:
-#          name: ${{ inputs.app-name-slug }}-linux
-#          path: dist_electron/*.AppImage
-#          retention-days: ${{ inputs.artifacts-retention }}
+      - name: Save artifact with dist tar
+        if: inputs.build-tar
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ inputs.app-name-slug }}-tar
+          path: ${{ steps.gradle-props.outputs.buildDir }}/distributions/*.tar
+          retention-days: ${{ inputs.artifacts-retention }}
+
+      - name: Build docker image
+        if: |
+          inputs.build-docker ||
+            ( inputs.build-docker-releases
+              && startsWith( needs.detect-version.outputs.tag, 'v') )
+        run: |
+          ./gradlew \
+            --project-prop "version=${{ needs.detect-version.outputs.version }}" \
+            :${{ inputs.build-project }}:dockerBuildImage
+
+      - name: Generate push targets list
+        id: push-targets
+        if: |
+          inputs.build-docker ||
+            ( inputs.build-docker-releases
+              && startsWith( needs.detect-version.outputs.tag, 'v') )
+
+        uses: milaboratory/github-ci/actions/shell@v1
+        env:
+          BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
+          BUILD_VERSION: ${{ needs.detect-version.outputs.version }}
+        with:
+          run: |
+            # Always push '<tag name>:<version>' 'as is'
+            echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:${BUILD_VERSION}"
+
+      - name: Publish docker image to GitHub registry
+        if: |
+          inputs.build-docker ||
+            ( inputs.build-docker-releases
+              && startsWith( needs.detect-version.outputs.tag, 'v') )
+        uses: milaboratory/github-ci/actions/docker/push-github@v1
+        with:
+          auth-token: ${{ secrets.GITHUB_TOKEN }}
+          source: ${{ steps.gradle-props.outputs.name }}:${{ needs.detect-version.outputs.version }}
+          targets: ${{ steps.push-targets.outputs.stdout }}
 
       #
       # Release-only steps
       #
       - name: Create release
         id: create-release
-        # if: startsWith( needs.detect-version.outputs.tag, 'v')
-        if: 'false'
+        if: startsWith( needs.detect-version.outputs.tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -196,8 +259,7 @@ jobs:
           tag: ${{ needs.detect-version.outputs.tag }}
 
           assets: |
-            dist_electron/*.dmg,
-            dist_electron/*.AppImage
+            ${{ steps.gradle-props.outputs.buildDir }}/distributions/*.tar
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
