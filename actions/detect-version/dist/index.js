@@ -44,24 +44,6 @@ function prepareRepository(depth) {
         return milib_1.git.ensureHistorySize(depth);
     });
 }
-function currentTag() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return milib_1.git.describe({
-            tags: true,
-            abbrev: 0,
-            exactMatch: true
-        });
-    });
-}
-function previousTag() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield milib_1.git.describe({
-            tags: true,
-            abbrev: 0,
-            ref: 'HEAD^'
-        });
-    });
-}
 function commitsCount(startRef, endRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const commits = yield milib_1.git.revList({ ref: `${startRef}..${endRef}` });
@@ -81,14 +63,17 @@ function detectVersions() {
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
         const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
-        const prevTag = yield previousTag();
+        const latestTag = yield milib_1.git.latestVersionTag();
+        const latestSha = yield milib_1.git.resolveRef(latestTag);
+        let latestVersion = (0, utils_1.sanitizeVersion)(latestTag);
+        const prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
         let prevVersion = (0, utils_1.sanitizeVersion)(prevTag);
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion = '';
         try {
-            curTag = yield currentTag();
+            curTag = yield milib_1.git.currentTag();
             curVersion = (0, utils_1.sanitizeVersion)(curTag);
         }
         catch (error) {
@@ -106,17 +91,23 @@ function detectVersions() {
             if (prevTag) {
                 prevVersion = (0, utils_1.canonizeVersion)(prevVersion);
             }
+            if (latestTag) {
+                latestVersion = (0, utils_1.canonizeVersion)(latestVersion);
+            }
         }
         core.debug(`current version: '${curVersion}'
 current tag: '${curTag}'
 previous version: '${prevVersion}'
 previous tag: '${prevTag}'`);
-        core.setOutput('version', curVersion);
-        core.setOutput('tag', curTag);
-        core.setOutput('sha', curSha);
-        core.setOutput('prev-version', prevVersion);
-        core.setOutput('prev-tag', prevTag);
-        core.setOutput('prev-sha', prevSha);
+        core.setOutput('current-version', curVersion);
+        core.setOutput('current-tag', curTag);
+        core.setOutput('current-sha', curSha);
+        core.setOutput('previous-version', prevVersion);
+        core.setOutput('previous-tag', prevTag);
+        core.setOutput('previous-sha', prevSha);
+        core.setOutput('latest-tag', latestTag);
+        core.setOutput('latest-sha', latestSha);
+        core.setOutput('latest-version', latestVersion);
     });
 }
 function run() {
@@ -1780,7 +1771,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ensureHistorySize = exports.fetchTags = exports.resolveRef = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
+exports.ensureHistorySize = exports.previousTag = exports.latestTag = exports.latestVersionTag = exports.currentTag = exports.listCommitTags = exports.fetchTags = exports.resolveRef = exports.tag = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
 const exec = __importStar(__nccwpck_require__(642));
 function git(...args) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1845,6 +1836,24 @@ function describe(opts) {
     });
 }
 exports.describe = describe;
+function tag(opts) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const cmd = ["tag"];
+        if (opts && opts.list)
+            cmd.push("--list");
+        if (opts && opts.pointsAt)
+            cmd.push(`--points-at=${opts.pointsAt}`);
+        if (opts && opts.merged)
+            cmd.push(`--merged=${opts.merged}`);
+        if (opts && opts.sort)
+            cmd.push(`--sort=${opts.sort}`);
+        if (opts && opts.ref)
+            cmd.push(opts.ref);
+        const tagResult = yield git(...cmd);
+        return tagResult.stdout.trim();
+    });
+}
+exports.tag = tag;
 /*
  * Complex git action helpers.
  * Here are functions that simplify common actions
@@ -1876,6 +1885,109 @@ function fetchTags(remote = "origin") {
     });
 }
 exports.fetchTags = fetchTags;
+/**
+ * Get all tags that point exactly to given commit (HEAD by default)
+ */
+function listCommitTags(ref = "HEAD") {
+    return __awaiter(this, void 0, void 0, function* () {
+        const tagsListStr = yield tag({
+            pointsAt: ref,
+        });
+        if (!tagsListStr) {
+            return [];
+        }
+        return tagsListStr.split("\n");
+    });
+}
+exports.listCommitTags = listCommitTags;
+/**
+ * Get tag that points exactly to given commit
+ * NOTE: when several tags point to given commit, the freshest (by tag's date)
+ *       is returned. This behavior is defined by git itself.
+ *       See 'man git-describe' for more info.
+ */
+function currentTag(ref = "HEAD") {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield describe({
+            tags: true,
+            abbrev: 0,
+            exactMatch: true,
+            ref,
+        });
+    });
+}
+exports.currentTag = currentTag;
+/**
+ * Get the latest version tag in repository
+ *   - if at least one tag with 'v' prefix exists in repository,
+ *     then only 'v'-prefixed tags are be treated
+ *   - tags are sorted as version numbers,
+ *     see 'man git-tag' -> '/version:refname'
+ *
+ * This usually gives the latest application release version.
+ */
+function latestVersionTag() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const tagsListStr = yield tag({
+            list: true,
+            sort: "version:refname",
+        });
+        const tagsList = tagsListStr.split("\n");
+        let vPrefixFound = false;
+        let latestVersion = "";
+        for (const v of tagsList) {
+            if (v.startsWith("v")) {
+                // Save only v-prefixed tags if we face at least one
+                vPrefixFound = true;
+                latestVersion = v;
+            }
+            else if (!vPrefixFound) {
+                // Update latest version number until we found at least one with 'v'-prefix.
+                latestVersion = v;
+            }
+        }
+        return latestVersion;
+    });
+}
+exports.latestVersionTag = latestVersionTag;
+/**
+ * Get first tag reachable from given commit.
+ * It is either tag that points directly to commit, or to any of its parents (closest parent).
+ *
+ * NOTE: when several tags point to single commit, the freshest (by tag's date) is returned.
+ *       This behavior is defined by git itself.
+ *       See 'man git-describe' for more info.
+ * @param ref
+ */
+function latestTag(ref = "HEAD") {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield describe({
+            tags: true,
+            abbrev: 0,
+            ref,
+        });
+    });
+}
+exports.latestTag = latestTag;
+/**
+ * Get first tag reachable from given commit's PARENT.
+ * This is useful when you try to detect changes between two versions of code.
+ * E.g.:
+ *  const curTag = currentTag('HEAD')
+ *  const prevTag = previousTag('HEAD')
+ *  const versionChanges = log({ref: `${prevTag}..${curTag}`})
+ *
+ * NOTE: when several tags point to single commit, the freshest (by tag's date)
+ *       is returned. This behavior is defined by git itself.
+ *       See 'man git-describe' for more info.
+ * @param ref
+ */
+function previousTag(ref = "HEAD") {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield latestTag(`${ref}^`);
+    });
+}
+exports.previousTag = previousTag;
 /**
  * Ensure git repository has history of at least <minCommits> size from <ref>.
  * If not, fetch at most <minCommits> of <ref> from <remote>.

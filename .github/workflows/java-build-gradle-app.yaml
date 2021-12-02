@@ -143,25 +143,30 @@ on:
         required: false
 
 jobs:
-  detect-version:
+  versions:
+    name: Versions Detection
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      - id: version-detector
+      - id: versions
         uses: milaboratory/github-ci/actions/detect-version@v1
         with:
           canonize: ${{ inputs.version-canonize }}
           fetch-depth: ${{ inputs.version-fetch-depth }}
 
     outputs:
-      version: ${{ steps.version-detector.outputs.version }}
-      tag: ${{ steps.version-detector.outputs.tag }}
-      sha: ${{ steps.version-detector.outputs.sha }}
+      current-version: ${{ steps.versions.outputs.curent-version }}
+      current-tag: ${{ steps.versions.outputs.curent-tag }}
+      current-sha: ${{ steps.versions.outputs.curent-sha }}
 
-      prev-version: ${{ steps.version-detector.outputs.prev-version }}
-      prev-tag: ${{ steps.version-detector.outputs.prev-tag }}
-      prev-sha: ${{ steps.version-detector.outputs.prev-sha }}
+      previous-version: ${{ steps.versions.outputs.previous-version }}
+      previous-tag: ${{ steps.versions.outputs.previous-tag }}
+      previous-sha: ${{ steps.versions.outputs.previous-sha }}
+
+      latest-version: ${{ steps.versions.outputs.latest-version }}
+      latest-tag: ${{ steps.versions.outputs.latest-tag }}
+      latest-sha: ${{ steps.versions.outputs.latest-sha }}
 
   build:
 
@@ -199,7 +204,7 @@ jobs:
         working-directory: ${{ inputs.build-project-dir }}
         run: |
           ./gradlew \
-            --project-prop "version=${{ needs.detect-version.outputs.version }}" \
+            --project-prop "version=${{ needs.versions.outputs.current-version }}" \
             :${{ inputs.build-project }}:distTar
 
       - name: Save artifact with tar distribution
@@ -214,11 +219,11 @@ jobs:
         if: |
           inputs.build-docker ||
             ( inputs.build-docker-releases
-              && startsWith( needs.detect-version.outputs.tag, 'v') )
+              && startsWith( needs.versions.outputs.current-tag, 'v') )
         working-directory: ${{ inputs.build-project-dir }}
         run: |
           ./gradlew \
-            --project-prop "version=${{ needs.detect-version.outputs.version }}" \
+            --project-prop "version=${{ needs.versions.outputs.current-version }}" \
             :${{ inputs.build-project }}:dockerBuildImage
 
       - name: Generate push targets list
@@ -226,12 +231,12 @@ jobs:
         if: |
           inputs.build-docker ||
             ( inputs.build-docker-releases
-              && startsWith( needs.detect-version.outputs.tag, 'v') )
+              && startsWith( needs.versions.outputs.current-tag, 'v') )
 
         uses: milaboratory/github-ci/actions/shell@v1
         env:
           BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
-          BUILD_VERSION: ${{ needs.detect-version.outputs.version }}
+          BUILD_VERSION: ${{ needs.versions.outputs.current-version }}
         with:
           run: |
             # Always push '<tag name>:<version>' 'as is'
@@ -241,11 +246,11 @@ jobs:
         if: |
           inputs.build-docker ||
             ( inputs.build-docker-releases
-              && startsWith( needs.detect-version.outputs.tag, 'v') )
+              && startsWith( needs.versions.outputs.current-tag, 'v') )
         uses: milaboratory/github-ci/actions/docker/push@v1
         with:
           auth-token: ${{ secrets.GITHUB_TOKEN }}
-          source: ${{ steps.gradle-props.outputs.name }}:${{ needs.detect-version.outputs.version }}
+          source: ${{ steps.gradle-props.outputs.name }}:${{ needs.versions.outputs.current-version }}
           targets: ${{ steps.push-targets.outputs.stdout }}
 
       #
@@ -253,13 +258,13 @@ jobs:
       #
       - name: Create release
         id: create-release
-        if: startsWith( needs.detect-version.outputs.tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: ${{ needs.detect-version.outputs.version }}
-          tag: ${{ needs.detect-version.outputs.tag }}
+          name: ${{ needs.versions.outputs.current-version }}
+          tag: ${{ needs.versions.outputs.current-tag }}
 
           assets: |
             ${{ steps.gradle-props.outputs.buildDir }}/distributions/*.tar
@@ -288,7 +293,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          build-version: ${{ needs.detect-version.outputs.version }}
+          build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
       - name: Report release is ready
@@ -299,4 +304,4 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          release-tag: ${{ needs.detect-version.outputs.tag }}
+          release-tag: ${{ needs.versions.outputs.current-tag }}

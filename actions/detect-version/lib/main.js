@@ -37,24 +37,6 @@ function prepareRepository(depth) {
         return milib_1.git.ensureHistorySize(depth);
     });
 }
-function currentTag() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return milib_1.git.describe({
-            tags: true,
-            abbrev: 0,
-            exactMatch: true
-        });
-    });
-}
-function previousTag() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield milib_1.git.describe({
-            tags: true,
-            abbrev: 0,
-            ref: 'HEAD^'
-        });
-    });
-}
 function commitsCount(startRef, endRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const commits = yield milib_1.git.revList({ ref: `${startRef}..${endRef}` });
@@ -74,14 +56,17 @@ function detectVersions() {
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
         const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
-        const prevTag = yield previousTag();
+        const latestTag = yield milib_1.git.latestVersionTag();
+        const latestSha = yield milib_1.git.resolveRef(latestTag);
+        let latestVersion = (0, utils_1.sanitizeVersion)(latestTag);
+        const prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
         let prevVersion = (0, utils_1.sanitizeVersion)(prevTag);
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion = '';
         try {
-            curTag = yield currentTag();
+            curTag = yield milib_1.git.currentTag();
             curVersion = (0, utils_1.sanitizeVersion)(curTag);
         }
         catch (error) {
@@ -99,17 +84,23 @@ function detectVersions() {
             if (prevTag) {
                 prevVersion = (0, utils_1.canonizeVersion)(prevVersion);
             }
+            if (latestTag) {
+                latestVersion = (0, utils_1.canonizeVersion)(latestVersion);
+            }
         }
         core.debug(`current version: '${curVersion}'
 current tag: '${curTag}'
 previous version: '${prevVersion}'
 previous tag: '${prevTag}'`);
-        core.setOutput('version', curVersion);
-        core.setOutput('tag', curTag);
-        core.setOutput('sha', curSha);
-        core.setOutput('prev-version', prevVersion);
-        core.setOutput('prev-tag', prevTag);
-        core.setOutput('prev-sha', prevSha);
+        core.setOutput('current-version', curVersion);
+        core.setOutput('current-tag', curTag);
+        core.setOutput('current-sha', curSha);
+        core.setOutput('previous-version', prevVersion);
+        core.setOutput('previous-tag', prevTag);
+        core.setOutput('previous-sha', prevSha);
+        core.setOutput('latest-tag', latestTag);
+        core.setOutput('latest-sha', latestSha);
+        core.setOutput('latest-version', latestVersion);
     });
 }
 function run() {

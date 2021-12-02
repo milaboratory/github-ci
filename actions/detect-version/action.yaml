@@ -26,24 +26,33 @@ inputs:
     default: 'false'
 
 outputs:
-  version:
+  current-version:
     description: |
       Version number read from git tags
-  tag:
+  current-tag:
     description: |
       Tag used for version detection 'as-is'
-  sha:
+  current-sha:
     description: |
       Full hash of git commit the version belongs to
-  prev-version:
+  previous-version:
     description: |
       Previous version number read from git tags
-  prev-tag:
+  previous-tag:
     description: |
       Previous version tag 'as-is'
-  prev-sha:
+  previous-sha:
     description: |
       Full hash of git commit the previous version belongs to
+  latest-version:
+    description: |
+      The latest version number we could read from git tags
+  latest-tag:
+    description: |
+      The latest version tag 'as-is' (sorted as version numbers)
+  latest-sha:
+    description: |
+      Full hash of git commit the latest version belongs to
 
 runs:
   using: 'node12'

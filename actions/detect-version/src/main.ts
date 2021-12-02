@@ -30,6 +30,10 @@ async function detectVersions(): Promise<void> {
 
   await prepareRepository(fetchDepth)
 
+  const latestTag = await git.latestVersionTag()
+  const latestSha = await git.resolveRef(latestTag)
+  let latestVersion = sanitizeVersion(latestTag)
+
   const prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
   let prevVersion = sanitizeVersion(prevTag)
@@ -59,6 +63,9 @@ async function detectVersions(): Promise<void> {
     if (prevTag) {
       prevVersion = canonizeVersion(prevVersion)
     }
+    if (latestTag) {
+      latestVersion = canonizeVersion(latestVersion)
+    }
   }
 
   core.debug(
@@ -68,12 +75,15 @@ previous version: '${prevVersion}'
 previous tag: '${prevTag}'`
   )
 
-  core.setOutput('version', curVersion)
-  core.setOutput('tag', curTag)
-  core.setOutput('sha', curSha)
-  core.setOutput('prev-version', prevVersion)
-  core.setOutput('prev-tag', prevTag)
-  core.setOutput('prev-sha', prevSha)
+  core.setOutput('current-version', curVersion)
+  core.setOutput('current-tag', curTag)
+  core.setOutput('current-sha', curSha)
+  core.setOutput('previous-version', prevVersion)
+  core.setOutput('previous-tag', prevTag)
+  core.setOutput('previous-sha', prevSha)
+  core.setOutput('latest-tag', latestTag)
+  core.setOutput('latest-sha', latestSha)
+  core.setOutput('latest-version', latestVersion)
 }
 
 async function run(): Promise<void> {

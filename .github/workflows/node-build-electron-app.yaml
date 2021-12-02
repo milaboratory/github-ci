@@ -115,25 +115,30 @@ on:
         required: false
 
 jobs:
-  detect-version:
+  versions:
+    name: Versions Detection
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      - id: version-detector
+      - id: versions
         uses: milaboratory/github-ci/actions/detect-version@v1
         with:
           canonize: ${{ inputs.version-canonize }}
           fetch-depth: ${{ inputs.version-fetch-depth }}
 
     outputs:
-      version: ${{ steps.version-detector.outputs.version }}
-      tag: ${{ steps.version-detector.outputs.tag }}
-      sha: ${{ steps.version-detector.outputs.sha }}
+      current-version: ${{ steps.versions.outputs.curent-version }}
+      current-tag: ${{ steps.versions.outputs.curent-tag }}
+      current-sha: ${{ steps.versions.outputs.curent-sha }}
 
-      prev-version: ${{ steps.version-detector.outputs.prev-version }}
-      prev-tag: ${{ steps.version-detector.outputs.prev-tag }}
-      prev-sha: ${{ steps.version-detector.outputs.prev-sha }}
+      previous-version: ${{ steps.versions.outputs.previous-version }}
+      previous-tag: ${{ steps.versions.outputs.previous-tag }}
+      previous-sha: ${{ steps.versions.outputs.previous-sha }}
+
+      latest-version: ${{ steps.versions.outputs.latest-version }}
+      latest-tag: ${{ steps.versions.outputs.latest-tag }}
+      latest-sha: ${{ steps.versions.outputs.latest-sha }}
 
   build:
     strategy:
@@ -161,7 +166,7 @@ jobs:
       - name: Patch package version
         uses: milaboratory/github-ci/actions/node/patch-version@v1
         with:
-          version: ${{ needs.detect-version.outputs.version }}
+          version: ${{ needs.versions.outputs.current-version }}
 
       - name: Build application
         run: |
@@ -188,13 +193,13 @@ jobs:
       #
       - name: Create release
         id: create-release
-        if: startsWith( needs.detect-version.outputs.tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: ${{ needs.detect-version.outputs.version }}
-          tag: ${{ needs.detect-version.outputs.tag }}
+          name: ${{ needs.versions.outputs.current-version }}
+          tag: ${{ needs.versions.outputs.current-tag }}
 
           assets: |
             dist_electron/*.dmg,
@@ -224,7 +229,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          build-version: ${{ needs.detect-version.outputs.version }}
+          build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
       - name: Report release is ready
@@ -235,4 +240,4 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          release-tag: ${{ needs.detect-version.outputs.tag }}
+          release-tag: ${{ needs.versions.outputs.current-tag }}
