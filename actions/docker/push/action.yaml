@@ -112,5 +112,5 @@ runs:
           ghwa_endgroup
         done <<<"${PUSH_TARGETS}"
 
-        ghwa_notice "Pushed Docker tags (expand to see the list):"$'\n'"${PUSH_TARGETS}"
+        ghwa_notice "Pushed Docker tags:"$'\n'"${PUSH_TARGETS}"
         ghwa_set_output "pushed" "${PUSH_TARGETS}"
