@@ -78,9 +78,11 @@ previous tag: '${prevTag}'`
   core.setOutput('current-version', curVersion)
   core.setOutput('current-tag', curTag)
   core.setOutput('current-sha', curSha)
+
   core.setOutput('previous-version', prevVersion)
   core.setOutput('previous-tag', prevTag)
   core.setOutput('previous-sha', prevSha)
+
   core.setOutput('latest-tag', latestTag)
   core.setOutput('latest-sha', latestSha)
   core.setOutput('latest-version', latestVersion)
