@@ -72,7 +72,7 @@ on:
           Each 'branch' build is stored
         type: boolean
         required: false
-        default: false
+        default: true
 
       build-tar:
         description: |
