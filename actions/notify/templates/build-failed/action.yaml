@@ -37,6 +37,7 @@ runs:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}
         format: markdown
+        disable_web_page_preview: true
         message: |
           💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
 
