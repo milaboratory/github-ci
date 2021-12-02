@@ -22,6 +22,12 @@ inputs:
       Release tag. Optional, defaults to github.sha
     required: true
 
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
 runs:
   using: "composite"
 
@@ -37,3 +43,5 @@ runs:
           - [View Release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
           - [Source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
           - [All releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
+
+          ${{ inputs.additional-info }}

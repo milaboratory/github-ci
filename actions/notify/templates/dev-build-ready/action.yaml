@@ -27,6 +27,12 @@ inputs:
     required: false
     default: 'dev'
 
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
 runs:
   using: "composite"
 
@@ -44,3 +50,5 @@ runs:
 
           - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
           - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+
+          ${{ inputs.additional-info }}
