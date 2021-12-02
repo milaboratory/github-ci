@@ -215,3 +215,6 @@ function ghwa_add_to_path() {
 
   echo "${_path}" >> "${GITHUB_PATH}"
 }
+
+set -o nounset
+set -o errexit
