@@ -148,7 +148,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     needs:
-      - detect-version
+      - versions
 
     steps:
       - uses: actions/checkout@v2
@@ -217,7 +217,7 @@ jobs:
     if: inputs.notify-telegram
 
     needs:
-      - detect-version
+      - versions
       - build
 
     steps:
