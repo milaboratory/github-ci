@@ -24,9 +24,11 @@ function trim_empty_lines() {
 # We should ignore them, e.g. when parsing properties
 function trim_gradle_headers() {
     awk '
-      BEGIN{ del=false }
-      /^-----------/{ del=!del;
+      BEGIN { del=false }
+
+      /^-----------/{ del = !del;
                       next }
+
       !del { print }'
 }
 
