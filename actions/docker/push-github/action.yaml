@@ -75,6 +75,8 @@ runs:
         TAG_NAME: ${{ inputs.tag-name }}
         TAG_VERSION: ${{ inputs.tag-version }}
       run: |
+        # Render tag names for publishing
+
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
         ghwa_set_output "versioned" "ghcr.io/${TARGET_REPO}/${TAG_NAME}:${TAG_VERSION}"
@@ -87,6 +89,8 @@ runs:
         TAG_NAME: ${{ inputs.tag-name }}
         TAG_VERSION: ${{ inputs.tag-version }}
       run: |
+        # Push versioned tag
+
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
         ghwa_group "Pushing tag '${{ steps.target-tags.outputs.versioned }}'..."
@@ -108,6 +112,8 @@ runs:
         TAG_VERSION: ${{ inputs.tag-version }}
       if: inputs.update-latest
       run: |
+        # Push latest tag
+
         source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
         ghwa_group "Pushing tag '${{ steps.target-tags.outputs.latest }}'..."
