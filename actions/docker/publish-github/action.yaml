@@ -17,8 +17,7 @@ inputs:
     description: |
       Authentication token for docker registry.
       Use secrets.GITHUB_TOKEN
-    required: false
-    default: ${{ secrets.GITHUB_TOKEN }}
+    required: true
 
   auth-user:
     description: |
