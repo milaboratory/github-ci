@@ -1,5 +1,5 @@
-# This workflow will prepare given version of Java and use it
-# to build gradle application. All gradle dependencies will be cached for next runs.
+# This workflow will prepare given version of Java and use it to build gradle application.
+# All gradle dependencies will be cached for next runs.
 
 name: Build Java Application
 
@@ -194,7 +194,7 @@ jobs:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project-name }}
 
-      - name: Build dist tar
+      - name: Build tar distribution
         if: inputs.build-tar
         working-directory: ${{ inputs.build-project-dir }}
         run: |
@@ -202,7 +202,7 @@ jobs:
             --project-prop "version=${{ needs.detect-version.outputs.version }}" \
             :${{ inputs.build-project }}:distTar
 
-      - name: Save artifact with dist tar
+      - name: Save artifact with tar distribution
         if: inputs.build-tar
         uses: actions/upload-artifact@v2
         with:
