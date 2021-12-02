@@ -248,6 +248,7 @@ jobs:
             fi
 
       - name: Publish docker image to GitHub registry
+        id: push
         if: inputs.build-docker
 
         uses: milaboratory/github-ci/actions/docker/push@v1
@@ -277,6 +278,7 @@ jobs:
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
+      docker-tags: ${{ steps.push.outputs.pushed }}
 
   notify-telegram:
 
@@ -300,6 +302,10 @@ jobs:
           product-name: ${{ inputs.app-name }}
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
+
+          additional-info: |
+            Docker tags:
+            ${{ needs.build.docker-tags }}
 
       - name: Report release is ready
         if: needs.build.outputs.release-id != ''
