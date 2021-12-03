@@ -9,6 +9,12 @@ inputs:
       Shell script body
     required: true
 
+  dump-stdout:
+    description: |
+      Save script's stdout to action's outputs.stdout
+    required: false
+    default: 'true'
+
 outputs:
   stdout:
     description: Script's stdout. Saved only on script's zero exit code
@@ -26,6 +32,8 @@ runs:
     - name: Read and print properties
       id: script
       shell: bash
+      env:
+        MISH_DUMP_STDOUT: ${{ inputs.dump-stdout }}
       run: |
         # Generate and run script, saving full STDOUT to step's output
 
@@ -47,8 +55,17 @@ runs:
         EndOfTmpScript-${end_marker}
 
         echo "Running script..."
-
         chmod u+x "${tmp_script_path}"
+
+        if [ "${MISH_DUMP_STDOUT}" != 'true'; then
+          # Don't duplicate script's stdout to file.
+          # We won't need it.
+
+          "${tmp_script_path}"
+          exit 0
+        fi
+
+        # Dump all script's stdout to temp file and save it into step's output.
         set -o pipefail # its important for us to not mask script exit code with 'tee'
         "${tmp_script_path}" | tee "${tmp_script_output}"
 
