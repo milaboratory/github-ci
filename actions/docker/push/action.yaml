@@ -125,5 +125,5 @@ runs:
         # Convert list of strings into valid JSON array
         ghwa_set_output "pushed-json" "$(
           jq --raw-input . <<<"${PUSH_TARGETS}" | # escape each line as JSON string
-          jq --slurp . # Convert list of escaped lines into JSON array
+          jq --slurp --compact . # Convert list of escaped lines into JSON array
         )"
