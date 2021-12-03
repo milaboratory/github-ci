@@ -32,7 +32,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}
