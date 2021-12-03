@@ -59,10 +59,12 @@ runs:
           - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
 
           {%- if docker_images | length > 0 %}
-          {% for i in docker_images %}
+
+          Docker images:
+          {%- for i in docker_images %}
           - {{ i }}
-          {% endfor %}
-          {% endif %}
+          {%- endfor %}
+          {%- endif %}
 
           ${{ inputs.additional-info }}
 

@@ -52,10 +52,12 @@ runs:
           - [All releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
 
           {%- if docker_images | length > 0 %}
-          {% for i in docker_images %}
+
+          Docker images:
+          {%- for i in docker_images %}
           - {{ i }}
-          {% endfor %}
-          {% endif %}
+          {%- endfor %}
+          {%- endif %}
 
           ${{ inputs.additional-info }}
 
