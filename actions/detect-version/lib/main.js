@@ -77,6 +77,7 @@ function detectVersions() {
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
         const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
+        const isRemoteLatestCommit = yield isBranchHead();
         const latestTag = yield milib_1.git.latestVersionTag();
         const latestSha = yield milib_1.git.resolveRef(latestTag);
         let latestVersion = (0, utils_1.sanitizeVersion)(latestTag);
@@ -127,7 +128,7 @@ latest tag: '${latestTag}'
         core.setOutput('latest-tag', latestTag);
         core.setOutput('latest-sha', latestSha);
         core.setOutput('latest-version', latestVersion);
-        core.setOutput('is-branch-head', yield isBranchHead());
+        core.setOutput('is-branch-head', isRemoteLatestCommit);
     });
 }
 function run() {

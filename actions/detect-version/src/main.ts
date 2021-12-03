@@ -53,6 +53,8 @@ async function detectVersions(): Promise<void> {
 
   await prepareRepository(fetchDepth)
 
+  const isRemoteLatestCommit = await isBranchHead()
+
   const latestTag = await git.latestVersionTag()
   const latestSha = await git.resolveRef(latestTag)
   let latestVersion = sanitizeVersion(latestTag)
@@ -115,7 +117,7 @@ latest tag: '${latestTag}'
   core.setOutput('latest-sha', latestSha)
   core.setOutput('latest-version', latestVersion)
 
-  core.setOutput('is-branch-head', await isBranchHead())
+  core.setOutput('is-branch-head', isRemoteLatestCommit)
 }
 
 async function run(): Promise<void> {
