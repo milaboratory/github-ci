@@ -45,13 +45,13 @@ inputs:
     required: true
 
 outputs:
-  pushed-tags:
+  pushed:
     description: |
       Newline separated list of full tag names pushed to target registry
       (including registry name prefix).
     value: ${{ steps.push.outputs.pushed }}
 
-  pushed-tags-json:
+  pushed-json:
     description: |
       List of pushed tags as JSON string.
       Use 'fromJSON()' to decode.
@@ -125,5 +125,5 @@ runs:
         # Convert list of strings into valid JSON array
         ghwa_set_output "pushed-json" "$(
           jq --raw-input . <<<"${PUSH_TARGETS}" | # escape each line as JSON string
-          jq --slurp --compact . # Convert list of escaped lines into JSON array
+          jq --slurp --compact-output . # Convert list of escaped lines into JSON array
         )"

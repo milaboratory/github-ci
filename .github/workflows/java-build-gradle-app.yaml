@@ -278,7 +278,7 @@ jobs:
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
-      docker-tags: ${{ steps.docker-push.outputs.pushed-tags }}
+      docker-tags: ${{ steps.docker-push.outputs.pushed }}
 
   notify-telegram:
 
