@@ -57,7 +57,7 @@ runs:
         echo "Running script..."
         chmod u+x "${tmp_script_path}"
 
-        if [ "${MISH_DUMP_STDOUT}" != 'true'; then
+        if [ "${MISH_DUMP_STDOUT}" != 'true' ]; then
           # Don't duplicate script's stdout to file.
           # We won't need it.
 
