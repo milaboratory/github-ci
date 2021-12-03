@@ -143,7 +143,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v1
       id: out-path
       env:
-        OUTPUT_FILE: inputs.out-file
+        OUTPUT_FILE: ${{ inputs.out-file }}
       with:
         run: |
           if [ -n "${OUTPUT_FILE}" ] ; then
