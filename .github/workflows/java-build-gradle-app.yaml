@@ -278,7 +278,7 @@ jobs:
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
-      docker-tags: ${{ steps.docker-push.outputs.pushed }}
+      docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   notify-telegram:
 
@@ -302,10 +302,7 @@ jobs:
           product-name: ${{ inputs.app-name }}
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
-
-          additional-info: |
-            Docker tags:
-            ${{ needs.build.outputs.docker-tags }}
+          docker-images: ${{ needs.build.outputs.docker-tags }}
 
       - name: Report release is ready
         if: needs.build.outputs.release-id != ''
@@ -316,3 +313,4 @@ jobs:
 
           product-name: ${{ inputs.app-name }}
           release-tag: ${{ needs.versions.outputs.current-tag }}
+          docker-images: ${{ needs.build.outputs.docker-tags }}
