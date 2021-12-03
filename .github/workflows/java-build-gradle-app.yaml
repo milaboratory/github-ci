@@ -165,6 +165,8 @@ jobs:
       latest-tag: ${{ steps.versions.outputs.latest-tag }}
       latest-sha: ${{ steps.versions.outputs.latest-sha }}
 
+      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+
   build:
 
     name: Build application
@@ -230,6 +232,7 @@ jobs:
         env:
           IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
           IS_LATEST_RELESE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
+          IS_BRANCH_HEAD: ${{ needs.versions.outputs.is-branch-head }}
           BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
           BUILD_VERSION: ${{ needs.versions.outputs.current-version }}
         with:
@@ -243,8 +246,11 @@ jobs:
                 echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest"
               fi
             else
-              # For branch builds update :latest-<branch> tag
-              echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
+              if [ "${IS_BRANCH_HEAD}" = 'true' ]; then
+                # For branch builds update :latest-<branch> tag when we build
+                # latest branch commit
+                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
+              fi
             fi
 
       - name: Publish docker image to GitHub registry
