@@ -51,6 +51,12 @@ outputs:
       (including registry name prefix).
     value: ${{ steps.push.outputs.pushed }}
 
+  pushed-tags-json:
+    description: |
+      List of pushed tags as JSON string.
+      Use 'fromJSON()' to decode.
+    value: ${{ steps.push.outputs.pushed-json }}
+
 runs:
   using: "composite"
 
@@ -85,6 +91,7 @@ runs:
 
         result="$(
           while read -r target_tag; do
+            # Don't try to push empty tags
             if [ -n "${target_tag// /}" ]; then
               echo "${TARGET_REGISTRY}/${target_tag}"
             fi
@@ -114,3 +121,9 @@ runs:
 
         ghwa_notice "Pushed Docker tags:"$'\n'"${PUSH_TARGETS}"
         ghwa_set_output "pushed" "${PUSH_TARGETS}"
+
+        # Convert list of strings into valid JSON array
+        ghwa_set_output "pushed-json" "$(
+          jq --raw-input . <<<"${PUSH_TARGETS}" | # escape each line as JSON string
+          jq --slurp . # Convert list of escaped lines into JSON array
+        )"
