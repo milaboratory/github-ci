@@ -29,21 +29,15 @@ runs:
   using: "composite"
 
   steps:
-    - name: Read and print properties
-      id: script
+    - name: Generate script
+      id: script-generator
       shell: bash
-      env:
-        MISH_DUMP_STDOUT: ${{ inputs.dump-stdout }}
       run: |
-        # Generate and run script, saving full STDOUT to step's output
-
-        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+        # Generate '${{ github.action }}':
 
         tmp_script_path="${{ github.action_path }}/tmp-script.sh"
-        tmp_script_output="${{ github.action_path }}/tmp-script.stdout"
 
-        echo "Generating tmp script at '${tmp_script_path}'..."
-
+        # Generate and run script, saving full STDOUT to step's output
         end_marker="$(date "+%s%N" | shasum -a 256 | awk '{print $1}')"
         cat >"${tmp_script_path}" <<"EndOfTmpScript-${end_marker}"
         #!/usr/bin/env bash
@@ -54,8 +48,21 @@ runs:
 
         EndOfTmpScript-${end_marker}
 
-        echo "Running script..."
         chmod u+x "${tmp_script_path}"
+
+    - name: Run script
+      id: script
+      shell: bash
+      env:
+        MISH_DUMP_STDOUT: ${{ inputs.dump-stdout }}
+
+      run: |
+        # Run '${{ github.action }}'
+
+        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+
+        tmp_script_path="${{ github.action_path }}/tmp-script.sh"
+        tmp_script_output="${{ github.action_path }}/tmp-script.stdout"
 
         if [ "${MISH_DUMP_STDOUT}" != 'true' ]; then
           # Don't duplicate script's stdout to file.
