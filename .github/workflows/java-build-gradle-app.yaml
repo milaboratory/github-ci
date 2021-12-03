@@ -231,7 +231,7 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v1
         env:
           IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-          IS_LATEST_RELESE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
+          IS_LATEST_RELEASE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
           IS_BRANCH_HEAD: ${{ needs.versions.outputs.is-branch-head }}
           BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
           BUILD_VERSION: ${{ needs.versions.outputs.current-version }}
