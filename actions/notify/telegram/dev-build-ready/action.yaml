@@ -27,6 +27,12 @@ inputs:
     required: false
     default: 'dev'
 
+  docker-images:
+    description: |
+      List of docker images related to build in JSON format
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -37,13 +43,13 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/notify/telegram@v1
+    - uses: milaboratory/github-ci/actions/templates/jinja@v1
+      id: message
       with:
-        to: ${{ inputs.telegram-target }}
-        token: ${{ inputs.telegram-token }}
-        format: markdown
-        disable_web_page_preview: true
-        message: |
+        data: |
+          { "docker_images": ${{ inputs.docker-images }} }
+
+        template: |
           🚧 \[${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
 
           Branch: ${{ github.ref_name }}
@@ -52,4 +58,18 @@ runs:
           - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
           - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
 
+          {%- if docker_images | length > 0 %}
+          {% for i in docker_images %}
+          - {{ i }}
+          {% endfor %}
+          {% endif %}
+
           ${{ inputs.additional-info }}
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1-beta
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: ${{ steps.message.outputs.data }}

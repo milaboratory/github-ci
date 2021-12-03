@@ -294,7 +294,7 @@ jobs:
     steps:
       - name: Report dev build is ready
         if: needs.build.outputs.release-id == ''
-        uses: milaboratory/github-ci/actions/notify/templates/dev-build-ready@v1
+        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -309,7 +309,7 @@ jobs:
 
       - name: Report release is ready
         if: needs.build.outputs.release-id != ''
-        uses: milaboratory/github-ci/actions/notify/templates/release-ready@v1
+        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

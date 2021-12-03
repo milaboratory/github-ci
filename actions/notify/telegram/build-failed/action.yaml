@@ -1,6 +1,6 @@
 name: Telegram Message
 description: |
-  Notify User or Channel about successful release in repository
+  Notify User or Channel about build failure
 
 inputs:
   telegram-target:
@@ -14,12 +14,12 @@ inputs:
 
   product-name:
     description: |
-      Name of product that was released
+      Name of product that was built
     required: false
     default: ${{ github.repository }}
-  release-tag:
+  build-version:
     description: |
-      Release tag. Optional, defaults to github.sha
+      Build version to display in message
     required: true
 
   additional-info:
@@ -32,17 +32,19 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/notify/telegram@v1
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1-beta
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}
         format: markdown
         disable_web_page_preview: true
         message: |
-          🔖 \[${{ inputs.product-name }}] New version was released: ${{ inputs.release-tag }}
+          💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
 
-          - [View Release on GitHub](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.release-tag }})
-          - [Source code on GitHub](${{ github.server_url }}/${{ github.repository }}/tree/${{ inputs.release-tag }})
-          - [All releases of ${{ inputs.product-name }}](${{ github.server_url }}/${{ github.repository }}/releases/)
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+
+          - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
+          - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
 
           ${{ inputs.additional-info }}
