@@ -50,6 +50,27 @@ function genDevVersion(baseVersion, baseRef) {
         return `${baseVersion}-${count}-${currentRefName}`;
     });
 }
+/**
+ * Check if action was started from branch AND current commit is
+ * repository's branch head.
+ */
+function isBranchHead() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const refType = process.env.GITHUB_REF_TYPE;
+        const refName = process.env.GITHUB_REF_NAME;
+        const currentSha = process.env.GITHUB_SHA;
+        if (refType !== 'branch') {
+            return false;
+        }
+        yield milib_1.git.fetch({
+            deepen: 1,
+            remote: 'origin',
+            refSpec: refName
+        });
+        const remoteRefSha = yield milib_1.git.resolveRef(`origin/${refName}`);
+        return remoteRefSha === currentSha;
+    });
+}
 function detectVersions() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
@@ -90,8 +111,13 @@ function detectVersions() {
         }
         core.debug(`current version: '${curVersion}'
 current tag: '${curTag}'
+
 previous version: '${prevVersion}'
-previous tag: '${prevTag}'`);
+previous tag: '${prevTag}'
+
+latest version: '${latestVersion}'
+latest tag: '${latestTag}'
+`);
         core.setOutput('current-version', curVersion);
         core.setOutput('current-tag', curTag);
         core.setOutput('current-sha', curSha);
@@ -101,6 +127,7 @@ previous tag: '${prevTag}'`);
         core.setOutput('latest-tag', latestTag);
         core.setOutput('latest-sha', latestSha);
         core.setOutput('latest-version', latestVersion);
+        core.setOutput('is-branch-head', yield isBranchHead());
     });
 }
 function run() {

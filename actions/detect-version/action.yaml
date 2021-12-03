@@ -53,6 +53,12 @@ outputs:
   latest-sha:
     description: |
       Full hash of git commit the latest version belongs to
+  is-branch-head:
+    description: |
+      Checks if remote version of current branch points to the same SHA as local.
+
+      This can be used to detect old workflow restarts when needed, for example
+      to prevent :latest docker image tag from being replaced by old workflow.
 
 runs:
   using: 'node12'

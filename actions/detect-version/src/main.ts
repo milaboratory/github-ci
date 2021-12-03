@@ -23,6 +23,29 @@ async function genDevVersion(
   return `${baseVersion}-${count}-${currentRefName}`
 }
 
+/**
+ * Check if action was started from branch AND current commit is
+ * repository's branch head.
+ */
+async function isBranchHead(): Promise<boolean> {
+  const refType = process.env.GITHUB_REF_TYPE as string
+  const refName = process.env.GITHUB_REF_NAME as string
+  const currentSha = process.env.GITHUB_SHA as string
+
+  if (refType !== 'branch') {
+    return false
+  }
+
+  await git.fetch({
+    deepen: 1,
+    remote: 'origin',
+    refSpec: refName
+  })
+
+  const remoteRefSha = await git.resolveRef(`origin/${refName}`)
+  return remoteRefSha === currentSha
+}
+
 async function detectVersions(): Promise<void> {
   // Read inputs
   const fetchDepth: number = parseInt(core.getInput('fetch-depth'))
@@ -71,8 +94,13 @@ async function detectVersions(): Promise<void> {
   core.debug(
     `current version: '${curVersion}'
 current tag: '${curTag}'
+
 previous version: '${prevVersion}'
-previous tag: '${prevTag}'`
+previous tag: '${prevTag}'
+
+latest version: '${latestVersion}'
+latest tag: '${latestTag}'
+`
   )
 
   core.setOutput('current-version', curVersion)
@@ -86,6 +114,8 @@ previous tag: '${prevTag}'`
   core.setOutput('latest-tag', latestTag)
   core.setOutput('latest-sha', latestSha)
   core.setOutput('latest-version', latestVersion)
+
+  core.setOutput('is-branch-head', await isBranchHead())
 }
 
 async function run(): Promise<void> {
