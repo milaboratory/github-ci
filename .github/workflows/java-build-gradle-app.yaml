@@ -238,18 +238,18 @@ jobs:
         with:
           run: |
             # Always push '<tag name>:<version>' 'as is'
-            echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:${BUILD_VERSION}"
+            echo "${GITHUB_REPOSITORY}/${BUILD_NAME,,}:${BUILD_VERSION,,}"
 
             if [ "${IS_RELEASE}" = 'true' ]; then
               if [ "${IS_LATEST_RELEASE}" = 'true' ]; then
                 # For latest releases also update :latest tag
-                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest"
+                echo "${GITHUB_REPOSITORY}/${BUILD_NAME,,}:latest"
               fi
             else
               if [ "${IS_BRANCH_HEAD}" = 'true' ]; then
                 # For branch builds update :latest-<branch> tag when we build
                 # latest branch commit
-                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
+                echo "${GITHUB_REPOSITORY}/${BUILD_NAME,,}:latest-${GITHUB_REF_NAME,,}"
               fi
             fi
 
