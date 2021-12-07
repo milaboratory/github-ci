@@ -6,8 +6,8 @@ description: |
 inputs:
   test:
     description: |
-      Tests to run. Regular shell script.
-
+      Tests to run.
+      This is a regular shell script with 'ghwa_commands' and 'testlib' libraries loaded.
       You can use test_* functions to perform checks
 
     required: true
