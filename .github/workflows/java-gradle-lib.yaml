@@ -211,14 +211,14 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/prefix@v1
         with:
           input: ${{ inputs.build-tasks }}
-          prefix: ${{ inputs.build-project }}
+          prefix: ":${{ inputs.build-project }}:"
 
       - name: Render publish tasks list
         id: publish-tasks
         uses: milaboratory/github-ci/actions/strings/prefix@v1
         with:
           input: ${{ inputs.publish-tasks }}
-          prefix: ${{ inputs.build-project }}
+          prefix: ":${{ inputs.build-project }}:"
 
       - name: Build library
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
