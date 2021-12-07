@@ -231,3 +231,7 @@ function ghwa_add_to_path() {
 
 set -o nounset
 set -o errexit
+
+: "${MICI_DEBUG:=true}"
+
+[ "${MICI_DEBUG}" = "true" ] && set -x
