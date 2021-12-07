@@ -1,0 +1,51 @@
+name: Run 'gradlew'
+author: 'MiLaboratories'
+description: |
+  Run 'gradlew' script located in gradle project proot
+
+inputs:
+  tasks:
+    description: |
+      Newline-separated list of tasks to run.
+    required: true
+
+  properties:
+    description: |
+      Properties to set for each task run
+    required: false
+    default: ''
+
+  working-directory:
+    description: |
+      Path to directory with ./gradlew file
+    required: false
+    default: ./
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Run 'gradlew ${{ inputs.target }}'
+      shell: bash
+
+      env:
+        GRADLE_PROPERTIES: ${{ inputs.properties }}
+        GRADLE_TASKS: ${{ inputs.tasks }}
+
+      run: |
+        set -o nounset
+        set -o errexit
+
+        props=(
+          --project-prop "mi-ci=true"
+          --project-prop "mi-release=false"
+        )
+        while read -r gradle_prop; do
+          if [ -n "${gradle_prop}" ]; then
+            props+=(--project-prop "${gradle_prop}")
+          fi
+        done <<<"${GRADLE_PROPERTIES}"
+
+        while read -r task; do
+          ./gradlew "${props[@]}" "${task}"
+        done <<<"${GRADLE_TASKS}"
