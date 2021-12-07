@@ -281,7 +281,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ inputs.lib-name }}
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
@@ -292,5 +292,5 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ inputs.lib-name }}
           release-tag: ${{ needs.versions.outputs.current-tag }}
