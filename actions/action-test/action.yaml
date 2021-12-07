@@ -1,0 +1,29 @@
+name: Run shell script with action tests library
+author: 'MiLaboratories'
+description: |
+  Run shell script with action tests library loaded
+
+inputs:
+  test:
+    description: |
+      Tests to run. Regular shell script.
+
+      You can use test_* functions to perform checks
+
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Run tests
+      id: tests
+      uses: milaboratory/github-ci/actions/shell@v1
+      with:
+        dump-stdout: false
+        run: |
+          source "${{ github.action_path }}/testlib.sh"
+
+          ${{ inputs.tests }}
+
+          _check_status
