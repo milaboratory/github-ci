@@ -24,6 +24,6 @@ runs:
         run: |
           source "${{ github.action_path }}/testlib.sh"
 
-          ${{ inputs.tests }}
+          ${{ inputs.test }}
 
           _check_status
