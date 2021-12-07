@@ -77,7 +77,7 @@ on:
           NOTE: for 'publish*' tasks use 'publish-tasks' input.
 
         type: string
-        required: true
+        required: false
         default: build
 
       artifacts-retention:
