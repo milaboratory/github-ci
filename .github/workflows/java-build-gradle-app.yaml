@@ -291,9 +291,30 @@ jobs:
       release-url: ${{ steps.create-release.outputs.html_url }}
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
-  notify-telegram:
+  notify-failure:
 
-    name: Telegram
+    name: Notify (failure)
+    runs-on: ubuntu-latest
+
+    if: failure() && inputs.notify-telegram
+
+    needs:
+      - versions
+      - build
+
+    steps:
+      - name: Report build failure to Telegram
+        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.lib-name }}
+          build-version: ${{ needs.versions.outputs.current-version }}
+
+  notify-success:
+
+    name: Notify (success)
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram
