@@ -1,0 +1,296 @@
+# This workflow will prepare given version of Java and use it to build gradle application.
+# All gradle dependencies will be cached for next runs.
+
+name: Build Java Application
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      lib-name:
+        description: |
+          Library name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+      lib-name-slug:
+        description: |
+          Library name slug (part of release file name)
+        type: string
+        required: true
+
+      #
+      # Version detection control
+      #
+      version-fetch-depth:
+        description: |
+          Fetch at least N commits during version detection from tags
+        type: string
+        required: false
+        default: 100
+      version-canonize:
+        description: |
+          Canonize version number to make it always look like regular semver: <major>.<minor>.<bugfix>
+        type: boolean
+        required: false
+        default: true
+
+      #
+      # Environment control
+      #
+      java-version:
+        description: |
+          Version of JAVA to use for build
+        type: string
+        required: true
+
+      java-distribution:
+        description: |
+          Java distribution to use.
+          Example: 'temurin', zulu, ...
+          See 'https://github.com/actions/setup-java#supported-distributions'
+          for complete list of supported distributions
+        type: string
+        required: false
+        default: 'temurin'
+
+      #
+      # Build control
+      #
+      build-project:
+        description: |
+          Gradle project name to build:
+            gradle :<project>:<command>
+
+          All tasks in
+        type: string
+        required: true
+
+      build-tasks:
+        description: |
+          Gradle build tasks.
+          You can put several tasks here (one per line)
+
+          NOTE: for 'publish*' tasks use 'publish-tasks' input.
+
+        type: string
+        required: true
+        default: build
+
+      artifacts-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+
+      build-project-dir:
+        description: |
+          Path to project root directory
+          Defaults to repository root
+        type: string
+        required: false
+        default: './'
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
+
+      #
+      # Publication control
+      #
+      publish-tasks:
+        description: |
+          Newline-separated list of tasks to run on library publication step.
+        type: string
+        required: false
+        default: publish
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      GRADLE_PROPERTIES:
+        description: |
+          Create properties file with given contents before starting the build
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  versions:
+    name: Detect versions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - id: versions
+        uses: milaboratory/github-ci/actions/detect-version@v1
+        with:
+          canonize: ${{ inputs.version-canonize }}
+          fetch-depth: ${{ inputs.version-fetch-depth }}
+
+    outputs:
+      current-version: ${{ steps.versions.outputs.current-version }}
+      current-tag: ${{ steps.versions.outputs.current-tag }}
+      current-sha: ${{ steps.versions.outputs.current-sha }}
+
+      previous-version: ${{ steps.versions.outputs.previous-version }}
+      previous-tag: ${{ steps.versions.outputs.previous-tag }}
+      previous-sha: ${{ steps.versions.outputs.previous-sha }}
+
+      latest-version: ${{ steps.versions.outputs.latest-version }}
+      latest-tag: ${{ steps.versions.outputs.latest-tag }}
+      latest-sha: ${{ steps.versions.outputs.latest-sha }}
+
+      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+
+  build:
+
+    name: Build application
+    runs-on: ubuntu-latest
+
+    needs:
+      - versions
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare env for Java application build
+        uses: actions/setup-java@v2
+        with:
+          distribution: ${{ inputs.java-distribution }}
+          java-version: ${{ inputs.java-version }}
+          cache: 'gradle'
+
+      - name: Set gradle.properties
+        env:
+          GRADLE_PROPS: ${{ secrets.GRADLE_PROPERTIES }}
+        run: |
+          mkdir -p ~/.gradle/
+          printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
+
+      - name: Read actual project properties
+        id: gradle-props
+        uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - name: Render build tasks list
+        id: build-tasks
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
+        with:
+          input: ${{ inputs.build-tasks }}
+          prefix: ${{ inputs.build-project }}
+
+      - name: Render publish tasks list
+        id: publish-tasks
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
+        with:
+          input: ${{ inputs.publish-tasks }}
+          prefix: ${{ inputs.build-project }}
+
+      - name: Build library
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: ${{ steps.build-tasks.outputs.result }}
+
+      - name: Publish library
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: ${{ steps.publish-tasks.outputs.result }}
+
+      #
+      # Release-only steps
+      #
+      - name: Create release
+        id: create-release
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        uses: milaboratory/github-ci/actions/release/create@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ needs.versions.outputs.current-version }}
+          tag: ${{ needs.versions.outputs.current-tag }}
+
+          assets: |
+            ${{ steps.gradle-props.outputs.buildDir }}/libs/*.jar
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-url: ${{ steps.create-release.outputs.html_url }}
+
+  notify-telegram:
+
+    name: Telegram
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram
+
+    needs:
+      - versions
+      - build
+
+    steps:
+      - name: Report dev build is ready
+        if: needs.build.outputs.release-id == ''
+        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
+          build-version: ${{ needs.versions.outputs.current-version }}
+          build-category: dev
+
+      - name: Report release is ready
+        if: needs.build.outputs.release-id != ''
+        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
+          release-tag: ${{ needs.versions.outputs.current-tag }}
