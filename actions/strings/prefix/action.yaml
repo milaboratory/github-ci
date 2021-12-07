@@ -1,0 +1,40 @@
+name: Prefix all lines
+author: 'MiLaboratories'
+description: |
+  Prefix all lines in <input> with <prefix> text
+
+inputs:
+  input:
+    description: |
+      Lines to prefix with <prefix>
+    required: true
+
+  prefix:
+    description: |
+      Prefix to add to all lines from <input>
+    required: true
+    default: 'true'
+
+outputs:
+  result:
+    description: |
+      All lines from <input> prefixed with <prefix>
+
+    value: ${{ steps.prefix.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prefix lines
+      id: prefix
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        PREFIX_TEXT: ${{ inputs.prefix }}
+        INPUT_TEXT: ${{ inputs.input }}
+
+      with:
+        run: |
+          while read -r line; do
+            echo "${PREFIX_TEXT}${line}"
+          done <<<"${INPUT_TEXT}"
