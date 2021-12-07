@@ -36,5 +36,9 @@ runs:
       with:
         run: |
           while read -r line; do
-            echo "${PREFIX_TEXT}${line}"
+            if [ -n "${line}" ]; then
+              echo "${PREFIX_TEXT:-}${line}"
+            else
+              echo ""
+            fi
           done <<<"${INPUT_TEXT}"
