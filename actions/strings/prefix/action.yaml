@@ -37,7 +37,7 @@ runs:
         run: |
           while read -r line; do
             if [ -n "${line}" ]; then
-              echo "${PREFIX_TEXT:=}${line}"
+              echo "${PREFIX_TEXT:-}${line}"
             else
               echo ""
             fi
