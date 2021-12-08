@@ -1,0 +1,44 @@
+name: Convert lines into JSON array
+author: 'MiLaboratories'
+description: |
+  Convert several lines of text into valid JSON array.
+  E.g.:
+      line1\nline2\nline3
+    will become:
+      [ "line1", "line2", "line3" ]
+
+inputs:
+  input:
+    description: |
+      Lines to prefix with <prefix>
+    required: true
+
+outputs:
+  result:
+    description: |
+      All lines from <input> as JSON array
+
+    value: ${{ steps.json.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Convert to JSON array
+      id: json
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        INPUT_LINES: ${{ inputs.input }}
+
+      with:
+        run: |
+          if [ -z "${INPUT_LINES}" ]; then
+            # Empty input should produce empty array
+            echo '[]'
+            exit 0
+          fi
+
+          {
+            jq --raw-input . | # convert each line into valid JSON string
+              jq --slurp --compact-output . # Convert list of JSON strings into JSON array
+          } <<<"${INPUT_LINES%%[$'\n']}" # strip last newline to not end each list with empty string
