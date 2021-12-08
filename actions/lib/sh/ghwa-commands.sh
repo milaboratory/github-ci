@@ -45,7 +45,7 @@ function _ghwa_command() {
     _act_options=" ${_act_options}" # prepend options list with space to not break action line format
   fi
 
-  echo "::${_act_name}${_act_options}::${_act_argument}"
+  echo "::${_act_name}${_act_options}::${_act_argument}" >&2
 }
 
 # Escape newlines and other symbols that could break commands
@@ -231,3 +231,10 @@ function ghwa_add_to_path() {
 
 set -o nounset
 set -o errexit
+
+: "${MISH_DEBUG:=false}"
+if [ "${MISH_DEBUG}" = "true" ]; then
+  set -v
+fi
+: "${MISH_ECHO_COMMANDS:=off}"
+ghwa_set_echo "${MISH_ECHO_COMMANDS}"

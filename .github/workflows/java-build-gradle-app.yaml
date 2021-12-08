@@ -201,11 +201,15 @@ jobs:
 
       - name: Build tar distribution
         if: inputs.build-tar
-        working-directory: ${{ inputs.build-project-dir }}
-        run: |
-          ./gradlew \
-            --project-prop "version=${{ needs.versions.outputs.current-version }}" \
-            :${{ inputs.build-project }}:distTar
+
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: :${{ inputs.build-project }}:distTar
 
       - name: Save artifact with tar distribution
         if: inputs.build-tar
@@ -218,11 +222,14 @@ jobs:
       - name: Build docker image
         if: inputs.build-docker
 
-        working-directory: ${{ inputs.build-project-dir }}
-        run: |
-          ./gradlew \
-            --project-prop "version=${{ needs.versions.outputs.current-version }}" \
-            :${{ inputs.build-project }}:dockerBuildImage
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: :${{ inputs.build-project }}:dockerBuildImage
 
       - name: Generate push targets list
         id: push-targets
@@ -286,9 +293,30 @@ jobs:
       release-url: ${{ steps.create-release.outputs.html_url }}
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
-  notify-telegram:
+  notify-failure:
 
-    name: Telegram
+    name: Notify (failure)
+    runs-on: ubuntu-latest
+
+    if: failure() && inputs.notify-telegram
+
+    needs:
+      - versions
+      - build
+
+    steps:
+      - name: Report build failure to Telegram
+        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.lib-name }}
+          build-version: ${{ needs.versions.outputs.current-version }}
+
+  notify-success:
+
+    name: Notify (success)
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram

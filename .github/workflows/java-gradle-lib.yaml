@@ -1,7 +1,7 @@
-# This workflow will do a clean prepare of node dependencies,
-# cache/restore them, build the source code and run tests across different OS
+# This workflow will prepare given version of Java and use it to build gradle application.
+# All gradle dependencies will be cached for next runs.
 
-name: Build Electron Application
+name: Build Java Application
 
 on:
   workflow_call:
@@ -9,16 +9,16 @@ on:
       #
       # Common settings
       #
-      app-name:
+      lib-name:
         description: |
-          Application name in human-readable form.
-          As it is supposed to be shown in texts
+          Library name in human-readable form.
+          As it is supposed to be shown in messages
         type: string
         required: false
         default: ${{ github.repository }}
-      app-name-slug:
+      lib-name-slug:
         description: |
-          Application name slug (part of release file name)
+          Library name slug (part of release file name)
         type: string
         required: true
 
@@ -41,42 +41,59 @@ on:
       #
       # Environment control
       #
-      node-version:
+      java-version:
         description: |
-          Node version to use
+          Version of JAVA to use for build
         type: string
         required: true
-      os:
-        description: |
-          OS to build for.
-          Examples: ubuntu-latest, macos-latest, windows-latest
 
-          Check labels of GitHub-hosted runners for more info:
-          https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#github-hosted-runners
+      java-distribution:
+        description: |
+          Java distribution to use.
+          Example: 'temurin', zulu, ...
+          See 'https://github.com/actions/setup-java#supported-distributions'
+          for complete list of supported distributions
         type: string
-        required: true
+        required: false
+        default: 'temurin'
 
       #
       # Build control
       #
+      build-project:
+        description: |
+          Gradle project name to build:
+            gradle :<project>:<command>
+
+          All tasks in
+        type: string
+        required: true
+
+      build-tasks:
+        description: |
+          Gradle build tasks.
+          You can put several tasks here (one per line)
+
+          NOTE: for 'publish*' tasks use 'publish-tasks' input.
+
+        type: string
+        required: false
+        default: build
+
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
         type: number
         required: false
         default: 7
-      build-script-name:
+
+      build-project-dir:
         description: |
-          Name of script for application build
+          Path to project root directory
+          Defaults to repository root
         type: string
         required: false
-        default: 'electron:build'
-      vue-project:
-        description: |
-          This is vue-based project. Use 'vue-cli' toolkit
-        type: boolean
-        required: false
-        default: true
+        default: './'
 
       #
       # Release control
@@ -95,6 +112,16 @@ on:
         default: doc,chore
 
       #
+      # Publication control
+      #
+      publish-tasks:
+        description: |
+          Newline-separated list of tasks to run on library publication step.
+        type: string
+        required: false
+        default: publish
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -105,6 +132,11 @@ on:
         default: true
 
     secrets:
+      GRADLE_PROPERTIES:
+        description: |
+          Create properties file with given contents before starting the build
+        required: false
+
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -116,7 +148,7 @@ on:
 
 jobs:
   versions:
-    name: Detect Versions
+    name: Detect versions
     runs-on: ubuntu-latest
 
     steps:
@@ -140,13 +172,12 @@ jobs:
       latest-tag: ${{ steps.versions.outputs.latest-tag }}
       latest-sha: ${{ steps.versions.outputs.latest-sha }}
 
+      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+
   build:
-    strategy:
-      matrix:
-        os: ${{ fromJSON( inputs.os ) }}
 
     name: Build application
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     needs:
       - versions
@@ -154,40 +185,60 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Prepare env for Node application build
-        uses: milaboratory/github-ci/actions/node/prepare@v1
+      - name: Prepare env for Java application build
+        uses: actions/setup-java@v2
         with:
-          node-version: ${{ inputs.node-version }}
-          cache-version: 'v1'
+          distribution: ${{ inputs.java-distribution }}
+          java-version: ${{ inputs.java-version }}
+          cache: 'gradle'
 
-      - name: Install node packages with npm
-        run: npm install
-        shell: bash
-
-      - name: Patch package version
-        uses: milaboratory/github-ci/actions/node/patch-version@v1
-        with:
-          version: ${{ needs.versions.outputs.current-version }}
-
-      - name: Build application
+      - name: Set gradle.properties
+        env:
+          GRADLE_PROPS: ${{ secrets.GRADLE_PROPERTIES }}
         run: |
-          npm run ${{ inputs.build-script-name }}
+          mkdir -p ~/.gradle/
+          printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
 
-      - name: Save artifact with Mac OS X application
-        uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
+      - name: Read actual project properties
+        id: gradle-props
+        uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
         with:
-          name: ${{ inputs.app-name-slug }}-mac
-          path: dist_electron/*.dmg
-          retention-days: ${{ inputs.artifacts-retention }}
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
 
-      - name: Save artifact with Linux application
-        uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
+      - name: Render build tasks list
+        id: build-tasks
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
         with:
-          name: ${{ inputs.app-name-slug }}-linux
-          path: dist_electron/*.AppImage
-          retention-days: ${{ inputs.artifacts-retention }}
+          input: ${{ inputs.build-tasks }}
+          prefix: ":${{ inputs.build-project }}:"
+
+      - name: Render publish tasks list
+        id: publish-tasks
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
+        with:
+          input: ${{ inputs.publish-tasks }}
+          prefix: ":${{ inputs.build-project }}:"
+
+      - name: Build library
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: ${{ steps.build-tasks.outputs.result }}
+
+      - name: Publish library
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+
+          tasks: ${{ steps.publish-tasks.outputs.result }}
 
       #
       # Release-only steps
@@ -203,8 +254,7 @@ jobs:
           tag: ${{ needs.versions.outputs.current-tag }}
 
           assets: |
-            dist_electron/*.dmg,
-            dist_electron/*.AppImage
+            ${{ steps.gradle-props.outputs.buildDir }}/libs/*.jar
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
@@ -252,7 +302,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ inputs.lib-name }}
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
@@ -263,5 +313,5 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ inputs.lib-name }}
           release-tag: ${{ needs.versions.outputs.current-tag }}
