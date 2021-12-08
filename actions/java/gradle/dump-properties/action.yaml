@@ -23,6 +23,14 @@ outputs:
     description: name property
     value: ${{ steps.props.outputs.name }}
 
+  group:
+    description: group property
+    value: ${{ steps.props.outputs.group }}
+
+  version:
+    description: version property
+    value: ${{ steps.props.outputs.version }}
+
   buildDir:
     description: buildDir property
     value: ${{ steps.props.outputs.buildDir }}
