@@ -33,6 +33,12 @@ inputs:
     required: false
     default: '[]'
 
+  maven-packages:
+    description: |
+      List of maven packages related to build in JSON format
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -47,7 +53,8 @@ runs:
       id: message
       with:
         data: |
-          { "docker_images": ${{ inputs.docker-images }} }
+          { "docker_images": ${{ inputs.docker-images }},
+            "maven_packages": ${{ inputs.maven-packages }} }
 
         template: |
           🚧 \[${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
@@ -62,6 +69,14 @@ runs:
 
           Docker images:
           {%- for i in docker_images %}
+          - {{ i }}
+          {%- endfor %}
+          {%- endif %}
+
+          {%- if maven_packages | length > 0 %}
+
+          Published maven packages:
+          {%- for i in maven_packages %}
           - {{ i }}
           {%- endfor %}
           {%- endif %}
