@@ -207,6 +207,7 @@ jobs:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: :${{ inputs.build-project }}:distTar
 
@@ -226,6 +227,7 @@ jobs:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: :${{ inputs.build-project }}:dockerBuildImage
 
