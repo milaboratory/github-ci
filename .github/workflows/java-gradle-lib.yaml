@@ -240,6 +240,13 @@ jobs:
 
           tasks: ${{ steps.publish-tasks.outputs.result }}
 
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v1
+        with:
+          input: |
+            ${{ steps.gradle-props.outputs.group}}.${{ steps.gradle-props.outputs.name }}:${{ needs.versions.outputs.current-version }}
+
       #
       # Release-only steps
       #
@@ -261,6 +268,7 @@ jobs:
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
+      maven-packages: ${{ steps.libs-list.outputs.result }}
 
   notify-failure:
 
@@ -306,6 +314,8 @@ jobs:
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
+          maven-packages: ${{ needs.build.outputs.maven-packages }}
+
       - name: Report release is ready
         if: needs.build.outputs.release-id != ''
         uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
@@ -315,3 +325,5 @@ jobs:
 
           product-name: ${{ inputs.lib-name }}
           release-tag: ${{ needs.versions.outputs.current-tag }}
+
+          maven-packages: ${{ needs.build.outputs.maven-packages }}
