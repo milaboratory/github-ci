@@ -297,7 +297,7 @@ jobs:
       #
       - name: Create release
         id: create-release
-        if: startsWith( steps.versions.outputs.current-tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
