@@ -114,7 +114,17 @@ on:
       #
       # Publication control
       #
-      publish-tasks:
+      publish-dev-tasks:
+        description: |
+          Newline-separated list of tasks to run on library publication step.
+        type: string
+        required: false
+        default: publish
+
+      #
+      # Publication control
+      #
+      publish-release-tasks:
         description: |
           Newline-separated list of tasks to run on library publication step.
         type: string
@@ -185,6 +195,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Dump version outputs
+        shell: bash
+        env:
+          V_O: ${{ toJSON(needs.versions.outputs) }}
+        run: |
+          jq . <<<"${V_O}"
+
       - name: Prepare env for Java application build
         uses: actions/setup-java@v2
         with:
@@ -206,19 +223,13 @@ jobs:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project }}
 
-      - name: Render build tasks list
+      - name: Generate build tasks
         id: build-tasks
         uses: milaboratory/github-ci/actions/strings/prefix@v1
         with:
           input: ${{ inputs.build-tasks }}
-          prefix: ":${{ inputs.build-project }}:"
-
-      - name: Render publish tasks list
-        id: publish-tasks
-        uses: milaboratory/github-ci/actions/strings/prefix@v1
-        with:
-          input: ${{ inputs.publish-tasks }}
-          prefix: ":${{ inputs.build-project }}:"
+          prefix: |-
+            :${{ inputs.build-project }}:
 
       - name: Build library
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
@@ -226,19 +237,53 @@ jobs:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
 
           tasks: ${{ steps.build-tasks.outputs.result }}
 
-      - name: Publish library
+      - name: Generate publish tasks (dev)
+        id: publish-dev-tasks
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
+        if: |
+          ! startsWith( steps.versions.outputs.current-tag, 'v')
+        with:
+          input: ${{ inputs.publish-dev-tasks }}
+          prefix: |-
+            :${{ inputs.build-project }}:
+
+      - name: Publish library (dev)
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        if: |
+          ! startsWith( steps.versions.outputs.current-tag, 'v')
         with:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
 
-          tasks: ${{ steps.publish-tasks.outputs.result }}
+          tasks: ${{ steps.publish-dev-tasks.outputs.result }}
+
+      - name: Generate publish tasks (release)
+        id: publish-release-tasks
+        if: |
+          startsWith( steps.versions.outputs.current-tag, 'v')
+        uses: milaboratory/github-ci/actions/strings/prefix@v1
+        with:
+          input: ${{ inputs.publish-release-tasks }}
+          prefix: |-
+            :${{ inputs.build-project }}:
+
+      - name: Publish library (release)
+        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+        if: |
+          startsWith( steps.versions.outputs.current-tag, 'v')
+        with:
+          working-directory: ${{ inputs.build-project-dir }}
+          properties: |
+            version=${{ needs.versions.outputs.current-version }}
+            mi-release=${{ needs.versions.outputs.is-release }}
+
+          tasks: ${{ steps.publish-release-tasks.outputs.result }}
 
       - name: Prepare JSON list of published libraries
         id: libs-list
@@ -252,7 +297,7 @@ jobs:
       #
       - name: Create release
         id: create-release
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        if: startsWith( steps.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
