@@ -23,3 +23,10 @@ function test_equals() {
     _status_failed
   fi
 }
+
+function fail_test() {
+  local _message="${1}"
+
+  ghwa_error "${_message}"
+  _status_failed
+}
