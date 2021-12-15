@@ -237,15 +237,15 @@ jobs:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: ${{ steps.build-tasks.outputs.result }}
 
       - name: Generate publish tasks (dev)
         id: publish-dev-tasks
         uses: milaboratory/github-ci/actions/strings/prefix@v1
-        if: |
-          ! startsWith( steps.versions.outputs.current-tag, 'v')
+        if: |-
+          ! startsWith( needs.versions.outputs.current-tag, 'v')
         with:
           input: ${{ inputs.publish-dev-tasks }}
           prefix: |-
@@ -253,20 +253,19 @@ jobs:
 
       - name: Publish library (dev)
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        if: |
-          ! startsWith( steps.versions.outputs.current-tag, 'v')
+        if: |-
+          ! startsWith( needs.versions.outputs.current-tag, 'v')
         with:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: ${{ steps.publish-dev-tasks.outputs.result }}
 
       - name: Generate publish tasks (release)
         id: publish-release-tasks
-        if: |
-          startsWith( steps.versions.outputs.current-tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/strings/prefix@v1
         with:
           input: ${{ inputs.publish-release-tasks }}
@@ -275,13 +274,12 @@ jobs:
 
       - name: Publish library (release)
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        if: |
-          startsWith( steps.versions.outputs.current-tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         with:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ needs.versions.outputs.is-release }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: ${{ steps.publish-release-tasks.outputs.result }}
 
