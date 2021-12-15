@@ -51,6 +51,6 @@ runs:
           fi
         done <<<"${GRADLE_PROPERTIES}"
 
-        while read -r task; do
-          ./gradlew "${props[@]}" "${task}"
-        done <<<"${GRADLE_TASKS}"
+        mapfile -t tasks <<<"${GRADLE_TASKS}"
+
+        ./gradlew "${props[@]}" "${tasks[@]}"
