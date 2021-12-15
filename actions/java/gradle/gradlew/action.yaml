@@ -35,8 +35,11 @@ runs:
         GRADLE_TASKS: ${{ inputs.tasks }}
 
       run: |
+        # Run gradlew tasks one-by-one
+
         set -o nounset
         set -o errexit
+        set -x
 
         props=(
           --project-prop "mi-ci=true"
