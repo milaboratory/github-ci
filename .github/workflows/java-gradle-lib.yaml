@@ -80,6 +80,19 @@ on:
         required: false
         default: build
 
+      artifacts-paths:
+        description: |
+          List of paths to artifacts to save after build run.
+          Empty list disables artifacts storage.
+
+          Relative paths are relative to gradle 'buildDir' project's property.
+          Absolute paths (starting with '/') are relative to repository root.
+          Patterns ('*', '**', etc.) are supported.
+
+        type: string
+        required: false
+        default: ''
+
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
@@ -98,6 +111,18 @@ on:
       #
       # Release control
       #
+      release-files:
+        description: |
+          Files to include in releases.
+
+          Relative paths are relative to gradle 'buildDir' project's property.
+          Absolute paths (starting with '/') are relative to repository root.
+          Patterns ('*', '**', etc.) are supported.
+
+        type: string
+        required: false
+        default: libs/*.jar
+
       changelog-exclude-types:
         description: |
           Comma-separated list of change types to skip during
@@ -237,53 +262,56 @@ jobs:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
           tasks: ${{ steps.build-tasks.outputs.result }}
 
-      - name: Generate publish tasks (dev)
-        id: publish-dev-tasks
-        uses: milaboratory/github-ci/actions/strings/prefix@v1
-        if: |
-          ! startsWith( steps.versions.outputs.current-tag, 'v')
-        with:
-          input: ${{ inputs.publish-dev-tasks }}
-          prefix: |-
-            :${{ inputs.build-project }}:
+      - name: Generate publish tasks
+        id: publish-tasks
+        uses: milaboratory/github-ci/actions/shell@v1
+        env:
+          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+          RELEASE_TASKS: ${{ inputs.publish-release-tasks }}
+          DEV_TASKS: ${{ inputs.publish-dev-tasks }}
+          GRADLE_PROJECT: ${{ inputs.build-project }}
 
-      - name: Publish library (dev)
+        with:
+          run: |
+            if [ "${IS_RELEASE}" = 'true' ]; then
+              mapfile -t tasks <<<"${RELEASE_TASKS}"
+            else
+              mapfile -t tasks <<<"${DEV_TASKS}"
+            fi
+
+            for task in "${tasks}"; do
+              echo ":${GRADLE_PROJECT}:${task}"
+            done
+
+      - name: Publish library
         uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        if: |
-          ! startsWith( steps.versions.outputs.current-tag, 'v')
         with:
           working-directory: ${{ inputs.build-project-dir }}
           properties: |
             version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( steps.versions.outputs.current-tag, 'v') }}
+            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
-          tasks: ${{ steps.publish-dev-tasks.outputs.result }}
+          tasks: ${{ steps.publish-tasks.outputs.stdout }}
 
-      - name: Generate publish tasks (release)
-        id: publish-release-tasks
-        if: |
-          startsWith( steps.versions.outputs.current-tag, 'v')
-        uses: milaboratory/github-ci/actions/strings/prefix@v1
+      - name: Generate artifacts paths
+        id: artifacts-paths
+        uses: milaboratory/github-ci/actions/strings/convert-paths@v1
         with:
-          input: ${{ inputs.publish-release-tasks }}
-          prefix: |-
-            :${{ inputs.build-project }}:
+          rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
+          abs-root: .
+          paths: ${{ inputs.artifacts-paths }}
 
-      - name: Publish library (release)
-        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        if: |
-          startsWith( steps.versions.outputs.current-tag, 'v')
+      - name: Save build artifacts
+        if: steps.artifacts-paths.outputs.result != ''
+        uses: actions/upload-artifact@v2
         with:
-          working-directory: ${{ inputs.build-project-dir }}
-          properties: |
-            version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ needs.versions.outputs.is-release }}
-
-          tasks: ${{ steps.publish-release-tasks.outputs.result }}
+          name: build-artifacts
+          path: ${{ steps.artifacts-paths.outputs.result }}
+          retention-days: ${{ inputs.artifacts-retention }}
 
       - name: Prepare JSON list of published libraries
         id: libs-list
@@ -295,9 +323,18 @@ jobs:
       #
       # Release-only steps
       #
+      - name: Generate release paths
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        id: release-files
+        uses: milaboratory/github-ci/actions/strings/convert-paths@v1
+        with:
+          rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
+          abs-root: .
+          paths: ${{ inputs.release-files }}
+
       - name: Create release
         id: create-release
-        if: startsWith( steps.versions.outputs.current-tag, 'v')
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -305,8 +342,7 @@ jobs:
           name: ${{ needs.versions.outputs.current-version }}
           tag: ${{ needs.versions.outputs.current-tag }}
 
-          assets: |
-            ${{ steps.gradle-props.outputs.buildDir }}/libs/*.jar
+          assets: ${{ steps.release-files.outputs.result }}
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
