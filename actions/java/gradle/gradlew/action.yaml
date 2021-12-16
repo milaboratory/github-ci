@@ -39,7 +39,6 @@ runs:
 
         set -o nounset
         set -o errexit
-        set -x
 
         props=(
           --project-prop "mi-ci=true"
