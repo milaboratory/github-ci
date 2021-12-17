@@ -237,13 +237,6 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Dump version outputs
-        shell: bash
-        env:
-          V_O: ${{ toJSON(needs.versions.outputs) }}
-        run: |
-          jq . <<<"${V_O}"
-
       - name: Prepare env for Java application build
         uses: actions/setup-java@v2
         with:
