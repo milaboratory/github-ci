@@ -1,0 +1,329 @@
+name: Build and push Docker image
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      product-name:
+        description: |
+          Project name in Human Readable form for notifications and logs.
+        type: string
+        required: true
+
+      dockerfile:
+        description: |
+          Path to Dockerfile.
+          Defaults to 'Dockerfile' in repository root
+
+          Relative paths are relative to repository root
+        type: string
+        required: false
+        default: Dockerfile
+
+      #
+      # Version detection control
+      #
+      version-fetch-depth:
+        description: |
+          Fetch at least N commits during version detection from tags
+        type: string
+        required: false
+        default: 100
+      version-canonize:
+        description: |
+          Canonize version number to make it always look like regular semver: <major>.<minor>.<bugfix>
+        type: boolean
+        required: false
+        default: true
+
+      #
+      # Push settings
+      #
+      push-dev-targets:
+        description: |
+          Push targets without registry and version.
+          Defaults to '{{ github.repository }}/build'.
+        type: string
+        required: false
+        default: ''
+
+      push-release-targets:
+        description: |
+          Push targets without registry and version.
+          Defaults to '{{ github.repository }}/build'.
+        type: string
+        required: false
+        default: ''
+
+      push-dev-versions:
+        description: |
+          'true' - push images with ':<closest tag>-<commits>-<branch>' version for branch builds
+          'false' - don't push tags with this verisons
+        type: boolean
+        required: false
+        default: false
+
+      push-branch-latest:
+        description: |
+          Update ':latest-<branch>' tag each time <branch> gets new commits
+        type: boolean
+        required: false
+        default: false
+
+      push-release-latest:
+        description: |
+          Update ':latest' tag after building new release
+        type: boolean
+        required: false
+        default: true
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      DOCKER_REGISTRY_USER:
+        description: |
+          Login for Docker Registry
+        required: true
+      DOCKER_REGISTRY_TOKEN:
+        description: |
+          Token or password for Docker Registry
+        required: true
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  versions:
+    name: Detect versions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - id: versions
+        uses: milaboratory/github-ci/actions/detect-version@v1
+        with:
+          canonize: ${{ inputs.version-canonize }}
+          fetch-depth: ${{ inputs.version-fetch-depth }}
+
+    outputs:
+      current-version: ${{ steps.versions.outputs.current-version }}
+      current-tag: ${{ steps.versions.outputs.current-tag }}
+      current-sha: ${{ steps.versions.outputs.current-sha }}
+
+      previous-version: ${{ steps.versions.outputs.previous-version }}
+      previous-tag: ${{ steps.versions.outputs.previous-tag }}
+      previous-sha: ${{ steps.versions.outputs.previous-sha }}
+
+      latest-version: ${{ steps.versions.outputs.latest-version }}
+      latest-tag: ${{ steps.versions.outputs.latest-tag }}
+      latest-sha: ${{ steps.versions.outputs.latest-sha }}
+
+      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+
+  build:
+
+    name: Build docker image
+    runs-on: ubuntu-latest
+
+    needs:
+      - versions
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build Docker Image
+        uses: milaboratory/github-ci/actions/shell@v1
+        id: build-image
+        env:
+          DOCKERFILE: ${{ inputs.dockerfile }}
+        with:
+          run: |
+            docker build \
+              "$(dirname "${DOCKERFILE}")" \
+              --tag "build:local"
+
+      - uses: milaboratory/github-ci/actions/shell@v1
+        id: tags
+        env:
+          PUSH_DEV_TARGETS: ${{ inputs.push-dev-targets }}
+          PUSH_RELEASE_TARGETS: ${{ inputs.push-release-targets }}
+          PUSH_DEV_VERSIONS: ${{ inputs.push-dev-versions }}
+          PUSH_BRANCH_LATEST: ${{ inputs.push-branch-latest }}
+          PUSH_RELEASE_LATEST: ${{ inputs.push-release-latest }}
+
+          CURRENT_VERSION: ${{ needs.versions.outputs.current-version }}
+          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+          IS_LATEST_RELEASE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
+          IS_LATEST_COMMIT: ${{ needs.versions.outputs.is-branch-head }}
+
+        with:
+          run: |
+            if [ -z "${PUSH_RELEASE_TARGETS}" ]; then
+              # Default release targets to dev, when not set
+              PUSH_RELEASE_TARGETS="${PUSH_DEV_TARGETS}"
+            fi
+
+            versions=()
+            push_targets=()
+
+            if [ "${IS_RELEASE}" = 'true' ]; then
+              #
+              # This is release.
+              #
+
+              mapfile -t push_targets <<<"${PUSH_RELEASE_TARGETS}"
+
+              versions+=( "${CURRENT_VERSION}" )
+
+              if [ "${IS_LATEST_RELEASE}" = 'true' ] &&
+                 [ "${PUSH_RELEASE_LATEST}" = 'true' ]; then
+
+                versions+=( "latest" )
+              fi
+
+            else
+              #
+              # This is dev build
+              #
+
+              mapfile -t push_targets <<<"${PUSH_DEV_TARGETS}"
+
+              if [ "${PUSH_DEV_VERSIONS}" = 'true' ]; then
+                versions+=( "${CURRENT_VERSION}" )
+              fi
+
+              if [ "${IS_LATEST_COMMIT}" = 'true' ] &&
+                 [ "${PUSH_BRANCH_LATEST}" = 'true' ]; then
+                versions+=( "latest-${GITHUB_REF_NAME}" )
+              fi
+            fi
+
+            # Default empty targets list to '<current repo>/build'
+            if [ "${#push_targets}" -eq 0 ]; then
+              push_targets=( "${GITHUB_REPOSITORY}/build" )
+            fi
+
+            # Combine versions list with targets list and return them
+            for target in "${push_targets[@]}"; do
+              for version in "${versions[@]}"; do
+                echo "${target}:${version}"
+              done
+            done
+
+      - uses: milaboratory/github-ci/actions/docker/push@v1
+        id: push
+        with:
+          source: build:local
+          targets: ${{ steps.tags.outputs.stdout }}
+          auth-user: ${{ secrets.DOCKER_REGISTRY_USER }}
+          auth-token: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+      #
+      # Release-only steps
+      #
+      - name: Create release
+        id: create-release
+        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        uses: milaboratory/github-ci/actions/release/create@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ needs.versions.outputs.current-version }}
+          tag: ${{ needs.versions.outputs.current-tag }}
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-url: ${{ steps.create-release.outputs.html_url }}
+      docker-tags: ${{ steps.push.outputs.pushed-json }}
+
+  notify-failure:
+
+    name: Notify (failure)
+    runs-on: ubuntu-latest
+
+    if: failure() && inputs.notify-telegram
+
+    needs:
+      - versions
+      - build
+
+    steps:
+      - name: Report build failure to Telegram
+        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          build-version: ${{ needs.versions.outputs.current-version }}
+
+  notify-success:
+
+    name: Notify (success)
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram
+
+    needs:
+      - versions
+      - build
+
+    steps:
+      - name: Report dev build is ready
+        if: needs.build.outputs.release-id == ''
+        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          build-version: ${{ needs.versions.outputs.current-version }}
+          build-category: dev
+
+          docker-images: ${{ needs.build.outputs.docker-tags }}
+
+      - name: Report release is ready
+        if: needs.build.outputs.release-id != ''
+        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          release-tag: ${{ needs.versions.outputs.current-tag }}
+
+          docker-images: ${{ needs.build.outputs.docker-tags }}
