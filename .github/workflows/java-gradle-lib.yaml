@@ -23,6 +23,19 @@ on:
         required: true
 
       #
+      # Checkout settings
+      #
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
       # Version detection control
       #
       version-fetch-depth:
@@ -188,6 +201,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
       - id: versions
         uses: milaboratory/github-ci/actions/detect-version@v1
         with:
@@ -219,6 +234,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
       - name: Dump version outputs
         shell: bash
