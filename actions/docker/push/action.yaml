@@ -49,13 +49,13 @@ outputs:
     description: |
       Newline separated list of full tag names pushed to target registry
       (including registry name prefix).
-    value: ${{ steps.push.outputs.pushed }}
+    value: ${{ fromJSON(steps.push.outputs.data).pushed }}
 
   pushed-json:
     description: |
       List of pushed tags as JSON string.
       Use 'fromJSON()' to decode.
-    value: ${{ steps.push.outputs.pushed-json }}
+    value: ${{ steps.push-json.outputs.result }}
 
 runs:
   using: "composite"
@@ -75,55 +75,61 @@ runs:
 
     - name: Render target tag names
       id: targets
-      shell: bash
+      uses: milaboratory/github-ci/actions/shell@v1
       env:
         SOURCE_TAG: ${{ inputs.source }}
         TARGET_REGISTRY: ${{ inputs.registry }}
         TARGET_TAGS: ${{ inputs.targets }}
-      run: |
-        # Render full target tags (<registry>/<path>:<version>)
+      with:
+        run: |
+          # Render full target tags (<registry>/<path>:<version>)
 
-        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+          source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
 
-        if [ -z "${TARGET_TAGS}" ]; then
-          TARGET_TAGS="${GITHUB_REPOSITORY}/${SOURCE_TAG}"
-        fi
+          if [ -z "${TARGET_TAGS}" ]; then
+            TARGET_TAGS="${GITHUB_REPOSITORY}/${SOURCE_TAG}"
+          fi
 
-        result="$(
-          while read -r target_tag; do
-            # Don't try to push empty tags
-            if [ -n "${target_tag// /}" ]; then
+          result="$(
+            while read -r target_tag; do
+              # Don't try to push empty tags
+              if [ -z "${target_tag// /}" ]; then
+                continue
+              fi
+
               echo "${TARGET_REGISTRY}/${target_tag}"
-            fi
-          done <<<"${TARGET_TAGS}"
-        )"
 
-        ghwa_set_env "PUSH_TARGETS" "${result}"
+            done <<<"${TARGET_TAGS}"
+          )"
+
+          ghwa_set_env "PUSH_TARGETS" "${result}"
 
     - name: Pushing tags to '${{ inputs.registry }}'
       id: push
-      shell: bash
+      uses: milaboratory/github-ci/actions/shell@v1
       env:
         SOURCE_TAG: ${{ inputs.source }}
-      run: |
-        # Pushing tags to '${{ inputs.registry }}'
+      with:
+        dump-stdout: false
+        run: |
+          # Pushing tags to '${{ inputs.registry }}'
 
-        source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
+          mapfile -t push_targets <<<"${PUSH_TARGETS}"
 
-        while read -r push_target; do
-          ghwa_group "Pushing '${push_target}'..."
+          for target in "${push_targets[@]}"; do
+            ghwa_group "Pushing '${target}'..."
 
-          docker tag "${SOURCE_TAG}" "${push_target}"
-          docker push "${push_target}"
+            docker tag "${SOURCE_TAG}" "${target}"
+            docker push "${target}"
 
-          ghwa_endgroup
-        done <<<"${PUSH_TARGETS}"
+            ghwa_endgroup
+          done
 
-        ghwa_notice "Pushed Docker tags:"$'\n'"${PUSH_TARGETS}"
-        ghwa_set_output "pushed" "${PUSH_TARGETS}"
+          ghwa_notice "Pushed Docker tags:"$'\n'"${PUSH_TARGETS}"
+          ghwa_set_output "pushed" "${PUSH_TARGETS}"
 
-        # Convert list of strings into valid JSON array
-        ghwa_set_output "pushed-json" "$(
-          jq --raw-input . <<<"${PUSH_TARGETS}" | # escape each line as JSON string
-          jq --slurp --compact-output . # Convert list of escaped lines into JSON array
-        )"
+    - name: Convert targets list to JSON array
+      id: push-json
+      uses: milaboratory/github-ci/actions/strings/json-list@v1
+      with:
+        input: ${{ fromJSON(steps.push.outputs.data).pushed }}
