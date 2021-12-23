@@ -1,0 +1,72 @@
+name: Run 'miaws' utility
+author: 'MiLaboratories'
+description: |
+  Run 'miaws' utility in action
+
+inputs:
+  github-token:
+    description: |
+      Auth token for GitHub container registry (ghcr.io)
+      Use {{ secrets.GITHUB_TOKEN }}
+    required: true
+
+  aws-key-id:
+    description: |
+      AWS Access Key ID for API requests
+    required: true
+
+  aws-key-secret:
+    description: |
+      AWS Access Key Secret for API requests
+    required: true
+
+  default-region:
+    description: |
+      Default region for all miaws commands, when no regions are set explicitly
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    # We have to login into 'ghcr.io' manually to be able to pull miaws/cli image
+    - uses: milaboratory/github-ci/actions/docker/login@v1
+      with:
+        registry: 'ghcr.io'
+        user: ${{ github.actor }}
+        password: ${{ inputs.github-token }}
+
+    - id: credentials
+      shell: bash
+      env:
+        KEY_ID: ${{ inputs.aws-key-id }}
+        KEY_SECRET: ${{ inputs.aws-key-secret }}
+      run: |
+        # Generate ~/.aws/credentials file
+        mkdir -p ~/.aws
+
+        cat > ~/.aws/credentials <<EndOfCreds
+        [default]
+        aws_access_key_id=${KEY_ID}
+        aws_secret_access_key=${KEY_SECRET}
+        EndOfCreds
+
+    - id: config
+      shell: bash
+      env:
+        DEFAULT_REGION: ${{ inputs.default-region }}
+      run: |
+        # Generate ~/.aws/config file
+
+        function set_option() {
+          local _o
+          for _o in "${@}"; do
+            echo "${_o}" >> ~/.aws/config
+          done
+        }
+
+        echo "[default]" > ~/.aws/config
+
+        if [ -n "${DEFAULT_REGION}" ]; then
+          set_option "region=${DEFAULT_REGION}"
+        fi

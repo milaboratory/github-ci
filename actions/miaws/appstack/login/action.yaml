@@ -1,0 +1,16 @@
+name: Login to appstack Docker
+author: 'MiLaboratories'
+description: |
+  Login to AppStack Docker registry
+
+inputs:
+runs:
+  using: "composite"
+
+  steps:
+    - name: Login
+      uses: milaboratory/github-ci/actions/miaws@v1
+      with:
+        args: |-
+          appstack
+          login
