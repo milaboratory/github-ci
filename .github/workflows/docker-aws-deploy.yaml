@@ -1,0 +1,152 @@
+name: Build and push Docker image
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      product-name:
+        description: |
+          Project name in human-readable form for notifications and logs.
+        type: string
+        required: true
+
+      default-region:
+        description: |
+          Region to push image to, when no other target regions were detected.
+        type: string
+        required: true
+
+      #
+      # Deploy settings
+      #
+      task:
+        description: |
+          Name of task to update
+        type: string
+        required: true
+
+      image:
+        description: |
+          Image to set for task
+        type: string
+        required: true
+
+      run:
+        description: |
+          Run task after update (miaws appstack run <task>)
+        type: boolean
+        required: false
+
+      regions:
+        description: |
+          List of regions to update task.
+
+          Task will be switched to new image version in listed regions
+
+          You can specify several regions, one per line.
+        type: string
+        required: false
+
+      deployment-units:
+        description: |
+          Deployment units to use for regions detection.
+
+          Task will be switched to new image version in regions that
+          have given deployment unit.
+
+          You can specify several units, one per line.
+        type: string
+        required: false
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      AWS_KEY_ID:
+        description: |
+          Login for Docker Registry
+        required: true
+      AWS_KEY_SECRET:
+        description: |
+          Secret for Docker Registry
+        required: true
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: milaboratory/github-ci/actions/miaws/configure@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          aws-key-id: ${{ secrets.AWS_KEY_ID }}
+          aws-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          default-region: ${{ inputs.default-region }}
+
+      - uses: milaboratory/github-ci/actions/miaws/appstack/deploy@v1
+        with:
+          task: ${{ inputs.task }}
+          image: ${{ inputs.image }}
+          regions: ${{ inputs.regions }}
+          deployment-units: ${{ inputs.deployment-units }}
+          run: ${{ inputs.run }}
+
+#  notify-failure:
+#
+#    name: Notify (failure)
+#    runs-on: ubuntu-latest
+#
+#    if: failure() && inputs.notify-telegram
+#
+#    needs:
+#      - deploy
+#
+#    steps:
+#      - name: Report deploy failure
+#        uses: milaboratory/github-ci/actions/notify/telegram/deploy-failed@v1
+#        with:
+#          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+#          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+#
+#          product-name: ${{ inputs.product-name }}
+#          build-version: ${{ github.sha }}
+#
+#  notify-success:
+#
+#    name: Notify (success)
+#    runs-on: ubuntu-latest
+#
+#    if: inputs.notify-telegram
+#
+#    needs:
+#      - deploy
+#
+#    steps:
+#      - name: Report deploy success
+#        uses: milaboratory/github-ci/actions/notify/telegram/deploy-success@v1
+#        with:
+#          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+#          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+#
+#          product-name: ${{ inputs.product-name }}
+#          build-version: ${{ github.sha }}
+#          build-category: dev
