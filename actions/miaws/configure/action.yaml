@@ -29,7 +29,8 @@ runs:
   using: "composite"
 
   steps:
-    # We have to login into 'ghcr.io' manually to be able to pull miaws/cli image
+    # We have to login into 'ghcr.io' manually to be able to pull miaws/cli
+    # image on real action run
     - uses: milaboratory/github-ci/actions/docker/login@v1
       with:
         registry: 'ghcr.io'

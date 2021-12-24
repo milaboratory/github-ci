@@ -31,9 +31,10 @@ runs:
   using: "composite"
 
   steps:
-    # We can't use regular 'using: docker' action here because it tries
-    # to pull image BEFORE any steps (and before docker login), which
-    # causes pipeline failure.
+    # We can't use regular 'using: "docker"' action here because of internal
+    # github action optimizations. All images in 'docker' actions are
+    # pulled/built before any steps (and before docker login), which
+    # causes pipeline failure for images in private docker registries.
     - shell: bash
       env:
         INPUT_REGIONS: ${{ inputs.regions }}
