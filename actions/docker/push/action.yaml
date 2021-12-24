@@ -61,17 +61,11 @@ runs:
   using: "composite"
 
   steps:
-    - name: Auth in docker registry
-      shell: bash
-      env:
-        TARGET_REGISTRY: ${{ inputs.registry }}
-        AUTH_TOKEN: ${{ inputs.auth-token }}
-        AUTH_USER: ${{ inputs.auth-user }}
-      run: |
-        docker login \
-          "${TARGET_REGISTRY}" \
-          --username "${AUTH_USER}" \
-          --password-stdin <<<"${AUTH_TOKEN}"
+    - uses: milaboratory/github-ci/actions/docker/login@v1
+      with:
+        registry: ${{ inputs.registry }}
+        user: ${{ inputs.auth-user }}
+        password: ${{ inputs.auth-token }}
 
     - name: Render target tag names
       id: targets
