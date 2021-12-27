@@ -29,6 +29,14 @@ on:
         required: false
         default: Dockerfile
 
+      build-context:
+        description: |
+          Path to docker build context root.
+          Defaults to directory with dockerfile.
+        type: string
+        required: false
+        default: ''
+
       #
       # Push settings
       #
@@ -115,11 +123,17 @@ jobs:
         id: build-image
         env:
           DOCKERFILE: ${{ inputs.dockerfile }}
+          BUILD_CONTEXT: ${{ inputs.build-context }}
         with:
           run: |
+            if [ -z "${BUILD_CONTEXT}" ]; then
+              BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
+            fi
+
             docker build \
-              "$(dirname "${DOCKERFILE}")" \
-              --tag "build:local"
+              --file "${DOCKERFILE}" \
+              --tag "build:local" \
+              "${BUILD_CONTEXT}"
 
       - uses: milaboratory/github-ci/actions/miaws/configure@v1
         with:
