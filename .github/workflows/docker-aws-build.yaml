@@ -153,9 +153,8 @@ jobs:
           deployment-units: ${{ inputs.deployment-units }}
 
     outputs:
-      pushed: ${{ steps.push.outputs.tag }}
-      pushed-json: |
-        [ "${{ steps.push.outputs.target-tag }}" ]
+      pushed: ${{ steps.push.outputs.pushed }}
+      pushed-json: ${{ steps.push.outputs.pushed-json }}
 
   notify-failure:
 
