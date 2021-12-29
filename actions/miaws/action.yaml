@@ -44,6 +44,7 @@ runs:
       run: |
         docker run \
           --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
+          --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker" \
           --mount "type=bind,source=$(pwd),destination=/repo" \
           --workdir /repo \
           --entrypoint /action.sh \
