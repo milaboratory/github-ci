@@ -42,10 +42,23 @@ runs:
         INPUT_DEPLOYMENT_UNITS: ${{ inputs.deployment-units }}
         INPUT_ARGS: ${{ inputs.args }}
       run: |
+        mounts=(
+          --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"
+          --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker"
+          --mount "type=bind,source=${HOME}/.aws,destination=/root/.aws"
+          --mount "type=bind,source=$(pwd),destination=/repo"
+        )
+
+        envs=(
+          --env INPUT_REGIONS
+          --env INPUT_REGIONS_BY_TASKS
+          --env INPUT_DEPLOYMENT_UNITS
+          --env INPUT_ARGS
+        )
+
         docker run \
-          --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
-          --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker" \
-          --mount "type=bind,source=$(pwd),destination=/repo" \
+          "${mounts[@]}" \
+          "${envs[@]}" \
           --workdir /repo \
           --entrypoint /action.sh \
           ghcr.io/milaboratory/miaws/cli:latest
