@@ -3,7 +3,6 @@ author: 'MiLaboratories'
 description: |
   Login to AppStack Docker registry
 
-inputs:
 runs:
   using: "composite"
 
