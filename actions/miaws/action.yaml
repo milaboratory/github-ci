@@ -42,6 +42,8 @@ runs:
         INPUT_DEPLOYMENT_UNITS: ${{ inputs.deployment-units }}
         INPUT_ARGS: ${{ inputs.args }}
       run: |
+        # MiAWS docker command
+
         mounts=(
           --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"
           --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker"
@@ -56,7 +58,6 @@ runs:
           --env INPUT_ARGS
         )
 
-        set -x
         docker run \
           "${mounts[@]}" \
           "${envs[@]}" \
