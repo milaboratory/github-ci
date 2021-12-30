@@ -16,7 +16,8 @@ on:
         description: |
           Region to push image to, when no other target regions were detected.
         type: string
-        required: true
+        required: false
+        default: 'eu-central-1'
 
       #
       # Deploy settings
@@ -27,9 +28,9 @@ on:
         type: string
         required: true
 
-      image:
+      image-tag:
         description: |
-          Image to set for task
+          Image tag to set for task
         type: string
         required: true
 
@@ -105,7 +106,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/miaws/appstack/deploy@v1
         with:
           task: ${{ inputs.task }}
-          image: ${{ inputs.image }}
+          image: ${{ inputs.image-tag }}
           regions: ${{ inputs.regions }}
           deployment-units: ${{ inputs.deployment-units }}
           run: ${{ inputs.run }}

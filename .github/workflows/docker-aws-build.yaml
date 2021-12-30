@@ -12,7 +12,7 @@ on:
         type: string
         required: true
 
-      image-name:
+      image-tag:
         description: |
           Set given tag to pushed docker image.
           The '<some-prefix>-<sha>' is recommended template.
@@ -44,7 +44,8 @@ on:
         description: |
           Region to push image to, when no other target regions were detected.
         type: string
-        required: true
+        required: false
+        default: 'eu-central-1'
 
       regions:
         description: |
@@ -147,7 +148,7 @@ jobs:
         id: push
         with:
           source: "build:local"
-          target: ${{ inputs.image-name }}
+          target: ${{ inputs.image-tag }}
           regions: ${{ inputs.regions }}
           regions-by-task: ${{ inputs.regions-by-task }}
           deployment-units: ${{ inputs.deployment-units }}
