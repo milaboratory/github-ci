@@ -1,0 +1,36 @@
+name: Run task
+author: 'MiLaboratories'
+description: |
+  Run AppStack task
+
+inputs:
+  task:
+    description: |
+      Task to run
+    required: true
+
+  regions:
+    description: |
+      Run task in listed regions
+      You can specify several regions, one per line.
+    required: false
+
+  deployment-units:
+    description: |
+      Run task in regions with given deployment units
+      You can specify several units, one per line.
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Run
+      uses: milaboratory/github-ci/actions/miaws@v1
+      with:
+        regions: ${{ inputs.regions }}
+        deployment-units: ${{ inputs.deployment-units }}
+        args: |-
+          appstack
+          run
+          ${{ input.task }}

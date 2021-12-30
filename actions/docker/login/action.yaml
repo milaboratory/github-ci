@@ -1,0 +1,35 @@
+name: 'Docker Login'
+description: 'GitHub Action to login against a Docker registry'
+author: 'docker'
+
+inputs:
+  registry:
+    description: |
+      Server address of Docker registry.
+      If not set then will default to GitHub Container Registry
+    default: 'ghcr.io'
+    required: false
+  user:
+    description: |
+      Username used to log against the Docker registry
+    required: false
+  password:
+    description: |
+      Password or personal access token used to log against the Docker registry
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Auth in docker registry
+      shell: bash
+      if: inputs.registry && inputs.user && inputs.password
+      env:
+        DOCKER_REGISTRY: ${{ inputs.registry }}
+        DOCKER_USER: ${{ inputs.user }}
+        DOCKER_PASSWORD: ${{ inputs.password }}
+      run: |
+        docker login \
+          "${DOCKER_REGISTRY}" \
+          --username "${DOCKER_USER}" \
+          --password-stdin <<<"${DOCKER_PASSWORD}"

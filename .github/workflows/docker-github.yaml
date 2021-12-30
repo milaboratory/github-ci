@@ -8,7 +8,7 @@ on:
       #
       product-name:
         description: |
-          Project name in Human Readable form for notifications and logs.
+          Project name in human-readable form for notifications and logs.
         type: string
         required: true
 
@@ -21,6 +21,14 @@ on:
         type: string
         required: false
         default: Dockerfile
+
+      build-context:
+        description: |
+          Path to docker build context root.
+          Defaults to directory with dockerfile.
+        type: string
+        required: false
+        default: ''
 
       #
       # Version detection control
@@ -105,6 +113,18 @@ on:
         type: boolean
         default: true
 
+    outputs:
+      pushed-tags:
+        description: |
+          Docker tags pushed by workflow.
+          Plaintext, one tag per line.
+        value: ${{ jobs.build.outputs.docker-tags }}
+      pushed-tags-json:
+        description: |
+          Docker tags pushed by workflow.
+          Valid JSON array.
+        value: ${{ jobs.build.outputs.docker-tags-json }}
+
     secrets:
       DOCKER_REGISTRY_USER:
         description: |
@@ -168,11 +188,17 @@ jobs:
         id: build-image
         env:
           DOCKERFILE: ${{ inputs.dockerfile }}
+          BUILD_CONTEXT: ${{ inputs.build-context }}
         with:
           run: |
+            if [ -z "${BUILD_CONTEXT}" ]; then
+              BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
+            fi
+
             docker build \
-              "$(dirname "${DOCKERFILE}")" \
-              --tag "build:local"
+              --file "${DOCKERFILE}" \
+              --tag "build:local" \
+              "${BUILD_CONTEXT}"
 
       - uses: milaboratory/github-ci/actions/shell@v1
         id: tags
@@ -268,7 +294,8 @@ jobs:
     outputs:
       release-id: ${{ steps.create-release.outputs.id }}
       release-url: ${{ steps.create-release.outputs.html_url }}
-      docker-tags: ${{ steps.push.outputs.pushed-json }}
+      docker-tags: ${{ steps.push.outputs.pushed }}
+      docker-tags-json: ${{ steps.push.outputs.pushed-json }}
 
   notify-failure:
 
@@ -314,7 +341,7 @@ jobs:
           build-version: ${{ needs.versions.outputs.current-version }}
           build-category: dev
 
-          docker-images: ${{ needs.build.outputs.docker-tags }}
+          docker-images: ${{ needs.build.outputs.docker-tags-json }}
 
       - name: Report release is ready
         if: needs.build.outputs.release-id != ''
@@ -326,4 +353,4 @@ jobs:
           product-name: ${{ inputs.product-name }}
           release-tag: ${{ needs.versions.outputs.current-tag }}
 
-          docker-images: ${{ needs.build.outputs.docker-tags }}
+          docker-images: ${{ needs.build.outputs.docker-tags-json }}

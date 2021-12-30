@@ -1,0 +1,202 @@
+name: Build and push Docker image
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      product-name:
+        description: |
+          Project name in human-readable form for notifications and logs.
+        type: string
+        required: true
+
+      image-tag:
+        description: |
+          Set given tag to pushed docker image.
+          The '<some-prefix>-<sha>' is recommended template.
+        type: string
+        required: true
+
+      dockerfile:
+        description: |
+          Path to Dockerfile.
+          Defaults to 'Dockerfile' in repository root
+
+          Relative paths are relative to repository root
+        type: string
+        required: false
+        default: Dockerfile
+
+      build-context:
+        description: |
+          Path to docker build context root.
+          Defaults to directory with dockerfile.
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Push settings
+      #
+      default-region:
+        description: |
+          Region to push image to, when no other target regions were detected.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      regions:
+        description: |
+          List of regions to push to.
+
+          Image will be pushed to docker repositories in given regions.
+
+          You can specify several tasks, one per line.
+        type: string
+        required: false
+        default: ''
+
+      regions-by-task:
+        description: |
+          Task to use for regions detection.
+
+          Image will be pushed to docker repositories in regions that have
+          given task.
+
+          You can specify several tasks, one per line.
+        type: string
+        required: false
+        default: ''
+
+      deployment-units:
+        description: |
+          Deployment units to use for regions detection.
+
+          Image will be pushed to docker repositories in regions that
+          have given deployment unit.
+
+          You can specify several units, one per line.
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      AWS_KEY_ID:
+        description: |
+          Login for Docker Registry
+        required: true
+      AWS_KEY_SECRET:
+        description: |
+          Secret for Docker Registry
+        required: true
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  build:
+    name: Build docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build Docker Image
+        uses: milaboratory/github-ci/actions/shell@v1
+        id: build-image
+        env:
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          BUILD_CONTEXT: ${{ inputs.build-context }}
+        with:
+          run: |
+            if [ -z "${BUILD_CONTEXT}" ]; then
+              BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
+            fi
+
+            docker build \
+              --file "${DOCKERFILE}" \
+              --tag "build:local" \
+              "${BUILD_CONTEXT}"
+
+      - uses: milaboratory/github-ci/actions/miaws/configure@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          aws-key-id: ${{ secrets.AWS_KEY_ID }}
+          aws-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          default-region: ${{ inputs.default-region }}
+
+      - uses: milaboratory/github-ci/actions/miaws/appstack/login@v1
+      - uses: milaboratory/github-ci/actions/miaws/appstack/push@v1
+        id: push
+        with:
+          source: "build:local"
+          target: ${{ inputs.image-tag }}
+          regions: ${{ inputs.regions }}
+          regions-by-task: ${{ inputs.regions-by-task }}
+          deployment-units: ${{ inputs.deployment-units }}
+
+    outputs:
+      pushed: ${{ steps.push.outputs.pushed }}
+      pushed-json: ${{ steps.push.outputs.pushed-json }}
+
+  notify-failure:
+
+    name: Notify (failure)
+    runs-on: ubuntu-latest
+
+    if: failure() && inputs.notify-telegram
+
+    needs:
+      - build
+
+    steps:
+      - name: Report build failure to Telegram
+        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          build-version: ${{ github.sha }}
+
+  notify-success:
+
+    name: Notify (success)
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram
+
+    needs:
+      - build
+
+    steps:
+      - name: Report dev build is ready
+        if: needs.build.outputs.release-id == ''
+        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          build-version: ${{ github.sha }}
+          build-category: dev
+
+          docker-images: ${{ needs.build.outputs.pushed-json }}

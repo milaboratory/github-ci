@@ -1,0 +1,64 @@
+name: Run 'miaws' utility
+author: 'MiLaboratories'
+description: |
+  Run 'miaws' utility in action
+
+inputs:
+  args:
+    description: |
+      Command arguments, one per line.
+    required: true
+
+  regions:
+    description: |
+      --region options list
+      One line - one region
+    required: false
+
+  regions-by-tasks:
+    description: |
+      --regions-by-task options list
+      One line - one task
+    required: false
+
+  deployment-units:
+    description: |
+      --deployment-unit options list
+      One line - one unit
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    # We can't use regular 'using: "docker"' action here because of internal
+    # github action optimizations. All images in 'docker' actions are
+    # pulled/built before any steps (and before docker login), which
+    # causes pipeline failure for images in private docker registries.
+    - shell: bash
+      env:
+        INPUT_REGIONS: ${{ inputs.regions }}
+        INPUT_REGIONS_BY_TASKS: ${{ inputs.regions-by-tasks }}
+        INPUT_DEPLOYMENT_UNITS: ${{ inputs.deployment-units }}
+        INPUT_ARGS: ${{ inputs.args }}
+      run: |
+        mounts=(
+          --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"
+          --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker"
+          --mount "type=bind,source=${HOME}/.aws,destination=/root/.aws"
+          --mount "type=bind,source=$(pwd),destination=/repo"
+        )
+
+        envs=(
+          --env INPUT_REGIONS
+          --env INPUT_REGIONS_BY_TASKS
+          --env INPUT_DEPLOYMENT_UNITS
+          --env INPUT_ARGS
+        )
+
+        docker run \
+          "${mounts[@]}" \
+          "${envs[@]}" \
+          --workdir /repo \
+          --entrypoint /action.sh \
+          ghcr.io/milaboratory/miaws/cli:latest
