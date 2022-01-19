@@ -35,9 +35,9 @@ runs:
         mkdir -p ~/.gradle/
 
         if [ "${APPEND}" = "true" ]; then
-          printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
+          printf "%s" "${PROPERTIES}" >> ~/.gradle/gradle.properties
         else
-          printf "%s" "${GRADLE_PROPS}" > ~/.gradle/gradle.properties
+          printf "%s" "${PROPERTIES}" > ~/.gradle/gradle.properties
         fi
 
     - name: Dump contents of gradle.properties
