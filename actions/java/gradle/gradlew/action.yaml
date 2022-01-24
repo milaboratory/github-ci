@@ -4,9 +4,9 @@ description: |
   Run 'gradlew' script located in gradle project proot
 
 inputs:
-  tasks:
+  arguments:
     description: |
-      Newline-separated list of tasks to run.
+      Newline-separated list of arguments to run.
     required: true
 
   properties:
@@ -37,4 +37,4 @@ runs:
         job-id: ${{ inputs.cache-key }}
         build-root-directory: ${{ inputs.working-directory }}
         properties: ${{ inputs.properties }}
-        arguments: ${{ inputs.tasks }}
+        arguments: ${{ inputs.arguments }}
