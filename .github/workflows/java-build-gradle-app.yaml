@@ -207,7 +207,7 @@ jobs:
             version=${{ needs.versions.outputs.current-version }}
             mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
-          tasks: :${{ inputs.build-project }}:distTar
+          arguments: :${{ inputs.build-project }}:distTar
 
       - name: Save artifact with tar distribution
         if: inputs.build-tar
@@ -227,7 +227,7 @@ jobs:
             version=${{ needs.versions.outputs.current-version }}
             mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
-          tasks: :${{ inputs.build-project }}:dockerBuildImage
+          arguments: :${{ inputs.build-project }}:dockerBuildImage
 
       - name: Generate push targets list
         id: push-targets
