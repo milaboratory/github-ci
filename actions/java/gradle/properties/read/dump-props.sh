@@ -6,8 +6,8 @@ set -o pipefail
 
 script_path="$(cd "$(dirname "${0}")" && dirname "${PWD}")"
 
-# shellcheck source-path=../../lib/sh/ghwa-commands.sh
-source "${script_path}/../../lib/sh/ghwa-commands.sh"
+# shellcheck source-path=../../../lib/sh/ghwa-commands.sh
+source "${script_path}/../../../lib/sh/ghwa-commands.sh"
 
 function trim_spaces() {
     sed '
