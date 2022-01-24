@@ -272,7 +272,7 @@ jobs:
             version=${{ needs.versions.outputs.current-version }}
             mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
-          tasks: ${{ steps.build-tasks.outputs.result }}
+          arguments: ${{ steps.build-tasks.outputs.result }}
 
       - name: Generate publish tasks
         id: publish-tasks
@@ -303,7 +303,7 @@ jobs:
             version=${{ needs.versions.outputs.current-version }}
             mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
 
-          tasks: ${{ steps.publish-tasks.outputs.stdout }}
+          arguments: ${{ steps.publish-tasks.outputs.stdout }}
 
       - name: Generate artifacts paths
         id: artifacts-paths
