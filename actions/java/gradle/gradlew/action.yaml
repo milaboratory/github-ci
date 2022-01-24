@@ -21,35 +21,20 @@ inputs:
     required: false
     default: ./
 
+  cache-key:
+    description: |
+      Key to use for gradle build cache
+    required: false
+    default: 'jdk-common'
+
 runs:
   using: "composite"
 
   steps:
     - name: Run 'gradlew ${{ inputs.target }}'
-      shell: bash
-
-      working-directory: ${{ inputs.working-directory }}
-
-      env:
-        GRADLE_PROPERTIES: ${{ inputs.properties }}
-        GRADLE_TASKS: ${{ inputs.tasks }}
-
-      run: |
-        # Run gradlew tasks one-by-one
-
-        set -o nounset
-        set -o errexit
-
-        props=(
-          --project-prop "mi-ci=true"
-          --project-prop "mi-release=false"
-        )
-        while read -r gradle_prop; do
-          if [ -n "${gradle_prop}" ]; then
-            props+=(--project-prop "${gradle_prop}")
-          fi
-        done <<<"${GRADLE_PROPERTIES}"
-
-        mapfile -t tasks <<<"${GRADLE_TASKS}"
-
-        ./gradlew "${props[@]}" "${tasks[@]}"
+      uses: milaboratory/github-ci/actions/java/gradle/cache@v1
+      with:
+        job-id: ${{ inputs.cache-key }}
+        build-root-directory: ${{ inputs.working-directory }}
+        properties: ${{ inputs.properties }}
+        arguments: ${{ inputs.tasks }}

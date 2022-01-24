@@ -10,9 +10,9 @@ inputs:
     required: false
     default: ''
 
-  append:
+  replace:
     description: |
-      Append properties instead of replacing them
+      Replace entire properties file instead of appending
     required: false
     default: 'false'
 
@@ -30,14 +30,14 @@ runs:
       shell: bash
       env:
         PROPERTIES: ${{ inputs.properties }}
-        APPEND: ${{ inputs.append }}
+        REPLACE: ${{ inputs.replace }}
       run: |
         mkdir -p ~/.gradle/
 
-        if [ "${APPEND}" = "true" ]; then
-          printf "%s" "${PROPERTIES}" >> ~/.gradle/gradle.properties
-        else
+        if [ "${REPLACE}" = "true" ]; then
           printf "%s" "${PROPERTIES}" > ~/.gradle/gradle.properties
+        else
+          printf "%s" "${PROPERTIES}" >> ~/.gradle/gradle.properties
         fi
 
     - name: Dump contents of gradle.properties
