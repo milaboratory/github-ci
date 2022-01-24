@@ -1,0 +1,47 @@
+name: Set ~/.gradle/gradle.properties
+author: 'MiLaboratories'
+description: |
+  Set contents of ~/.gradle/gradle.properties file.
+
+inputs:
+  properties:
+    description: |
+      Properties to set for each task run
+    required: false
+    default: ''
+
+  replace:
+    description: |
+      Replace entire properties file instead of appending
+    required: false
+    default: 'false'
+
+outputs:
+  properties:
+    description: |
+      Final gradle.properties contents after operation.
+    value: ${{ steps.props.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set gradle.properties
+      shell: bash
+      env:
+        PROPERTIES: ${{ inputs.properties }}
+        REPLACE: ${{ inputs.replace }}
+      run: |
+        mkdir -p ~/.gradle/
+
+        if [ "${REPLACE}" = "true" ]; then
+          printf "%s" "${PROPERTIES}" > ~/.gradle/gradle.properties
+        else
+          printf "%s" "${PROPERTIES}" >> ~/.gradle/gradle.properties
+        fi
+
+    - name: Dump contents of gradle.properties
+      id: props
+      uses: milaboratory/github-ci/actions/shell@v1
+      with:
+        run: cat ~/.gradle/gradle.properties

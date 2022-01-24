@@ -245,15 +245,13 @@ jobs:
           cache: 'gradle'
 
       - name: Set gradle.properties
-        env:
-          GRADLE_PROPS: ${{ secrets.GRADLE_PROPERTIES }}
-        run: |
-          mkdir -p ~/.gradle/
-          printf "%s" "${GRADLE_PROPS}" >> ~/.gradle/gradle.properties
+        uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
+        with:
+          properties: ${{ secrets.GRADLE_PROPERTIES }}
 
       - name: Read actual project properties
         id: gradle-props
-        uses: milaboratory/github-ci/actions/java/gradle/dump-properties@v1
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
         with:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project }}

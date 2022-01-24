@@ -63,4 +63,4 @@ runs:
         args: |-
           appstack
           run
-          ${{ input.task }}
+          ${{ inputs.task }}
