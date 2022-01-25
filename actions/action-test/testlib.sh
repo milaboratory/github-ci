@@ -24,6 +24,16 @@ function test_equals() {
   fi
 }
 
+function test_not_empty() {
+  local _test_name="${1}"
+  local _actual="${2}"
+
+  if [ -z "${_actual}" ]; then
+    ghwa_error "${_test_name}: result should not be empty"
+    _status_failed
+  fi
+}
+
 function fail_test() {
   local _message="${1}"
 

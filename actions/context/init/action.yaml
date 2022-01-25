@@ -6,6 +6,20 @@ description: |
   This action should be called in the first job of each workflow
   that uses 'context' artifact to pass data between jobs and actions.
 
+inputs:
+  version-canonize:
+    description: |
+      Canonize version number to make it always look like regular semver: '<major>.<minor>.<patch>'.
+      This makes git tag 'v1.1' to produce version '1.1.0' instead of '1.1'.
+    required: false
+    default: 'true'
+
+  version-fetch-depth:
+    description: |
+      The number of commits of git history from current HEAD to fetch
+    required: false
+    default: '100'
+
 runs:
   using: "composite"
 
