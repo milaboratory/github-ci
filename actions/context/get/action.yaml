@@ -64,11 +64,11 @@ runs:
             # We have several values of the same key.
             # Silent warning, if all values have the same value.
             for f in "${key_files[@]}"; do
-              if cmp --silent "${CTX_PATH}/${f}" "${CTX_PATH}/${key_files[-1]}"; then
+              if cmp --silent "${f}" "${key_files[-1]}"; then
                 ghwa_warning "Key '${CTX_KEY}' was set with different values more than once"
                 break
               fi
             done
           fi
 
-          cat "${CTX_PATH}/${key_files[-1]}"
+          cat "${key_files[-1]}"
