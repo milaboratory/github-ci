@@ -26,19 +26,19 @@ runs:
   steps:
     - shell: bash
       env:
-        CTX_PATH: ${{ github.action_path }}/ctx
+        CTX_PATH: ${{ github.action_path }}/../ctx
 
       run: rm -rf "${CTX_PATH}"
 
     - uses: actions/download-artifact@v2
       with:
         name: context
-        path: ${{ github.action_path }}/ctx
+        path: ${{ github.action_path }}/../ctx
 
     - id: create_key
       uses: milaboratory/github-ci/actions/shell@v1
       env:
-        CTX_PATH: ${{ github.action_path }}/ctx
+        CTX_PATH: ${{ github.action_path }}/../ctx
         CTX_KEY: ${{ inputs.key }}
         CTX_VALUE: ${{ inputs.value }}
 
