@@ -57,18 +57,9 @@ runs:
             fi
           fi
 
-          if [ "${#key_files[@]}" -gt 10 ]; then
-            ghwa_warning "The same context key '${CTX_KEY}' was set more than 10 times. Optimize your workflow."
-
-          elif [ "${#key_files[@]}" -gt 1 ]; then
-            # We have several values of the same key.
-            # Silent warning, if all values have the same value.
-            for f in "${key_files[@]}"; do
-              if cmp --silent "${f}" "${key_files[-1]}"; then
-                ghwa_warning "Key '${CTX_KEY}' was set with different values more than once"
-                break
-              fi
-            done
+          if [ "${#key_files[@]}" -gt 1 ]; then
+            ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
+            exit 1
           fi
 
           cat "${key_files[-1]}"
