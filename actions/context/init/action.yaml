@@ -1,0 +1,24 @@
+name: Initialize context
+author: 'MiLaboratories'
+description: |
+  Initialize context with main run data.
+
+  This action should be called in the first job of each workflow
+  that uses 'context' artifact to pass data between jobs and actions.
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/checkout@v2
+
+    - id: versions
+      uses: milaboratory/github-ci/actions/detect-version@v1
+      with:
+        canonize: ${{ inputs.version-canonize }}
+        fetch-depth: ${{ inputs.version-fetch-depth }}
+
+    - uses: milaboratory/github-ci/actions/context/put@v1
+      with:
+        key: "versions.json"
+        value: ${{ toJSON( steps.versions.outputs ) }}

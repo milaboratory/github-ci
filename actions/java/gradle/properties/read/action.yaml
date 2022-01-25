@@ -17,7 +17,8 @@ inputs:
 
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
-# them all to action's outputs. We have to explicitly list props we're interested in.
+# 'all' properties to action's outputs.
+# We have to explicitly list props to be provided in action's outputs.
 outputs:
   name:
     description: name property
