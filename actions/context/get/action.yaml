@@ -58,7 +58,7 @@ runs:
           echo 'false'
 
     - uses: actions/download-artifact@v2
-      if: steps.needs_update.outputs.stdout == "true"
+      if: 'steps.needs_update.outputs.stdout == "true"'
       with:
         name: context
         path: ${{ github.action_path }}/../ctx
