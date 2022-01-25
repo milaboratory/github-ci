@@ -53,7 +53,7 @@ runs:
           fi
 
           printf "%s" "${CTX_VALUE}" > "${file_path}"
-          echo "${file_path}"
+          echo "$(realpath "${file_path}")"
 
     - uses: actions/upload-artifact@v2
       with:
