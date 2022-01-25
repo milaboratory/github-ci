@@ -42,10 +42,10 @@ outputs:
     value: ${{ fromJSON(steps.versions.outputs.value).latest-sha }}
 
   is-latest-version:
-    description: 'True' when current version is the latest version available
+    description: "'True' when current version is the latest version available"
     value: ${{ fromJSON(steps.versions.outputs.value).latest-version == fromJSON(steps.versions.outputs.value).current-version }}
   is-branch-head:
-    description: 'True' when current run is from latest commit of branch.
+    description: "'True' when current run is from latest commit of branch."
     value: ${{ fromJSON(steps.versions.outputs.value).is-branch-head }}
 
 runs:
