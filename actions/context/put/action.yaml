@@ -24,18 +24,25 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/shell@v1
-      id: update_key
+    - id: create_key
+      uses: milaboratory/github-ci/actions/shell@v1
+
       env:
         CTX_PATH: ${{ github.action_path }}/ctx
         CTX_KEY: ${{ inputs.key }}
         CTX_VALUE: ${{ inputs.value }}
+
       with:
         run: |
+          time_nano=$(date '+%s%N')
+          file_path="${CTX_PATH}/${CTX_KEY}.${time_nano}"
+
           mkdir -p "${CTX_PATH}"
-          printf "%s" "${CTX_VALUE}" > "${CTX_PATH}/${CTX_KEY}"
+          printf "%s" "${CTX_VALUE}" > "${file_path}"
+
+          echo "${file_path}"
 
     - uses: actions/upload-artifact@v2
       with:
         name: context
-        path: ${{ github.action_path }}/ctx/${{ inputs.key }}
+        path: ${{ steps.create_key.outputs.stdout }}

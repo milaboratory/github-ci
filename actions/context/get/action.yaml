@@ -46,7 +46,9 @@ runs:
 
       with:
         run: |
-          if [ ! -r "${CTX_PATH}/${CTX_KEY}" ]; then
+          key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
+
+          if [ "${#key_files[@]}" -eq 0 ]; then
             if [ "${IGNORE_MISSING}" = "true" ]; then
               exit 0
             else
@@ -55,4 +57,18 @@ runs:
             fi
           fi
 
-          cat "${CTX_PATH}/${CTX_KEY}"
+          if [ "${#key_files[@]}" -gt 10 ]; then
+            ghwa_warning "The same context key '${CTX_KEY}' was set more than 10 times. Optimize your workflow."
+
+          elif [ "${#key_files[@]}" -gt 1 ]; then
+            # We have several values of the same key.
+            # Silent warning, if all values have the same value.
+            for f in "${key_files[@]}"; do
+              if cmp --silent "${CTX_PATH}/${f}" "${CTX_PATH}/${key_files[-1]}"; then
+                ghwa_warning "Key '${CTX_KEY}' was set with different values more than once"
+                break
+              fi
+            done
+          fi
+
+          cat "${CTX_PATH}/${key_files[-1]}"
