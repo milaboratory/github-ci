@@ -1,0 +1,58 @@
+name: Get data from context.
+author: 'MiLaboratories'
+description: |
+  Get from context data stored by prevoius jobs.
+  Consider context as key-value store with immutable values.
+  Once stored under specific key, the value can not be changed.
+
+  NOTE: for large files use 'cache' GitHub Actions functionality
+        as 'context' bases on 'artifacts' and is slow on big files.
+
+inputs:
+  key:
+    description: |
+      The key to use for value storage.
+      The value could be retreived from context by this key.
+    required: true
+
+  ignore-missing:
+    description: |
+      Don't fail on attempt to read missing key from context
+    required: false
+    default: 'false'
+
+outputs:
+  value:
+    description:
+      The value loaded from context
+    value: ${{ steps.value.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: context
+        path: ${{ github.action_path }}/ctx
+
+    - id: value
+      uses: milaboratory/github-ci/actions/shell@v1
+
+      env:
+        CTX_PATH: ${{ github.action_path }}/ctx
+        CTX_KEY: ${{ inputs.key }}
+        IGNORE_MISSING: ${{ inputs.ignore-missing }}
+
+      with:
+        run: |
+          if [ ! -r "${CTX_PATH}/${CTX_KEY}" ]; then
+            if [ "${IGNORE_MISSING}" = "true" ]; then
+              exit 0
+            else
+              ghwa_error "Key '${CTX_KEY}' is missing in context artifact"
+              exit 1
+            fi
+          fi
+
+          cat "${CTX_PATH}/${CTX_KEY}"
