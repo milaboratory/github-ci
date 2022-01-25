@@ -29,7 +29,7 @@ function test_not_empty() {
   local _actual="${2}"
 
   if [ -z "${_actual}" ]; then
-    ghwa_error "${_test_name}: result should not be empty"
+    ghwa_error "${_test_name}: value should not be empty"
     _status_failed
   fi
 }
