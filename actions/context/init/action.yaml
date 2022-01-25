@@ -24,10 +24,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: actions/upload-artifact@v2
-      with:
-        name: context
-        path: ${{ github.action_path }}/init.txt
+    - uses: milaboratory/github-ci/actions/context/create@v1
 
     - uses: actions/checkout@v2
     - id: versions
