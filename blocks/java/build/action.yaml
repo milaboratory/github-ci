@@ -90,6 +90,13 @@ inputs:
     required: false
     default: ''
 
+  artifact-name:
+    description: |
+      Name of build artifact to create when <artifacts-paths> input is not empty
+
+    required: false
+    default: 'build-artifacts'
+
   artifacts-paths:
     description: |
       List of paths to artifacts to save after build run.
@@ -107,11 +114,6 @@ inputs:
       Time in days to keep build artifacts before removing them
     required: false
     default: '7'
-
-outputs:
-  maven-packages:
-    description: ''
-    value: ${{ steps.libs-list.outputs.result }}
 
 runs:
   using: "composite"
@@ -184,6 +186,6 @@ runs:
       if: steps.artifacts-paths.outputs.result != ''
       uses: actions/upload-artifact@v2
       with:
-        name: build-artifacts
+        name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifacts-paths.outputs.result }}
         retention-days: ${{ inputs.artifacts-retention }}
