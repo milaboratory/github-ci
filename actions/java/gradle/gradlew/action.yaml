@@ -36,5 +36,8 @@ runs:
       with:
         job-id: ${{ inputs.cache-key }}
         build-root-directory: ${{ inputs.working-directory }}
-        properties: ${{ inputs.properties }}
+        properties: |-
+          mi-ci=true
+          mi-release=false
+          ${{ inputs.properties }}
         arguments: ${{ inputs.arguments }}
