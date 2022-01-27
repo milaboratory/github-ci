@@ -23,9 +23,9 @@ inputs:
 
   cache-key:
     description: |
-      Key to use for gradle build cache
+      Key to use for gradle build cache, shared across builds in single repository.
     required: false
-    default: 'jdk-common'
+    default: ''
 
 runs:
   using: "composite"
