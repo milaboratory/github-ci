@@ -9,11 +9,18 @@ inputs:
       Gradle project root (with settings.gradle file)
     required: false
     default: ./
+
   project-name:
     description: |
       Project to get properties (gradle :<project>:properties)
     required: false
     default: ''
+
+  cache-key:
+    description: |
+      Key to use for gradle build cache
+    required: false
+    default: 'jdk-common'
 
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
@@ -40,10 +47,19 @@ runs:
   using: "composite"
 
   steps:
+    - uses: milaboratory/github-ci/actions/java/gradle/cache@v1
+      with:
+        job-id: ${{ inputs.cache-key }}
+        build-root-directory: ${{ inputs.project-dir }}
+
     - name: Read and print properties
       id: props
       shell: bash
       working-directory: ${{ inputs.project-dir }}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        PROJECT_NAME: ${{ inputs.project-name }}
+
       run: |
-        ./gradlew --quiet ":${{ inputs.project-name }}:properties" |
-          "${{ github.action_path }}/dump-props.sh"
+        ./gradlew --quiet ":${PROJECT_NAME}:properties" |
+          "${ACTION_PATH}/dump-props.sh"
