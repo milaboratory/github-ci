@@ -1,10 +1,11 @@
 name: Initialize context
 author: 'MiLaboratories'
 description: |
-  Initialize context with main run data.
+  Initialize `context` artifact with main run data.
+  `context` artifact is used to pass data between jobs and actions.
 
-  This action should be called in the first job of each workflow
-  that uses 'context' artifact to pass data between jobs and actions.
+  This action should be called first in workflow to provide all
+  blocks (`blocks/*` actions) with information they require.
 
 inputs:
   version-canonize:
