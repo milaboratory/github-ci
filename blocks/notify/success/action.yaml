@@ -1,0 +1,86 @@
+name: Send notifications about workflow success
+author: 'MiLaboratories'
+description: |
+  Send notifications about workflow success.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      ID of Telegram Channel or User to notify on build results.
+    required: true
+
+  telegram-token:
+    description: |
+      Telegram Bot API authorization token
+    required: true
+
+  product-name:
+    description: |
+      App name in human-readable form,
+      ss it is supposed to be shown in messages and notifications.
+    required: false
+    default: ${{ github.repository }}
+
+  docker-images:
+    description: |
+      List of docker images in JSON format to put into notification
+    required: false
+    default: '[]'
+
+  maven-packages:
+    description: |
+      List of java libraries in JSON format to put into notification.
+    required: false
+    default: '[]'
+
+  additional-info:
+    description: |
+      Any additional text to append to notification.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v1
+
+    - shell: bash
+      env:
+        CTX: ${{ toJSON(steps.context.outputs) }}
+      run: echo "Context"
+
+    - name: Report dev build is ready
+      if: |
+        ! fromJSON(steps.context.outputs.is-release)
+      uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        build-category: dev
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.context.outputs.current-version }}
+
+        docker-images: ${{ inputs.docker-images }}
+        maven-packages: ${{ inputs.maven-packages }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Report release is ready
+      if: |
+        fromJSON(steps.context.outputs.is-release)
+      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        release-tag: ${{ steps.context.outputs.current-tag }}
+
+        docker-images: ${{ inputs.docker-images }}
+        maven-packages: ${{ inputs.maven-packages }}
+        additional-info: ${{ inputs.additional-info }}
