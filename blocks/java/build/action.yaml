@@ -1,10 +1,13 @@
-name: Initialize context
+name: Build Java project using gradle
 author: 'MiLaboratories'
 description: |
-  Initialize context with main run data.
+  Build Java project with gradle.
 
-  This action should be called in the first job of each workflow
-  that uses 'context' artifact to pass data between jobs and actions.
+  This action cares about caching and re-using build results and
+  uploading selected build results into GitHub Actions artifacts storage.
+
+  Requirements:
+    - initialized context (actions/context/init)
 
 inputs:
   #
@@ -90,6 +93,15 @@ inputs:
     required: false
     default: ''
 
+  cache-key:
+    description: |
+      Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+  #
+  # Artifact control
+  #
   artifact-name:
     description: |
       Name of build artifact to create when <artifacts-paths> input is not empty
@@ -97,7 +109,7 @@ inputs:
     required: false
     default: 'build-artifacts'
 
-  artifacts-paths:
+  artifact-paths:
     description: |
       List of paths to artifacts to save after build run.
       Empty list disables artifacts upload.
@@ -109,7 +121,7 @@ inputs:
     required: false
     default: ''
 
-  artifacts-retention:
+  artifact-retention:
     description: |
       Time in days to keep build artifacts before removing them
     required: false
@@ -165,7 +177,7 @@ runs:
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
-        cache-key: jdk-${{ inputs.java-version }}
+        cache-key: ${{ inputs.cache-key }}
 
     - name: Read actual project properties
       id: gradle-props
