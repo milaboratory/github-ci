@@ -108,11 +108,11 @@ runs:
     - id: job-id
       uses: milaboratory/github-ci/actions/shell@v1
       env:
-        JOB_ID: ${{ inputs.job-id }}
+        CACHE_KEY: ${{ inputs.job-id }}
       with:
-        run:
-          if [ -n "${JOB_ID}" ]; then
-            echo "${JOB_ID}"
+        run: |
+          if [ -n "${CACHE_KEY}" ]; then
+            echo "${CACHE_KEY}"
             exit 0
           fi
 
