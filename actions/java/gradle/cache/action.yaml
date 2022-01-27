@@ -12,7 +12,10 @@ outputs:
 
 inputs:
   job-id:
-    description: A job identifier to avoid cache pollution from different jobs
+    description: |
+      A job identifier to avoid cache pollution from different jobs.
+      When empty, defaults to '<java distribution>-<java major version>'.
+        Example: 'Temurin-11'.
     required: false
   build-root-directory:
     description: Relative path under $GITHUB_WORKSPACE where Git repository is placed
@@ -102,10 +105,34 @@ inputs:
 runs:
   using: composite
   steps:
+    - id: job-id
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        JOB_ID: ${{ inputs.job-id }}
+      with:
+        run:
+          if [ -n "${JOB_ID}" ]; then
+            echo "${JOB_ID}"
+            exit 0
+          fi
+
+          # Use java binary from PATH by default
+          JAVA_EXE="java"
+
+          # When available, use java bin from JAVA_HOME
+          if [ -x "${JAVA_HOME}/bin/java" ]; then
+            JAVA_EXE="${JAVA_HOME}/bin/java"
+          fi
+
+          # Try to detect cache key automatically using java version
+          "${JAVA_EXE}" --version |
+            awk '/Environment/{print $4}' |
+            awk -F '[-.]' '{printf "%s-%s", $1, $2}'
+
     - uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf
       id: cache
       with:
-        job-id: ${{ inputs.job-id }}
+        job-id: ${{ steps.job-id.outputs.stdout }}
         build-root-directory: ${{ inputs.build-root-directory }}
         gradle-version: ${{ inputs.gradle-version }}
         read-only: ${{ inputs.read-only }}
