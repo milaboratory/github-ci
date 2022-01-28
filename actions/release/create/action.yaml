@@ -149,5 +149,5 @@ runs:
         allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
-        artifacts: ${{ steps.assets.outputs.stdout }}
+        artifacts: ${{ steps.assets.outputs.result }}
         commit: ${{ inputs.commit }}
