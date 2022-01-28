@@ -129,16 +129,13 @@ runs:
         name: ${{ inputs.artifact }}
 
     - id: assets
-      uses: milaboratory/github-ci/actions/shell@v1
-      env:
-        ASSETS: ${{ inputs.assets }}
-        ARTIFACT: ${{ inputs.artifact }}
+      uses: milaboratory/github-ci/actions/strings/join@v1
       with:
-        run: |
-          echo "${ASSETS}"
-          if [ -n "${ARTIFACT}" ]; then
-            echo "${ARTIFACT}/*"
-          fi
+        input: |
+          ${{ inputs.assets }}
+          ${{ inputs.artifact }}
+        separator: ,
+        skip-empty: true
 
     - name: Create release
       id: create
@@ -152,6 +149,5 @@ runs:
         allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
-        artifacts: |
-          ${{ steps.assets.outputs.stdout }}
+        artifacts: ${{ steps.assets.outputs.stdout }}
         commit: ${{ inputs.commit }}
