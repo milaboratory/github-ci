@@ -203,7 +203,7 @@ jobs:
           tag: ${{ needs.versions.outputs.current-tag }}
 
           assets: |
-            dist_electron/*.dmg,
+            dist_electron/*.dmg
             dist_electron/*.AppImage
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
