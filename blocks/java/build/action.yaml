@@ -22,6 +22,13 @@ inputs:
     required: false
     default: ''
 
+  project-dir:
+    description: |
+      Path to project root directory.
+      Defaults to repository root.
+    required: false
+    default: './'
+
   tasks:
     description: |
       Gradle build tasks.
@@ -50,13 +57,6 @@ inputs:
 
     required: false
     default: ''
-
-  project-dir:
-    description: |
-      Path to project root directory.
-      Defaults to repository root.
-    required: false
-    default: './'
 
   #
   # Checkout settings
@@ -104,7 +104,7 @@ inputs:
   #
   artifact-name:
     description: |
-      Name of build artifact to create when <artifacts-paths> input is not empty
+      Name of build artifact to create when <artifact-paths> input is not empty
 
     required: false
     default: 'build-artifacts'
@@ -187,17 +187,17 @@ runs:
         project-name: ${{ inputs.project }}
 
     - name: Generate artifacts paths
-      id: artifacts-paths
+      id: artifact-paths
       uses: milaboratory/github-ci/actions/strings/convert-paths@v1
       with:
         rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
         abs-root: .
-        paths: ${{ inputs.artifacts-paths }}
+        paths: ${{ inputs.artifact-paths }}
 
     - name: Save build artifacts
-      if: steps.artifacts-paths.outputs.result != ''
+      if: steps.artifact-paths.outputs.result != ''
       uses: actions/upload-artifact@v2
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ steps.artifacts-paths.outputs.result }}
-        retention-days: ${{ inputs.artifacts-retention }}
+        path: ${{ steps.artifact-paths.outputs.result }}
+        retention-days: ${{ inputs.artifact-retention }}
