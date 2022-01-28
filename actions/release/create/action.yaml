@@ -134,7 +134,7 @@ runs:
         input: |
           ${{ inputs.assets }}
           ${{ inputs.artifact }}
-        separator: ,
+        separator: ','
         skip-empty: true
 
     - name: Create release
