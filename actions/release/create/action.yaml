@@ -45,10 +45,6 @@ inputs:
           dir2/file2.dmg
           dir3/**
     required: true
-  artifact:
-    description: |
-      Upload artifact's content as release assets.
-    required: false
 
   #
   # Release creation settings
@@ -122,18 +118,10 @@ runs:
         token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
 
-    - name: Download artifacts
-      if: inputs.artifact != ''
-      uses: actions/download-artifact@v1
-      with:
-        name: ${{ inputs.artifact }}
-
     - id: assets
       uses: milaboratory/github-ci/actions/strings/join@v1
       with:
-        input: |
-          ${{ inputs.assets }}
-          ${{ inputs.artifact }}
+        input: ${{ inputs.assets }}
         separator: ','
         skip-empty: true
 
