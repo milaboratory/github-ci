@@ -146,6 +146,11 @@ jobs:
 
     steps:
       - uses: milaboratory/github-ci/actions/context/init@v1
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+    outputs:
+      is-release: ${{ steps.context.outputs.is-release }}
 
   build:
     name: :build
@@ -286,7 +291,10 @@ jobs:
     runs-on: ubuntu-latest
 
     needs:
+      - init
       - distDocker
+
+    if: fromJSON(needs.init.outputs.is-release)
 
     environment: release
 
