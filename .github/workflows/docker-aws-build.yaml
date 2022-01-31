@@ -42,7 +42,20 @@ on:
           List of build args (ARG Dockerfile instruction)
           to pass to `docker build` command:
             --build-arg <arg>
-          Use multiline format: one line - one argument:
+
+          One line - one argument:
+            NODE_ENV=production
+            CUSTOM_VAR=value1
+        type: string
+        required: false
+        default: ''
+
+      build-env:
+        description: |
+          List of environment variables to set at build time:
+            --env <arg>
+
+          One line - one variable:
             NODE_ENV=production
             CUSTOM_VAR=value1
         type: string
@@ -138,16 +151,21 @@ jobs:
           DOCKERFILE: ${{ inputs.dockerfile }}
           BUILD_CONTEXT: ${{ inputs.build-context }}
           BUILD_ARGS: ${{ inputs.build-args }}
+          BUILD_ENVS: ${{ inputs.build-envs }}
         with:
           run: |
-            if [ -z "${BUILD_CONTEXT}" ]; then
+            if [ -z "${BUILD_CONTEXT:-}" ]; then
               BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
             fi
 
             args=()
-            while read -r arg; do
-              args+=( --build-arg "${arg}" )
+            while read -r _arg; do
+              args+=( --build-arg "${_arg}" )
             done <<<"${BUILD_ARGS}"
+
+            while read -r _env; do
+              declare -x "${_env}"
+            done <<<"${BUILD_ENVS}"
 
             docker build \
               --file "${DOCKERFILE}" \
