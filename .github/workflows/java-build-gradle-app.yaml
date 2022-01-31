@@ -279,7 +279,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          docker-images: ${{ needs.build.outputs.docker-tags }}
+          docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
   release:
     name: Release app
