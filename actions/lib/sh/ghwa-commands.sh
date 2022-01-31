@@ -39,7 +39,7 @@ function _ghwa_command() {
   { shift 1; shift 1; } || true
 
   local _act_options
-  _act_options="$(_ghwa_join ',' "${@}")"
+  _act_options="$(_ghwa_join ',' "${@:-}")"
 
   if [ -n "${_act_options}" ]; then
     _act_options=" ${_act_options}" # prepend options list with space to not break action line format
