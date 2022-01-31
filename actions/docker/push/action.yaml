@@ -78,8 +78,6 @@ runs:
         run: |
           # Render full target tags (<registry>/<path>:<version>)
 
-          source "${{ github.action_path }}/../../lib/sh/ghwa-commands.sh"
-
           if [ -z "${TARGET_TAGS}" ]; then
             TARGET_TAGS="${GITHUB_REPOSITORY}/${SOURCE_TAG}"
           fi
