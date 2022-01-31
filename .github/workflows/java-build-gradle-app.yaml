@@ -148,7 +148,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/context/init@v1
 
   build:
-    name: Build application
+    name: :build
     runs-on: ubuntu-latest
 
     needs:
@@ -169,7 +169,7 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
   test:
-    name: Test application
+    name: :test
     runs-on: ubuntu-latest
 
     needs:
@@ -189,7 +189,7 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
   distTar:
-    name: Build tar archive with application
+    name: :distTar
     runs-on: ubuntu-latest
 
     needs:
@@ -214,7 +214,7 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
   distDocker:
-    name: Build docker image with application
+    name: :dockerBuildImage
     runs-on: ubuntu-latest
 
     needs:
