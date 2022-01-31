@@ -48,8 +48,8 @@ runs:
             fi
 
             if [[ "${p}" = /* ]]; then
-              echo "${ABS_ROOT}${p}"
+              realpath --no-symlinks "${ABS_ROOT}${p}"
             else
-              echo "${REL_ROOT}${p}"
+              realpath --no-symlinks "${REL_ROOT}${p}"
             fi
           done <<<"${PATHS}"
