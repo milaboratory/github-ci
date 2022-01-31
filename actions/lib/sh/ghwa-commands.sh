@@ -39,7 +39,7 @@ function _ghwa_command() {
   { shift 1; shift 1; } || true
 
   local _act_options
-  _act_options="$(_ghwa_join ',' "${@}")"
+  _act_options="$(_ghwa_join ',' "${@:-}")"
 
   if [ -n "${_act_options}" ]; then
     _act_options=" ${_act_options}" # prepend options list with space to not break action line format
@@ -82,7 +82,7 @@ function ghwa_notice() {
   local _message="${1}"
   shift
 
-  _ghwa_command "notice" "$(ghwa_escape "${_message}")" "${@}"
+  _ghwa_command "notice" "$(ghwa_escape "${_message}")" "${@:-}"
 }
 
 # GitHub Workflow command 'warning'
@@ -94,7 +94,7 @@ function ghwa_warning() {
   local _message="${1}"
   shift
 
-  _ghwa_command "warning" "$(ghwa_escape "${_message}")" "${@}"
+  _ghwa_command "warning" "$(ghwa_escape "${_message}")" "${@:-}"
 }
 
 # GitHub Workflow command 'error'
@@ -106,7 +106,7 @@ function ghwa_error() {
   local _message="${1}"
   shift
 
-  _ghwa_command "error" "$(ghwa_escape "${_message}")" "${@}"
+  _ghwa_command "error" "$(ghwa_escape "${_message}")" "${@:-}"
 }
 
 # GitHub Workflow command 'debug'

@@ -103,6 +103,8 @@ jobs:
           aws-key-secret: ${{ secrets.AWS_KEY_SECRET }}
           default-region: ${{ inputs.default-region }}
 
+      # We have to checkout repository to get .minfo.json file in the root
+      - uses: actions/checkout@v2
       - uses: milaboratory/github-ci/actions/miaws/appstack/deploy@v1
         with:
           task: ${{ inputs.task }}
