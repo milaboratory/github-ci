@@ -75,6 +75,7 @@ runs:
         TARGET_REGISTRY: ${{ inputs.registry }}
         TARGET_TAGS: ${{ inputs.targets }}
       with:
+        dump-stdout: false
         run: |
           # Render full target tags (<registry>/<path>:<version>)
 
