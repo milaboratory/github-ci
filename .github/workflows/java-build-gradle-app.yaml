@@ -66,23 +66,6 @@ on:
         type: string
         required: true
 
-      build-docker:
-        description: |
-          Build and push docker image (gradle :<project>:dockerBuildImage) for each run.
-          Each 'branch' build is stored
-        type: boolean
-        required: false
-        default: true
-
-      build-tar:
-        description: |
-          Create .tar archive with all jars required for application
-          and startup script (gradle :<project>:distTar).
-          The archive is saved as artifact with <artifact-retention> TTL.
-        type: boolean
-        required: false
-        default: true
-
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
@@ -141,11 +124,15 @@ on:
 
 jobs:
   init:
-    name: Initialize workflow
+    name: Init
     runs-on: ubuntu-latest
 
     steps:
       - uses: milaboratory/github-ci/actions/context/init@v1
+        with:
+          version-fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-canonize: ${{ inputs.version-canonize }}
+
       - id: context
         uses: milaboratory/github-ci/actions/context@v1
 
