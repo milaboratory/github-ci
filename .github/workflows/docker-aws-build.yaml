@@ -37,6 +37,18 @@ on:
         required: false
         default: ''
 
+      build-args:
+        description: |
+          List of build args (ARG Dockerfile instruction)
+          to pass to `docker build` command:
+            --build-arg <arg>
+          Use multiline format: one line - one argument:
+            NODE_ENV=production
+            CUSTOM_VAR=value1
+        type: string
+        required: false
+        default: ''
+
       #
       # Push settings
       #
@@ -125,15 +137,22 @@ jobs:
         env:
           DOCKERFILE: ${{ inputs.dockerfile }}
           BUILD_CONTEXT: ${{ inputs.build-context }}
+          BUILD_ARGS: ${{ inputs.build-args }}
         with:
           run: |
             if [ -z "${BUILD_CONTEXT}" ]; then
               BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
             fi
 
+            args=()
+            while read -r arg; do
+              args+=( --build-arg "${arg}" )
+            done <<<"${BUILD_ARGS}"
+
             docker build \
               --file "${DOCKERFILE}" \
               --tag "build:local" \
+              "${args[@]}" \
               "${BUILD_CONTEXT}"
 
       - uses: milaboratory/github-ci/actions/miaws/configure@v1
