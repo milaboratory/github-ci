@@ -48,8 +48,8 @@ runs:
             fi
 
             if [[ "${p}" = /* ]]; then
-              realpath --no-symlinks "${ABS_ROOT}${p}"
+              mish_abspath "${ABS_ROOT}${p}"
             else
-              realpath --no-symlinks "${REL_ROOT}${p}"
+              mish_abspath "${REL_ROOT}${p}"
             fi
           done <<<"${PATHS}"
