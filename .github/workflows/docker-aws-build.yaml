@@ -151,7 +151,7 @@ jobs:
           DOCKERFILE: ${{ inputs.dockerfile }}
           BUILD_CONTEXT: ${{ inputs.build-context }}
           BUILD_ARGS: ${{ inputs.build-args }}
-          BUILD_ENVS: ${{ inputs.build-envs }}
+          BUILD_ENV: ${{ inputs.build-env }}
         with:
           run: |
             if [ -z "${BUILD_CONTEXT:-}" ]; then
@@ -164,8 +164,10 @@ jobs:
             done <<<"${BUILD_ARGS}"
 
             while read -r _env; do
-              declare -x "${_env}"
-            done <<<"${BUILD_ENVS}"
+              if [ -n "${_env}" ]; then
+                declare -x "${_env}"
+              fi
+            done <<<"${BUILD_ENV}"
 
             docker build \
               --file "${DOCKERFILE}" \
