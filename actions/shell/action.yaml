@@ -43,6 +43,7 @@ runs:
         #!/usr/bin/env bash
 
         source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+        source "${{ github.action_path }}/../lib/sh/mish-lib.sh"
 
         ${{ inputs.run }}
 
@@ -60,6 +61,8 @@ runs:
         # Run '${{ github.action }}'
 
         source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+        set -o nounset
+        set -o errexit
 
         tmp_script_path="${{ github.action_path }}/tmp-script.sh"
         tmp_script_output="${{ github.action_path }}/tmp-script.stdout"

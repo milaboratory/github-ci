@@ -229,12 +229,5 @@ function ghwa_add_to_path() {
   echo "${_path}" >> "${GITHUB_PATH}"
 }
 
-set -o nounset
-set -o errexit
-
-: "${MISH_DEBUG:=false}"
-if [ "${MISH_DEBUG}" = "true" ]; then
-  set -v
-fi
-: "${MISH_ECHO_COMMANDS:=off}"
-ghwa_set_echo "${MISH_ECHO_COMMANDS}"
+: "${GHWA_ECHO_COMMANDS:=off}"
+ghwa_set_echo "${GHWA_ECHO_COMMANDS}"
