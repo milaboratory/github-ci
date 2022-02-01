@@ -45,6 +45,20 @@ inputs:
     required: false
     default: ''
 
+  env:
+    description: |
+      Environment variables to set before running
+      `docker build` command
+
+      One line - one env var:
+        NODE_ENV=production
+        CUSTOM_VAR=value1
+
+      Check dockerfile reference for difference between ENV and ARG
+
+    required: false
+    default: ''
+
 
 runs:
   using: 'composite'
@@ -56,6 +70,7 @@ runs:
         DOCKERFILE: ${{ inputs.dockerfile }}
         BUILD_CONTEXT: ${{ inputs.context }}
         BUILD_ARGS: ${{ inputs.args }}
+        BUILD_ENV: ${{ inputs.env }}
         IMAGE_TAGS: ${{ inputs.tags }}
 
       with:
@@ -78,6 +93,12 @@ runs:
               tags+=( --tag "${_tag}" )
             fi
           done <<<"${IMAGE_TAGS}"
+
+          while read _env; do
+            if [ -n "${_env}" ]; then
+              declare -x "${_env}"
+            fi
+          done <<<"${BUILD_ENV}"
 
           docker build \
             --file "${DOCKERFILE}" \
