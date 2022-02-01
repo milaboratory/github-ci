@@ -145,35 +145,13 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build Docker Image
-        uses: milaboratory/github-ci/actions/shell@v1
-        id: build-image
-        env:
-          DOCKERFILE: ${{ inputs.dockerfile }}
-          BUILD_CONTEXT: ${{ inputs.build-context }}
-          BUILD_ARGS: ${{ inputs.build-args }}
-          BUILD_ENV: ${{ inputs.build-env }}
+        uses: milaboratory/github-ci/actions/docker/build@v1
         with:
-          run: |
-            if [ -z "${BUILD_CONTEXT:-}" ]; then
-              BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
-            fi
-
-            args=()
-            while read -r _arg; do
-              args+=( --build-arg "${_arg}" )
-            done <<<"${BUILD_ARGS}"
-
-            while read -r _env; do
-              if [ -n "${_env}" ]; then
-                declare -x "${_env}"
-              fi
-            done <<<"${BUILD_ENV}"
-
-            docker build \
-              --file "${DOCKERFILE}" \
-              --tag "build:local" \
-              "${args[@]}" \
-              "${BUILD_CONTEXT}"
+          dockerfile: ${{ inputs.dockerfile }}
+          context: ${{ inputs.build-context }}
+          env: ${{ inputs.build-env }}
+          args: ${{ inputs.build-args }}
+          tags: 'build:local'
 
       - uses: milaboratory/github-ci/actions/miaws/configure@v1
         with:
@@ -186,7 +164,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/miaws/appstack/push@v1
         id: push
         with:
-          source: "build:local"
+          source: 'build:local'
           target: ${{ inputs.image-tag }}
           regions: ${{ inputs.regions }}
           regions-by-task: ${{ inputs.regions-by-task }}
