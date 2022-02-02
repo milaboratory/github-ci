@@ -242,7 +242,7 @@ jobs:
 
   notify-build-failure:
 
-    name: Notify (failure)
+    name: Notify build failure
     runs-on: ubuntu-latest
 
     if: failure() && inputs.notify-telegram
@@ -251,7 +251,7 @@ jobs:
       - distDocker
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/failure@v1
+      - uses: milaboratory/github-ci/blocks/notify/build/failure@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -260,7 +260,7 @@ jobs:
 
   notify-build-success:
 
-    name: Notify (success)
+    name: Notify build success
     runs-on: ubuntu-latest
 
     if: success() && inputs.notify-telegram
@@ -269,7 +269,7 @@ jobs:
       - distDocker
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/success@v1
+      - uses: milaboratory/github-ci/blocks/notify/build/success@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

@@ -60,19 +60,3 @@ runs:
           else
             echo "dev"
           fi
-
-    - name: Report build is ready
-      if: |
-        ! fromJSON(steps.context.outputs.is-release)
-      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v1
-      with:
-        telegram-target: ${{ inputs.telegram-target }}
-        telegram-token: ${{ inputs.telegram-token }}
-
-        build-category: ${{ steps.category.outputs.stdout }}
-        product-name: ${{ inputs.product-name }}
-        build-version: ${{ steps.context.outputs.current-version }}
-
-        docker-images: ${{ inputs.docker-images }}
-        maven-packages: ${{ inputs.maven-packages }}
-        additional-info: ${{ inputs.additional-info }}
