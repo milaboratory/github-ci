@@ -294,32 +294,32 @@ jobs:
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.build.outputs.docker-tags-json }}
 
-#  release:
-#    name: Release image
-#    runs-on: ubuntu-latest
-#
-#    needs:
-#      - init
-#      - build
-#
-#    if: fromJSON(needs.init.outputs.is-release)
-#    environment: release
-#
-#    steps:
-#      - id: context
-#        uses: milaboratory/github-ci/actions/context@v1
-#
-#      - id: create-release
-#        name: Create release
-#        uses: milaboratory/github-ci/actions/release/create@v1
-#        with:
-#          token: ${{ secrets.GITHUB_TOKEN }}
-#
-#          name: ${{ steps.context.outputs.current-version }}
-#          tag: ${{ steps.context.outputs.current-tag }}
-#
-#          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
-#
-#      outputs:
-#        release-id: ${{ steps.create-release.outputs.id }}
-#        release-url: ${{ steps.create-release.outputs.html_url }}
+  release:
+    name: Release image
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+      - id: create-release
+        name: Create release
+        uses: milaboratory/github-ci/actions/release/create@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-tag }}
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-url: ${{ steps.create-release.outputs.html_url }}
