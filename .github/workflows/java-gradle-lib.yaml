@@ -87,13 +87,13 @@ on:
           Gradle build tasks.
           You can put several tasks here (one per line)
 
-          NOTE: for 'publish*' tasks use 'publish-tasks' input.
+          NOTE: for 'publish*' tasks use 'publish-*-tasks' inputs.
 
         type: string
         required: false
         default: build
 
-      artifacts-paths:
+      artifact-paths:
         description: |
           List of paths to artifacts to save after build run.
           Empty list disables artifacts storage.
@@ -106,7 +106,7 @@ on:
         required: false
         default: ''
 
-      artifacts-retention:
+      artifact-retention:
         description: |
           Time in days to keep build artifacts before removing them
         type: number
@@ -159,15 +159,12 @@ on:
         required: false
         default: publish
 
-      #
-      # Publication control
-      #
       publish-release-tasks:
         description: |
           Newline-separated list of tasks to run on library publication step.
         type: string
         required: false
-        default: publish
+        default: ''
 
       #
       # Notifications
@@ -195,171 +192,133 @@ on:
         required: false
 
 jobs:
-  versions:
-    name: Detect versions
+  init:
+    name: Init
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: milaboratory/github-ci/actions/context/init@v1
         with:
-          submodules: ${{ inputs.checkout-submodules }}
-      - id: versions
-        uses: milaboratory/github-ci/actions/detect-version@v1
-        with:
-          canonize: ${{ inputs.version-canonize }}
-          fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-canonize: ${{ inputs.version-canonize }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
 
     outputs:
-      current-version: ${{ steps.versions.outputs.current-version }}
-      current-tag: ${{ steps.versions.outputs.current-tag }}
-      current-sha: ${{ steps.versions.outputs.current-sha }}
-
-      previous-version: ${{ steps.versions.outputs.previous-version }}
-      previous-tag: ${{ steps.versions.outputs.previous-tag }}
-      previous-sha: ${{ steps.versions.outputs.previous-sha }}
-
-      latest-version: ${{ steps.versions.outputs.latest-version }}
-      latest-tag: ${{ steps.versions.outputs.latest-tag }}
-      latest-sha: ${{ steps.versions.outputs.latest-sha }}
-
-      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+      is-release: ${{ steps.context.outputs.is-release }}
 
   build:
-
-    name: Build application
+    name: :build
     runs-on: ubuntu-latest
 
     needs:
-      - versions
+      - init
 
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Prepare env for Java application build
-        uses: actions/setup-java@v2
+      - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
-          distribution: ${{ inputs.java-distribution }}
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.build-tasks }}
+          exclude-tasks: test
+
+          artifact-name: ${{ inputs.lib-name-slug }}
+          artifact-paths: ${{ inputs.artifact-paths }}
+          artifact-retention: ${{ inputs.artifact-retention }}
+
+          properties: |
+            mi-ci-stage=build
+            ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
-          cache: 'gradle'
+          java-distribution: ${{ inputs.java-distribution }}
 
-      - name: Set gradle.properties
-        uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
-        with:
-          properties: ${{ secrets.GRADLE_PROPERTIES }}
-
-      - name: Read actual project properties
-        id: gradle-props
+      - id: props
         uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
         with:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project }}
 
-      - name: Generate build tasks
-        id: build-tasks
-        uses: milaboratory/github-ci/actions/strings/prefix@v1
-        with:
-          input: ${{ inputs.build-tasks }}
-          prefix: |-
-            :${{ inputs.build-project }}:
-
-      - name: Build library
-        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        with:
-          working-directory: ${{ inputs.build-project-dir }}
-          properties: |
-            version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-
-          arguments: ${{ steps.build-tasks.outputs.result }}
-
-      - name: Generate publish tasks
-        id: publish-tasks
-        uses: milaboratory/github-ci/actions/shell@v1
-        env:
-          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-          RELEASE_TASKS: ${{ inputs.publish-release-tasks }}
-          DEV_TASKS: ${{ inputs.publish-dev-tasks }}
-          GRADLE_PROJECT: ${{ inputs.build-project }}
-
-        with:
-          run: |
-            if [ "${IS_RELEASE}" = 'true' ]; then
-              mapfile -t tasks <<<"${RELEASE_TASKS}"
-            else
-              mapfile -t tasks <<<"${DEV_TASKS}"
-            fi
-
-            for task in "${tasks}"; do
-              echo ":${GRADLE_PROJECT}:${task}"
-            done
-
-      - name: Publish library
-        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        with:
-          working-directory: ${{ inputs.build-project-dir }}
-          properties: |
-            version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-
-          arguments: ${{ steps.publish-tasks.outputs.stdout }}
-
-      - name: Generate artifacts paths
-        id: artifacts-paths
+      - id: release-files
+        name: Render release files paths
+        if: inputs.release-files != ''
         uses: milaboratory/github-ci/actions/strings/convert-paths@v1
         with:
-          rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
+          rel-root: ${{ steps.props.outputs.buildDir }}/
           abs-root: .
-          paths: ${{ inputs.artifacts-paths }}
+          paths: ${{ inputs.release-files }}
 
-      - name: Save build artifacts
-        if: steps.artifacts-paths.outputs.result != ''
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
+        name: Save release files
+        if: inputs.release-files != ''
         with:
-          name: build-artifacts
-          path: ${{ steps.artifacts-paths.outputs.result }}
-          retention-days: ${{ inputs.artifacts-retention }}
+          name: 'release-files'
+          path: ${{ steps.release-files.outputs.result }}
+          retention-days: ${{ inputs.artifact-retention }}
 
       - name: Prepare JSON list of published libraries
         id: libs-list
         uses: milaboratory/github-ci/actions/strings/json-list@v1
         with:
-          input: |
-            ${{ steps.gradle-props.outputs.group}}.${{ steps.gradle-props.outputs.name }}:${{ needs.versions.outputs.current-version }}
-
-      #
-      # Release-only steps
-      #
-      - name: Generate release paths
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
-        id: release-files
-        uses: milaboratory/github-ci/actions/strings/convert-paths@v1
-        with:
-          rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
-          abs-root: .
-          paths: ${{ inputs.release-files }}
-
-      - name: Create release
-        id: create-release
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
-        uses: milaboratory/github-ci/actions/release/create@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-          name: ${{ needs.versions.outputs.current-version }}
-          tag: ${{ needs.versions.outputs.current-tag }}
-
-          assets: ${{ steps.release-files.outputs.result }}
-
-          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+          input: |-
+            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
-      release-id: ${{ steps.create-release.outputs.id }}
-      release-url: ${{ steps.create-release.outputs.html_url }}
-      maven-packages: ${{ steps.libs-list.outputs.result }}
+      libs-list: ${{ steps.libs-list.outputs.result }}
 
-  notify-failure:
+  test:
+    name: :test
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: test
+
+          properties: |
+            mi-ci-stage=test
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+  publish-dev:
+    name: :publish-dev
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.publish-dev-tasks }}
+          exclude-tasks: test
+
+          properties: |
+            mi-ci-stage=publish
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+  notify-build-failure:
 
     name: Notify (failure)
     runs-on: ubuntu-latest
@@ -367,52 +326,90 @@ jobs:
     if: failure() && inputs.notify-telegram
 
     needs:
-      - versions
       - build
 
     steps:
-      - name: Report build failure to Telegram
-        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+      - uses: milaboratory/github-ci/blocks/notify/failure@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.lib-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
+          product-name: ${{ inputs.app-name }}
 
-  notify-success:
+  notify-build-success:
 
     name: Notify (success)
     runs-on: ubuntu-latest
 
-    if: inputs.notify-telegram
+    if: success() && inputs.notify-telegram
 
     needs:
-      - versions
       - build
 
     steps:
-      - name: Report dev build is ready
-        if: needs.build.outputs.release-id == ''
-        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+      - uses: milaboratory/github-ci/blocks/notify/success@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.lib-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
-          build-category: dev
+          product-name: ${{ inputs.app-name }}
+          maven-packages: ${{ needs.build.outputs.libs-list }}
 
-          maven-packages: ${{ needs.build.outputs.maven-packages }}
+  release:
+    name: Release app
+    runs-on: ubuntu-latest
 
-      - name: Report release is ready
-        if: needs.build.outputs.release-id != ''
-        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
+    needs:
+      - build
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+      - uses: actions/download-artifact@v2
         with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          name: 'release-files'
+          path: 'release-files'
 
-          product-name: ${{ inputs.lib-name }}
-          release-tag: ${{ needs.versions.outputs.current-tag }}
+      - name: Create release
+        uses: milaboratory/github-ci/actions/release/create@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-          maven-packages: ${{ needs.build.outputs.maven-packages }}
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-tag }}
+
+          assets: 'release-files/*'
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+  publish-release:
+    name: :publish-dev
+    runs-on: ubuntu-latest
+
+    needs:
+      - release
+
+    if: fromJSON(needs.init.outputs.is-release) && inputs.publish-release-tasks != ''
+    environment: release
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.publish-release-tasks }}
+          exclude-tasks: test
+
+          properties: |
+            mi-ci-stage=publish
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
