@@ -361,7 +361,7 @@ jobs:
           maven-packages: ${{ needs.build.outputs.libs-list }}
 
   release:
-    name: Release app
+    name: Release lib
     runs-on: ubuntu-latest
 
     needs:
@@ -392,7 +392,7 @@ jobs:
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
   publish-release:
-    name: :publish-dev
+    name: :publish-release
     runs-on: ubuntu-latest
 
     needs:
