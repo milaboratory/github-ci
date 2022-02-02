@@ -20,7 +20,7 @@ inputs:
     description: |
       Key to use for gradle build cache
     required: false
-    default: 'jdk-common'
+    default: ''
 
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
