@@ -74,8 +74,9 @@ runs:
       with:
         run: |
           key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
+          keys_count="${#key_files[@]}"
 
-          if [ "${#key_files[@]}" -eq 0 ]; then
+          if [ "${keys_count}" -eq 0 ]; then
             if [ "${IGNORE_MISSING}" = "true" ]; then
               exit 0
             else
@@ -84,9 +85,9 @@ runs:
             fi
           fi
 
-          if [ "${#key_files[@]}" -gt 1 ]; then
+          if [ "${keys_count}" -gt 1 ]; then
             ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
             exit 1
           fi
 
-          cat "${key_files[-1]}"
+          cat "${key_files[${keys_count}-1]}"
