@@ -64,7 +64,7 @@ runs:
       id: message
       with:
         data: |
-          { "product": { "name": ${{ toJSON$(inputs.product-name) }},
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
                          "additional_info": ${{ toJSON(inputs.additional-info) }} },
 
             "build": { "category": ${{ toJSON(inputs.build-category) }},
