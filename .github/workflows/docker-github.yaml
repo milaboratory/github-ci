@@ -247,7 +247,7 @@ jobs:
             fi
 
             # Default empty targets list to '<current repo>/build'
-            if [ "${#push_targets}" -eq 0 ]; then
+            if [ "${#push_targets[@]}" -eq 0 ]; then
               push_targets=( "${GITHUB_REPOSITORY}/build" )
             fi
 
