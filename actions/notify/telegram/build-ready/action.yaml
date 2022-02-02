@@ -1,0 +1,115 @@
+name: Telegram Message
+description: |
+  Notify User or Channel about successful dev build
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+  build-version:
+    description: |
+      Build version to display in message
+    required: true
+  build-category:
+    description: |
+      Build category: 'dev', 'release', 'whatever' :)
+    required: false
+    default: 'dev'
+
+  docker-images:
+    description: |
+      List of docker images related to build in JSON format
+    required: false
+    default: '[]'
+
+  maven-packages:
+    description: |
+      List of maven packages related to build in JSON format
+    required: false
+    default: '[]'
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: github-json
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      with:
+        run: |
+          # Cut sensitive information from 'github' context
+          # to pass safely to template
+
+          jq "del(.token)" <<<"${GITHUB_CONTEXT}"
+
+    - uses: milaboratory/github-ci/actions/templates/jinja@v1
+      id: message
+      with:
+        data: |
+          { "product": { "name": ${{ toJSON$(inputs.product-name) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "build": { "category": ${{ toJSON(inputs.build-category) }},
+                       "version": ${{ toJSON(inputs.build-version) }} },
+
+            "github": ${{ steps.github-json.outputs.stdout }},
+
+            "category_icons": { "dev": "🚧",
+                                "release": "🔖" },
+
+            "docker_images": ${{ inputs.docker-images }},
+            "maven_packages": ${{ inputs.maven-packages }} }
+
+        template: |
+          {{- category_icons[ build["category"] ] | default ('💚') -}}
+          {{- " " -}} \[{{ product["name"] }}] New {{ build["category"] }} build is ready: {{ build["version"] }}
+
+          Branch: {{ github["ref_name"] }}
+          Commit: {{ github["sha"] }}
+
+          - [View Build on GitHub]({{ github["server_url"] }}/{{ github["name"] }}/actions/runs/{{ github["run_id"] }})
+          - [Source code on GitHub]({{ github["server_url"] }}/{{ github["name"] }}/tree/{{ github["sha"] }})
+
+          {%- if docker_images | length > 0 %}
+
+          Docker images:
+          {%- for i in docker_images %}
+          - {{ i }}
+          {%- endfor %}
+          {%- endif %}
+
+          {%- if maven_packages | length > 0 %}
+
+          Published maven packages:
+          {%- for i in maven_packages %}
+          - {{ i }}
+          {%- endfor %}
+          {%- endif %}
+
+          {{ product["additional_info"] }}
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: ${{ steps.message.outputs.data }}
