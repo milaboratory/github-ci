@@ -241,7 +241,6 @@ jobs:
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   notify-build-failure:
-
     name: Notify build failure
     runs-on: ubuntu-latest
 
@@ -259,7 +258,6 @@ jobs:
           product-name: ${{ inputs.app-name }}
 
   notify-build-success:
-
     name: Notify build success
     runs-on: ubuntu-latest
 
@@ -286,7 +284,6 @@ jobs:
       - distDocker
 
     if: fromJSON(needs.init.outputs.is-release)
-
     environment: release
 
     steps:
