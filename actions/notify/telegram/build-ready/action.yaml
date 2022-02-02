@@ -85,8 +85,8 @@ runs:
           Branch: {{ github["ref_name"] }}
           Commit: {{ github["sha"] }}
 
-          - [View Build on GitHub]({{ github["server_url"] }}/{{ github["name"] }}/actions/runs/{{ github["run_id"] }})
-          - [Source code on GitHub]({{ github["server_url"] }}/{{ github["name"] }}/tree/{{ github["sha"] }})
+          - [View build on GitHub]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }})
+          - [View sources on GitHub]({{ github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] }})
 
           {%- if docker_images | length > 0 %}
 
