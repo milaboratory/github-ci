@@ -145,32 +145,12 @@ on:
         required: false
 
 jobs:
-  versions:
-    name: Detect versions
+  init:
+    name: Init
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - id: versions
-        uses: milaboratory/github-ci/actions/detect-version@v1
-        with:
-          canonize: ${{ inputs.version-canonize }}
-          fetch-depth: ${{ inputs.version-fetch-depth }}
-
-    outputs:
-      current-version: ${{ steps.versions.outputs.current-version }}
-      current-tag: ${{ steps.versions.outputs.current-tag }}
-      current-sha: ${{ steps.versions.outputs.current-sha }}
-
-      previous-version: ${{ steps.versions.outputs.previous-version }}
-      previous-tag: ${{ steps.versions.outputs.previous-tag }}
-      previous-sha: ${{ steps.versions.outputs.previous-sha }}
-
-      latest-version: ${{ steps.versions.outputs.latest-version }}
-      latest-tag: ${{ steps.versions.outputs.latest-tag }}
-      latest-sha: ${{ steps.versions.outputs.latest-sha }}
-
-      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+      - uses: milaboratory/github-ci/actions/context/init@v1
 
   build:
 
@@ -178,10 +158,12 @@ jobs:
     runs-on: ubuntu-latest
 
     needs:
-      - versions
+      - init
 
     steps:
       - uses: actions/checkout@v2
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
 
       - name: Build Docker Image
         uses: milaboratory/github-ci/actions/docker/build@v1
@@ -199,10 +181,10 @@ jobs:
           PUSH_BRANCH_LATEST: ${{ inputs.push-branch-latest }}
           PUSH_RELEASE_LATEST: ${{ inputs.push-release-latest }}
 
-          CURRENT_VERSION: ${{ needs.versions.outputs.current-version }}
-          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-          IS_LATEST_RELEASE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
-          IS_LATEST_COMMIT: ${{ needs.versions.outputs.is-branch-head }}
+          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+          IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          IS_LATEST_VERSION: ${{ steps.context.outputs.is-latest-version }}
+          IS_LATEST_COMMIT: ${{ steps.context.outputs.is-branch-head }}
 
         with:
           run: |
@@ -223,7 +205,7 @@ jobs:
 
               versions+=( "${CURRENT_VERSION}" )
 
-              if [ "${IS_LATEST_RELEASE}" = 'true' ] &&
+              if [ "${IS_LATEST_VERSION}" = 'true' ] &&
                  [ "${PUSH_RELEASE_LATEST}" = 'true' ]; then
 
                 versions+=( "latest" )
@@ -271,13 +253,13 @@ jobs:
       #
       - name: Create release
         id: create-release
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        if: fromJSON(steps.context.outputs.is-release)
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: ${{ needs.versions.outputs.current-version }}
-          tag: ${{ needs.versions.outputs.current-tag }}
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-tag }}
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
