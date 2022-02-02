@@ -26,6 +26,7 @@ mish_abspath(){
 
   local _path_parts
   local _result
+  local _result_len
 
   echo "${_path}" |
     (
@@ -37,10 +38,11 @@ mish_abspath(){
         case "$i" in
         ''|.) continue ;;
         ..)
-          if [ "${#_result[@]}" -eq 0 ];then
+          _result_len="${#_result[@]}"
+          if [ "${_result_len}" -eq 0 ];then
             continue
           else
-            unset "_result[-1]"
+            unset "_result[${_result_len}-1]"
           fi
           ;;
         *)
