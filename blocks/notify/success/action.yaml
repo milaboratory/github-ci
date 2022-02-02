@@ -49,37 +49,29 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v1
 
-    - shell: bash
+    - uses: milaboratory/github-ci/actions/shell@v1
+      id: category
       env:
-        CTX: ${{ toJSON(steps.context.outputs) }}
-      run: echo "Context"
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+      with:
+        run: |
+          if [ "${IS_RELEASE}" = "true" ]; then
+            echo "release"
+          else
+            echo "dev"
+          fi
 
-    - name: Report dev build is ready
+    - name: Report build is ready
       if: |
         ! fromJSON(steps.context.outputs.is-release)
-      uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v1
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
 
-        build-category: dev
+        build-category: ${{ steps.category.outputs.stdout }}
         product-name: ${{ inputs.product-name }}
         build-version: ${{ steps.context.outputs.current-version }}
-
-        docker-images: ${{ inputs.docker-images }}
-        maven-packages: ${{ inputs.maven-packages }}
-        additional-info: ${{ inputs.additional-info }}
-
-    - name: Report release is ready
-      if: |
-        fromJSON(steps.context.outputs.is-release)
-      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
-      with:
-        telegram-target: ${{ inputs.telegram-target }}
-        telegram-token: ${{ inputs.telegram-token }}
-
-        product-name: ${{ inputs.product-name }}
-        release-tag: ${{ steps.context.outputs.current-tag }}
 
         docker-images: ${{ inputs.docker-images }}
         maven-packages: ${{ inputs.maven-packages }}
