@@ -52,9 +52,9 @@ function _ghwa_command() {
 function ghwa_escape() {
   local _data="${1}"
   local _escaped
-  _escaped="${_data//'%'/'%25'}"
-  _escaped="${_escaped//$'\n'/'%0A'}"
-  _escaped="${_escaped//$'\r'/'%0D'}"
+  _escaped="${_data//'%'/%25}"
+  _escaped="${_escaped//$'\n'/%0A}"
+  _escaped="${_escaped//$'\r'/%0D}"
 
   printf "%s" "${_escaped}"
 }
