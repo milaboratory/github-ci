@@ -7,9 +7,6 @@ description: |
   our common context's content and its structure.
   It provides a bit more convenient way to read context.
 
-  Each run of action re-reads context (re-downloads artifact
-  and parses the contents).
-
 outputs:
   current-version:
     description: Current version number
