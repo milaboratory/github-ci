@@ -59,18 +59,6 @@ inputs:
     default: ''
 
   #
-  # Checkout settings
-  #
-  checkout-submodules:
-    description: |
-      'Submodules' mode for 'actions/checkout' action:
-        '', 'false' - disable submodules support
-        'true' - checkout submodules
-        'recursive' - checkout submodules recursive
-    required: false
-    default: ''
-
-  #
   # Environment control
   #
   java-version:
@@ -133,10 +121,6 @@ runs:
   steps:
     - id: context
       uses: milaboratory/github-ci/actions/context@v1
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: ${{ inputs.checkout-submodules }}
 
     - name: Prepare env for Java application build
       uses: actions/setup-java@v2

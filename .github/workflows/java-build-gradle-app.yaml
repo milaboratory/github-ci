@@ -147,6 +147,7 @@ jobs:
       - init
 
     steps:
+      - uses: actions/checkout@v2
       - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
           project: ${{ inputs.build-project }}
@@ -168,6 +169,7 @@ jobs:
       - build
 
     steps:
+      - uses: actions/checkout@v2
       - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
           project: ${{ inputs.build-project }}
@@ -188,6 +190,7 @@ jobs:
       - build
 
     steps:
+      - uses: actions/checkout@v2
       - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
           project: ${{ inputs.build-project }}
@@ -213,6 +216,7 @@ jobs:
       - test
 
     steps:
+      - uses: actions/checkout@v2
       - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
           project: ${{ inputs.build-project }}
