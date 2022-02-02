@@ -192,7 +192,7 @@ jobs:
 
       - name: Save artifact with application
         uses: actions/upload-artifact@v2
-        if: fromJSON( steps.artifact.outputs.data ).name != ""
+        if: fromJSON( steps.artifact.outputs.data ).name != ''
         with:
           name: ${{ fromJSON( steps.artifact.outputs.data ).name }}
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
@@ -200,7 +200,7 @@ jobs:
 
       - name: Upload app to release artifact
         uses: actions/upload-artifact@v2
-        if: fromJSON( steps.artifact.outputs.data ).name != ""
+        if: fromJSON( steps.artifact.outputs.data ).name != ''
         with:
           name: release-files
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
