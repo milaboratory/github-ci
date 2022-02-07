@@ -43,7 +43,12 @@ runs:
           --mount "type=bind,source=$(pwd),destination=/repo"
         )
 
-        mapfile -t args <<<"${INPUT_ARGS}"
+        args=()
+        while read -r _arg; do
+          if [ -n "${_arg}" ]; then
+            args+=( "${_arg}" )
+          fi
+        done <<<"${INPUT_ARGS}"
 
         docker run \
           "${mounts[@]}" \
