@@ -53,7 +53,10 @@ inputs:
     description: |
       Custom arguments for gradle command.
       Each line is considered as single argument:
-        '-b <file>' on single line will cause error.
+          '-b <file>'
+        on single line will cause error. Put
+          '-b
+           <file>' to get what you want.
 
     required: false
     default: ''
