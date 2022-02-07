@@ -6,7 +6,7 @@ description: |
   Once stored under specific key, the value can not be changed.
 
   NOTE: for large files use 'cache' GitHub Actions functionality
-        as 'context' bases on 'artifacts' and is slow on big files.
+        as 'context' is based on 'artifacts' and is slow on big files.
 
 inputs:
   key:
@@ -44,10 +44,10 @@ runs:
 
       with:
         run: |
-          time_nano=$(date '+%N')
-          file_path="${CTX_PATH}/${CTX_KEY}.${time_nano}"
+          random="$(printf "%05d" "${RANDOM}")"
+          file_path="${CTX_PATH}/${CTX_KEY}.${random}"
 
-          if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
+          if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
             ghwa_error "Key '${CTX_KEY}' already is set in context artifact"
             exit 1
           fi
