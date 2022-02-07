@@ -14,10 +14,10 @@ inputs:
       AWS Access Key Secret for API requests
     required: true
 
-  default-region:
+  region:
     description: |
-      Default region for all miaws commands, when no regions are set explicitly.
-    required: false
+      AWS region.
+    required: true
 
   append:
     description: |
@@ -49,13 +49,14 @@ runs:
         [default]
         aws_access_key_id=${KEY_ID}
         aws_secret_access_key=${KEY_SECRET}
+
         EndOfCreds
 
     - id: config
       shell: bash
       env:
         AWS_CONFIG_APPEND: ${{ inputs.append }}
-        DEFAULT_REGION: ${{ inputs.default-region }}
+        REGION: ${{ inputs.region }}
       run: |
         # Generate ~/.aws/config file
         mkdir -p ~/.aws
@@ -65,13 +66,8 @@ runs:
           true > ~/.aws/config
         fi
 
-        opt_default_region=""
-        if [ -n "${DEFAULT_REGION}" ]; then
-          opt_default_region="region=${DEFAULT_REGION}"
-        fi
-
         cat >> ~/.aws/config <<EndOfConfig
         [default]
-        ${opt_default_region}
+        region=${REGION}
 
         EndOfConfig

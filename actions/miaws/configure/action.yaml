@@ -42,5 +42,5 @@ runs:
       with:
         key-id: ${{ inputs.aws-key-id }}
         key-secret: ${{ inputs.aws-key-secret }}
-        default-region: ${{ inputs.default-region }}
+        region: ${{ inputs.default-region }}
         append: false
