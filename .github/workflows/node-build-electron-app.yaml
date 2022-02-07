@@ -206,40 +206,39 @@ jobs:
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.artifacts-retention }}
 
-  notify-build-failure:
-    name: Notify build failure
+  merge-status:
+    name: merge build statuses
     runs-on: ubuntu-latest
-
-    if: failure() && inputs.notify-telegram
 
     needs:
       - build
 
+    # This hacky job gets 'success' status only when all build jobs succeed
+    # If any of jobs in 'build' matrix fails, <merge-status> gets canceled and
+    # has '' (empty string) in <status> output
     steps:
-      - name: Report build failure
-        uses: milaboratory/github-ci/blocks/notify/build/failure@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+      - shell: bash
+        run: 'true'
 
-          product-name: ${{ inputs.app-name }}
+    outputs:
+      status: ${{ job.status }}
 
-  notify-build-success:
-    name: Notify build success
+  notify-build:
+    name: Notify build
     runs-on: ubuntu-latest
 
-    if: inputs.notify-telegram
+    if: always() && inputs.notify-telegram
 
     needs:
-      - build
+      - merge-status
 
     steps:
-      - name: Report build failure
-        uses: milaboratory/github-ci/blocks/notify/build/success@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
+          build-status: ${{ needs.merge-status.outputs.status != '' && needs.merge-status.outputs.status || 'failure' }}
           product-name: ${{ inputs.app-name }}
 
   release:
