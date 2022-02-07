@@ -37,37 +37,10 @@ runs:
         user: ${{ github.actor }}
         password: ${{ inputs.github-token }}
 
-    - id: credentials
-      shell: bash
-      env:
-        KEY_ID: ${{ inputs.aws-key-id }}
-        KEY_SECRET: ${{ inputs.aws-key-secret }}
-      run: |
-        # Generate ~/.aws/credentials file
-        mkdir -p ~/.aws
-
-        cat > ~/.aws/credentials <<EndOfCreds
-        [default]
-        aws_access_key_id=${KEY_ID}
-        aws_secret_access_key=${KEY_SECRET}
-        EndOfCreds
-
-    - id: config
-      shell: bash
-      env:
-        DEFAULT_REGION: ${{ inputs.default-region }}
-      run: |
-        # Generate ~/.aws/config file
-
-        function set_option() {
-          local _o
-          for _o in "${@}"; do
-            echo "${_o}" >> ~/.aws/config
-          done
-        }
-
-        echo "[default]" > ~/.aws/config
-
-        if [ -n "${DEFAULT_REGION}" ]; then
-          set_option "region=${DEFAULT_REGION}"
-        fi
+    # MiAWS uses official AWS API client, which reads AWS configuration files
+    - uses: milaboratory/github-ci/actions/aws/configure@v1
+      with:
+        key-id: ${{ inputs.aws-key-id }}
+        key-secret: ${{ inputs.aws-key-secret }}
+        default-region: ${{ inputs.default-region }}
+        append: false
