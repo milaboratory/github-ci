@@ -238,40 +238,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
+      status: ${{ job.status }}
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
-  notify-build-failure:
-    name: Notify build failure
+  notify-build:
+    name: Notify build
     runs-on: ubuntu-latest
 
-    if: failure() && inputs.notify-telegram
+    if: always() && inputs.notify-telegram
 
     needs:
       - distDocker
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build/failure@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
-
-  notify-build-success:
-    name: Notify build success
-    runs-on: ubuntu-latest
-
-    if: success() && inputs.notify-telegram
-
-    needs:
-      - distDocker
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/build/success@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
+          build-status: ${{ needs.distDocker.outputs.status }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
