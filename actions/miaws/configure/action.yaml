@@ -1,7 +1,7 @@
-name: Run 'miaws' utility
+name: Configure 'miaws' utility
 author: 'MiLaboratories'
 description: |
-  Run 'miaws' utility in action
+  Generate configuration files for 'aws' and 'miaws' utilities
 
 inputs:
   github-token:
