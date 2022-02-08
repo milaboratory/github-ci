@@ -69,10 +69,10 @@ runs:
 
         template: |
           {{- status_icons[ tests["status"] ] | default ('') -}}
-          {{- " " -}} \[{{ product["name"] }}] Tests for build '{{ build["version"] }}' status: tests["status"].
+          {{- " " -}} \[{{ product["name"] }}] Tests for build '{{ build["version"] }}' status: {{ tests["status"] }}.
             [View build]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }})
           {%- if tests["url"] | length %}
-            [View report](tests["url"])
+            [View report]({{ tests["url"] }})
           {%- endif %}
 
           {{ product["additional_info"] }}
