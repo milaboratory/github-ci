@@ -58,9 +58,9 @@ runs:
             "build": { "version": ${{ toJSON(inputs.build-version) }} },
           
             "tests": { "status": ${{ toJSON(inputs.tests-status) }},
-                       "url": ${{ toJSON(inputs.report-url) }},
+                       "url": ${{ toJSON(inputs.report-url) }} },
 
-            "github": ${{ fromJSON(steps.safe-ctx.outputs.data).github }},
+            "github": ${{ steps.safe-ctx.outputs.github }},
 
             "status_icons": { "success": "✅",
                               "failure": "❌",
