@@ -195,7 +195,7 @@ runs:
       id: artifact-paths
       uses: milaboratory/github-ci/actions/aws@v1
       with:
-        args:
+        args: |
           s3
           cp
           --recursive
