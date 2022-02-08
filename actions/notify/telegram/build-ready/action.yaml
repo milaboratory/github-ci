@@ -49,16 +49,8 @@ runs:
   using: "composite"
 
   steps:
-    - id: github-json
-      uses: milaboratory/github-ci/actions/shell@v1
-      env:
-        GITHUB_CONTEXT: ${{ toJSON(github) }}
-      with:
-        run: |
-          # Cut sensitive information from 'github' context
-          # to pass safely to template
-
-          jq "del(.token)" <<<"${GITHUB_CONTEXT}"
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v1
 
     - uses: milaboratory/github-ci/actions/templates/jinja@v1
       id: message
@@ -70,7 +62,7 @@ runs:
             "build": { "category": ${{ toJSON(inputs.build-category) }},
                        "version": ${{ toJSON(inputs.build-version) }} },
 
-            "github": ${{ steps.github-json.outputs.stdout }},
+            "github": ${{ steps.safe-ctx.outputs.github }},
 
             "category_icons": { "dev": "🚧",
                                 "release": "🔖" },
