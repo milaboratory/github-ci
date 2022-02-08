@@ -32,6 +32,12 @@ runs:
   using: "composite"
 
   steps:
+    - id: short-sha
+      uses: milaboratory/github-ci/actions/shell@v1
+      with:
+        run: |
+          echo "${GITHUB_SHA:0:8}"
+
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
       with:
         to: ${{ inputs.telegram-target }}
@@ -39,12 +45,7 @@ runs:
         format: markdown
         disable_web_page_preview: true
         message: |
-          💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
-
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-
-          - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
+          💩 \[${{ inputs.product-name }}] [Build failed](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}): ${{ inputs.build-version }}
+            Branch: [${{ github.ref_name }}](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}}) ([${{ steps.short-sha.outputs.stdout }}](${{github.server_url}}/${{github.repository}}/commit/${{github.sha}}))
 
           ${{ inputs.additional-info }}
