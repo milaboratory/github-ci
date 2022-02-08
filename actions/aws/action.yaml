@@ -36,11 +36,12 @@ runs:
       run: |
         # aws-cli in docker
 
+        workdir="$(pwd)"
         mounts=(
           --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"
           --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker"
           --mount "type=bind,source=${HOME}/.aws,destination=/root/.aws"
-          --mount "type=bind,source=$(pwd),destination=/repo"
+          --mount "type=bind,source=${workdir},destination=${workdir}"
         )
 
         args=()
@@ -52,6 +53,6 @@ runs:
 
         docker run \
           "${mounts[@]}" \
-          --workdir /repo \
+          --workdir "${workdir}" \
           "amazon/aws-cli:${CLI_VERSION}" \
           "${args[@]}"
