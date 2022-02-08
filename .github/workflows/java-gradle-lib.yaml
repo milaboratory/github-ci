@@ -305,17 +305,39 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v1
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          tasks: test
 
           properties: |
             mi-ci-stage=test
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+    outputs:
+      status: ${{ job.status }}
+      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.tests-path }}/index.html
+
+  notify-test:
+    name: notify test
+    runs-on: ubuntu-latest
+
+    if: success() || failure()
+    needs:
+      - test
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/tests@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.lib-name }}
+          tests-status: ${{ needs.test.outputs.status }}
+          report-url: ${{ needs.test.outputs.report-url }}
 
   publish-dev:
     name: :publish-dev
