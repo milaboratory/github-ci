@@ -71,7 +71,8 @@ inputs:
   s3-bucket:
     description: |
       S3 bucket to use for tests
-    required: true
+    required: false
+    default: 'milaboratory-artefacts-public-files'
 
   s3-path-prefix:
     description: |
