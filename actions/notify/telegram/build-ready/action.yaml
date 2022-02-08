@@ -80,7 +80,7 @@ runs:
 
           Docker images:
           {%- for i in docker_images %}
-          - {{ i }}
+          - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
 
@@ -88,7 +88,7 @@ runs:
 
           Maven packages:
           {%- for i in maven_packages %}
-          - {{ i }}
+          - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
 
