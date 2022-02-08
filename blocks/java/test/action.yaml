@@ -153,12 +153,12 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v1
       with:
         run: |
-          rand_str="$(
+          rand="$(
             shasum - <<<"${RANDOM}${RANDOM}${RANDOM}" |
-              awk '{print substr($1, 0, 15)}'
+              awk '{print $1}'
           )"
 
-          echo "${GITHUB_REPOSITORY}/${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${rand_str}/tests/"
+          echo "${GITHUB_REPOSITORY}/${GITHUB_SHA:0:8}-${GITHUB_RUN_NUMBER}-${rand:0:15}/tests/"
 
     - name: Generate list of tasks to exclude
       id: excludes
