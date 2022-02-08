@@ -1,0 +1,203 @@
+name: Run Java project tests and publish results
+author: 'MiLaboratories'
+description: |
+  Run Java project tests with gradle.
+  
+  Upload test results to remote storage so developer could see the report.
+
+  This action cares about caching and re-using build results.
+  This means tests use results build jobs finished before this
+  action has started.
+  
+  Requirements:
+    - initialized context (actions/context/init)
+    - configured AWS environment (actions/aws/configure)
+
+inputs:
+  #
+  # Test run control
+  #
+  project:
+    description: |
+      Gradle project name to build _without_ task name:
+        gradle :<project>:<task>
+      For 'root' project just leave input empty
+
+    required: false
+    default: ''
+
+  project-dir:
+    description: |
+      Path to project root directory.
+      Defaults to repository root.
+    required: false
+    default: './'
+
+  tasks:
+    description: |
+      Test tasks to run.
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: test
+
+  exclude-tasks:
+    description: |
+      Tasks to skip (--exclude-task options).
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: ''
+
+  custom-arguments:
+    description: |
+      Custom arguments for gradle command.
+      Each line is considered as single argument:
+          '-b <file>'
+        on single line will cause error. Put
+          '-b
+           <file>' to get what you want.
+
+    required: false
+    default: ''
+
+  #
+  # Results upload control
+  #
+  s3-bucket:
+    description: |
+      S3 bucket to use for tests
+    required: true
+
+  s3-path-prefix:
+    description: |
+      Prefix for all uploaded test files.
+      
+      Tests report will be uploaded to:
+        's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+
+    required: false
+    default: 'cdn/internal/ci'
+
+  #
+  # Environment control
+  #
+  java-version:
+    description: |
+      Version of JAVA to use for build.
+    required: true
+
+  java-distribution:
+    description: |
+      Java distribution to use.
+      Example: 'temurin', 'zulu', ...
+      See 'https://github.com/actions/setup-java#supported-distributions'
+      for complete list of supported distributions.
+    required: false
+    default: 'temurin'
+
+  properties:
+    description: |
+      Create properties file with given contents before starting the build
+    required: false
+    default: ''
+
+  cache-key:
+    description: |
+      Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+outputs:
+  tests-path:
+    description: |
+      Tests report path in S3 bucket without {{ s3-path-prefix }}
+    value: ${{ steps.upload-path.outputs.stdout }}
+
+  tests-path-full:
+    description: |
+      Tests report path in S3 bucket with {{ s3-path-prefix }}
+    value: ${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v1
+
+    - name: Prepare env for Java application build
+      uses: actions/setup-java@v2
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Set gradle.properties
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
+      with:
+        properties: ${{ inputs.properties }}
+
+    - name: Read actual project properties
+      id: gradle-props
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+      with:
+        project-dir: ${{ inputs.project-dir }}
+        project-name: ${{ inputs.project }}
+
+    - name: Generate upload path
+      id: upload-path
+      uses: milaboratory/github-ci/actions/shell@v1
+      with:
+        run: |
+          rand_str="$(
+            shasum - <<<"${RANDOM}${RANDOM}${RANDOM}" |
+              awk '{print substr($1, 0, 15)}'
+          )"
+
+          echo "${GITHUB_REPOSITORY}/${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${rand_str}/tests/"
+
+    - name: Generate list of tasks to exclude
+      id: excludes
+      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      with:
+        input: ${{ inputs.exclude-tasks }}
+        prefix: |-
+          --exclude-task
+          :${{ inputs.project }}:
+
+    - name: Generate test tasks
+      id: tasks
+      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      with:
+        input: ${{ inputs.tasks }}
+        prefix: ':${{ inputs.project }}:'
+
+    - name: Build project
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+      with:
+        working-directory: ${{ inputs.project-dir }}
+        properties: |
+          version=${{ steps.context.outputs.current-version }}
+          mi-release=${{ steps.context.outputs.is-release }}
+
+        arguments: |-
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          ${{ steps.tasks.outputs.result }}
+        cache-key: ${{ inputs.cache-key }}
+
+    - name: Upload test results
+      if: always()
+      id: artifact-paths
+      uses: milaboratory/github-ci/actions/aws@v1
+      with:
+        args:
+          s3
+          cp
+          --recursive
+          ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}
