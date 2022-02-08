@@ -1,6 +1,6 @@
 name: Telegram Message
 description: |
-  Notify User or Channel about successful dev build
+  Notify User or Channel about new build
 
 inputs:
   telegram-target:
