@@ -71,7 +71,7 @@ runs:
           {{- status_icons[ tests["status"] ] | default ('') -}}
           {{- " " -}} \[{{ product["name"] }}] Tests for build '{{ build["version"] }}' status: tests["status"].
             [View build]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }})
-          {%- if tests["url"] != "" %}
+          {%- if tests["url"] | length %}
             [View report](tests["url"])
           {%- endif %}
 
