@@ -17,7 +17,11 @@ inputs:
 
   ignore-missing:
     description: |
-      Don't fail on attempt to read missing key from context
+      Don't fail on attempt to read missing key from context.
+      This affects only action's status on attemt to read missing key.
+
+      Use 'default-value' to control the value returned for
+      missing keys and races.
     required: false
     default: 'false'
 
@@ -26,6 +30,16 @@ inputs:
       Force context refresh from remote server before getting value.
     required: false
     default: 'false'
+
+  default-value:
+    description: |
+      Default value to return when no key found in context or race detected.
+      This does not affect action status for missing keys.
+
+      Use 'ignore-missing' input to control action's status.
+
+    required: false
+    default: ''
 
 outputs:
   value:
@@ -70,6 +84,7 @@ runs:
         CTX_PATH: ${{ github.action_path }}/../ctx
         CTX_KEY: ${{ inputs.key }}
         IGNORE_MISSING: ${{ inputs.ignore-missing }}
+        DEFAULT_VALUE: ${{ inputs.default-value }}
 
       with:
         run: |
@@ -77,6 +92,8 @@ runs:
           keys_count="${#key_files[@]}"
 
           if [ "${keys_count}" -eq 0 ]; then
+            echo "${DEFAULT_VALUE}"
+
             if [ "${IGNORE_MISSING}" = "true" ]; then
               exit 0
             else
@@ -86,6 +103,8 @@ runs:
           fi
 
           if [ "${keys_count}" -gt 1 ]; then
+            echo "${DEFAULT_VALUE}"
+
             ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
             exit 1
           fi
