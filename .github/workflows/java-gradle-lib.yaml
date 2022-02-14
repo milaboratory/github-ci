@@ -182,6 +182,17 @@ on:
           Create properties file with given contents before starting the build
         required: false
 
+      AWS_KEY_ID:
+        description: |
+          AWS Key ID for S3 to use when uloading tests report.
+          Empty value disables report upload step.
+        required: false
+      AWS_KEY_SECRET:
+        description: |
+          AWS Key Secet for S3 to use when uploading tests report.
+          Empty value disables report upload step.
+        required: false
+
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -316,6 +327,10 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
       status: ${{ job.status }}
