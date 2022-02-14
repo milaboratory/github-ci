@@ -68,12 +68,25 @@ inputs:
   #
   # Results upload control
   #
+  s3-key-id:
+    description: |
+      AWS Key ID for S3 auth
+    required: true
+  s3-key-secret:
+    description: |
+      AWS Key Secret for S3 auth
+    required: true
+
+  s3-region:
+    description: |
+      AWS region with target S3 bucket
+    required: false
+    default: 'eu-central-1'
   s3-bucket:
     description: |
       S3 bucket to use for tests
     required: false
     default: 'milaboratory-artefacts-public-files'
-
   s3-path-prefix:
     description: |
       Prefix for all uploaded test files.
@@ -191,9 +204,17 @@ runs:
           ${{ steps.tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
 
+    - name: Configure AWS CLI
+      if: always()
+      uses: milaboratory/github-ci/actions/aws/configure@v1
+      with:
+        key-id: ${{ inputs.s3-key-id }}
+        key-secret: ${{ inputs.s3-key-secret }}
+        region: ${{ inputs.s3-region }}
+        append: false
+
     - name: Upload test results
       if: always()
-      id: artifact-paths
       uses: milaboratory/github-ci/actions/aws@v1
       with:
         args: |
