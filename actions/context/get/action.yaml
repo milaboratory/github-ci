@@ -45,7 +45,7 @@ outputs:
   value:
     description:
       The value loaded from context
-    value: ${{ steps.value.outputs.stdout }}
+    value: ${{ fromJSON(steps.value.outputs.data).value }}
 
 runs:
   using: "composite"
@@ -87,12 +87,13 @@ runs:
         DEFAULT_VALUE: ${{ inputs.default-value }}
 
       with:
+        dump-stdout: false
         run: |
           key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
           keys_count="${#key_files[@]}"
 
           if [ "${keys_count}" -eq 0 ]; then
-            echo "${DEFAULT_VALUE}"
+            ghwa_set_output 'value' "${DEFAULT_VALUE}"
 
             if [ "${IGNORE_MISSING}" = "true" ]; then
               exit 0
@@ -103,10 +104,10 @@ runs:
           fi
 
           if [ "${keys_count}" -gt 1 ]; then
-            echo "${DEFAULT_VALUE}"
+            ghwa_set_output 'value' "${DEFAULT_VALUE}"
 
             ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
             exit 1
           fi
 
-          cat "${key_files[${keys_count}-1]}"
+          ghwa_set_output 'value' "$(cat "${key_files[${keys_count}-1]}")"
