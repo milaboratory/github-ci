@@ -90,7 +90,11 @@ runs:
       with:
         dump-stdout: false
         run: |
-          key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
+          key_files=()
+          if [ -e "${CTX_PATH}" ]; then
+            key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
+          fi
+
           keys_count="${#key_files[@]}"
 
           if [ "${keys_count}" -eq 0 ]; then
