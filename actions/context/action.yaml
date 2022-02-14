@@ -1,0 +1,59 @@
+name: Read parsed data from context.
+author: 'MiLaboratories'
+description: |
+  Read the data from context, parse it and return in outputs
+
+  This is a wrapper for context/get action, that knows about
+  our common context's content and its structure.
+  It provides a bit more convenient way to read context.
+
+outputs:
+  current-version:
+    description: Current version number
+    value: ${{ fromJSON(steps.versions.outputs.value).current-version }}
+  current-version-tag:
+    description: Current tag (if any)
+    value: ${{ fromJSON(steps.versions.outputs.value).current-tag }}
+  current-version-sha:
+    description: SHA of commit of current version
+    value: ${{ fromJSON(steps.versions.outputs.value).current-sha }}
+
+  previous-version:
+    description: Previous version number
+    value: ${{ fromJSON(steps.versions.outputs.value).previous-version }}
+  previous-version-tag:
+    description: Previous tag
+    value: ${{ fromJSON(steps.versions.outputs.value).previous-tag }}
+  previous-version-sha:
+    description: SHA of commit of previous version
+    value: ${{ fromJSON(steps.versions.outputs.value).previous-sha }}
+
+  latest-version:
+    description: Latest version number
+    value: ${{ fromJSON(steps.versions.outputs.value).latest-version }}
+  latest-version-tag:
+    description: Latest tag (ordered as versions)
+    value: ${{ fromJSON(steps.versions.outputs.value).latest-tag }}
+  latest-version-sha:
+    description: SHA of commit of latest version
+    value: ${{ fromJSON(steps.versions.outputs.value).latest-sha }}
+
+  is-latest-version:
+    description: "'True' when current version is the latest version available"
+    value: ${{ fromJSON(steps.versions.outputs.value).latest-version == fromJSON(steps.versions.outputs.value).current-version }}
+  is-branch-head:
+    description: "'True' when current run is from latest commit of branch."
+    value: ${{ fromJSON(steps.versions.outputs.value).is-branch-head }}
+  is-release:
+    description: "'True' when current commit's tag starts with 'v'"
+    value: ${{ startsWith( fromJSON(steps.versions.outputs.value).current-tag, 'v') }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: versions
+      uses: milaboratory/github-ci/actions/context/get@v1
+      with:
+        key: "versions.json"
+        default-value: '{}'

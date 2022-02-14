@@ -9,18 +9,9 @@ inputs:
         secrets.GITHUB_TOKEN
     required: true
 
-  assets:
-    description: |
-      '\n' or ','-delimited list of assets to upload to release.
-      Globbing is supported.
-      Example:
-        assets: |
-          dir1/*.txt
-          dir2/file1.exe
-          dir2/file2.dmg
-          dir3/**
-    required: true
-
+  #
+  # Main release attributes settings
+  #
   name:
     description: |
       Name of release.
@@ -40,6 +31,24 @@ inputs:
     required: false
     default: ${{ github.sha }}
 
+  #
+  # Release assets settings
+  #
+  assets:
+    description: |
+      '\n' or ','-delimited list of assets to upload to release.
+      Globbing is supported.
+      Example:
+        assets: |
+          dir1/*.txt
+          dir2/file1.exe
+          dir2/file2.dmg
+          dir3/**
+    required: true
+
+  #
+  # Release creation settings
+  #
   draft:
     description: |
       Mark release as 'draft'
@@ -109,6 +118,13 @@ runs:
         token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
 
+    - id: assets
+      uses: milaboratory/github-ci/actions/strings/join@v1
+      with:
+        input: ${{ inputs.assets }}
+        separator: ','
+        skip-empty: true
+
     - name: Create release
       id: create
       uses: ncipollo/release-action@c4bf6c1ab090090498fb7f3ddc9f99ba5ab619b9
@@ -121,6 +137,5 @@ runs:
         allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
-        artifacts: |
-          ${{ inputs.assets }}
+        artifacts: ${{ steps.assets.outputs.result }}
         commit: ${{ inputs.commit }}

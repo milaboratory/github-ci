@@ -66,23 +66,6 @@ on:
         type: string
         required: true
 
-      build-docker:
-        description: |
-          Build and push docker image (gradle :<project>:dockerBuildImage) for each run.
-          Each 'branch' build is stored
-        type: boolean
-        required: false
-        default: true
-
-      build-tar:
-        description: |
-          Create .tar archive with all jars required for application
-          and startup script (gradle :<project>:distTar).
-          The archive is saved as artifact with <artifact-retention> TTL.
-        type: boolean
-        required: false
-        default: true
-
       artifacts-retention:
         description: |
           Time in days to keep build artifacts before removing them
@@ -140,209 +123,172 @@ on:
         required: false
 
 jobs:
-  versions:
-    name: Detect versions
+  init:
+    name: Init
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - id: versions
-        uses: milaboratory/github-ci/actions/detect-version@v1
+      - uses: milaboratory/github-ci/actions/context/init@v1
         with:
-          canonize: ${{ inputs.version-canonize }}
-          fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-canonize: ${{ inputs.version-canonize }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
 
     outputs:
-      current-version: ${{ steps.versions.outputs.current-version }}
-      current-tag: ${{ steps.versions.outputs.current-tag }}
-      current-sha: ${{ steps.versions.outputs.current-sha }}
-
-      previous-version: ${{ steps.versions.outputs.previous-version }}
-      previous-tag: ${{ steps.versions.outputs.previous-tag }}
-      previous-sha: ${{ steps.versions.outputs.previous-sha }}
-
-      latest-version: ${{ steps.versions.outputs.latest-version }}
-      latest-tag: ${{ steps.versions.outputs.latest-tag }}
-      latest-sha: ${{ steps.versions.outputs.latest-sha }}
-
-      is-branch-head: ${{ steps.versions.outputs.is-branch-head }}
+      is-release: ${{ steps.context.outputs.is-release }}
 
   build:
-
-    name: Build application
+    name: :build
     runs-on: ubuntu-latest
 
     needs:
-      - versions
+      - init
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Prepare env for Java application build
-        uses: actions/setup-java@v2
+      - uses: milaboratory/github-ci/blocks/java/build@v1
         with:
-          distribution: ${{ inputs.java-distribution }}
-          java-version: ${{ inputs.java-version }}
-          cache: 'gradle'
-
-      - name: Set gradle.properties
-        uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
-        with:
-          properties: ${{ secrets.GRADLE_PROPERTIES }}
-
-      - name: Read actual project properties
-        id: gradle-props
-        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
-        with:
+          project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          project-name: ${{ inputs.build-project }}
+          tasks: build
+          exclude-tasks: test
 
-      - name: Build tar distribution
-        if: inputs.build-tar
-
-        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        with:
-          working-directory: ${{ inputs.build-project-dir }}
           properties: |
-            version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
+            mi-ci-stage=build
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
 
-          tasks: :${{ inputs.build-project }}:distTar
+  test:
+    name: :test
+    runs-on: ubuntu-latest
 
-      - name: Save artifact with tar distribution
-        if: inputs.build-tar
-        uses: actions/upload-artifact@v2
+    needs:
+      - build
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: test
+
+          properties: |
+            mi-ci-stage=test
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+  distTar:
+    name: :distTar
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: distTar
+          exclude-tasks: test
+
+          artifact-name: ${{ inputs.app-name-slug }}-tar
+          artifact-paths: ./distributions/*.tar
+          artifact-retention: ${{ inputs.artifact-retention }}
+
+          properties: |
+            mi-ci-stage=dist
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+  distDocker:
+    name: :dockerBuildImage
+    runs-on: ubuntu-latest
+
+    needs:
+      - test
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: dockerBuildImage
+          exclude-tasks: test
+
+          properties: |
+            mi-ci-stage=dist
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+      - uses: milaboratory/github-ci/blocks/java/publish/docker@v1
+        id: docker-push
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      status: ${{ job.status }}
+      docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if: always() && inputs.notify-telegram
+
+    needs:
+      - distDocker
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: ${{ needs.distDocker.outputs.status }}
+          product-name: ${{ inputs.app-name }}
+          docker-images: ${{ needs.distDocker.outputs.docker-tags }}
+
+  release:
+    name: Release app
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - distDocker
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+      - uses: actions/download-artifact@v1
         with:
           name: ${{ inputs.app-name-slug }}-tar
-          path: ${{ steps.gradle-props.outputs.buildDir }}/distributions/*.tar
-          retention-days: ${{ inputs.artifacts-retention }}
 
-      - name: Build docker image
-        if: inputs.build-docker
-
-        uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
-        with:
-          working-directory: ${{ inputs.build-project-dir }}
-          properties: |
-            version=${{ needs.versions.outputs.current-version }}
-            mi-release=${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-
-          tasks: :${{ inputs.build-project }}:dockerBuildImage
-
-      - name: Generate push targets list
-        id: push-targets
-        if: inputs.build-docker
-
-        uses: milaboratory/github-ci/actions/shell@v1
-        env:
-          IS_RELEASE: ${{ startsWith( needs.versions.outputs.current-tag, 'v') }}
-          IS_LATEST_RELEASE: ${{ needs.versions.outputs.current-tag == needs.versions.outputs.latest-tag }}
-          IS_BRANCH_HEAD: ${{ needs.versions.outputs.is-branch-head }}
-          BUILD_NAME: ${{ steps.gradle-props.outputs.name }}
-          BUILD_VERSION: ${{ needs.versions.outputs.current-version }}
-        with:
-          run: |
-            # Always push '<tag name>:<version>' 'as is'
-            echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:${BUILD_VERSION}"
-
-            if [ "${IS_RELEASE}" = 'true' ]; then
-              if [ "${IS_LATEST_RELEASE}" = 'true' ]; then
-                # For latest releases also update :latest tag
-                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest"
-              fi
-            else
-              if [ "${IS_BRANCH_HEAD}" = 'true' ]; then
-                # For branch builds update :latest-<branch> tag when we build
-                # latest branch commit
-                echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
-              fi
-            fi
-
-      - name: Publish docker image to GitHub registry
-        id: docker-push
-        if: inputs.build-docker
-
-        uses: milaboratory/github-ci/actions/docker/push@v1
-        with:
-          auth-token: ${{ secrets.GITHUB_TOKEN }}
-          source: ${{ steps.gradle-props.outputs.name }}:${{ needs.versions.outputs.current-version }}
-          targets: ${{ steps.push-targets.outputs.stdout }}
-
-      #
-      # Release-only steps
-      #
       - name: Create release
-        id: create-release
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        if: fromJSON(steps.context.outputs.is-release)
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: ${{ needs.versions.outputs.current-version }}
-          tag: ${{ needs.versions.outputs.current-tag }}
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-tag }}
 
           assets: |
-            ${{ steps.gradle-props.outputs.buildDir }}/distributions/*.tar
+            ${{ inputs.app-name-slug }}-tar/*
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
-
-    outputs:
-      release-id: ${{ steps.create-release.outputs.id }}
-      release-url: ${{ steps.create-release.outputs.html_url }}
-      docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
-
-  notify-failure:
-
-    name: Notify (failure)
-    runs-on: ubuntu-latest
-
-    if: failure() && inputs.notify-telegram
-
-    needs:
-      - versions
-      - build
-
-    steps:
-      - name: Report build failure to Telegram
-        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.app-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
-
-  notify-success:
-
-    name: Notify (success)
-    runs-on: ubuntu-latest
-
-    if: inputs.notify-telegram
-
-    needs:
-      - versions
-      - build
-
-    steps:
-      - name: Report dev build is ready
-        if: needs.build.outputs.release-id == ''
-        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.app-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
-          build-category: dev
-          docker-images: ${{ needs.build.outputs.docker-tags }}
-
-      - name: Report release is ready
-        if: needs.build.outputs.release-id != ''
-        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.app-name }}
-          release-tag: ${{ needs.versions.outputs.current-tag }}
-          docker-images: ${{ needs.build.outputs.docker-tags }}

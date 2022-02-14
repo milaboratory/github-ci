@@ -1,6 +1,6 @@
 name: Telegram Message
 description: |
-  Notify User or Channel about successful dev build
+  Notify User or Channel about new build
 
 inputs:
   telegram-target:
@@ -23,7 +23,7 @@ inputs:
     required: true
   build-category:
     description: |
-      Build category: 'dev', 'nigtly', 'whatever' :)
+      Build category: 'dev', 'release', 'whatever' :)
     required: false
     default: 'dev'
 
@@ -49,39 +49,50 @@ runs:
   using: "composite"
 
   steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v1
+
     - uses: milaboratory/github-ci/actions/templates/jinja@v1
       id: message
       with:
         data: |
-          { "docker_images": ${{ inputs.docker-images }},
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "build": { "category": ${{ toJSON(inputs.build-category) }},
+                       "version": ${{ toJSON(inputs.build-version) }} },
+
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "category_icons": { "dev": "🚧",
+                                "release": "🔖" },
+
+            "docker_images": ${{ inputs.docker-images }},
             "maven_packages": ${{ inputs.maven-packages }} }
 
         template: |
-          🚧 \[${{ inputs.product-name }}] New ${{ inputs.build-category }} build is ready: ${{ inputs.build-version }}
-
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-
-          - [View Build on GitHub](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          - [Source code on GitHub](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}})
-
+          {{- category_icons[ build["category"] ] | default ('💚') -}}
+          {{- " " -}} 
+          \[{{ product["name"] }}] New {{ build["category"] }} [build is ready]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }}): {{ build["version"] }}
+            Branch: [{{ github["ref_name"] }}]({{ github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] }}) ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
+          
           {%- if docker_images | length > 0 %}
 
           Docker images:
           {%- for i in docker_images %}
-          - {{ i }}
+          - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
 
           {%- if maven_packages | length > 0 %}
 
-          Published maven packages:
+          Maven packages:
           {%- for i in maven_packages %}
-          - {{ i }}
+          - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
 
-          ${{ inputs.additional-info }}
+          {{ product["additional_info"] }}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
       with:

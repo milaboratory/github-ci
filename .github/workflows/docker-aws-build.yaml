@@ -37,6 +37,31 @@ on:
         required: false
         default: ''
 
+      build-args:
+        description: |
+          List of build args (ARG Dockerfile instruction)
+          to pass to `docker build` command:
+            --build-arg <arg>
+
+          One line - one argument:
+            NODE_ENV=production
+            CUSTOM_VAR=value1
+        type: string
+        required: false
+        default: ''
+
+      build-env:
+        description: |
+          List of environment variables to set at build time:
+            --env <arg>
+
+          One line - one variable:
+            NODE_ENV=production
+            CUSTOM_VAR=value1
+        type: string
+        required: false
+        default: ''
+
       #
       # Push settings
       #
@@ -120,21 +145,13 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build Docker Image
-        uses: milaboratory/github-ci/actions/shell@v1
-        id: build-image
-        env:
-          DOCKERFILE: ${{ inputs.dockerfile }}
-          BUILD_CONTEXT: ${{ inputs.build-context }}
+        uses: milaboratory/github-ci/actions/docker/build@v1
         with:
-          run: |
-            if [ -z "${BUILD_CONTEXT}" ]; then
-              BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
-            fi
-
-            docker build \
-              --file "${DOCKERFILE}" \
-              --tag "build:local" \
-              "${BUILD_CONTEXT}"
+          dockerfile: ${{ inputs.dockerfile }}
+          context: ${{ inputs.build-context }}
+          env: ${{ inputs.build-env }}
+          args: ${{ inputs.build-args }}
+          tags: 'build:local'
 
       - uses: milaboratory/github-ci/actions/miaws/configure@v1
         with:
@@ -147,56 +164,33 @@ jobs:
       - uses: milaboratory/github-ci/actions/miaws/appstack/push@v1
         id: push
         with:
-          source: "build:local"
+          source: 'build:local'
           target: ${{ inputs.image-tag }}
           regions: ${{ inputs.regions }}
           regions-by-task: ${{ inputs.regions-by-task }}
           deployment-units: ${{ inputs.deployment-units }}
 
     outputs:
+      status: ${{ job.status }}
       pushed: ${{ steps.push.outputs.pushed }}
       pushed-json: ${{ steps.push.outputs.pushed-json }}
 
-  notify-failure:
+  notify-build:
 
-    name: Notify (failure)
+    name: Notify build
     runs-on: ubuntu-latest
 
-    if: failure() && inputs.notify-telegram
+    if: always() && inputs.notify-telegram
 
     needs:
       - build
 
     steps:
-      - name: Report build failure to Telegram
-        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
+          build-status: ${{ needs.build.outputs.status }}
           product-name: ${{ inputs.product-name }}
-          build-version: ${{ github.sha }}
-
-  notify-success:
-
-    name: Notify (success)
-    runs-on: ubuntu-latest
-
-    if: inputs.notify-telegram
-
-    needs:
-      - build
-
-    steps:
-      - name: Report dev build is ready
-        if: needs.build.outputs.release-id == ''
-        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.product-name }}
-          build-version: ${{ github.sha }}
-          build-category: dev
-
           docker-images: ${{ needs.build.outputs.pushed-json }}

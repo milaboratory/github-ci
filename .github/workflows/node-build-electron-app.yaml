@@ -115,30 +115,21 @@ on:
         required: false
 
 jobs:
-  versions:
-    name: Detect Versions
+  init:
+    name: Init
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - id: versions
-        uses: milaboratory/github-ci/actions/detect-version@v1
+      - uses: milaboratory/github-ci/actions/context/init@v1
         with:
           canonize: ${{ inputs.version-canonize }}
           fetch-depth: ${{ inputs.version-fetch-depth }}
 
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
     outputs:
-      current-version: ${{ steps.versions.outputs.current-version }}
-      current-tag: ${{ steps.versions.outputs.current-tag }}
-      current-sha: ${{ steps.versions.outputs.current-sha }}
-
-      previous-version: ${{ steps.versions.outputs.previous-version }}
-      previous-tag: ${{ steps.versions.outputs.previous-tag }}
-      previous-sha: ${{ steps.versions.outputs.previous-sha }}
-
-      latest-version: ${{ steps.versions.outputs.latest-version }}
-      latest-tag: ${{ steps.versions.outputs.latest-tag }}
-      latest-sha: ${{ steps.versions.outputs.latest-sha }}
+      is-release: ${{ steps.context.outputs.is-release }}
 
   build:
     strategy:
@@ -149,10 +140,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     needs:
-      - versions
+      - init
 
     steps:
       - uses: actions/checkout@v2
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
 
       - name: Prepare env for Node application build
         uses: milaboratory/github-ci/actions/node/prepare@v1
@@ -167,101 +161,119 @@ jobs:
       - name: Patch package version
         uses: milaboratory/github-ci/actions/node/patch-version@v1
         with:
-          version: ${{ needs.versions.outputs.current-version }}
+          version: ${{ steps.context.outputs.current-version }}
 
       - name: Build application
+        env:
+          BUILD_SCRIPT: ${{ inputs.build-script-name }}
         run: |
-          npm run ${{ inputs.build-script-name }}
+          npm run "${BUILD_SCRIPT}"
 
-      - name: Save artifact with Mac OS X application
-        uses: actions/upload-artifact@v2
-        if: runner.os == 'macOS'
+      - id: artifact
+        uses: milaboratory/github-ci/actions/shell@v1
+        env:
+          APP_NAME_SLUG: ${{ inputs.app-name-slug }}
         with:
-          name: ${{ inputs.app-name-slug }}-mac
-          path: dist_electron/*.dmg
+          dump-stdout: false
+          run: |
+            if [ "${RUNNER_OS}" = "Linux" ]; then
+              ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
+              ghwa_set_output "path" "dist_electron/*.AppImage"
+
+            elif [ "${RUNNER_OS}" = "macOS" ]; then
+              ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
+              ghwa_set_output "path" "dist_electron/*.dmg"
+
+            else
+              ghwa_set_output "name" ""
+              ghwa_set_output "path" ""
+
+            fi
+
+      - name: Save artifact with application
+        uses: actions/upload-artifact@v2
+        if: fromJSON( steps.artifact.outputs.data ).name != ''
+        with:
+          name: ${{ fromJSON( steps.artifact.outputs.data ).name }}
+          path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.artifacts-retention }}
 
-      - name: Save artifact with Linux application
+      - name: Upload app to release artifact
         uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
+        if: fromJSON( steps.artifact.outputs.data ).name != ''
         with:
-          name: ${{ inputs.app-name-slug }}-linux
-          path: dist_electron/*.AppImage
+          name: release-files
+          path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.artifacts-retention }}
 
-      #
-      # Release-only steps
-      #
+  merge-status:
+    name: merge build statuses
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+
+    # This hacky job gets 'success' status only when all build jobs succeed
+    # If any of jobs in 'build' matrix fails, <merge-status> gets canceled and
+    # has '' (empty string) in <status> output
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      status: ${{ job.status }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if: always() && inputs.notify-telegram
+
+    needs:
+      - merge-status
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: ${{ needs.merge-status.outputs.status != '' && needs.merge-status.outputs.status || 'failure' }}
+          product-name: ${{ inputs.app-name }}
+
+  release:
+    name: Create release
+
+    runs-on: ubuntu-latest
+    needs:
+      - init
+      - build
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v1
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: release-files
+          path: release-files
+
       - name: Create release
-        id: create-release
-        if: startsWith( needs.versions.outputs.current-tag, 'v')
+        id: release
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: ${{ needs.versions.outputs.current-version }}
-          tag: ${{ needs.versions.outputs.current-tag }}
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-tag }}
 
-          assets: |
-            dist_electron/*.dmg,
-            dist_electron/*.AppImage
+          assets: release-files/*
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
     outputs:
-      release-id: ${{ steps.create-release.outputs.id }}
-      release-url: ${{ steps.create-release.outputs.html_url }}
-
-  notify-failure:
-
-    name: Notify (failure)
-    runs-on: ubuntu-latest
-
-    if: failure() && inputs.notify-telegram
-
-    needs:
-      - versions
-      - build
-
-    steps:
-      - name: Report build failure to Telegram
-        uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.lib-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
-
-  notify-success:
-
-    name: Notify (success)
-    runs-on: ubuntu-latest
-
-    if: inputs.notify-telegram
-
-    needs:
-      - versions
-      - build
-
-    steps:
-      - name: Report dev build is ready
-        if: needs.build.outputs.release-id == ''
-        uses: milaboratory/github-ci/actions/notify/telegram/dev-build-ready@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.app-name }}
-          build-version: ${{ needs.versions.outputs.current-version }}
-          build-category: dev
-
-      - name: Report release is ready
-        if: needs.build.outputs.release-id != ''
-        uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v1
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          product-name: ${{ inputs.app-name }}
-          release-tag: ${{ needs.versions.outputs.current-tag }}
+      release-id: ${{ steps.release.outputs.id }}
+      release-url: ${{ steps.release.outputs.html_url }}

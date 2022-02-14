@@ -1,0 +1,107 @@
+name: 'GitHub Pages action'
+description: |
+  Commit-hardening wrapper for GitHub Pages static files
+  generator action.
+
+  Original action: https://github.com/peaceiris/actions-gh-pages/
+  Original author: peaceiris
+
+author: denkoren
+
+inputs:
+  deploy-key:
+    description: 'Set a SSH private key from repository secret value for pushing to the remote branch.'
+    required: false
+  github-token:
+    description: 'Set a generated GITHUB_TOKEN for pushing to the remote branch.'
+    required: false
+  personal-token:
+    description: 'Set a personal access token for pushing to the remote branch.'
+    required: false
+  publish-branch:
+    description: 'Set a target branch for deployment.'
+    required: false
+    default: 'gh-pages'
+  publish-dir:
+    description: 'Set an input directory for deployment.'
+    required: false
+    default: 'public'
+  destination-dir:
+    description: 'Set an destination subdirectory for deployment.'
+    required: false
+    default: ''
+  external-repository:
+    description: 'Set an external repository (owner/repo).'
+    required: false
+  allow-empty-commit:
+    description: 'If empty commits should be made to the publication branch'
+    required: false
+    default: 'false'
+  keep-files:
+    description: 'If existing files in the publish branch should be not removed before deploying'
+    required: false
+    default: 'false'
+  force-orphan:
+    description: 'Keep only the latest commit on a GitHub Pages branch'
+    required: false
+    default: 'false'
+  user-name:
+    description: 'Set Git user.name'
+    required: false
+  user-email:
+    description: 'Set Git user.email'
+    required: false
+  commit-message:
+    description: 'Set a custom commit message with a triggered commit hash'
+    required: false
+  full-commit-message:
+    description: 'Set a custom full commit message without a triggered commit hash'
+    required: false
+  tag-name:
+    description: 'Set tag name'
+    required: false
+  tag-message:
+    description: 'Set tag message'
+    required: false
+  enable-jekyll:
+    description: 'Enable the GitHub Pages built-in Jekyll'
+    required: false
+    default: 'false'
+  disable-nojekyll:
+    description: 'An alias for enable_jekyll to disable adding .nojekyll file to a publishing branch'
+    required: false
+    default: 'false'
+  cname:
+    description: 'Set custom domain'
+    required: false
+  exclude-assets:
+    description: 'Set files or directories to exclude from a publish directory.'
+    required: false
+    default: '.github'
+
+runs:
+  using: composite
+
+  steps:
+    - uses: peaceiris/actions-gh-pages@068dc23d9710f1ba62e86896f84735d869951305 # v3.8.0
+      with:
+        deploy_key: ${{ inputs.deploy-key }}
+        github_token: ${{ inputs.github-token }}
+        personal_token: ${{ inputs.personal-token }}
+        publish_branch: ${{ inputs.publish-branch }}
+        publish_dir: ${{ inputs.publish-dir }}
+        destination_dir: ${{ inputs.destination-dir }}
+        external_repository: ${{ inputs.external-repository }}
+        allow_empty_commit: ${{ inputs.allow-empty-commit }}
+        keep_files: ${{ inputs.keep-files }}
+        force_orphan: ${{ inputs.force-orphan }}
+        user_name: ${{ inputs.user-name }}
+        user_email: ${{ inputs.user-email }}
+        commit_message: ${{ inputs.commit-message }}
+        full_commit_message: ${{ inputs.full-commit-message }}
+        tag_name: ${{ inputs.tag-name }}
+        tag_message: ${{ inputs.tag-message }}
+        enable_jekyll: ${{ inputs.enable-jekyll }}
+        disable_nojekyll: ${{ inputs.disable-nojekyll }}
+        cname: ${{ inputs.cname }}
+        exclude_assets: ${{ inputs.exclude-assets }}
