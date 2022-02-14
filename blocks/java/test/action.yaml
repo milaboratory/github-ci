@@ -68,6 +68,12 @@ inputs:
   #
   # Results upload control
   #
+  upload-report:
+    description: |
+      Set it to 'false' if you want to skip report upload steps
+    required: false
+    default: 'true'
+
   s3-key-id:
     description: |
       AWS Key ID for S3 auth
@@ -207,7 +213,7 @@ runs:
         cache-key: ${{ inputs.cache-key }}
 
     - name: Configure AWS CLI
-      if: always() && inputs.s3-key-id != ''
+      if: always() && inputs.s3-key-id != '' && inputs.upload-report == 'true'
       uses: milaboratory/github-ci/actions/aws/configure@v1
       with:
         key-id: ${{ inputs.s3-key-id }}
@@ -216,7 +222,7 @@ runs:
         append: false
 
     - name: Upload test results
-      if: always()
+      if: always() && inputs.upload-report == 'true'
       uses: milaboratory/github-ci/actions/aws@v1
       with:
         args: |
