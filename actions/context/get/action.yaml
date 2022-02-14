@@ -72,6 +72,8 @@ runs:
           echo 'false'
 
     - uses: actions/download-artifact@v2
+      # There is no 'continue-on-error' in composite actions,
+      # that is why we can't make action be 'ok' for absent artifact.
       if: steps.needs_update.outputs.stdout == 'true'
       with:
         name: context
