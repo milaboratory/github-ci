@@ -353,7 +353,7 @@ jobs:
 
           product-name: ${{ inputs.lib-name }}
           tests-status: ${{ needs.test.outputs.status }}
-          report-url: ${{ needs.test.outputs.report-url }}
+          report-url: ${{ needs.test.outputs.report-uploaded == 'true' && needs.test.outputs.report-url }}
 
   publish-dev:
     name: :publish-dev
