@@ -56,3 +56,4 @@ runs:
       uses: milaboratory/github-ci/actions/context/get@v1
       with:
         key: "versions.json"
+        default-value: '{}'

@@ -158,6 +158,15 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v1
 
+    - name: Configure AWS CLI
+      if: inputs.s3-key-id != '' && inputs.upload-report == 'true'
+      uses: milaboratory/github-ci/actions/aws/configure@v1
+      with:
+        key-id: ${{ inputs.s3-key-id }}
+        key-secret: ${{ inputs.s3-key-secret }}
+        region: ${{ inputs.s3-region }}
+        append: false
+
     - name: Prepare env for Java application build
       uses: actions/setup-java@v2
       with:
@@ -217,15 +226,6 @@ runs:
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
-
-    - name: Configure AWS CLI
-      if: always() && inputs.s3-key-id != '' && inputs.upload-report == 'true'
-      uses: milaboratory/github-ci/actions/aws/configure@v1
-      with:
-        key-id: ${{ inputs.s3-key-id }}
-        key-secret: ${{ inputs.s3-key-secret }}
-        region: ${{ inputs.s3-region }}
-        append: false
 
     - name: Upload test results
       id: upload-report
