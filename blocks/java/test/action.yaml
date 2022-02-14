@@ -135,15 +135,21 @@ inputs:
     default: ''
 
 outputs:
-  tests-path:
+  report-path:
     description: |
       Tests report path in S3 bucket without {{ s3-path-prefix }}
     value: ${{ steps.upload-path.outputs.stdout }}
 
-  tests-path-full:
+  report-path-full:
     description: |
       Tests report path in S3 bucket with {{ s3-path-prefix }}
     value: ${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}
+
+  report-uploaded:
+    description: |
+      'true' when report was uploaded to S3.
+      'false' when upload was skipped or failed.
+    value: ${{ steps.upload-report.outcome == 'success' }}
 
 runs:
   using: "composite"
@@ -222,6 +228,7 @@ runs:
         append: false
 
     - name: Upload test results
+      id: upload-report
       if: always() && inputs.upload-report == 'true'
       uses: milaboratory/github-ci/actions/aws@v1
       with:
