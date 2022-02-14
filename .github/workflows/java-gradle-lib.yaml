@@ -341,7 +341,7 @@ jobs:
     name: notify test
     runs-on: ubuntu-latest
 
-    if: success() || failure()
+    if: always() && needs.test.outputs.status != ''
     needs:
       - test
 
