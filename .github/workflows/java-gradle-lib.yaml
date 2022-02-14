@@ -334,8 +334,8 @@ jobs:
 
     outputs:
       status: ${{ job.status }}
-      report-uploaded: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
-      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.tests-path }}index.html
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   notify-test:
     name: notify test
