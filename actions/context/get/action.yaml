@@ -78,6 +78,7 @@ runs:
         path: ${{ github.action_path }}/../ctx
 
     - id: value
+      if: always()
       uses: milaboratory/github-ci/actions/shell@v1
 
       env:
