@@ -87,7 +87,7 @@ runs:
             "packages": ${{ inputs.packages }} }
 
         template: |
-          {%- macro case_first(text) %}
+          {%- macro case_first(text) -%}
             {{ text[0]|upper}}{{text[1:] }}
           {%- endmacro %}
           {%- if job["status"] == "failure" -%}
