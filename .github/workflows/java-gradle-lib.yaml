@@ -400,7 +400,7 @@ jobs:
       - publish-dev
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/publication@v1
+      - uses: milaboratory/github-ci/blocks/notify/publish@v1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -409,7 +409,6 @@ jobs:
 
           product-name: ${{ inputs.lib-name }}
           product-type: library
-          build-category: ${{
 
           repository-type: maven
           repository-category: dev
