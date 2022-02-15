@@ -52,9 +52,9 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          🚀 \[{{ product["name"] }}] [New release](
+          🚀 \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            ): [{{ release["version"] }}](
+            )] New release: [{{ release["version"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
             )
 
