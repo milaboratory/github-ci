@@ -87,7 +87,7 @@ runs:
             "packages": ${{ inputs.packages }} }
 
         template: |
-          {%- if job["status"] == "failed" -%}
+          {%- if job["status"] == "failure" -%}
 
           ❌ [{{ product["name"] }}] {{ product["type"] }} [publication failed](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
