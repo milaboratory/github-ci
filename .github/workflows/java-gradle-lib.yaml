@@ -445,6 +445,25 @@ jobs:
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
+    outputs:
+      status: ${{ job.status }}
+
+  notify-release:
+    name: notify publish dev
+    runs-on: ubuntu-latest
+
+    if: always() && needs.release.outputs.status != ''
+    needs:
+      - release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.lib-name }}
+
   publish-release:
     name: :publish-release
     runs-on: ubuntu-latest
