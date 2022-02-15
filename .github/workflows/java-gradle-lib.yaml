@@ -472,3 +472,43 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+      - id: props
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v1
+        with:
+          input: |-
+            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+
+    outputs:
+      status: ${{ job.status }}
+      libs-list: ${{ steps.libs-list.outputs.result }}
+
+  notify-publish-release:
+    name: notify publish dev
+    runs-on: ubuntu-latest
+
+    if: always() && needs.publish-release.outputs.status != ''
+    needs:
+      - publish-release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/publish@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: ${{ needs.publish-release.outputs.status }}
+
+          product-name: ${{ inputs.lib-name }}
+          product-type: library
+
+          repository-type: maven
+          repository-category: release
+          packages: ${{ needs.publish-release.outputs.libs-list }}
