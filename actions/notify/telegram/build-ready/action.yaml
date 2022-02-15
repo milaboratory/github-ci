@@ -73,7 +73,9 @@ runs:
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
           {{- " " -}} 
-          \[{{ product["name"] }}] [New {{ build["category"] }} build]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }}): {{ build["version"] }}
+          \[[{{ product["name"] }}](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            )] New {{ build["category"] }} build: {{ build["version"] }}
             Branch: [{{ github["ref_name"] }}]({{ github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] }}) ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
           
           {%- if docker_images | length > 0 %}

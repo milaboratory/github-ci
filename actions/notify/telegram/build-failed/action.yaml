@@ -45,7 +45,7 @@ runs:
         format: markdown
         disable_web_page_preview: true
         message: |
-          💩 \[${{ inputs.product-name }}] [Build failed](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}): ${{ inputs.build-version }}
+          💩 \[[${{ inputs.product-name }}](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})] Build failed: ${{ inputs.build-version }}
             Branch: [${{ github.ref_name }}](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}}) ([${{ steps.short-sha.outputs.stdout }}](${{github.server_url}}/${{github.repository}}/commit/${{github.sha}}))
 
           ${{ inputs.additional-info }}

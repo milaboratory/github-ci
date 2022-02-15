@@ -68,12 +68,10 @@ runs:
           }
 
         template: |
-          {{- status_icons[ tests["status"] ] | default ('') -}}
-          {{- " " -}} \[{{ product["name"] }}] Tests for build '{{ build["version"] }}' status: {{ tests["status"] }}.
-            [View build]({{ github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] }})
-          {%- if tests["url"] | length %}
-            [View report]({{ tests["url"] }})
-          {%- endif %}
+          {{- status_icons[ tests["status"] ] | default ('')
+          }} \[[{{ product["name"] }}](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            )] Tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
 
           {{ product["additional_info"] }}
 
