@@ -86,7 +86,32 @@ runs:
 
             "packages": ${{ inputs.packages }} }
 
-        template-file: ${{ github.action_path }}/template.j2
+        template: |
+          {%- if job["status"] == "failed" -%}
+
+          ❌ [{{ product["name"] }}] {{ product["type"] }} [publication failed](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ) to {{ repository["type"] }} {{ repository["category"] }} repository.
+
+          {%- else -%}
+
+          📝 \[{{ product["name"] }}] New version of {{ product["type"] }} [was published](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ) to {{ repository["type"] }} {{ repository["category"] }} repository.
+
+          {%- endif %}
+            Branch: [{{ github["ref_name"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+            ) ([{{ github["sha"][:8] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] -}}
+            ))
+            Packages:
+            {%- for i in packages %}
+              - ```{{ i }}```
+            {%- endfor %}
+
+          {{ product["additional_info"] }}
+
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
       with:
