@@ -449,7 +449,7 @@ jobs:
       status: ${{ job.status }}
 
   notify-release:
-    name: notify publish dev
+    name: notify release
     runs-on: ubuntu-latest
 
     if: always() && needs.release.outputs.status != ''
@@ -510,7 +510,7 @@ jobs:
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-publish-release:
-    name: notify publish dev
+    name: notify publish release
     runs-on: ubuntu-latest
 
     if: always() && needs.publish-release.outputs.status != ''
