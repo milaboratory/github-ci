@@ -42,6 +42,7 @@ runs:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
 
+        product-name: ${{ inputs.product-name }}
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-tag }}
 
