@@ -89,7 +89,7 @@ runs:
         template: |
           {%- if job["status"] == "failure" -%}
 
-          ❌ [{{ product["name"] }}] {{ product["type"] }} [publication failed](
+          ❌ \[{{ product["name"] }}] {{ product["type"] }} [publication failed](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
             ) to {{ repository["type"] }} {{ repository["category"] }} repository.
 
