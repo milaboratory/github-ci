@@ -92,15 +92,15 @@ runs:
           {%- endmacro %}
           {%- if job["status"] == "failure" -%}
 
-          ❌ \[{{ product["name"] }}] [{{ case_first(product["type"]) }} publication failed](
+          ❌ \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            ) to {{ repository["type"] }} {{ repository["category"] }} repository.
+            )] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
 
           {%- else -%}
 
-          📝 \[{{ product["name"] }}] [{{ case_first(product["type"]) }} was published](
+          📝 \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            ) to {{ repository["type"] }} {{ repository["category"] }} repository.
+            )] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
 
           {%- endif %}
             Branch: [{{ github["ref_name"] }}](
