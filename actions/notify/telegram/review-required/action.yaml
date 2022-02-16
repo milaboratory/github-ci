@@ -60,7 +60,7 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          🚀 \[[{{ product["name"] }}](
+          🧑‍🚀 \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
             )] {{ message }}
             {%- if reviewers | length %}
