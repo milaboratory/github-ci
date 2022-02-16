@@ -335,6 +335,7 @@ jobs:
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
+          tasks: test
 
           properties: |
             mi-ci-stage=test
