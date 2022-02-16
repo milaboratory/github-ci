@@ -274,6 +274,20 @@ jobs:
           path: ${{ steps.release-files.outputs.result }}
           retention-days: ${{ inputs.artifact-retention }}
 
+      - name: Publish lib to dev repositories
+        uses: milaboratory/github-ci/blocks/java/build@v1
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.publish-dev-tasks }}
+          exclude-tasks: test
+
+          custom-arguments: |
+            -Pmi-ci-stage=publish
+
+          java-version: '' # skip java environment preparation step
+          properties: '' # don't change '~/.gradle/gradle.properties' file
+
       - name: Prepare JSON list of published libraries
         id: libs-list
         uses: milaboratory/github-ci/actions/strings/json-list@v1
@@ -341,7 +355,7 @@ jobs:
     name: notify test
     runs-on: ubuntu-latest
 
-    if: success() || failure()
+    if: always() && needs.test.outputs.status != ''
     needs:
       - test
 
@@ -355,33 +369,22 @@ jobs:
           tests-status: ${{ needs.test.outputs.status }}
           report-url: ${{ fromJSON(needs.test.outputs.report-uploaded) && needs.test.outputs.report-url || '' }}
 
-  publish-dev:
-    name: :publish-dev
+  notify-release-review:
+    name: notify review required
     runs-on: ubuntu-latest
 
+    if: always() && needs.test.outputs.status != ''
     needs:
-      - build
+      - test
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v1
         with:
-          submodules: ${{ inputs.checkout-submodules }}
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v1
-
-      - uses: milaboratory/github-ci/blocks/java/build@v1
-        with:
-          project: ${{ inputs.build-project }}
-          project-dir: ${{ inputs.build-project-dir }}
-          tasks: ${{ inputs.publish-dev-tasks }}
-          exclude-tasks: test
-
-          properties: |
-            mi-ci-stage=publish
-            ${{ secrets.GRADLE_PROPERTIES }}
-          java-version: ${{ inputs.java-version }}
-          java-distribution: ${{ inputs.java-distribution }}
+          message: new version of library is ready for release.
+          product-name: ${{ inputs.lib-name }}
 
   release:
     name: Release lib
@@ -414,6 +417,25 @@ jobs:
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
+    outputs:
+      status: ${{ job.status }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always() && needs.release.outputs.status != ''
+    needs:
+      - release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.lib-name }}
+
   publish-release:
     name: :publish-release
     runs-on: ubuntu-latest
@@ -441,3 +463,43 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+      - id: props
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v1
+        with:
+          input: |-
+            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+
+    outputs:
+      status: ${{ job.status }}
+      libs-list: ${{ steps.libs-list.outputs.result }}
+
+  notify-publish-release:
+    name: notify publish release
+    runs-on: ubuntu-latest
+
+    if: always() && needs.publish-release.outputs.status != ''
+    needs:
+      - publish-release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/publish@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: ${{ needs.publish-release.outputs.status }}
+
+          product-name: ${{ inputs.lib-name }}
+          product-type: library
+
+          repository-type: maven
+          repository-category: release
+          packages: ${{ needs.publish-release.outputs.libs-list }}

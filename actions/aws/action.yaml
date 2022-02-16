@@ -36,6 +36,11 @@ runs:
       run: |
         # aws-cli in docker
 
+        # Make sure directories exist so bind mounts will not fail docker container run.
+        mkdir -p \
+          "${HOME}/.aws" \
+          "${HOME}/.docker"
+
         workdir="$(pwd)"
         mounts=(
           --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"

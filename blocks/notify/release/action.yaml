@@ -1,0 +1,49 @@
+name: Send notifications about release creation
+author: 'MiLaboratories'
+description: |
+  Send notifications about release creation
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v1
+
+    - name: Send new release notigication to Telegram
+      if: inputs.telegram-target != ''
+      uses: milaboratory/github-ci/actions/notify/telegram/release@v1
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.context.outputs.current-version }}
+        tag: ${{ steps.context.outputs.current-tag }}
+
+        additional-info: ${{ inputs.additional-info }}

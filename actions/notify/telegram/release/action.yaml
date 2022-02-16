@@ -1,6 +1,6 @@
-name: Telegram Message
+name: Notify new release created
 description: |
-  Notify User or Channel about new tests result
+  Notify User or Channel about new release
 
 inputs:
   telegram-target:
@@ -17,23 +17,14 @@ inputs:
       Name of product that was built
     required: false
     default: ${{ github.repository }}
-  build-version:
+  version:
     description: |
-      Build version to display in message
+      Release version number
     required: true
-
-  tests-status:
+  tag:
     description: |
-      Tests job status.
-      To get it, put it into job's outputs (status: {{ job.status }}),
-      then get it from needs.<job-id>.outputs.status
+      Release tag
     required: true
-
-  report-url:
-    description: |
-      Tests report URL
-    required: false
-    default: ''
 
   additional-info:
     description: |
@@ -55,25 +46,20 @@ runs:
           { "product": { "name": ${{ toJSON(inputs.product-name) }},
                          "additional_info": ${{ toJSON(inputs.additional-info) }} },
 
-            "build": { "version": ${{ toJSON(inputs.build-version) }} },
-          
-            "tests": { "status": ${{ toJSON(inputs.tests-status) }},
-                       "url": ${{ toJSON(inputs.report-url) }} },
+            "release": { "version": ${{ toJSON(inputs.version) }},
+                         "tag": ${{ toJSON(inputs.tag) }} },
 
-            "github": ${{ steps.safe-ctx.outputs.github }},
-
-            "status_icons": { "success": "✅",
-                              "failure": "❌",
-                              "cancelled": "❌" }
-          }
+            "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          {{- status_icons[ tests["status"] ] | default ('')
-          }} \[[{{ product["name"] }}](
-            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] Tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+          🚀 \[[{{ product["name"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            )] New release: [{{ release["version"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
+            )
 
           {{ product["additional_info"] }}
+
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
       with:
