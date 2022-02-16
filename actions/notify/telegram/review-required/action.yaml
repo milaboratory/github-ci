@@ -67,7 +67,7 @@ runs:
             {{ reviewers | join(', ') }}, your approval is required.
             {%- else %}
             Approval is required.
-            {%- enif %}
+            {%- endif %}
 
           {{ product["additional_info"] }}
 
