@@ -79,19 +79,17 @@ runs:
             Branch: [{{ github["ref_name"] }}]({{ github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] }}) ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
           
           {%- if docker_images | length > 0 %}
-
-          Docker images:
-          {%- for i in docker_images %}
-          - ```{{ i }}```
-          {%- endfor %}
+            Docker images:
+            {%- for i in docker_images %}
+              - ```{{ i }}```
+            {%- endfor %}
           {%- endif %}
 
           {%- if maven_packages | length > 0 %}
-
-          Maven packages:
-          {%- for i in maven_packages %}
-          - ```{{ i }}```
-          {%- endfor %}
+            Maven packages:
+            {%- for i in maven_packages %}
+              - ```{{ i }}```
+            {%- endfor %}
           {%- endif %}
 
           {{ product["additional_info"] }}
