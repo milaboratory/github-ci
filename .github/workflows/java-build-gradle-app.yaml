@@ -229,6 +229,10 @@ jobs:
     needs:
       - test
 
+      # The jobs below added to control notifications order in Telegram
+      - notify-test
+      - notify-build
+
     steps:
       - uses: milaboratory/github-ci/blocks/notify/review-required@v1
         with:
