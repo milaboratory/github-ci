@@ -63,7 +63,11 @@ runs:
           🚀 \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
             )] {{ message }}
+            {%- if approvers | length %}
             {{ approvers | join(', ') }}, your approval is required.
+            {%- else %}
+            Approval is required.
+            {%- enif %}
 
           {{ product["additional_info"] }}
 
