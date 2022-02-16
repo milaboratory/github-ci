@@ -55,6 +55,7 @@ runs:
             "release": { "version": ${{ toJSON(inputs.version) }},
                          "tag": ${{ toJSON(inputs.tag) }} },
 
+            "message": ${{ toJSON(inputs.message) }},
             "reviewers": ${{ steps.reviewers.outputs.result }},
 
             "github": ${{ steps.safe-ctx.outputs.github }} }
