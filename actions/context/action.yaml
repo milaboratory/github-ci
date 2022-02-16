@@ -45,8 +45,8 @@ outputs:
     description: "'True' when current run is from latest commit of branch."
     value: ${{ fromJSON(steps.versions.outputs.value).is-branch-head }}
   is-release:
-    description: "'True' when current commit's tag starts with 'v'"
-    value: ${{ startsWith( fromJSON(steps.versions.outputs.value).current-tag, 'v') }}
+    description: "'True' when current commit has tag"
+    value: ${{ fromJSON(steps.versions.outputs.value).current-tag != '' }}
 
 runs:
   using: "composite"
