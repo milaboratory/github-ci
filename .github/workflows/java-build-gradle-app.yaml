@@ -211,6 +211,9 @@ jobs:
     needs:
       - test
 
+      # Jobs below are added to control notifications order in Telegram
+      - notify-build
+
     steps:
       - uses: milaboratory/github-ci/blocks/notify/tests@v1
         with:
@@ -229,7 +232,7 @@ jobs:
     needs:
       - test
 
-      # The jobs below added to control notifications order in Telegram
+      # Jobs below are added to control notifications order in Telegram
       - notify-test
       - notify-build
 
@@ -352,3 +355,22 @@ jobs:
             ${{ inputs.app-name-slug }}-tar/*
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      status: ${{ job.status }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always() && needs.release.outputs.status != ''
+    needs:
+      - release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v1
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
