@@ -16,9 +16,9 @@ inputs:
     description: |
       Message to display in notification
     required: true
-  approvers:
+  reviewers:
     description: |
-      List of approvers to call for action (one per line)
+      List of reviewers to call for action (one per line)
     required: true
 
   product-name:
@@ -41,9 +41,9 @@ runs:
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v1
 
     - uses: milaboratory/github-ci/actions/strings/json-list@v1
-      id: approvers
+      id: reviewers
       with:
-        input: ${{ inputs.approvers }}
+        input: ${{ inputs.reviewers }}
 
     - uses: milaboratory/github-ci/actions/templates/jinja@v1
       id: message
@@ -55,7 +55,7 @@ runs:
             "release": { "version": ${{ toJSON(inputs.version) }},
                          "tag": ${{ toJSON(inputs.tag) }} },
 
-            "approvers": ${{ steps.approvers.outputs.result }},
+            "reviewers": ${{ steps.reviewers.outputs.result }},
 
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
@@ -63,8 +63,8 @@ runs:
           🚀 \[[{{ product["name"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
             )] {{ message }}
-            {%- if approvers | length %}
-            {{ approvers | join(', ') }}, your approval is required.
+            {%- if reviewers | length %}
+            {{ reviewers | join(', ') }}, your approval is required.
             {%- else %}
             Approval is required.
             {%- enif %}
