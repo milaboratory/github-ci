@@ -1,0 +1,76 @@
+name: Notify new release created
+description: |
+  Notify User or Channel about new release
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  message:
+    description: |
+      Message to display in notification
+    required: true
+  approvers:
+    description: |
+      List of approvers to call for action (one per line)
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v1
+
+    - uses: milaboratory/github-ci/actions/strings/json-list@v1
+      id: approvers
+      with:
+        input: ${{ inputs.approvers }}
+
+    - uses: milaboratory/github-ci/actions/templates/jinja@v1
+      id: message
+      with:
+        data: |
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "release": { "version": ${{ toJSON(inputs.version) }},
+                         "tag": ${{ toJSON(inputs.tag) }} },
+
+            "approvers": ${{ steps.approvers.outputs.result }},
+
+            "github": ${{ steps.safe-ctx.outputs.github }} }
+
+        template: |
+          🚀 \[[{{ product["name"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            )] {{ message }}
+            {{ approvers | join(', ') }}, your approval is required.
+
+          {{ product["additional_info"] }}
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v1
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: ${{ steps.message.outputs.data }}
