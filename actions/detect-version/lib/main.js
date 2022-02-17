@@ -33,6 +33,18 @@ const utils_1 = require("./utils");
 const milib_1 = require("milib");
 function prepareRepository(depth) {
     return __awaiter(this, void 0, void 0, function* () {
+        // We have to do black magic here because of
+        // https://github.com/milaboratory/github-ci/issues/13
+        const refType = process.env.GITHUB_REF_TYPE;
+        const refName = process.env.GITHUB_REF_NAME;
+        if (refType === 'tag') {
+            yield milib_1.git.fetch({
+                remote: 'origin',
+                refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
+                deepen: 1,
+                forceFlag: true
+            });
+        }
         yield milib_1.git.fetchTags();
         return milib_1.git.ensureHistorySize(depth);
     });

@@ -4,6 +4,20 @@ import {canonizeVersion, sanitizeVersion} from './utils'
 import {git} from 'milib'
 
 async function prepareRepository(depth: number): Promise<void> {
+  // We have to do black magic here because of
+  // https://github.com/milaboratory/github-ci/issues/13
+  const refType: string = process.env.GITHUB_REF_TYPE as string
+  const refName: string = process.env.GITHUB_REF_NAME as string
+
+  if (refType === 'tag') {
+    await git.fetch({
+      remote: 'origin',
+      refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
+      deepen: 1,
+      forceFlag: true
+    })
+  }
+
   await git.fetchTags()
   return git.ensureHistorySize(depth)
 }

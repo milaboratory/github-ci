@@ -40,6 +40,18 @@ const utils_1 = __nccwpck_require__(918);
 const milib_1 = __nccwpck_require__(604);
 function prepareRepository(depth) {
     return __awaiter(this, void 0, void 0, function* () {
+        // We have to do black magic here because of
+        // https://github.com/milaboratory/github-ci/issues/13
+        const refType = process.env.GITHUB_REF_TYPE;
+        const refName = process.env.GITHUB_REF_NAME;
+        if (refType === 'tag') {
+            yield milib_1.git.fetch({
+                remote: 'origin',
+                refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
+                deepen: 1,
+                forceFlag: true
+            });
+        }
         yield milib_1.git.fetchTags();
         return milib_1.git.ensureHistorySize(depth);
     });
@@ -1799,7 +1811,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ensureHistorySize = exports.previousTag = exports.latestTag = exports.latestVersionTag = exports.currentTag = exports.listCommitTags = exports.fetchTags = exports.resolveRef = exports.tag = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
+exports.ensureHistorySize = exports.previousTag = exports.latestTag = exports.latestVersionTag = exports.currentTag = exports.listCommitTags = exports.fetchTags = exports.resolveRef = exports.tag = exports.lsRemote = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
 const exec = __importStar(__nccwpck_require__(642));
 function git(...args) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1819,6 +1831,8 @@ exports.git = git;
 function fetch(opts) {
     return __awaiter(this, void 0, void 0, function* () {
         const cmd = ["fetch"];
+        if (opts && opts.forceFlag)
+            cmd.push("--force");
         if (opts && opts.depth != null)
             cmd.push(`--depth=${opts.depth}`);
         if (opts && opts.deepen != null)
@@ -1864,6 +1878,30 @@ function describe(opts) {
     });
 }
 exports.describe = describe;
+function lsRemote(opts) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const cmd = ["ls-remote"];
+        if (opts.tagsFlag)
+            cmd.push("--tags");
+        if (opts.headsFlag)
+            cmd.push("--heads");
+        if (opts.refs)
+            cmd.push("--refs");
+        if (opts.quietFlag)
+            cmd.push("--quiet");
+        cmd.push(opts.repository);
+        if (opts.refs)
+            cmd.push(...opts.refs);
+        const lsRemoteResult = yield git(...cmd);
+        const result = [];
+        for (const line of lsRemoteResult.stdout.trim().split("\n")) {
+            const parts = line.split("\t");
+            result.push({ objectSHA: parts[0], refName: parts[1] });
+        }
+        return result;
+    });
+}
+exports.lsRemote = lsRemote;
 function tag(opts) {
     return __awaiter(this, void 0, void 0, function* () {
         const cmd = ["tag"];
