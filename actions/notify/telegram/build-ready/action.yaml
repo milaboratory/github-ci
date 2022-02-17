@@ -64,8 +64,8 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "category_icons": { "dev": "🚧",
-                                "release": "🔖" },
+            "category_icons": { "dev": "⚙",
+                                "release": "📦️" },
 
             "docker_images": ${{ inputs.docker-images }},
             "maven_packages": ${{ inputs.maven-packages }} }
