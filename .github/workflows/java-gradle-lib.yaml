@@ -220,7 +220,7 @@ jobs:
       is-release: ${{ steps.context.outputs.is-release }}
 
   build:
-    name: :build
+    name: :build + publish-dev
     runs-on: ubuntu-latest
 
     needs:
