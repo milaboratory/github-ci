@@ -213,7 +213,7 @@ runs:
         input: ${{ inputs.tasks }}
         prefix: ':${{ inputs.project }}:'
 
-    - name: Build project
+    - name: Run tests
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
       with:
         working-directory: ${{ inputs.project-dir }}
@@ -227,9 +227,22 @@ runs:
           ${{ steps.tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
 
+    - name: Check if we should upload results to S3
+      id: should-upload
+      if: always()
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        UPLOAD_ENABLED: ${{ inputs.upload-report }}
+        REPORT_PATH: ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
+      with:
+        run: |
+          if [ "${UPLOAD_ENABLED}" = 'true' ] && [ -e "${REPORT_PATH}" ]; then
+            echo 'true'
+          fi
+
     - name: Upload test results
       id: upload-report
-      if: always() && inputs.upload-report == 'true'
+      if: always() && steps.should-upload.outputs.stdout == 'true'
       uses: milaboratory/github-ci/actions/aws@v1
       with:
         args: |
