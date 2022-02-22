@@ -114,6 +114,12 @@ on:
         required: false
         default: doc,chore
 
+      release-to-s3:
+        description: |
+          Set it to 'true' if you want to upload releases to S3 bucket
+        type: boolean
+        required: false
+        default: false
       release-s3-region:
         description: |
           Upload application release artifact's files to
@@ -127,7 +133,7 @@ on:
           given AWS S3 bucket.
         required: false
         type: string
-        default: ''
+        default: 'milaboratory-artefacts-public-files'
       release-s3-path:
         description: |
           Upload application release artifact's files to given 'path'
@@ -437,7 +443,7 @@ jobs:
   upload-release-s3:
     runs-on: ubuntu-latest
 
-    if: inputs.release-s3-bucket != ''
+    if: inputs.release-to-s3
     needs:
       - release
       - distArchive
