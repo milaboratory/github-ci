@@ -283,8 +283,9 @@ jobs:
     name: notify review required
     runs-on: ubuntu-latest
 
-    if: always() && needs.test.outputs.status != ''
+    if: (success() || failure()) && fromJSON(needs.init.outputs.is-release) && needs.test.outputs.status != ''
     needs:
+      - init
       - test
 
       # Jobs below are added to control notifications order in Telegram
