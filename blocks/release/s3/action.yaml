@@ -44,8 +44,7 @@ inputs:
   s3-bucket:
     description: |
       Application archive target S3 bucket
-    required: false
-    default: 'milaboratory-artefacts-public-files'
+    required: true
   s3-path:
     description: |
       Put artifact's files into given 'directory' in
@@ -54,8 +53,7 @@ inputs:
       Files will be uploaded to:
         's3://<s3-bucket>/<s3-path>/<file-name>'
 
-    required: false
-    default: 'cdn/software/${{ github.repository.name }}'
+    required: true
 
 outputs:
   uploaded:
