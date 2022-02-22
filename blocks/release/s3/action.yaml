@@ -121,7 +121,7 @@ runs:
           s3
           cp
           ${{ steps.artifact-path.outputs.stdout }}/
-          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}/
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
     - id: uploaded-list
       uses: milaboratory/github-ci/actions/shell@v1
