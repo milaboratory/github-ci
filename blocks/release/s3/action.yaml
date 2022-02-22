@@ -120,6 +120,7 @@ runs:
         args: |
           s3
           cp
+          --recursive
           ${{ steps.artifact-path.outputs.stdout }}/
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
