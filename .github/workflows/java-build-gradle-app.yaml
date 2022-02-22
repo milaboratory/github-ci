@@ -65,6 +65,13 @@ on:
           Gradle project name to build: gradle :<project>:<command>
         type: string
         required: true
+      build-project-dir:
+        description: |
+          Path to project root directory
+          Defaults to repository root
+        type: string
+        required: false
+        default: './'
 
       artifacts-retention:
         description: |
@@ -73,13 +80,23 @@ on:
         required: false
         default: 7
 
-      build-project-dir:
+      #
+      # Archive distribution control
+      #
+      dist-archive-tasks:
         description: |
-          Path to project root directory
-          Defaults to repository root
+          Tasks for archive distribution generation (.zip, .tar and so on)
+
         type: string
         required: false
-        default: './'
+        default: 'distTar'
+      dist-archive-paths:
+        description: |
+          Distribution archives to save as build artifact and to upload to S3
+
+        type: string
+        required: false
+        default: './distributions/*.tar'
 
       #
       # Release control
@@ -96,6 +113,44 @@ on:
         type: string
         required: false
         default: doc,chore
+
+      release-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+      release-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: ''
+      release-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.repository.name }}'
+      release-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
 
       #
       # Notifications
@@ -245,10 +300,11 @@ jobs:
           message: new version of app is ready for release.
           product-name: ${{ inputs.app-name }}
 
-  distTar:
-    name: :distTar
+  distArchive:
+    name: archive
     runs-on: ubuntu-latest
 
+    if: inputs.dist-archive-paths != '' && inputs.dist-archive-tasks != ''
     needs:
       - build
 
@@ -258,11 +314,11 @@ jobs:
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          tasks: distTar
+          tasks: ${{ inputs.dist-archive-tasks }}
           exclude-tasks: test
 
-          artifact-name: ${{ inputs.app-name-slug }}-tar
-          artifact-paths: ./distributions/*.tar
+          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-paths: ${{ inputs.dist-archive-paths }}
           artifact-retention: ${{ inputs.artifact-retention }}
 
           properties: |
@@ -270,6 +326,12 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+    outputs:
+      status: ${{ job.status }}
+      # Even 'constant' outputs become initialized only for started jobs.
+      # All outputs of 'skipped' job will always be empty.
+      started: 'true'
 
   distDocker:
     name: :dockerBuildImage
@@ -329,21 +391,23 @@ jobs:
 
     needs:
       - init
+      - distArchive
       - distDocker
 
-    if: fromJSON(needs.init.outputs.is-release)
+    if: (cancelled() || success()) && fromJSON(needs.init.outputs.is-release)
     environment: release
 
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v1
 
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
+        if: needs.distArchive.outputs.started == 'true'
         with:
-          name: ${{ inputs.app-name-slug }}-tar
+          name: ${{ inputs.app-name-slug }}
+          path: release-files
 
       - name: Create release
-        if: fromJSON(steps.context.outputs.is-release)
         uses: milaboratory/github-ci/actions/release/create@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -352,9 +416,23 @@ jobs:
           tag: ${{ steps.context.outputs.current-tag }}
 
           assets: |
-            ${{ inputs.app-name-slug }}-tar/*
+            release-files/*
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+      - name: Upload to S3
+        if: ${{ inputs.release-s3-bucket != '' && needs.distArchive.outputs.started == 'true' }}
+        uses: milaboratory/github-ci/blocks/release/s3@v1
+        with:
+          artifact-name: ${{ inputs.app-name-slug }}
+          add-version: ${{ inputs.release-s3-add-version }}
+
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+
+          s3-region: ${{ inputs.release-s3-region }}
+          s3-bucket: ${{ inputs.release-s3-bucket }}
+          s3-path: ${{ inputs.release-s3-path }}
 
     outputs:
       status: ${{ job.status }}
