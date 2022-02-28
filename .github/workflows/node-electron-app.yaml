@@ -23,22 +23,6 @@ on:
         required: true
 
       #
-      # Version detection control
-      #
-      version-fetch-depth:
-        description: |
-          Fetch at least N commits during version detection from tags
-        type: string
-        required: false
-        default: 100
-      version-canonize:
-        description: |
-          Canonize version number to make it always look like regular semver: <major>.<minor>.<bugfix>
-        type: boolean
-        required: false
-        default: true
-
-      #
       # Environment control
       #
       node-version:
@@ -120,11 +104,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: milaboratory/github-ci/actions/context/init@v1
-        with:
-          version-canonize: ${{ inputs.version-canonize }}
-          version-fetch-depth: ${{ inputs.version-fetch-depth }}
-
       - id: context
         uses: milaboratory/github-ci/actions/context@v1
 
