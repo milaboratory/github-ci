@@ -1,0 +1,141 @@
+name: Upload artifact's contents to S3 bucket
+author: 'MiLaboratories'
+description: |
+  Upload artifact's contents to S3 Bucket.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  artifact-name:
+    description: |
+      Name of artifact to work with. This artifact will be downloaded
+      from GitHub, all its contents will be uploaded to S3.
+    required: false
+    default: ''
+  add-version:
+    description: |
+      Add verison number to all uploaded files.
+      If file in artifact has extension (e.g. 'app.zip')
+      and current version (from actions/context) is, say, '1.3.0',
+      the file in S3 would have name 'app-1.3.0.zip'.
+
+      Files without extension ('myfile') will have version number
+      appended ('myfile-1.3.0').
+    required: false
+    default: 'false'
+
+  s3-key-id:
+    description: |
+      AWS Key ID for S3 auth
+    required: false
+    default: ''
+  s3-key-secret:
+    description: |
+      AWS Key Secret for S3 auth
+    required: false
+    default: ''
+
+  s3-region:
+    description: |
+      AWS region with target S3 bucket
+    required: false
+    default: 'eu-central-1'
+  s3-bucket:
+    description: |
+      Application archive target S3 bucket
+    required: true
+  s3-path:
+    description: |
+      Put artifact's files into given 'directory' in
+      S3 bucket.
+
+      Files will be uploaded to:
+        's3://<s3-bucket>/<s3-path>/<file-name>'
+
+    required: true
+
+outputs:
+  uploaded:
+    description: |
+      Newline-separated list of S3 keys for uploaded files
+      (without bucket and region name)
+    value: ${{ steps.uploaded-list.outputs.stdout }}
+  uploaded-json:
+    description: |
+      'uploaded' in JSON format
+    value: ${{ steps.uploaded-json.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v1
+
+    - name: Configure AWS CLI
+      if: inputs.s3-key-id != ''
+      uses: milaboratory/github-ci/actions/aws/configure@v1
+      with:
+        key-id: ${{ inputs.s3-key-id }}
+        key-secret: ${{ inputs.s3-key-secret }}
+        region: ${{ inputs.s3-region }}
+        append: false
+
+    - id: artifact-path
+      uses: milaboratory/github-ci/actions/shell@v1
+      with:
+        run: echo './release-artifact'
+
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.artifact-path.outputs.stdout }}
+
+    - name: Add version
+      if: inputs.add-version == 'true'
+      shell: bash
+      env:
+        ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
+        VERSION: ${{ steps.context.outputs.current-version }}
+      run: |
+        find "${ARTIFACT_PATH}" -mindepth 1 |
+          while read -r file_path; do
+            file_name=$(basename "${file_path}")
+            extension="${file_name##*.}"
+
+            if [ -n "${extension}" ]; then
+              mv "${file_path}" "${file_path%.*}-${VERSION}.${extension}"
+            else
+              mv "${file_path}" "${file_path}-${VERSION}"
+            fi
+          done
+
+    - name: Upload files
+      uses: milaboratory/github-ci/actions/aws@v1
+      with:
+        args: |
+          s3
+          cp
+          --recursive
+          ${{ steps.artifact-path.outputs.stdout }}/
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
+
+    - id: uploaded-list
+      uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
+        S3_PATH: ${{ inputs.s3-path }}
+      with:
+        run: |
+          cd "${ARTIFACT_PATH}"
+          find . -mindepth 1 |
+            while read -r file_path; do
+              echo "${S3_PATH%/}/${file_path#./}"
+            done
+
+    - id: uploaded-json
+      uses: milaboratory/github-ci/actions/strings/json-list@v1
+      with:
+        input: ${{ steps.uploaded-list.outputs.stdout }}

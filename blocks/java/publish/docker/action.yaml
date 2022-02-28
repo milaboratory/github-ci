@@ -1,10 +1,7 @@
-name: Build Java project using gradle
+name: Tag and push Docker image
 author: 'MiLaboratories'
 description: |
-  Build Java project with gradle.
-
-  This action cares about caching and re-using build results and
-  uploading selected build results into GitHub Actions artifacts storage.
+  Tag and push docker image built with Gradle
 
   Requirements:
     - initialized context (actions/context/init)
@@ -70,7 +67,7 @@ runs:
             fi
           fi
 
-    - name: Publish docker image to GitHub registry
+    - name: Publish docker image
       id: docker-push
 
       uses: milaboratory/github-ci/actions/docker/push@v1
