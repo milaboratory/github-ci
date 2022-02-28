@@ -1,0 +1,22 @@
+name: "Automerge V1"
+
+on:
+  push:
+    branches: [ 'v1' ]
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - shell: bash
+        env:
+          TARGET_BRANCH: 'master'
+        run: |
+          git checkout "${TARGET_BRANCH}"
+          git merge --no-edit "${GITHUB_REF_NAME}"
+          git push
