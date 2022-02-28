@@ -152,8 +152,8 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/actions/context/init@v1
         with:
-          canonize: ${{ inputs.version-canonize }}
-          fetch-depth: ${{ inputs.version-fetch-depth }}
+          version-canonize: ${{ inputs.version-canonize }}
+          version-fetch-depth: ${{ inputs.version-fetch-depth }}
 
       - id: context
         uses: milaboratory/github-ci/actions/context@v1

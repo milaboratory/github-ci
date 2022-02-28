@@ -144,7 +144,7 @@ on:
 
         type: string
         required: false
-        default: 'cdn/software/${{ github.repository.name }}'
+        default: 'cdn/software/${{ github.event.repository.name }}'
       release-s3-add-version:
         description: |
           Add version number to all files uploaded to S3 bucket.
