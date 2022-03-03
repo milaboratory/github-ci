@@ -118,7 +118,7 @@ runs:
     - name: Get SHA suffix
       id: sha
       if: inputs.add-sha != 'false' && inputs.add-sha != ''
-      uses: ''
+      uses: milaboratory/github-ci/actions/shell@v1
       with:
         run: |
           current_sha="${GITHUB_SHA}"
