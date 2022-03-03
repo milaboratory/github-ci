@@ -51,13 +51,7 @@ runs:
 
           if [ -d "${input_path}" ]; then
             find "${input_path}" \
-              -mindepth 1 -and \
-              \( -type b \
-              -or -type c \
-              -or -type f \
-              -or -type l \
-              -or -type p \
-              -or -type s \)
+              -mindepth 1 -and -type b,c,f,l,p,s
           else
             echo "${input_path}"
           fi
