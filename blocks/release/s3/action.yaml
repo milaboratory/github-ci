@@ -119,6 +119,8 @@ runs:
       id: sha
       if: inputs.add-sha != 'false' && inputs.add-sha != ''
       uses: milaboratory/github-ci/actions/shell@v1
+      env:
+        ADD_SHA: ${{ inputs.add-sha }}
       with:
         run: |
           current_sha="${GITHUB_SHA}"
