@@ -45,7 +45,7 @@ runs:
 
         mapfile -t input_paths <<<"${PATHS}"
 
-        for input_path in "${input_paths}"; do
+        for input_path in "${input_paths[@]}"; do
           if [ -z "${input_path}" ]; then
             continue
           fi
