@@ -31,14 +31,14 @@ runs:
   steps:
     # We have to login into 'ghcr.io' manually to be able to pull miaws/cli
     # image on real action run
-    - uses: milaboratory/github-ci/actions/docker/login@v1
+    - uses: milaboratory/github-ci/actions/docker/login@v2
       with:
         registry: 'ghcr.io'
         user: ${{ github.actor }}
         password: ${{ inputs.github-token }}
 
     # MiAWS uses official AWS API client, which reads AWS configuration files
-    - uses: milaboratory/github-ci/actions/aws/configure@v1
+    - uses: milaboratory/github-ci/actions/aws/configure@v2
       with:
         key-id: ${{ inputs.aws-key-id }}
         key-secret: ${{ inputs.aws-key-secret }}

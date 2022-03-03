@@ -86,11 +86,11 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Configure AWS CLI
       if: inputs.s3-key-id != ''
-      uses: milaboratory/github-ci/actions/aws/configure@v1
+      uses: milaboratory/github-ci/actions/aws/configure@v2
       with:
         key-id: ${{ inputs.s3-key-id }}
         key-secret: ${{ inputs.s3-key-secret }}
@@ -98,7 +98,7 @@ runs:
         append: false
 
     - id: artifact-path
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       with:
         run: echo './release-artifact'
 
@@ -110,7 +110,7 @@ runs:
 
     - name: Add version
       if: inputs.add-version == 'true'
-      uses: milaboratory/github-ci/actions/files/add-suffix@v1
+      uses: milaboratory/github-ci/actions/files/add-suffix@v2
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
@@ -118,7 +118,7 @@ runs:
     - name: Get SHA suffix
       id: sha
       if: inputs.add-sha != 'false' && inputs.add-sha != ''
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         ADD_SHA: ${{ inputs.add-sha }}
       with:
@@ -134,13 +134,13 @@ runs:
 
     - name: Add SHA
       if: steps.sha.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v1
+      uses: milaboratory/github-ci/actions/files/add-suffix@v2
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'
 
     - name: Upload files
-      uses: milaboratory/github-ci/actions/aws@v1
+      uses: milaboratory/github-ci/actions/aws@v2
       with:
         args: |
           s3
@@ -150,7 +150,7 @@ runs:
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
     - id: uploaded-list
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
         S3_PATH: ${{ inputs.s3-path }}
@@ -163,6 +163,6 @@ runs:
             done
 
     - id: uploaded-json
-      uses: milaboratory/github-ci/actions/strings/json-list@v1
+      uses: milaboratory/github-ci/actions/strings/json-list@v2
       with:
         input: ${{ steps.uploaded-list.outputs.stdout }}

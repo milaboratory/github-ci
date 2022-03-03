@@ -25,16 +25,16 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/context/create@v1
+    - uses: milaboratory/github-ci/actions/context/create@v2
 
     - uses: actions/checkout@v2
     - id: versions
-      uses: milaboratory/github-ci/actions/detect-version@v1
+      uses: milaboratory/github-ci/actions/detect-version@v2
       with:
         canonize: ${{ inputs.version-canonize }}
         fetch-depth: ${{ inputs.version-fetch-depth }}
 
-    - uses: milaboratory/github-ci/actions/context/put@v1
+    - uses: milaboratory/github-ci/actions/context/put@v2
       with:
         key: "versions.json"
         value: ${{ toJSON( steps.versions.outputs ) }}

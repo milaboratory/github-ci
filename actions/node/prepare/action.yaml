@@ -31,7 +31,7 @@ runs:
         cache: 'npm'
 
     - name: Cache electron libs
-      uses: milaboratory/github-ci/actions/node/electron/cache@v1
+      uses: milaboratory/github-ci/actions/node/electron/cache@v2
       with:
         cache-version: ${{ inputs.cache-version }}
         local-cache: 'on'

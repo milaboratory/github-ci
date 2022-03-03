@@ -8,7 +8,7 @@ runs:
 
   steps:
     - name: Login
-      uses: milaboratory/github-ci/actions/miaws@v1
+      uses: milaboratory/github-ci/actions/miaws@v2
       with:
         args: |-
           appstack

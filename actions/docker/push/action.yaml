@@ -61,7 +61,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/docker/login@v1
+    - uses: milaboratory/github-ci/actions/docker/login@v2
       with:
         registry: ${{ inputs.registry }}
         user: ${{ inputs.auth-user }}
@@ -69,7 +69,7 @@ runs:
 
     - name: Render target tag names
       id: targets
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         SOURCE_TAG: ${{ inputs.source }}
         TARGET_REGISTRY: ${{ inputs.registry }}
@@ -99,7 +99,7 @@ runs:
 
     - name: Pushing tags to '${{ inputs.registry }}'
       id: push
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         SOURCE_TAG: ${{ inputs.source }}
       with:
@@ -123,6 +123,6 @@ runs:
 
     - name: Convert targets list to JSON array
       id: push-json
-      uses: milaboratory/github-ci/actions/strings/json-list@v1
+      uses: milaboratory/github-ci/actions/strings/json-list@v2
       with:
         input: ${{ fromJSON(steps.push.outputs.data).pushed }}

@@ -54,9 +54,9 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
-    - uses: milaboratory/github-ci/actions/shell@v1
+    - uses: milaboratory/github-ci/actions/shell@v2
       id: category
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
@@ -70,7 +70,7 @@ runs:
 
     - name: Report build failure to Telegram
       if: inputs.build-status != 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -82,7 +82,7 @@ runs:
 
     - name: Report build is ready
       if: inputs.build-status == 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

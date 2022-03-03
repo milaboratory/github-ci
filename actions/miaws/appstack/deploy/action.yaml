@@ -43,7 +43,7 @@ runs:
 
   steps:
     - name: Deploy
-      uses: milaboratory/github-ci/actions/miaws@v1
+      uses: milaboratory/github-ci/actions/miaws@v2
       with:
         regions: ${{ inputs.regions }}
         deployment-units: ${{ inputs.deployment-units }}
@@ -56,7 +56,7 @@ runs:
 
     - name: Run
       if: inputs.run == 'true'
-      uses: milaboratory/github-ci/actions/miaws@v1
+      uses: milaboratory/github-ci/actions/miaws@v2
       with:
         regions: ${{ inputs.regions }}
         deployment-units: ${{ inputs.deployment-units }}

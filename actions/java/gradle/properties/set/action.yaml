@@ -42,6 +42,6 @@ runs:
 
     - name: Dump contents of gradle.properties
       id: props
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       with:
         run: cat ~/.gradle/gradle.properties

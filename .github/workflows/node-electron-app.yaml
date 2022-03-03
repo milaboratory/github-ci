@@ -105,7 +105,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -125,10 +125,10 @@ jobs:
       - uses: actions/checkout@v2
 
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
       - name: Prepare env for Node application build
-        uses: milaboratory/github-ci/actions/node/prepare@v1
+        uses: milaboratory/github-ci/actions/node/prepare@v2
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: 'v1'
@@ -138,7 +138,7 @@ jobs:
         shell: bash
 
       - name: Patch package version
-        uses: milaboratory/github-ci/actions/node/patch-version@v1
+        uses: milaboratory/github-ci/actions/node/patch-version@v2
         with:
           version: ${{ steps.context.outputs.current-version }}
 
@@ -149,7 +149,7 @@ jobs:
           npm run "${BUILD_SCRIPT}"
 
       - id: artifact
-        uses: milaboratory/github-ci/actions/shell@v1
+        uses: milaboratory/github-ci/actions/shell@v2
         env:
           APP_NAME_SLUG: ${{ inputs.app-name-slug }}
         with:
@@ -212,7 +212,7 @@ jobs:
       - merge-status
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -233,7 +233,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
       - uses: actions/download-artifact@v2
         with:
@@ -242,7 +242,7 @@ jobs:
 
       - name: Create release
         id: release
-        uses: milaboratory/github-ci/actions/release/create@v1
+        uses: milaboratory/github-ci/actions/release/create@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

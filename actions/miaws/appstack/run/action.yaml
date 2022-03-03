@@ -26,7 +26,7 @@ runs:
 
   steps:
     - name: Run
-      uses: milaboratory/github-ci/actions/miaws@v1
+      uses: milaboratory/github-ci/actions/miaws@v2
       with:
         regions: ${{ inputs.regions }}
         deployment-units: ${{ inputs.deployment-units }}

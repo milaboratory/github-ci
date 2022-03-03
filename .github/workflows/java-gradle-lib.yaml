@@ -193,7 +193,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -211,9 +211,9 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -231,7 +231,7 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
       - id: props
-        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v2
         with:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project }}
@@ -239,7 +239,7 @@ jobs:
       - id: release-files
         name: Render release files paths
         if: inputs.release-files != ''
-        uses: milaboratory/github-ci/actions/strings/convert-paths@v1
+        uses: milaboratory/github-ci/actions/strings/convert-paths@v2
         with:
           rel-root: ${{ steps.props.outputs.buildDir }}/
           abs-root: .
@@ -254,7 +254,7 @@ jobs:
           retention-days: ${{ inputs.artifact-retention }}
 
       - name: Publish lib to dev repositories
-        uses: milaboratory/github-ci/blocks/java/build@v1
+        uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -269,7 +269,7 @@ jobs:
 
       - name: Prepare JSON list of published libraries
         id: libs-list
-        uses: milaboratory/github-ci/actions/strings/json-list@v1
+        uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
             ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
@@ -288,7 +288,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -310,7 +310,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/java/test@v1
+        uses: milaboratory/github-ci/blocks/java/test@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -340,7 +340,7 @@ jobs:
       - test
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v1
+      - uses: milaboratory/github-ci/blocks/notify/tests@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -363,7 +363,7 @@ jobs:
       - notify-build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v1
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -383,7 +383,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
       - uses: actions/download-artifact@v2
         with:
@@ -391,7 +391,7 @@ jobs:
           path: 'release-files'
 
       - name: Create release
-        uses: milaboratory/github-ci/actions/release/create@v1
+        uses: milaboratory/github-ci/actions/release/create@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -414,7 +414,7 @@ jobs:
       - release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v1
+      - uses: milaboratory/github-ci/blocks/notify/release@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -436,7 +436,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -450,14 +450,14 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
       - id: props
-        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v2
         with:
           project-dir: ${{ inputs.build-project-dir }}
           project-name: ${{ inputs.build-project }}
 
       - name: Prepare JSON list of published libraries
         id: libs-list
-        uses: milaboratory/github-ci/actions/strings/json-list@v1
+        uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
             ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
@@ -475,7 +475,7 @@ jobs:
       - publish-release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/publish@v1
+      - uses: milaboratory/github-ci/blocks/notify/publish@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

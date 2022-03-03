@@ -43,11 +43,11 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Send new release notigication to Telegram
       if: inputs.telegram-target != ''
-      uses: milaboratory/github-ci/actions/notify/telegram/review-required@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/review-required@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

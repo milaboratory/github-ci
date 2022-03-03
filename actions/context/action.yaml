@@ -53,7 +53,7 @@ runs:
 
   steps:
     - id: versions
-      uses: milaboratory/github-ci/actions/context/get@v1
+      uses: milaboratory/github-ci/actions/context/get@v2
       with:
         key: "versions.json"
         default-value: '{}'

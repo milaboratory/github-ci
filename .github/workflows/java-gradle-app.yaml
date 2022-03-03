@@ -202,7 +202,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -216,7 +216,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -239,7 +239,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: test
-        uses: milaboratory/github-ci/blocks/java/test@v1
+        uses: milaboratory/github-ci/blocks/java/test@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -272,7 +272,7 @@ jobs:
       - notify-build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v1
+      - uses: milaboratory/github-ci/blocks/notify/tests@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -295,7 +295,7 @@ jobs:
       - notify-build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v1
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -313,7 +313,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -345,7 +345,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: milaboratory/github-ci/blocks/java/build@v1
+      - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -358,7 +358,7 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-      - uses: milaboratory/github-ci/blocks/java/publish/docker@v1
+      - uses: milaboratory/github-ci/blocks/java/publish/docker@v2
         id: docker-push
         with:
           project: ${{ inputs.build-project }}
@@ -379,7 +379,7 @@ jobs:
       - distDocker
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -415,7 +415,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v1
+        uses: milaboratory/github-ci/actions/context@v2
 
       - uses: actions/download-artifact@v2
         if: needs.distArchive.outputs.started == 'true'
@@ -424,7 +424,7 @@ jobs:
           path: release-files
 
       - name: Create release
-        uses: milaboratory/github-ci/actions/release/create@v1
+        uses: milaboratory/github-ci/actions/release/create@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -447,7 +447,7 @@ jobs:
     steps:
       - name: Upload to S3
         if: needs.distArchive.outputs.started == 'true'
-        uses: milaboratory/github-ci/blocks/release/s3@v1
+        uses: milaboratory/github-ci/blocks/release/s3@v2
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.release-s3-add-version }}
@@ -471,7 +471,7 @@ jobs:
       - upload-release-s3
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v1
+      - uses: milaboratory/github-ci/blocks/notify/release@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

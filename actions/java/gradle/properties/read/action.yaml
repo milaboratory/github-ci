@@ -47,7 +47,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/java/gradle/cache@v1
+    - uses: milaboratory/github-ci/actions/java/gradle/cache@v2
       with:
         job-id: ${{ inputs.cache-key }}
         build-root-directory: ${{ inputs.project-dir }}

@@ -61,9 +61,9 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
-    - uses: milaboratory/github-ci/actions/shell@v1
+    - uses: milaboratory/github-ci/actions/shell@v2
       id: category
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
@@ -78,7 +78,7 @@ runs:
 
     - name: Report tests result to Telegram
       if: inputs.telegram-target != ''
-      uses: milaboratory/github-ci/actions/notify/telegram/publish@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/publish@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

@@ -48,11 +48,11 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Report tests result to Telegram
       if: inputs.telegram-target != ''
-      uses: milaboratory/github-ci/actions/notify/telegram/tests@v1
+      uses: milaboratory/github-ci/actions/notify/telegram/tests@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

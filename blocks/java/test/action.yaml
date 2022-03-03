@@ -156,11 +156,11 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Configure AWS CLI
       if: inputs.s3-key-id != '' && inputs.upload-report == 'true'
-      uses: milaboratory/github-ci/actions/aws/configure@v1
+      uses: milaboratory/github-ci/actions/aws/configure@v2
       with:
         key-id: ${{ inputs.s3-key-id }}
         key-secret: ${{ inputs.s3-key-secret }}
@@ -174,20 +174,20 @@ runs:
         java-version: ${{ inputs.java-version }}
 
     - name: Set gradle.properties
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v2
       with:
         properties: ${{ inputs.properties }}
 
     - name: Read actual project properties
       id: gradle-props
-      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v2
       with:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
 
     - name: Generate upload path
       id: upload-path
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       with:
         run: |
           rand="$(
@@ -199,7 +199,7 @@ runs:
 
     - name: Generate list of tasks to exclude
       id: excludes
-      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
@@ -208,13 +208,13 @@ runs:
 
     - name: Generate test tasks
       id: tasks
-      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
         input: ${{ inputs.tasks }}
         prefix: ':${{ inputs.project }}:'
 
     - name: Run tests
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
         working-directory: ${{ inputs.project-dir }}
         properties: |
@@ -230,7 +230,7 @@ runs:
     - name: Check if we should upload results to S3
       id: should-upload
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-report }}
         REPORT_PATH: ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
@@ -243,7 +243,7 @@ runs:
     - name: Upload test results
       id: upload-report
       if: always() && steps.should-upload.outputs.stdout == 'true'
-      uses: milaboratory/github-ci/actions/aws@v1
+      uses: milaboratory/github-ci/actions/aws@v2
       with:
         args: |
           s3

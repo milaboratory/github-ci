@@ -145,7 +145,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build Docker Image
-        uses: milaboratory/github-ci/actions/docker/build@v1
+        uses: milaboratory/github-ci/actions/docker/build@v2
         with:
           dockerfile: ${{ inputs.dockerfile }}
           context: ${{ inputs.build-context }}
@@ -153,15 +153,15 @@ jobs:
           args: ${{ inputs.build-args }}
           tags: 'build:local'
 
-      - uses: milaboratory/github-ci/actions/miaws/configure@v1
+      - uses: milaboratory/github-ci/actions/miaws/configure@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           aws-key-id: ${{ secrets.AWS_KEY_ID }}
           aws-key-secret: ${{ secrets.AWS_KEY_SECRET }}
           default-region: ${{ inputs.default-region }}
 
-      - uses: milaboratory/github-ci/actions/miaws/appstack/login@v1
-      - uses: milaboratory/github-ci/actions/miaws/appstack/push@v1
+      - uses: milaboratory/github-ci/actions/miaws/appstack/login@v2
+      - uses: milaboratory/github-ci/actions/miaws/appstack/push@v2
         id: push
         with:
           source: 'build:local'
@@ -186,7 +186,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v1
+      - uses: milaboratory/github-ci/blocks/notify/build@v2
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

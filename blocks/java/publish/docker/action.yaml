@@ -36,12 +36,12 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Generate push targets list
       id: push-targets
 
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
         IS_LATEST_VERSION: ${{ steps.context.outputs.is-latest-version }}
@@ -70,7 +70,7 @@ runs:
     - name: Publish docker image
       id: docker-push
 
-      uses: milaboratory/github-ci/actions/docker/push@v1
+      uses: milaboratory/github-ci/actions/docker/push@v2
       with:
         auth-token: ${{ inputs.github-token }}
         source: ${{ inputs.project }}:${{ steps.context.outputs.current-version }}

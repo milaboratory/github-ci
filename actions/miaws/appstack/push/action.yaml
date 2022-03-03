@@ -68,7 +68,7 @@ runs:
   steps:
     - name: Get target tag name
       id: target
-      uses: milaboratory/github-ci/actions/shell@v1
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         SOURCE_TAG: ${{ inputs.source }}
         TARGET_TAG: ${{ inputs.target }}
@@ -82,9 +82,9 @@ runs:
 
           echo "${TARGET_TAG}"
 
-    - uses: milaboratory/github-ci/actions/miaws/appstack/login@v1
+    - uses: milaboratory/github-ci/actions/miaws/appstack/login@v2
     - id: push
-      uses: milaboratory/github-ci/actions/miaws@v1
+      uses: milaboratory/github-ci/actions/miaws@v2
       with:
         regions: ${{ inputs.regions }}
         regions-by-tasks: ${{ inputs.regions-by-task }}

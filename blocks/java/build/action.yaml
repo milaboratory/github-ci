@@ -128,7 +128,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v1
+      uses: milaboratory/github-ci/actions/context@v2
 
     - name: Prepare env for Java application build
       if: inputs.java-version != ''
@@ -139,13 +139,13 @@ runs:
 
     - name: Set gradle.properties
       if: inputs.properties != ''
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v1
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v2
       with:
         properties: ${{ inputs.properties }}
 
     - name: Generate list of tasks to exclude
       id: excludes
-      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
@@ -154,13 +154,13 @@ runs:
 
     - name: Generate build tasks
       id: tasks
-      uses: milaboratory/github-ci/actions/strings/prefix@v1
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
         input: ${{ inputs.tasks }}
         prefix: ':${{ inputs.project }}:'
 
     - name: Build project
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v1
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
         working-directory: ${{ inputs.project-dir }}
         properties: |
@@ -175,14 +175,14 @@ runs:
 
     - name: Read actual project properties
       id: gradle-props
-      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v1
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v2
       with:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
 
     - name: Generate artifacts paths
       id: artifact-paths
-      uses: milaboratory/github-ci/actions/strings/convert-paths@v1
+      uses: milaboratory/github-ci/actions/strings/convert-paths@v2
       with:
         rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
         abs-root: .
