@@ -39,6 +39,9 @@ runs:
       run: |
         # add-suffix: rename files in given paths
 
+        set -o nounset
+        set -o errexit
+
         mapfile -t input_paths <<<"${PATHS}"
 
         for input_path in "${input_paths}"; do
@@ -57,8 +60,8 @@ runs:
             extension="${file_name##*.}"
 
             if [ -n "${extension}" ]; then
-              mv "${file_path}" "${file_path%.*}${SUFFIX}.${extension}"
+              mv -- "${file_path}" "${file_path%.*}${SUFFIX}.${extension}"
             else
-              mv "${file_path}" "${file_path}${SUFFIX}"
+              mv -- "${file_path}" "${file_path}${SUFFIX}"
             fi
           done
