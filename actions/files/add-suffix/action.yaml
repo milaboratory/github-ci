@@ -60,7 +60,11 @@ runs:
             file_name=$(basename "${file_path}")
             extension="${file_name##*.}"
 
-            if [ -n "${extension}" ] && [ "${file_name}" -ne "${extension}" ]; then
+            if [ "${file_name}" = "${extension}" ]; then
+              extension=""
+            fi
+
+            if [ -n "${extension}" ]; then
               mv -- "${file_path}" "${file_path%.*}${SUFFIX}.${extension}"
             else
               mv -- "${file_path}" "${file_path}${SUFFIX}"
