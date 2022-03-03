@@ -141,6 +141,23 @@ on:
         type: boolean
         required: false
         default: true
+      release-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
 
       #
       # Notifications
@@ -434,6 +451,7 @@ jobs:
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.release-s3-add-version }}
+          add-sha: ${{ inputs.release-s3-add-sha }}
 
           s3-key-id: ${{ secrets.AWS_KEY_ID }}
           s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
