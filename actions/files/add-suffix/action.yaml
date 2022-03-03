@@ -41,6 +41,7 @@ runs:
 
         set -o nounset
         set -o errexit
+        set -x
 
         mapfile -t input_paths <<<"${PATHS}"
 
