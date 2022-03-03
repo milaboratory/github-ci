@@ -50,7 +50,7 @@ runs:
           fi
 
           if [ -d "${input_path}" ]; then
-            find "${input_path}" -mindepth 1
+            find "${input_path}" -mindepth 1 -type bcflps
           else
             echo "${input_path}"
           fi
