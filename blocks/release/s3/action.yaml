@@ -24,6 +24,21 @@ inputs:
       appended ('myfile-1.3.0').
     required: false
     default: 'false'
+  add-sha:
+    description: |
+      Add abbreviated commit SHA to uploaded files.
+      If file in artifact has extension (e.g. 'app.zip')
+      and current SHA is, say, 'deadfacea6c72ef99d5b11c67973a4b7d5109de9',
+      the file in S3 would have name 'app-deadface.zip'.
+
+      Files without extension ('myfile') will have version number
+      appended ('myfile-deadface').
+
+      If both 'add-version' and 'add-sha' are 'true', SHA is added to
+      file name AFTER version number: app-1.2.3-deadbeef
+
+    required: false
+    default: 'false'
 
   s3-key-id:
     description: |
@@ -95,22 +110,32 @@ runs:
 
     - name: Add version
       if: inputs.add-version == 'true'
-      shell: bash
-      env:
-        ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
-        VERSION: ${{ steps.context.outputs.current-version }}
-      run: |
-        find "${ARTIFACT_PATH}" -mindepth 1 |
-          while read -r file_path; do
-            file_name=$(basename "${file_path}")
-            extension="${file_name##*.}"
+      uses: milaboratory/github-ci/actions/files/add-suffix@v1
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.context.outputs.current-version }}'
 
-            if [ -n "${extension}" ]; then
-              mv "${file_path}" "${file_path%.*}-${VERSION}.${extension}"
-            else
-              mv "${file_path}" "${file_path}-${VERSION}"
-            fi
-          done
+    - name: Get SHA suffix
+      id: sha
+      if: inputs.add-sha != 'false' && inputs.add-sha != ''
+      uses: ''
+      with:
+        run: |
+          current_sha="${GITHUB_SHA}"
+
+          if [ "${ADD_SHA}" != 'true' ] && [ "${ADD_SHA}" -gt 0 ] ; then
+            # Abbreviate SHA size to given number of symbols
+            current_sha="${current_sha:0:${ADD_SHA}}"
+          fi
+
+          echo "${current_sha}"
+
+    - name: Add SHA
+      if: steps.sha.outputs.stdout != ''
+      uses: milaboratory/github-ci/actions/files/add-suffix@v1
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.sha.outputs.stdout }}'
 
     - name: Upload files
       uses: milaboratory/github-ci/actions/aws@v1
