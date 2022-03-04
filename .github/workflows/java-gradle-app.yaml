@@ -48,7 +48,8 @@ on:
         description: |
           Gradle project name to build: gradle :<project>:<command>
         type: string
-        required: true
+        required: false
+        default: ''
       build-project-dir:
         description: |
           Path to project root directory
