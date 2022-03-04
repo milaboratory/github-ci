@@ -66,6 +66,16 @@ on:
         default: 7
 
       #
+      # Docker distribution control
+      #
+      dist-docker-tasks:
+        description: |
+          Tasks to run to build docker image with application
+        type: string
+        required: false
+        default: dockerBuildImage
+
+      #
       # Archive distribution control
       #
       dist-archive-tasks:
@@ -230,6 +240,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+    outputs:
+      status: ${{ job.status }}
+
   test:
     name: :test
     runs-on: ubuntu-latest
@@ -341,6 +354,7 @@ jobs:
     name: :dockerBuildImage
     runs-on: ubuntu-latest
 
+    if: inputs.dist-docker-tasks != ''
     needs:
       - build
 
@@ -350,7 +364,7 @@ jobs:
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          tasks: dockerBuildImage
+          tasks: ${{ inputs.dist-docker-tasks }}
           exclude-tasks: test
 
           properties: |
@@ -377,6 +391,7 @@ jobs:
     if: always() && inputs.notify-telegram
 
     needs:
+      - build
       - distDocker
 
     steps:
@@ -385,7 +400,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.distDocker.outputs.status }}
+          build-status: ${{ needs.build.outputs.status }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
