@@ -68,6 +68,12 @@ on:
       #
       # Docker distribution control
       #
+      dist-docker:
+        description: |
+          Distribute application in Docker image
+        type: boolean
+        required: false
+        default: false
       dist-docker-tasks:
         description: |
           Tasks to run to build docker image with application
@@ -78,17 +84,24 @@ on:
       #
       # Archive distribution control
       #
+      dist-archive:
+        description: |
+          Distribute application in archive:
+           - upload to GitHub Artifacts storage
+           - save as GitHub Release asset
+           - upload to S3 bucket (see release-to-s3 input)
+        type: boolean
+        required: false
+        default: false
       dist-archive-tasks:
         description: |
           Tasks for archive distribution generation (.zip, .tar and so on)
-
         type: string
         required: false
         default: 'distTar'
       dist-archive-paths:
         description: |
-          Distribution archives to save as build artifact and to upload to S3
-
+          Files to save as build artifact, release asset and to upload to S3
         type: string
         required: false
         default: './distributions/*.tar'
@@ -321,7 +334,7 @@ jobs:
     name: archive
     runs-on: ubuntu-latest
 
-    if: inputs.dist-archive-paths != '' && inputs.dist-archive-tasks != ''
+    if: inputs.dist-archive == 'true'
     needs:
       - build
 
@@ -354,7 +367,7 @@ jobs:
     name: :dockerBuildImage
     runs-on: ubuntu-latest
 
-    if: inputs.dist-docker-tasks != ''
+    if: inputs.dist-docker == 'true'
     needs:
       - build
 
@@ -455,14 +468,13 @@ jobs:
   upload-release-s3:
     runs-on: ubuntu-latest
 
-    if: inputs.release-to-s3
+    if: inputs.release-to-s3 && needs.distArchive.outputs.started == 'true'
     needs:
       - release
       - distArchive
 
     steps:
       - name: Upload to S3
-        if: needs.distArchive.outputs.started == 'true'
         uses: milaboratory/github-ci/blocks/release/s3@v2
         with:
           artifact-name: ${{ inputs.app-name-slug }}
