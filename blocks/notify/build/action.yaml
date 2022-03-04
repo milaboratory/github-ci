@@ -56,8 +56,8 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v2
 
-    - uses: milaboratory/github-ci/actions/shell@v2
-      id: category
+    - id: category
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
       with:
@@ -80,6 +80,18 @@ runs:
 
         additional-info: ${{ inputs.additional-info }}
 
+    - id: json
+      if: inputs.build-status == 'success'
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+
     - name: Report build is ready
       if: inputs.build-status == 'success'
       uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v2
@@ -91,6 +103,6 @@ runs:
         build-version: ${{ steps.context.outputs.current-version }}
         build-category: ${{ steps.category.outputs.stdout }}
 
-        docker-images: ${{ inputs.docker-images }}
-        maven-packages: ${{ inputs.maven-packages }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
         additional-info: ${{ inputs.additional-info }}
