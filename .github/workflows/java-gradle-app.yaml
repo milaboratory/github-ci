@@ -334,7 +334,7 @@ jobs:
     name: archive
     runs-on: ubuntu-latest
 
-    if: inputs.dist-archive == 'true'
+    if: inputs.dist-archive
     needs:
       - build
 
@@ -367,7 +367,7 @@ jobs:
     name: :dockerBuildImage
     runs-on: ubuntu-latest
 
-    if: inputs.dist-docker == 'true'
+    if: inputs.dist-docker
     needs:
       - build
 
