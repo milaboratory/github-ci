@@ -34,14 +34,16 @@ inputs:
   docker-images:
     description: |
       List of docker images in JSON format to put into notification
+      Empty string is silently converted to '[]' for convenience.
     required: false
-    default: '[]'
+    default: ''
 
   maven-packages:
     description: |
       List of java libraries in JSON format to put into notification.
+      Empty string is silently converted to '[]' for convenience.
     required: false
-    default: '[]'
+    default: ''
 
   additional-info:
     description: |
