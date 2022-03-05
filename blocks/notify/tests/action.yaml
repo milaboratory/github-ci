@@ -23,6 +23,11 @@ inputs:
       To get it, put it into job's outputs (status: {{ job.status }}),
       then get it from needs.<job-id>.outputs.status
     required: true
+  tests-type:
+    description: |
+      Tests type: integration, unit, functional, acceptance, etc.
+    required: false
+    default: 'Unit'
 
   report-url:
     description: |
@@ -60,6 +65,7 @@ runs:
         product-name: ${{ inputs.product-name }}
         build-version: ${{ steps.context.outputs.current-version }}
         tests-status: ${{ inputs.tests-status }}
+        tests-type: ${{ inputs.tests-type }}
         report-url: ${{ inputs.report-url }}
 
         additional-info: ${{ inputs.additional-info }}
