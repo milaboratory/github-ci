@@ -313,9 +313,6 @@ jobs:
     needs:
       - test-unit
 
-      # Jobs below are added to control notifications order
-      - notify-build
-
     steps:
       - uses: milaboratory/github-ci/blocks/notify/tests@v2
         with:
@@ -367,9 +364,6 @@ jobs:
     if: always() && needs.test-integration.outputs.status != ''
     needs:
       - test-integration
-
-      # Jobs below are added to control notifications order
-      - notify-build
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/tests@v2
