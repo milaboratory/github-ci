@@ -66,6 +66,22 @@ on:
         default: 7
 
       #
+      # Tests control
+      #
+      test-unit:
+        description: |
+          Run unit tests
+        type: boolean
+        required: false
+        default: true
+      test-integration:
+        description: |
+          Run integration tests
+        type: boolean
+        required: false
+        default: false
+
+      #
       # Docker distribution control
       #
       dist-docker:
@@ -256,10 +272,11 @@ jobs:
     outputs:
       status: ${{ job.status }}
 
-  test:
-    name: :test
+  test-unit:
+    name: :test (unit)
     runs-on: ubuntu-latest
 
+    if: inputs.test-unit
     needs:
       - build
 
@@ -274,6 +291,7 @@ jobs:
 
           properties: |
             mi-ci-stage=test
+            mi-ci-test-type=unit
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
@@ -287,15 +305,15 @@ jobs:
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
-  notify-test:
-    name: notify test
+  notify-test-unit:
+    name: notify unit test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test.outputs.status != ''
+    if: always() && needs.test-unit.outputs.status != ''
     needs:
-      - test
+      - test-unit
 
-      # Jobs below are added to control notifications order in Telegram
+      # Jobs below are added to control notifications order
       - notify-build
 
     steps:
@@ -305,21 +323,83 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          tests-status: ${{ needs.test.outputs.status }}
-          report-url: ${{ fromJSON(needs.test.outputs.report-uploaded) && needs.test.outputs.report-url || '' }}
+          tests-status: ${{ needs.test-unit.outputs.status }}
+          tests-type: 'Unit'
+          report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
+
+  test-integration:
+    name: :test (integration)
+    runs-on: ubuntu-latest
+
+    if: inputs.test-integration
+    needs:
+      - build
+
+    steps:
+      - uses: actions/checkout@v2
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v2
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: test
+
+          properties: |
+            mi-ci-stage=test
+            mi-ci-test-type=integration
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
+
+    outputs:
+      status: ${{ job.status }}
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+
+  notify-test-integration:
+    name: notify integration test
+    runs-on: ubuntu-latest
+
+    if: always() && needs.test-integration.outputs.status != ''
+    needs:
+      - test-integration
+
+      # Jobs below are added to control notifications order
+      - notify-build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/tests@v2
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.app-name }}
+          tests-status: ${{ needs.test-integration.outputs.status }}
+          tests-type: 'Integration'
+          report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
   notify-release-review:
     name: notify review required
     runs-on: ubuntu-latest
 
-    if: (success() || failure()) && fromJSON(needs.init.outputs.is-release) && needs.test.outputs.status != ''
+    if: always()
+      && fromJSON(needs.init.outputs.is-release)
+      && ( needs.test-unit.outputs.status != '' ||
+           needs.test-integration.outputs.status != '' )
+
     needs:
       - init
-      - test
+      - test-unit
+      - test-integration
 
       # Jobs below are added to control notifications order in Telegram
-      - notify-test
       - notify-build
+      - notify-test-unit
+      - notify-test-integration
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/review-required@v2
