@@ -386,12 +386,7 @@ jobs:
            needs.test-integration.outputs.status != '' )
 
     needs:
-      - init
-      - test-unit
-      - test-integration
-
-      # Jobs below are added to control notifications order in Telegram
-      - notify-build
+      # Send 'review required' notification only after all tests finished
       - notify-test-unit
       - notify-test-integration
 
