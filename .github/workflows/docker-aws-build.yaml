@@ -37,6 +37,14 @@ on:
         required: false
         default: ''
 
+      build-target:
+        description: |
+          Target to build in multistage builds.
+          (docker build '--target')
+        type: string
+        required: false
+        default: ''
+
       build-args:
         description: |
           List of build args (ARG Dockerfile instruction)
@@ -149,6 +157,7 @@ jobs:
         with:
           dockerfile: ${{ inputs.dockerfile }}
           context: ${{ inputs.build-context }}
+          target: ${{ inputs.build-target }}
           env: ${{ inputs.build-env }}
           args: ${{ inputs.build-args }}
           tags: 'build:local'
