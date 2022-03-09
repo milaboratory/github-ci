@@ -21,6 +21,13 @@ inputs:
     required: false
     default: ''
 
+  target:
+    description: |
+      --target build option.
+      Target to build in multistage builds.
+    required: false
+    default: ''
+
   tags:
     description: |
       List of tags to attach to built image
@@ -69,6 +76,7 @@ runs:
       env:
         DOCKERFILE: ${{ inputs.dockerfile }}
         BUILD_CONTEXT: ${{ inputs.context }}
+        BUILD_TARGET: ${{ inputs.target }}
         BUILD_ARGS: ${{ inputs.args }}
         BUILD_ENV: ${{ inputs.env }}
         IMAGE_TAGS: ${{ inputs.tags }}
@@ -80,10 +88,15 @@ runs:
             BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
           fi
 
-          args=()
+          options=()
+          if [ -n "${BUILD_TARGET}" ]; then
+            options+=( --target "${BUILD_TARGET}" )
+          fi
+
+          build_args=()
           while read -r _arg; do
             if [ -n "${_arg}" ]; then
-              args+=( --build-arg "${_arg}" )
+              build_args+=( --build-arg "${_arg}" )
             fi
           done <<<"${BUILD_ARGS}"
 
@@ -102,6 +115,7 @@ runs:
 
           docker build \
             --file "${DOCKERFILE}" \
+            "${options[@]}" \
             "${tags[@]}" \
-            "${args[@]}" \
+            "${build_args[@]}" \
             "${BUILD_CONTEXT}"
