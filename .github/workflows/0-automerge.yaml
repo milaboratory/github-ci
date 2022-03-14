@@ -2,7 +2,7 @@ name: "Automerge V1"
 
 on:
   push:
-    branches: [ 'v1' ]
+    branches: [ 'v2' ]
 
 jobs:
   merge:
