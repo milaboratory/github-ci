@@ -1,8 +1,8 @@
 name: 'Telegram Message Notify'
 description: |
   Sending a Telegram message
-  This action is a wrapper for third-party action with strong bind
-  to git commit (revision hardening)
+  This is a wrapper for third-party action.
+  The action is pre-built from our local fork at milaboratory/telegram-action
 author: 'Bo-Yi Wu'
 
 inputs:
@@ -59,27 +59,8 @@ inputs:
     required: false
 
 runs:
-  using: "composite"
-  steps:
-    - uses: appleboy/telegram-action@2e9996f96e095a537aa4442da4af41ca7b594fba
-      with:
-        to: ${{ inputs.to }}
-        token: ${{ inputs.token }}
-        message: ${{ inputs.message }}
-        message_file: ${{ inputs.message_file }}
-        socks5: ${{ inputs.socks5 }}
-        photo: ${{ inputs.photo }}
-        document: ${{ inputs.document }}
-        sticker: ${{ inputs.sticker }}
-        audio: ${{ inputs.audio }}
-        voice: ${{ inputs.voice }}
-        location: ${{ inputs.location }}
-        venue: ${{ inputs.venue }}
-        video: ${{ inputs.video }}
-        debug: ${{ inputs.debug }}
-        format: ${{ inputs.format }}
-        disable_web_page_preview: ${{ inputs.disable_web_page_preview }}
-        disable_notification: ${{ inputs.disable_notification }}
+  using: "docker"
+  image: docker://ghcr.io/milaboratory/telegram-action/telegram:c88270c3afefe1eeaff50dcc3dc67a59ecd07181
 
 branding:
   icon: 'message-square'
