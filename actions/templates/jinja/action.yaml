@@ -153,7 +153,7 @@ runs:
 
           mktemp ./XXXXXXXXXXX
 
-    - uses: cuchi/jinja2-action@1149b92d9ea6db61d7f71c22e3d5028d8065f140
+    - uses: milaboratory/github-ci/actions/templates/jinja/wrapper@v2
       with:
         template: ${{ steps.tpl-path.outputs.stdout }}
         output_file: ${{ steps.out-path.outputs.stdout }}

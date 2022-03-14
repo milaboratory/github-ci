@@ -26,7 +26,7 @@ inputs:
 
 runs:
   using: 'docker'
-  image: docker://ghcr.io/milaboratory/jinja2-action/render:85adc49a6697034a3f7de2964a09f41d1ad7e86e
+  image: docker://ghcr.io/milaboratory/jinja2-action/render:80dd04e7893f22f782bf0d5f33584622172e43c4
   entrypoint: /app/entrypoint.py
 
 branding:
