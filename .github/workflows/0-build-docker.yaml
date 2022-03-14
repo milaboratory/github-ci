@@ -1,0 +1,32 @@
+name: Build docker image
+
+on:
+  push:
+    tags-ignore: [ '*' ]
+    branches: [ 'master' ]
+    paths: [ 'docker/**' ]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: docker/integration
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/integration:${{ github.sha }}
