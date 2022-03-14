@@ -8,7 +8,7 @@ WORKDIR /installer
 
 RUN unzip awscli.zip
 
-FROM ubuntu:20.04 as aws-cli
+FROM ubuntu:20.04
 
 COPY --from=aws-installer /installer /aws-cli-installer
 RUN /aws-cli-installer/aws/install \
