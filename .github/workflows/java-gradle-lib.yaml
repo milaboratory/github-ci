@@ -1,7 +1,7 @@
 # This workflow will prepare given version of Java and use it to build gradle application.
 # All gradle dependencies will be cached for next runs.
 
-name: Build Java Application
+name: Build Java Library
 
 on:
   workflow_call:
