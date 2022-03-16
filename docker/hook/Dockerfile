@@ -14,6 +14,11 @@ COPY --from=aws-installer /installer /aws-cli-installer
 RUN /aws-cli-installer/aws/install \
     && rm -rf /aws-cli-installer
 
+RUN apt-get update \
+    && apt-get install --yes \
+        libdigest-sha-perl \
+    && apt-get clean
+
 COPY ./entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
