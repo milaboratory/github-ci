@@ -4,7 +4,9 @@ on:
   push:
     tags-ignore: [ '*' ]
     branches: [ 'master' ]
-    paths: [ 'docker/**' ]
+    paths:
+      - docker/**
+      - .github/workflows/0-build-docker.yaml
 
   workflow_dispatch:
 
@@ -16,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      IMAGE_NAME: 'hooks'
+      IMAGE_NAME: 'hook'
 
     steps:
       - uses: actions/checkout@v2
