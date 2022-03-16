@@ -281,7 +281,7 @@ jobs:
       - build
 
     container:
-      image: ghcr.io/milaboratory/github-ci/hook:3aae716a2569a96d0b7c100121ab14c6d94c2ca8
+      image: ghcr.io/milaboratory/github-ci/hook:0f0eeec503d9baf01c04604028287f86f179e24f
 
     steps:
       - uses: actions/checkout@v2
