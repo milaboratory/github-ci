@@ -1,4 +1,4 @@
-name: "Automerge V1"
+name: "Automerge 'v2' to 'master'"
 
 on:
   push:

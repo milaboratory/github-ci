@@ -12,8 +12,11 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  integration:
+  hooks:
     runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: 'hooks'
 
     steps:
       - uses: actions/checkout@v2
@@ -28,7 +31,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: docker/integration
+          context: docker/${{ env.IMAGE_NAME }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/integration:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
