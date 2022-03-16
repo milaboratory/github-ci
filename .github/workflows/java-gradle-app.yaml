@@ -280,9 +280,6 @@ jobs:
     needs:
       - build
 
-    container:
-      image: ghcr.io/milaboratory/github-ci/hook:3aae716a2569a96d0b7c100121ab14c6d94c2ca8
-
     steps:
       - uses: actions/checkout@v2
       - id: test
