@@ -1,0 +1,37 @@
+name: Run executable if it exists
+author: 'MiLaboratories'
+description: |
+  Run executable (script/binary) only when it exists on FS
+
+  Don't fail for absent file, just report a notice.
+
+inputs:
+  script-path:
+    description: |
+      Path to script on local FS.
+      Use full path to the file (relative or absolute).
+
+      Wrong path will not cause action to fail, it will just print notice about absent file.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - shell: bash
+      env:
+        SCRIPT_PATH: ${{ inputs.script-path }}
+      run: |
+        # Run script if exists
+
+        if ! [ -e "${SCRIPT_PATH}" ]; then
+          echo "Script '${SCRIPT_PATH}' does not exist. Hook was skipped." >&2
+          exit 0
+        fi
+
+        if ! [ -x "${SCRIPT_PATH}" ]; then
+          echo "Script '${SCRIPT_PATH}' is not executable. Hook was skipped." >&2
+          exit 0
+        fi
+
+        "${SCRIPT_PATH}"
