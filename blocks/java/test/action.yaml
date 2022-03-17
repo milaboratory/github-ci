@@ -68,6 +68,14 @@ inputs:
   #
   # Hook settings
   #
+  before-hooks-tasks:
+    description: |
+      Task to run before hooks. You can pre-build code to get required
+      binaries before running hook scripts.
+
+      You can put several tasks here (one per line).
+    required: false
+    default: ''
   hook-before:
     description: |
       Hook to run AFTER build but BEFORE tests execution.
@@ -222,14 +230,16 @@ runs:
           --exclude-task
           :${{ inputs.project }}:
 
-    - name: Generate test tasks
-      id: tasks
+    - name: Generate before-hooks tasks
+      id: before-hooks-tasks
+      if: inputs.before-hooks-tasks != ''
       uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
-        input: ${{ inputs.tasks }}
+        input: ${{ inputs.before-hooks-tasks }}
         prefix: ':${{ inputs.project }}:'
 
-    - name: Compile code before running hooks
+    - name: Run before-hooks tasks
+      if: steps.before-hooks-tasks.outputs.result != ''
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
         working-directory: ${{ inputs.project-dir }}
@@ -240,7 +250,7 @@ runs:
         arguments: |-
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
-          :${{ inputs.project }}:shadowJar
+          ${{ steps.before-hooks-tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
 
     - name: Run 'before-tests' hook
@@ -248,6 +258,13 @@ runs:
       uses: milaboratory/github-ci/actions/helpers/safe-run@v2
       with:
         script-path: .mi-ci/hooks/${{ inputs.hook-before }}
+
+    - name: Generate test tasks
+      id: test-tasks
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
+      with:
+        input: ${{ inputs.tasks }}
+        prefix: ':${{ inputs.project }}:'
 
     - name: Run tests
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
@@ -260,7 +277,7 @@ runs:
         arguments: |-
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
-          ${{ steps.tasks.outputs.result }}
+          ${{ steps.test-tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
 
     - name: Run 'after-tests' hook
