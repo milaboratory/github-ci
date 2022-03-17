@@ -282,6 +282,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v2
         with:
