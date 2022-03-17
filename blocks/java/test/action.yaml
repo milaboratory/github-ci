@@ -66,6 +66,30 @@ inputs:
     default: ''
 
   #
+  # Hook settings
+  #
+  before-hooks-tasks:
+    description: |
+      Task to run before hooks. You can pre-build code to get required
+      binaries before running hook scripts.
+
+      You can put several tasks here (one per line).
+    required: false
+    default: ''
+  hook-before:
+    description: |
+      Hook to run AFTER build but BEFORE tests execution.
+      The hook should be located in .mi-ci/hooks/ directory.
+    required: false
+    default: ''
+  hook-after:
+    description: |
+      Hook to run AFTER tests execution.
+      The hook should be located in .mi-ci/hooks/ directory.
+    required: false
+    default: ''
+
+  #
   # Results upload control
   #
   upload-report:
@@ -206,14 +230,16 @@ runs:
           --exclude-task
           :${{ inputs.project }}:
 
-    - name: Generate test tasks
-      id: tasks
+    - name: Generate before-hooks tasks
+      id: before-hooks-tasks
+      if: inputs.before-hooks-tasks != ''
       uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
-        input: ${{ inputs.tasks }}
+        input: ${{ inputs.before-hooks-tasks }}
         prefix: ':${{ inputs.project }}:'
 
-    - name: Run tests
+    - name: Run before-hooks tasks
+      if: steps.before-hooks-tasks.outputs.result != ''
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
         working-directory: ${{ inputs.project-dir }}
@@ -224,8 +250,43 @@ runs:
         arguments: |-
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
-          ${{ steps.tasks.outputs.result }}
+          ${{ steps.before-hooks-tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
+
+    - name: Run 'before-tests' hook
+      if: inputs.hook-before != ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v2
+      with:
+        script-path: .mi-ci/hooks/${{ inputs.hook-before }}
+
+    - name: Generate test tasks
+      id: test-tasks
+      if: inputs.tasks != ''
+      uses: milaboratory/github-ci/actions/strings/prefix@v2
+      with:
+        input: ${{ inputs.tasks }}
+        prefix: ':${{ inputs.project }}:'
+
+    - name: Run tests
+      if: steps.test-tasks.outputs.result != ''
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
+      with:
+        working-directory: ${{ inputs.project-dir }}
+        properties: |
+          version=${{ steps.context.outputs.current-version }}
+          mi-release=${{ steps.context.outputs.is-release }}
+
+        arguments: |-
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          ${{ steps.test-tasks.outputs.result }}
+        cache-key: ${{ inputs.cache-key }}
+
+    - name: Run 'after-tests' hook
+      if: inputs.hook-after != ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v2
+      with:
+        script-path: .mi-ci/hooks/${{ inputs.hook-after }}
 
     - name: Check if we should upload results to S3
       id: should-upload
