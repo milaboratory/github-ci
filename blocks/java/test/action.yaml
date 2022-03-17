@@ -79,13 +79,11 @@ inputs:
   hook-before:
     description: |
       Hook to run AFTER build but BEFORE tests execution.
-      The hook should be located in .mi-ci/hooks/ directory.
     required: false
     default: ''
   hook-after:
     description: |
       Hook to run AFTER tests execution.
-      The hook should be located in .mi-ci/hooks/ directory.
     required: false
     default: ''
 
@@ -257,7 +255,7 @@ runs:
       if: inputs.hook-before != ''
       uses: milaboratory/github-ci/actions/helpers/safe-run@v2
       with:
-        script-path: .mi-ci/hooks/${{ inputs.hook-before }}
+        script-path: ${{ inputs.hook-before }}
 
     - name: Generate test tasks
       id: test-tasks
@@ -286,7 +284,7 @@ runs:
       if: inputs.hook-after != ''
       uses: milaboratory/github-ci/actions/helpers/safe-run@v2
       with:
-        script-path: .mi-ci/hooks/${{ inputs.hook-after }}
+        script-path: ${{ inputs.hook-after }}
 
     - name: Check if we should upload results to S3
       id: should-upload
