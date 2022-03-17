@@ -66,6 +66,22 @@ inputs:
     default: ''
 
   #
+  # Hook settings
+  #
+  hook-before:
+    description: |
+      Hook to run AFTER build but BEFORE tests execution.
+      The hook should be located in .mi-ci/hooks/ directory.
+    required: false
+    default: ''
+  hook-after:
+    description: |
+      Hook to run AFTER tests execution.
+      The hook should be located in .mi-ci/hooks/ directory.
+    required: false
+    default: ''
+
+  #
   # Results upload control
   #
   upload-report:
@@ -213,6 +229,26 @@ runs:
         input: ${{ inputs.tasks }}
         prefix: ':${{ inputs.project }}:'
 
+    - name: Compile code before running hooks
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
+      with:
+        working-directory: ${{ inputs.project-dir }}
+        properties: |
+          version=${{ steps.context.outputs.current-version }}
+          mi-release=${{ steps.context.outputs.is-release }}
+
+        arguments: |-
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          :${{ inputs.project }}:shadowJar
+        cache-key: ${{ inputs.cache-key }}
+
+    - name: Run 'before-tests' hook
+      if: inputs.hook-before != ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v2
+      with:
+        script-path: .mi-ci/hooks/${{ inputs.hook-before }}
+
     - name: Run tests
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
@@ -226,6 +262,12 @@ runs:
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
+
+    - name: Run 'after-tests' hook
+      if: inputs.hook-after != ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v2
+      with:
+        script-path: .mi-ci/hooks/${{ inputs.hook-after }}
 
     - name: Check if we should upload results to S3
       id: should-upload
