@@ -74,12 +74,37 @@ on:
         type: boolean
         required: false
         default: true
+      test-unit-before-tasks:
+        description: |
+          Run theese gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-unit-tasks:
+        description: |
+          Run theese gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
+
       test-integration:
         description: |
           Run integration tests
         type: boolean
         required: false
         default: false
+      test-integration-before-tasks:
+        description: |
+          Run theese gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-integration-tasks:
+        description: |
+          Run theese gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
 
       #
       # Docker distribution control
@@ -288,7 +313,11 @@ jobs:
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          tasks: test
+          before-hooks-tasks: ${{ inputs.test-unit-before-tasks }}
+          tasks: ${{ inputs.test-unit-tasks }}
+
+          hook-before: .mi-ci/hooks/test-unit-before.sh
+          hook-after: .mi-ci/hooks/test-unit-after.sh
 
           properties: |
             mi-ci-stage=test
@@ -335,12 +364,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v2
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
-          tasks: test
+          before-hooks-tasks: ${{ inputs.test-integration-before-tasks }}
+          tasks: ${{ inputs.test-integration-tasks }}
+
+          hook-before: .mi-ci/hooks/test-integration-before.sh
+          hook-after: .mi-ci/hooks/test-integration-after.sh
 
           properties: |
             mi-ci-stage=test
