@@ -25,11 +25,13 @@ runs:
         # Run script if exists
 
         if ! [ -e "${SCRIPT_PATH}" ]; then
+          echo "::debug::Script '${SCRIPT_PATH}' does not exist. Hook was skipped." >&2
           echo "Script '${SCRIPT_PATH}' does not exist. Hook was skipped." >&2
           exit 0
         fi
 
         if ! [ -x "${SCRIPT_PATH}" ]; then
+          echo "::debug::Script '${SCRIPT_PATH}' is not executable. Hook was skipped." >&2
           echo "Script '${SCRIPT_PATH}' is not executable. Hook was skipped." >&2
           exit 0
         fi
