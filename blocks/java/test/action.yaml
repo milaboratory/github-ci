@@ -261,12 +261,14 @@ runs:
 
     - name: Generate test tasks
       id: test-tasks
+      if: inputs.tasks != ''
       uses: milaboratory/github-ci/actions/strings/prefix@v2
       with:
         input: ${{ inputs.tasks }}
         prefix: ':${{ inputs.project }}:'
 
     - name: Run tests
+      if: steps.test-tasks.outputs.result != ''
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v2
       with:
         working-directory: ${{ inputs.project-dir }}
