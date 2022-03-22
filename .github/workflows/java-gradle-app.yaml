@@ -86,6 +86,24 @@ on:
         type: string
         required: false
         default: 'test'
+      test-unit-cache:
+        description: |
+          Cache test data for unit tests
+        type: boolean
+        required: false
+        default: false
+      test-unit-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each unit tests run
+        type: string
+        required: false
+        default: ''
+      test-unit-cache-key:
+        description: |
+          Key for unit tests cached data
+        type: string
+        required: false
+        default: ''
 
       test-integration:
         description: |
@@ -105,6 +123,24 @@ on:
         type: string
         required: false
         default: 'test'
+      test-integration-cache:
+        description: |
+          Cache test data for integration tests
+        type: boolean
+        required: false
+        default: false
+      test-integration-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each integration tests run
+        type: string
+        required: false
+        default: ''
+      test-integration-cache-key:
+        description: |
+          Key for integration tests cached data
+        type: string
+        required: false
+        default: ''
 
       #
       # Docker distribution control
@@ -319,6 +355,10 @@ jobs:
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
 
+          test-data-cache-enabled: ${{ inputs.test-unit-cache }}
+          test-data-cache-paths: ${{ inputs.test-unit-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-unit-cache-key }}
+
           properties: |
             mi-ci-stage=test
             mi-ci-test-type=unit
@@ -375,6 +415,10 @@ jobs:
 
           hook-before: .mi-ci/hooks/test-integration-before.sh
           hook-after: .mi-ci/hooks/test-integration-after.sh
+
+          test-data-cache-enabled: ${{ inputs.test-integration-cache }}
+          test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-integration-cache-key }}
 
           properties: |
             mi-ci-stage=test
