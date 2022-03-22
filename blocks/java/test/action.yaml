@@ -66,6 +66,25 @@ inputs:
     default: ''
 
   #
+  # Test data cache control
+  #
+  test-data-cache-enabled:
+    description: |
+      Enable test data caching (e.g. downloadable data samples, required for tests)
+    required: false
+    default: 'false'
+  test-data-cache-paths:
+    description: |
+      Paths to files to store in cache
+    required: false
+    default: ''
+  test-data-cache-key:
+    description: |
+      Cache key
+    required: false
+    default: ''
+
+  #
   # Hook settings
   #
   before-hooks-tasks:
@@ -227,6 +246,13 @@ runs:
         prefix: |-
           --exclude-task
           :${{ inputs.project }}:
+
+    - name: Download cached test data
+      if: inputs.test-data-cache-enabled == 'true' && inputs.test-data-cache-paths != '' && inputs.test-data-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.test-data-cache-paths }}
+        key: ${{ inputs.test-data-cache-key }}
 
     - name: Generate before-hooks tasks
       id: before-hooks-tasks
