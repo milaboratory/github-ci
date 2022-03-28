@@ -29,7 +29,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(require("@actions/core"));
-const utils_1 = require("./utils");
+const utils = __importStar(require("./utils"));
 const milib_1 = require("milib");
 function prepareRepository(depth) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -38,6 +38,7 @@ function prepareRepository(depth) {
         const refType = process.env.GITHUB_REF_TYPE;
         const refName = process.env.GITHUB_REF_NAME;
         if (refType === 'tag') {
+            // force-fetch current tag from origin
             yield milib_1.git.fetch({
                 remote: 'origin',
                 refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
@@ -49,59 +50,39 @@ function prepareRepository(depth) {
         return milib_1.git.ensureHistorySize(depth);
     });
 }
-function commitsCount(startRef, endRef) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const commits = yield milib_1.git.revList({ ref: `${startRef}..${endRef}` });
-        return commits.length;
-    });
-}
 function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
-        const count = yield commitsCount(baseRef, 'HEAD');
-        return `${baseVersion}-${count}-${currentRefName}`;
-    });
-}
-/**
- * Check if action was started from branch AND current commit is
- * repository's branch head.
- */
-function isBranchHead() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const refType = process.env.GITHUB_REF_TYPE;
-        const refName = process.env.GITHUB_REF_NAME;
-        const currentSha = process.env.GITHUB_SHA;
-        if (refType !== 'branch') {
-            return false;
-        }
-        yield milib_1.git.fetch({
-            deepen: 1,
-            remote: 'origin',
-            refSpec: refName
-        });
-        const remoteRefSha = yield milib_1.git.resolveRef(`origin/${refName}`);
-        return remoteRefSha === currentSha;
+        const count = yield milib_1.git.countCommits(baseRef, 'HEAD');
+        return {
+            major: baseVersion.major,
+            minor: baseVersion.minor,
+            patch: baseVersion.patch,
+            suffix: `${count}-${currentRefName}`,
+            original: `${baseVersion.original}-${count}-${currentRefName}`,
+            semver: true
+        };
     });
 }
 function detectVersions() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
-        const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
-        const isRemoteLatestCommit = yield isBranchHead();
-        const latestTag = yield milib_1.git.latestVersionTag();
+        const isRemoteLatestCommit = yield utils.isBranchHead();
+        const knownVersions = yield utils.getVersions();
+        const latestTag = utils.latestVersionTag(knownVersions);
         const latestSha = yield milib_1.git.resolveRef(latestTag);
-        let latestVersion = (0, utils_1.sanitizeVersion)(latestTag);
+        const latestVersion = knownVersions[latestTag];
         const prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
-        let prevVersion = (0, utils_1.sanitizeVersion)(prevTag);
+        const prevVersion = knownVersions[prevTag];
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
-        let curVersion = '';
+        let curVersion;
         try {
             curTag = yield milib_1.git.currentTag();
-            curVersion = (0, utils_1.sanitizeVersion)(curTag);
+            curVersion = knownVersions[curTag];
         }
         catch (error) {
             if (!(error instanceof Error)) {
@@ -110,37 +91,28 @@ function detectVersions() {
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
-        // Canonize version number so it always has <major>.<minor>.<patch> format
-        if (canonize) {
-            if (curTag) {
-                curVersion = (0, utils_1.canonizeVersion)(curVersion);
-            }
-            if (prevTag) {
-                prevVersion = (0, utils_1.canonizeVersion)(prevVersion);
-            }
-            if (latestTag) {
-                latestVersion = (0, utils_1.canonizeVersion)(latestVersion);
-            }
-        }
-        core.debug(`current version: '${curVersion}'
+        core.debug(`current version: '${curVersion.original}'
 current tag: '${curTag}'
 
-previous version: '${prevVersion}'
+previous version: '${prevVersion.original}'
 previous tag: '${prevTag}'
 
-latest version: '${latestVersion}'
+latest version: '${latestVersion.original}'
 latest tag: '${latestTag}'
 `);
-        core.setOutput('current-version', curVersion);
+        core.setOutput('current-version', milib_1.version.toString(curVersion));
         core.setOutput('current-tag', curTag);
         core.setOutput('current-sha', curSha);
-        core.setOutput('previous-version', prevVersion);
+        core.setOutput('previous-version', milib_1.version.toString(prevVersion));
         core.setOutput('previous-tag', prevTag);
         core.setOutput('previous-sha', prevSha);
+        core.setOutput('latest-version', milib_1.version.toString(latestVersion));
         core.setOutput('latest-tag', latestTag);
         core.setOutput('latest-sha', latestSha);
-        core.setOutput('latest-version', latestVersion);
+        core.setOutput('is-release', curTag !== '');
         core.setOutput('is-branch-head', isRemoteLatestCommit);
+        core.setOutput('is-latest-version', milib_1.version.compare(latestVersion, curVersion) === 0);
+        core.setOutput('is-latest-major', utils.isLatestMajor(knownVersions, curVersion));
     });
 }
 function run() {

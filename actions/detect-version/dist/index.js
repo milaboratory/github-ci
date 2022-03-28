@@ -36,7 +36,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
-const utils_1 = __nccwpck_require__(918);
+const utils = __importStar(__nccwpck_require__(918));
 const milib_1 = __nccwpck_require__(604);
 function prepareRepository(depth) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -45,6 +45,7 @@ function prepareRepository(depth) {
         const refType = process.env.GITHUB_REF_TYPE;
         const refName = process.env.GITHUB_REF_NAME;
         if (refType === 'tag') {
+            // force-fetch current tag from origin
             yield milib_1.git.fetch({
                 remote: 'origin',
                 refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
@@ -56,59 +57,39 @@ function prepareRepository(depth) {
         return milib_1.git.ensureHistorySize(depth);
     });
 }
-function commitsCount(startRef, endRef) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const commits = yield milib_1.git.revList({ ref: `${startRef}..${endRef}` });
-        return commits.length;
-    });
-}
 function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
-        const count = yield commitsCount(baseRef, 'HEAD');
-        return `${baseVersion}-${count}-${currentRefName}`;
-    });
-}
-/**
- * Check if action was started from branch AND current commit is
- * repository's branch head.
- */
-function isBranchHead() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const refType = process.env.GITHUB_REF_TYPE;
-        const refName = process.env.GITHUB_REF_NAME;
-        const currentSha = process.env.GITHUB_SHA;
-        if (refType !== 'branch') {
-            return false;
-        }
-        yield milib_1.git.fetch({
-            deepen: 1,
-            remote: 'origin',
-            refSpec: refName
-        });
-        const remoteRefSha = yield milib_1.git.resolveRef(`origin/${refName}`);
-        return remoteRefSha === currentSha;
+        const count = yield milib_1.git.countCommits(baseRef, 'HEAD');
+        return {
+            major: baseVersion.major,
+            minor: baseVersion.minor,
+            patch: baseVersion.patch,
+            suffix: `${count}-${currentRefName}`,
+            original: `${baseVersion.original}-${count}-${currentRefName}`,
+            semver: true
+        };
     });
 }
 function detectVersions() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
         const fetchDepth = parseInt(core.getInput('fetch-depth'));
-        const canonize = core.getBooleanInput('canonize');
         yield prepareRepository(fetchDepth);
-        const isRemoteLatestCommit = yield isBranchHead();
-        const latestTag = yield milib_1.git.latestVersionTag();
+        const isRemoteLatestCommit = yield utils.isBranchHead();
+        const knownVersions = yield utils.getVersions();
+        const latestTag = utils.latestVersionTag(knownVersions);
         const latestSha = yield milib_1.git.resolveRef(latestTag);
-        let latestVersion = (0, utils_1.sanitizeVersion)(latestTag);
+        const latestVersion = knownVersions[latestTag];
         const prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
-        let prevVersion = (0, utils_1.sanitizeVersion)(prevTag);
+        const prevVersion = knownVersions[prevTag];
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
-        let curVersion = '';
+        let curVersion;
         try {
             curTag = yield milib_1.git.currentTag();
-            curVersion = (0, utils_1.sanitizeVersion)(curTag);
+            curVersion = knownVersions[curTag];
         }
         catch (error) {
             if (!(error instanceof Error)) {
@@ -117,37 +98,28 @@ function detectVersions() {
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
-        // Canonize version number so it always has <major>.<minor>.<patch> format
-        if (canonize) {
-            if (curTag) {
-                curVersion = (0, utils_1.canonizeVersion)(curVersion);
-            }
-            if (prevTag) {
-                prevVersion = (0, utils_1.canonizeVersion)(prevVersion);
-            }
-            if (latestTag) {
-                latestVersion = (0, utils_1.canonizeVersion)(latestVersion);
-            }
-        }
-        core.debug(`current version: '${curVersion}'
+        core.debug(`current version: '${curVersion.original}'
 current tag: '${curTag}'
 
-previous version: '${prevVersion}'
+previous version: '${prevVersion.original}'
 previous tag: '${prevTag}'
 
-latest version: '${latestVersion}'
+latest version: '${latestVersion.original}'
 latest tag: '${latestTag}'
 `);
-        core.setOutput('current-version', curVersion);
+        core.setOutput('current-version', milib_1.version.toString(curVersion));
         core.setOutput('current-tag', curTag);
         core.setOutput('current-sha', curSha);
-        core.setOutput('previous-version', prevVersion);
+        core.setOutput('previous-version', milib_1.version.toString(prevVersion));
         core.setOutput('previous-tag', prevTag);
         core.setOutput('previous-sha', prevSha);
+        core.setOutput('latest-version', milib_1.version.toString(latestVersion));
         core.setOutput('latest-tag', latestTag);
         core.setOutput('latest-sha', latestSha);
-        core.setOutput('latest-version', latestVersion);
+        core.setOutput('is-release', curTag !== '');
         core.setOutput('is-branch-head', isRemoteLatestCommit);
+        core.setOutput('is-latest-version', milib_1.version.compare(latestVersion, curVersion) === 0);
+        core.setOutput('is-latest-major', utils.isLatestMajor(knownVersions, curVersion));
     });
 }
 function run() {
@@ -170,55 +142,89 @@ run();
 /***/ }),
 
 /***/ 918:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.countOccurrences = exports.sanitizeVersion = exports.canonizeVersion = void 0;
+exports.isLatestMajor = exports.isBranchHead = exports.latestVersionTag = exports.getVersions = void 0;
+const milib_1 = __nccwpck_require__(604);
 /**
- * Converts shortened version number to its canonical 'semver' version:
- *        1 -> 1.0.0
- *     2.25 -> 2.25.0
- *   4.3.12 -> 4.3.12
- *
- * @param version
- * @throws Error when <version> can't be canonized
+ * Get map of version numbers in git repository:
+ *  <tag name> -> <parsed version info>
  */
-function canonizeVersion(version) {
-    const matches = version.match('^[0-9](\\.[0-9]+){0,2}$');
-    if (matches === null) {
-        throw Error(`'${version}' does not look like version number and can't thus be canonized`);
-    }
-    const parts = version.split('.');
-    for (let i = parts.length; i < 3; i++) {
-        parts[i] = '0';
-    }
-    return parts.join('.');
+function getVersions() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const tagsResult = yield milib_1.git.tag({ list: true });
+        const tags = tagsResult.split('\n');
+        const result = {};
+        for (const tag of tags) {
+            let v = tag;
+            if (tag.startsWith('v')) {
+                v = tag.slice(1); // cut 'v' prefix
+            }
+            result[tag] = milib_1.version.parse(v);
+        }
+        return result;
+    });
 }
-exports.canonizeVersion = canonizeVersion;
-function sanitizeVersion(version) {
-    if (version.startsWith('v')) {
-        return version.substring(1); // v1.0.2 -> 1.0.2
-    }
-    return version;
+exports.getVersions = getVersions;
+function latestVersionTag(v) {
+    const versionsList = Object.entries(v);
+    // Sort the list by values
+    versionsList.sort((a, b) => milib_1.version.compare(a[1], b[1]));
+    // Get the tag name of the latest version
+    return versionsList[versionsList.length - 1][0];
 }
-exports.sanitizeVersion = sanitizeVersion;
-function countOccurrences(str, substr) {
-    let index = 0;
-    let startIndex = 0;
-    const searchStrLen = substr.length;
-    if (searchStrLen === 0) {
-        return 0;
-    }
-    let count = 0;
-    while ((index = str.indexOf(substr, startIndex)) > -1) {
-        count = count + 1;
-        startIndex = index + searchStrLen;
-    }
-    return count;
+exports.latestVersionTag = latestVersionTag;
+/**
+ * Check if action was started from branch AND current commit is
+ * repository's branch head.
+ */
+function isBranchHead() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const refType = process.env.GITHUB_REF_TYPE;
+        const refName = process.env.GITHUB_REF_NAME;
+        const currentSha = process.env.GITHUB_SHA;
+        if (refType !== 'branch') {
+            return false;
+        }
+        yield milib_1.git.fetch({
+            deepen: 1,
+            remote: 'origin',
+            refSpec: refName
+        });
+        const remoteRefSha = yield milib_1.git.resolveRef(`origin/${refName}`);
+        return remoteRefSha === currentSha;
+    });
 }
-exports.countOccurrences = countOccurrences;
+exports.isBranchHead = isBranchHead;
+/**
+ * Check if current version is the latest known modification of the major verison.
+ * Returns 'true' when 1.3.12 is the latest known modification of v1 even if
+ * 2.12.1, 3.0.0 and other higher versions exist in list.
+ */
+function isLatestMajor(knownVersions, current) {
+    const allVersions = Object.values(knownVersions);
+    allVersions.sort(milib_1.version.compare);
+    for (let i = allVersions.length - 1; i >= 0; i--) {
+        const v = allVersions[i];
+        if (v.major === current.major) {
+            return milib_1.version.compare(v, current) === 0;
+        }
+    }
+    return false;
+}
+exports.isLatestMajor = isLatestMajor;
 
 
 /***/ }),
@@ -1801,123 +1807,102 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ensureHistorySize = exports.previousTag = exports.latestTag = exports.latestVersionTag = exports.currentTag = exports.listCommitTags = exports.fetchTags = exports.resolveRef = exports.tag = exports.lsRemote = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
+exports.ensureHistorySize = exports.previousTag = exports.latestTag = exports.currentTag = exports.countCommits = exports.listCommitTags = exports.fetchTags = exports.resolveRef = exports.tag = exports.lsRemote = exports.describe = exports.revList = exports.fetch = exports.git = void 0;
 const exec = __importStar(__nccwpck_require__(642));
-function git(...args) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const execResult = yield exec.getExecOutput("git", args, {
-            ignoreReturnCode: true,
-        });
-        if (execResult.exitCode !== 0) {
-            const cmd = `git '${args.join("' '")}'`;
-            const exitCode = execResult.exitCode.toString();
-            const stderr = execResult.stderr;
-            throw Error(`command "${cmd}" failed with code '${exitCode}':\n\n${stderr}`);
-        }
-        return execResult;
+async function git(...args) {
+    const execResult = await exec.getExecOutput("git", args, {
+        ignoreReturnCode: true,
     });
+    if (execResult.exitCode !== 0) {
+        const cmd = `git '${args.join("' '")}'`;
+        const exitCode = execResult.exitCode.toString();
+        const stderr = execResult.stderr;
+        throw Error(`command "${cmd}" failed with code '${exitCode}':\n\n${stderr}`);
+    }
+    return execResult;
 }
 exports.git = git;
-function fetch(opts) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cmd = ["fetch"];
-        if (opts && opts.forceFlag)
-            cmd.push("--force");
-        if (opts && opts.depth != null)
-            cmd.push(`--depth=${opts.depth}`);
-        if (opts && opts.deepen != null)
-            cmd.push(`--deepen=${opts.deepen}`);
-        if (opts && opts.remote)
-            cmd.push(opts.remote);
-        if (opts && opts.refSpec)
-            cmd.push(opts.refSpec);
-        yield git(...cmd);
-    });
+async function fetch(opts) {
+    const cmd = ["fetch"];
+    if (opts && opts.forceFlag)
+        cmd.push("--force");
+    if (opts && opts.depth != null)
+        cmd.push(`--depth=${opts.depth}`);
+    if (opts && opts.deepen != null)
+        cmd.push(`--deepen=${opts.deepen}`);
+    if (opts && opts.remote)
+        cmd.push(opts.remote);
+    if (opts && opts.refSpec)
+        cmd.push(opts.refSpec);
+    await git(...cmd);
 }
 exports.fetch = fetch;
-function revList(opts) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cmd = ["rev-list"];
-        if (opts && opts.maxCount != null)
-            cmd.push(`--max-count=${opts.maxCount}`);
-        if (opts && opts.ref)
-            cmd.push(opts.ref);
-        const revListResult = yield git(...cmd);
-        const revListStr = revListResult.stdout.trim();
-        if (revListStr === "") {
-            return [];
-        }
-        return revListStr.split("\n");
-    });
+async function revList(opts) {
+    const cmd = ["rev-list"];
+    if (opts && opts.maxCount != null)
+        cmd.push(`--max-count=${opts.maxCount}`);
+    if (opts && opts.ref)
+        cmd.push(opts.ref);
+    const revListResult = await git(...cmd);
+    const revListStr = revListResult.stdout.trim();
+    if (revListStr === "") {
+        return [];
+    }
+    return revListStr.split("\n");
 }
 exports.revList = revList;
-function describe(opts) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cmd = ["describe"];
-        if (opts && opts.tags)
-            cmd.push("--tags");
-        if (opts && opts.abbrev != null)
-            cmd.push(`--abbrev=${opts.abbrev}`);
-        if (opts && opts.exactMatch)
-            cmd.push("--exact-match");
-        if (opts && opts.ref)
-            cmd.push(opts.ref);
-        const describeResult = yield git(...cmd);
-        const versionString = describeResult.stdout;
-        return versionString.trim();
-    });
+async function describe(opts) {
+    const cmd = ["describe"];
+    if (opts && opts.tags)
+        cmd.push("--tags");
+    if (opts && opts.abbrev != null)
+        cmd.push(`--abbrev=${opts.abbrev}`);
+    if (opts && opts.exactMatch)
+        cmd.push("--exact-match");
+    if (opts && opts.ref)
+        cmd.push(opts.ref);
+    const describeResult = await git(...cmd);
+    const versionString = describeResult.stdout;
+    return versionString.trim();
 }
 exports.describe = describe;
-function lsRemote(opts) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cmd = ["ls-remote"];
-        if (opts.tagsFlag)
-            cmd.push("--tags");
-        if (opts.headsFlag)
-            cmd.push("--heads");
-        if (opts.refs)
-            cmd.push("--refs");
-        if (opts.quietFlag)
-            cmd.push("--quiet");
-        cmd.push(opts.repository);
-        if (opts.refs)
-            cmd.push(...opts.refs);
-        const lsRemoteResult = yield git(...cmd);
-        const result = [];
-        for (const line of lsRemoteResult.stdout.trim().split("\n")) {
-            const parts = line.split("\t");
-            result.push({ objectSHA: parts[0], refName: parts[1] });
-        }
-        return result;
-    });
+async function lsRemote(opts) {
+    const cmd = ["ls-remote"];
+    if (opts.tagsFlag)
+        cmd.push("--tags");
+    if (opts.headsFlag)
+        cmd.push("--heads");
+    if (opts.refs)
+        cmd.push("--refs");
+    if (opts.quietFlag)
+        cmd.push("--quiet");
+    cmd.push(opts.repository);
+    if (opts.refs)
+        cmd.push(...opts.refs);
+    const lsRemoteResult = await git(...cmd);
+    const result = [];
+    for (const line of lsRemoteResult.stdout.trim().split("\n")) {
+        const parts = line.split("\t");
+        result.push({ objectSHA: parts[0], refName: parts[1] });
+    }
+    return result;
 }
 exports.lsRemote = lsRemote;
-function tag(opts) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const cmd = ["tag"];
-        if (opts && opts.list)
-            cmd.push("--list");
-        if (opts && opts.pointsAt)
-            cmd.push(`--points-at=${opts.pointsAt}`);
-        if (opts && opts.merged)
-            cmd.push(`--merged=${opts.merged}`);
-        if (opts && opts.sort)
-            cmd.push(`--sort=${opts.sort}`);
-        if (opts && opts.ref)
-            cmd.push(opts.ref);
-        const tagResult = yield git(...cmd);
-        return tagResult.stdout.trim();
-    });
+async function tag(opts) {
+    const cmd = ["tag"];
+    if (opts && opts.list)
+        cmd.push("--list");
+    if (opts && opts.pointsAt)
+        cmd.push(`--points-at=${opts.pointsAt}`);
+    if (opts && opts.merged)
+        cmd.push(`--merged=${opts.merged}`);
+    if (opts && opts.sort)
+        cmd.push(`--sort=${opts.sort}`);
+    if (opts && opts.ref)
+        cmd.push(opts.ref);
+    const tagResult = await git(...cmd);
+    return tagResult.stdout.trim();
 }
 exports.tag = tag;
 /*
@@ -1930,92 +1915,59 @@ exports.tag = tag;
  * Resolve any textual reference into commit SHA.
  * Commit SHA as <ref> is resolved to itself.
  */
-function resolveRef(ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        const shaList = yield revList({ maxCount: 1, ref });
-        return shaList[0];
-    });
+async function resolveRef(ref = "HEAD") {
+    const shaList = await revList({ maxCount: 1, ref });
+    return shaList[0];
 }
 exports.resolveRef = resolveRef;
 /**
  * Fetch all tags from remote repository without their history (only single commit)
  * and without breaking local history of already fetched refs
  */
-function fetchTags(remote = "origin") {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield fetch({
-            remote,
-            refSpec: "refs/tags/*:refs/tags/*",
-            deepen: 1,
-        });
+async function fetchTags(remote = "origin") {
+    await fetch({
+        remote,
+        refSpec: "refs/tags/*:refs/tags/*",
+        deepen: 1,
     });
 }
 exports.fetchTags = fetchTags;
 /**
  * Get all tags that point exactly to given commit (HEAD by default)
  */
-function listCommitTags(ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        const tagsListStr = yield tag({
-            pointsAt: ref,
-        });
-        if (!tagsListStr) {
-            return [];
-        }
-        return tagsListStr.split("\n");
+async function listCommitTags(ref = "HEAD") {
+    const tagsListStr = await tag({
+        pointsAt: ref,
     });
+    if (!tagsListStr) {
+        return [];
+    }
+    return tagsListStr.split("\n");
 }
 exports.listCommitTags = listCommitTags;
+/**
+ * Count number of commits from <from> to <to> references, including <to> commit itself.
+ */
+async function countCommits(from, to) {
+    const commits = await revList({ ref: `${from}..${to}` });
+    return commits.length;
+}
+exports.countCommits = countCommits;
 /**
  * Get tag that points exactly to given commit
  * NOTE: when several tags point to given commit, the freshest (by tag's date)
  *       is returned. This behavior is defined by git itself.
  *       See 'man git-describe' for more info.
  */
-function currentTag(ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield describe({
-            tags: true,
-            abbrev: 0,
-            exactMatch: true,
-            ref,
-        });
+async function currentTag(ref = "HEAD") {
+    return await describe({
+        tags: true,
+        abbrev: 0,
+        exactMatch: true,
+        ref,
     });
 }
 exports.currentTag = currentTag;
-/**
- * Get the latest version tag in repository
- *   - if at least one tag with 'v' prefix exists in repository,
- *     then only 'v'-prefixed tags are be treated
- *   - tags are sorted as version numbers,
- *     see 'man git-tag' -> '/version:refname'
- *
- * This usually gives the latest application release version.
- */
-function latestVersionTag() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const tagsListStr = yield tag({
-            list: true,
-            sort: "version:refname",
-        });
-        const tagsList = tagsListStr.split("\n");
-        let vPrefixFound = false;
-        let latestVersion = "";
-        for (const v of tagsList) {
-            if (v.startsWith("v")) {
-                // Save only v-prefixed tags if we face at least one
-                vPrefixFound = true;
-                latestVersion = v;
-            }
-            else if (!vPrefixFound) {
-                // Update latest version number until we found at least one with 'v'-prefix.
-                latestVersion = v;
-            }
-        }
-        return latestVersion;
-    });
-}
-exports.latestVersionTag = latestVersionTag;
 /**
  * Get first tag reachable from given commit.
  * It is either tag that points directly to commit, or to any of its parents (closest parent).
@@ -2025,13 +1977,11 @@ exports.latestVersionTag = latestVersionTag;
  *       See 'man git-describe' for more info.
  * @param ref
  */
-function latestTag(ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield describe({
-            tags: true,
-            abbrev: 0,
-            ref,
-        });
+async function latestTag(ref = "HEAD") {
+    return await describe({
+        tags: true,
+        abbrev: 0,
+        ref,
     });
 }
 exports.latestTag = latestTag;
@@ -2048,30 +1998,26 @@ exports.latestTag = latestTag;
  *       See 'man git-describe' for more info.
  * @param ref
  */
-function previousTag(ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield latestTag(`${ref}^`);
-    });
+async function previousTag(ref = "HEAD") {
+    return await latestTag(`${ref}^`);
 }
 exports.previousTag = previousTag;
 /**
  * Ensure git repository has history of at least <minCommits> size from <ref>.
  * If not, fetch at most <minCommits> of <ref> from <remote>.
  */
-function ensureHistorySize(minCommits, remote = "origin", ref = "HEAD") {
-    return __awaiter(this, void 0, void 0, function* () {
-        const commits = yield revList({
-            maxCount: minCommits,
-            ref,
-        });
-        if (commits.length >= minCommits) {
-            return;
-        }
-        yield fetch({
-            deepen: minCommits,
-            remote,
-            refSpec: ref,
-        });
+async function ensureHistorySize(minCommits, remote = "origin", ref = "HEAD") {
+    const commits = await revList({
+        maxCount: minCommits,
+        ref,
+    });
+    if (commits.length >= minCommits) {
+        return;
+    }
+    await fetch({
+        deepen: minCommits,
+        remote,
+        refSpec: ref,
     });
 }
 exports.ensureHistorySize = ensureHistorySize;
@@ -2104,9 +2050,291 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.git = void 0;
+exports.version = exports.string = exports.git = void 0;
 const git = __importStar(__nccwpck_require__(521));
 exports.git = git;
+const string = __importStar(__nccwpck_require__(863));
+exports.string = string;
+const version = __importStar(__nccwpck_require__(736));
+exports.version = version;
+
+
+/***/ }),
+
+/***/ 863:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.countOccurrences = void 0;
+/**
+ * Count number of <substr> fragments inside <str>.
+ * Full <substr> is searched in <str>:
+ *   countOccurrences("FFmmmmmFFFmmmFmmFFmmmFFF", "FF") // returns '4'
+ */
+function countOccurrences(str, substr) {
+    let index = 0;
+    let startIndex = 0;
+    const searchStrLen = substr.length;
+    if (searchStrLen === 0) {
+        return 0;
+    }
+    let count = 0;
+    while ((index = str.indexOf(substr, startIndex)) > -1) {
+        count = count + 1;
+        startIndex = index + searchStrLen;
+    }
+    return count;
+}
+exports.countOccurrences = countOccurrences;
+
+
+/***/ }),
+
+/***/ 736:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// /**
+//  * Check if version string contains only dots, hyphens and numbers:
+//  *  - 1.2.3    -> true
+//  *  - 1.0.4-1  -> true
+//  *  - 3.9.4a   -> false (a is letter)
+//  */
+// export function isNumeric(v: string): boolean {
+//   const n = Number(v.replaceAll(/[-.]/g, ""));
+//   return !Number.isNaN(n);
+// }
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toString = exports.compare = exports.parse = void 0;
+function isNumber(v) {
+    const n = Number(v);
+    return !Number.isNaN(n);
+}
+function parse(v) {
+    const parts = v.split(".");
+    const result = {
+        major: 0,
+        minor: 0,
+        patch: 0,
+        suffix: "",
+        original: v,
+        semver: false, // the version seems to conform with semver
+    };
+    if (isNumber(parts[0])) {
+        result.major = Number(parts[0]);
+    }
+    else {
+        result.suffix = v;
+    }
+    if (parts.length === 1) {
+        // Only <major> version part or completely unknown version format
+        result.semver = isNumber(parts[0]);
+        return result;
+    }
+    // parts.length >= 2
+    if (!isNumber(parts[1])) {
+        // Cases:
+        //  - 3.alpha (unknown format)
+        //  - 3.2-alpha (incomplete semver)
+        const minor = parse_suffix(parts[1]);
+        if (Number.isNaN(minor.v)) {
+            // Unknown format.
+            result.suffix = parts.slice(1).join(".");
+            return result;
+        }
+        // Incomplete semver format with suffix
+        result.minor = minor.v;
+        result.suffix = [minor.s].concat(parts.slice(2)).join(".");
+        result.semver = true;
+        return result;
+    }
+    result.minor = Number(parts[1]);
+    if (parts.length === 2) {
+        // Incomplete semver format: <major>.<minor>
+        result.semver = true;
+        return result;
+    }
+    // parts.length >=3
+    if (isNumber(parts[2])) {
+        // Regular semver with numeric <patch> part: <major>.<minor>.<patch>
+        result.patch = Number(parts[2]);
+        result.semver = parts.length === 3;
+        if (parts.length > 3) {
+            // Custom case with additional version parts: <major>.<minor>.<patch>.<...>
+            // Put rest of dots into 'suffix' field: <major>.<minor>.<patch>.<suffix>
+            result.suffix = parts.slice(3).join(".");
+        }
+        return result;
+    }
+    // parts.length >= 3 and parts[2] is not a number:
+    // Cases:
+    //   - 2.2.abra
+    //   - 2.2.abra.kadabra
+    //   - 2.2.abra-kadabra
+    //   - 0.2.3-custom
+    //   - 1.2.3-alpha.2
+    const patch = parse_suffix(parts[2]);
+    if (Number.isNaN(patch.v)) {
+        // <patch> version parts has no '-' delimiters and not a number.
+        // Treat non-numeric <patch> version as suffix: <major>.<minor>.<suffix>
+        // Cases:
+        //   - 2.2.abrakadabra
+        //   - 2.2.abra.kadabra
+        result.suffix = parts.slice(2).join(".");
+        return result;
+    }
+    // Canonical semver case with suffix: <major>.<minor>.<patch>-<suffix>
+    // Cases:
+    //   - 0.2.3-custom
+    //   - 1.2.3-alpha.2
+    result.patch = patch.v;
+    result.suffix = [patch.s].concat(parts.slice(3)).join(".");
+    result.semver = true;
+    return result;
+}
+exports.parse = parse;
+function parse_suffix(value) {
+    const parts = value.split("-");
+    if (parts.length === 1) {
+        // Cases:
+        //   - abc
+        //   - 123
+        //   - ''
+        if (isNumber(value)) {
+            return {
+                v: Number(value),
+                s: "",
+            };
+        }
+        // value has no '-' delimiters and not a number
+        // Cases:
+        //   - abc
+        //   - ''
+        return {
+            v: NaN,
+            s: value,
+        };
+    }
+    if (!isNumber(parts[0])) {
+        // Cases:
+        //   - abc-def
+        return {
+            v: NaN,
+            s: value,
+        };
+    }
+    // Cases:
+    //   - 1-abc
+    //   - 1-abc-def
+    return {
+        v: Number(parts[0]),
+        s: parts.slice(1).join("-"),
+    };
+}
+/**
+ * Compares <a> and <b> versions
+ *   - returns -1 if <a> < <b>
+ *   - returns  1 if <a> > <b>
+ *   - returns  0 if <a> == <b>
+ */
+function compare(a, b) {
+    if (!a.semver || !b.semver) {
+        // Always compare unknown version formats as stings
+        if (a.original < b.original) {
+            return -1;
+        }
+        if (a.original > b.original) {
+            return 1;
+        }
+        return 0;
+    }
+    if (a.major < b.major) {
+        return -1;
+    }
+    if (a.major > b.major) {
+        return 1;
+    }
+    if (a.minor < b.minor) {
+        return -1;
+    }
+    if (a.minor > b.minor) {
+        return 1;
+    }
+    if (a.patch < b.patch) {
+        return -1;
+    }
+    if (a.patch > b.patch) {
+        return 1;
+    }
+    // <major>, <minor> and <patch> versions are the same for both <a> and <b> here
+    if (b.suffix === "" && a.suffix !== "") {
+        // Consider versions with suffix (alpha, beta, etc.) to be smaller than final versions
+        return -1;
+    }
+    if (a.suffix === "" && b.suffix !== "") {
+        // Consider versions with suffix (alpha, beta, etc.) to be smaller than final versions
+        return 1;
+    }
+    if (a.suffix < b.suffix) {
+        return -1;
+    }
+    if (a.suffix > b.suffix) {
+        return 1;
+    }
+    return 0;
+}
+exports.compare = compare;
+function toString(v) {
+    if (!v.semver) {
+        return v.original;
+    }
+    if (v.suffix === "") {
+        return `${v.major}.${v.minor}.${v.patch}`;
+    }
+    return `${v.major}.${v.minor}.${v.patch}-${v.suffix}`;
+}
+exports.toString = toString;
+// 0.1
+// 0.10.2
+// 0.10.3
+// 0.11.0
+// 0.11.1
+// 0.12.0
+// 0.13.0
+// 0.13.1
+// 0.13.2
+// 0.13.3
+// 0.14.0
+// 0.15.0
+// 0.15.1
+// 0.15.2
+// 0.15.3
+// 0.15.4
+// 0.15.5
+// 0.15.6
+// 0.16.0
+// 0.16.1
+// 0.17.0
+// 0.17.1
+// 0.18
+// 0.19
+// 1.0
+// 1.1
+// 1.2
+// 1.2.1
+// 1.3.0
+// 1.3.1
+// 1.4-alpha
+// 1.4.beta
+// 1.4.0-beta.2
+// 1.4.0
+// 1.4.1
+// 1.4.2.1
+// 1.4.2
+// 1.5
 
 
 /***/ }),
