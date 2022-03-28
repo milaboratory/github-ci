@@ -53,12 +53,28 @@ outputs:
   latest-sha:
     description: |
       Full hash of git commit the latest version belongs to
+  is-release:
+    description: |
+      Checks if current version is release version (current commit has some tag).
   is-branch-head:
     description: |
       Checks if remote version of current branch points to the same SHA as local.
 
       This can be used to detect old workflow restarts when needed, for example
       to prevent :latest docker image tag from being replaced by old workflow.
+  is-latest-version:
+    description: |
+      Checks if current version is latest of all known versions
+      (detected by tags in repository)
+  is-latest-major:
+    description: |
+      Checks if current version is the latest modification of the major version.
+      E.g. for list of versions
+        1.4.0
+        1.4.2
+        2.0.1
+      'is-latest-major' would be 'true' for 1.4.2 (the latest known v1)
+      and 2.0.1 (the latest known v2)
 
 runs:
   using: 'node12'
