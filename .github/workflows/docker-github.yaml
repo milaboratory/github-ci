@@ -71,6 +71,13 @@ on:
         required: false
         default: true
 
+      push-release-latest-major:
+        description: |
+          Update ':N' tag with major version number after building new release
+        type: boolean
+        required: false
+        default: true
+
       #
       # Release control
       #
@@ -167,10 +174,12 @@ jobs:
           PUSH_DEV_VERSIONS: ${{ inputs.push-dev-versions }}
           PUSH_BRANCH_LATEST: ${{ inputs.push-branch-latest }}
           PUSH_RELEASE_LATEST: ${{ inputs.push-release-latest }}
+          PUSH_RELEASE_LATEST_MAJOR: ${{ inputs.push-release-latest-major }}
 
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
           IS_RELEASE: ${{ steps.context.outputs.is-release }}
           IS_LATEST_VERSION: ${{ steps.context.outputs.is-latest-version }}
+          IS_LATEST_MAJOR: ${{ steps.context.outputs.is-latest-major }}
           IS_LATEST_COMMIT: ${{ steps.context.outputs.is-branch-head }}
 
         with:
@@ -196,6 +205,11 @@ jobs:
                  [ "${PUSH_RELEASE_LATEST}" = 'true' ]; then
 
                 versions+=( "latest" )
+              fi
+
+              if [ "${IS_LATEST_MAJOR}" = 'true' ] &&
+                 [ "${PUSH_RELEASE_LATEST_MAJOR}" = 'true' ]; then
+                versions+=( "${CURRENT_VERSION%%.*}" ) # get <major> part of version
               fi
 
             else
