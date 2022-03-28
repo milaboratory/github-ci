@@ -1,52 +1,82 @@
+import {git, version} from 'milib'
+
+// <tag name> -> <version>
+export interface versionsMap {
+  [key: string]: version.versionInfo
+}
+
 /**
- * Converts shortened version number to its canonical 'semver' version:
- *        1 -> 1.0.0
- *     2.25 -> 2.25.0
- *   4.3.12 -> 4.3.12
- *
- * @param version
- * @throws Error when <version> can't be canonized
+ * Get map of version numbers in git repository:
+ *  <tag name> -> <parsed version info>
  */
-export function canonizeVersion(version: string): string {
-  const matches = version.match('^[0-9](\\.[0-9]+){0,2}$')
+export async function getVersions(): Promise<versionsMap> {
+  const tagsResult = await git.tag({list: true})
+  const tags = tagsResult.split('\n')
 
-  if (matches === null) {
-    throw Error(
-      `'${version}' does not look like version number and can't thus be canonized`
-    )
+  const result = {} as versionsMap
+
+  for (const tag of tags) {
+    let v = tag
+    if (tag.startsWith('v')) {
+      v = tag.slice(1) // cut 'v' prefix
+    }
+
+    result[tag] = version.parse(v)
   }
 
-  const parts = version.split('.')
-  for (let i = parts.length; i < 3; i++) {
-    parts[i] = '0'
-  }
-
-  return parts.join('.')
+  return result
 }
 
-export function sanitizeVersion(version: string): string {
-  if (version.startsWith('v')) {
-    return version.substring(1) // v1.0.2 -> 1.0.2
-  }
+export function latestVersionTag(v: versionsMap): string {
+  const versionsList = Object.entries(v)
 
-  return version
+  // Sort the list by values
+  versionsList.sort((a, b) => version.compare(a[1], b[1]))
+
+  // Get the tag name of the latest version
+  return versionsList[versionsList.length - 1][0]
 }
 
-export function countOccurrences(str: string, substr: string): number {
-  let index = 0
-  let startIndex = 0
-  const searchStrLen = substr.length
+/**
+ * Check if action was started from branch AND current commit is
+ * repository's branch head.
+ */
+export async function isBranchHead(): Promise<boolean> {
+  const refType = process.env.GITHUB_REF_TYPE as string
+  const refName = process.env.GITHUB_REF_NAME as string
+  const currentSha = process.env.GITHUB_SHA as string
 
-  if (searchStrLen === 0) {
-    return 0
+  if (refType !== 'branch') {
+    return false
   }
 
-  let count = 0
+  await git.fetch({
+    deepen: 1,
+    remote: 'origin',
+    refSpec: refName
+  })
 
-  while ((index = str.indexOf(substr, startIndex)) > -1) {
-    count = count + 1
-    startIndex = index + searchStrLen
+  const remoteRefSha = await git.resolveRef(`origin/${refName}`)
+  return remoteRefSha === currentSha
+}
+
+/**
+ * Check if current version is the latest known modification of the major verison.
+ * Returns 'true' when 1.3.12 is the latest known modification of v1 even if
+ * 2.12.1, 3.0.0 and other higher versions exist in list.
+ */
+export function isLatestMajor(
+  knownVersions: versionsMap,
+  current: version.versionInfo
+): boolean {
+  const allVersions = Object.values(knownVersions)
+  allVersions.sort(version.compare)
+
+  for (let i = allVersions.length - 1; i >= 0; i--) {
+    const v = allVersions[i]
+    if (v.major === current.major) {
+      return version.compare(v, current) === 0
+    }
   }
-
-  return count
+  return false
 }

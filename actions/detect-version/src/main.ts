@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 
-import {canonizeVersion, sanitizeVersion} from './utils'
-import {git} from 'milib'
+import * as utils from './utils'
+import {git, version} from 'milib'
 
 async function prepareRepository(depth: number): Promise<void> {
   // We have to do black magic here because of
@@ -10,6 +10,7 @@ async function prepareRepository(depth: number): Promise<void> {
   const refName: string = process.env.GITHUB_REF_NAME as string
 
   if (refType === 'tag') {
+    // force-fetch current tag from origin
     await git.fetch({
       remote: 'origin',
       refSpec: `refs/tags/${refName}:refs/tags/${refName}`,
@@ -22,67 +23,47 @@ async function prepareRepository(depth: number): Promise<void> {
   return git.ensureHistorySize(depth)
 }
 
-async function commitsCount(startRef: string, endRef: string): Promise<number> {
-  const commits = await git.revList({ref: `${startRef}..${endRef}`})
-  return commits.length
-}
-
 async function genDevVersion(
-  baseVersion: string,
+  baseVersion: version.versionInfo,
   baseRef: string
-): Promise<string> {
+): Promise<version.versionInfo> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
-  const count = await commitsCount(baseRef, 'HEAD')
+  const count = await git.countCommits(baseRef, 'HEAD')
 
-  return `${baseVersion}-${count}-${currentRefName}`
-}
-
-/**
- * Check if action was started from branch AND current commit is
- * repository's branch head.
- */
-async function isBranchHead(): Promise<boolean> {
-  const refType = process.env.GITHUB_REF_TYPE as string
-  const refName = process.env.GITHUB_REF_NAME as string
-  const currentSha = process.env.GITHUB_SHA as string
-
-  if (refType !== 'branch') {
-    return false
-  }
-
-  await git.fetch({
-    deepen: 1,
-    remote: 'origin',
-    refSpec: refName
-  })
-
-  const remoteRefSha = await git.resolveRef(`origin/${refName}`)
-  return remoteRefSha === currentSha
+  return {
+    major: baseVersion.major,
+    minor: baseVersion.minor,
+    patch: baseVersion.patch,
+    suffix: `${count}-${currentRefName}`,
+    original: `${baseVersion.original}-${count}-${currentRefName}`,
+    semver: true
+  } as version.versionInfo
 }
 
 async function detectVersions(): Promise<void> {
   // Read inputs
   const fetchDepth: number = parseInt(core.getInput('fetch-depth'))
-  const canonize: boolean = core.getBooleanInput('canonize')
 
   await prepareRepository(fetchDepth)
 
-  const isRemoteLatestCommit = await isBranchHead()
+  const isRemoteLatestCommit = await utils.isBranchHead()
 
-  const latestTag = await git.latestVersionTag()
+  const knownVersions = await utils.getVersions()
+
+  const latestTag = utils.latestVersionTag(knownVersions)
   const latestSha = await git.resolveRef(latestTag)
-  let latestVersion = sanitizeVersion(latestTag)
+  const latestVersion = knownVersions[latestTag]
 
   const prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
-  let prevVersion = sanitizeVersion(prevTag)
+  const prevVersion = knownVersions[prevTag]
 
   const curSha = await git.resolveRef('HEAD')
   let curTag = ''
-  let curVersion = ''
+  let curVersion: version.versionInfo
   try {
     curTag = await git.currentTag()
-    curVersion = sanitizeVersion(curTag)
+    curVersion = knownVersions[curTag]
   } catch (error) {
     if (!(error instanceof Error)) {
       throw error
@@ -94,44 +75,40 @@ async function detectVersions(): Promise<void> {
     curVersion = await genDevVersion(prevVersion, prevTag)
   }
 
-  // Canonize version number so it always has <major>.<minor>.<patch> format
-  if (canonize) {
-    if (curTag) {
-      curVersion = canonizeVersion(curVersion)
-    }
-    if (prevTag) {
-      prevVersion = canonizeVersion(prevVersion)
-    }
-    if (latestTag) {
-      latestVersion = canonizeVersion(latestVersion)
-    }
-  }
-
   core.debug(
-    `current version: '${curVersion}'
+    `current version: '${curVersion.original}'
 current tag: '${curTag}'
 
-previous version: '${prevVersion}'
+previous version: '${prevVersion.original}'
 previous tag: '${prevTag}'
 
-latest version: '${latestVersion}'
+latest version: '${latestVersion.original}'
 latest tag: '${latestTag}'
 `
   )
 
-  core.setOutput('current-version', curVersion)
+  core.setOutput('current-version', version.toString(curVersion))
   core.setOutput('current-tag', curTag)
   core.setOutput('current-sha', curSha)
 
-  core.setOutput('previous-version', prevVersion)
+  core.setOutput('previous-version', version.toString(prevVersion))
   core.setOutput('previous-tag', prevTag)
   core.setOutput('previous-sha', prevSha)
 
+  core.setOutput('latest-version', version.toString(latestVersion))
   core.setOutput('latest-tag', latestTag)
   core.setOutput('latest-sha', latestSha)
-  core.setOutput('latest-version', latestVersion)
 
+  core.setOutput('is-release', curTag !== '')
   core.setOutput('is-branch-head', isRemoteLatestCommit)
+  core.setOutput(
+    'is-latest-version',
+    version.compare(latestVersion, curVersion) === 0
+  )
+  core.setOutput(
+    'is-latest-major',
+    utils.isLatestMajor(knownVersions, curVersion)
+  )
 }
 
 async function run(): Promise<void> {
