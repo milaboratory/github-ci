@@ -38,15 +38,18 @@ outputs:
     description: SHA of commit of latest version
     value: ${{ fromJSON(steps.versions.outputs.value).latest-sha }}
 
-  is-latest-version:
-    description: "'True' when current version is the latest version available"
-    value: ${{ fromJSON(steps.versions.outputs.value).latest-version == fromJSON(steps.versions.outputs.value).current-version }}
+  is-release:
+    description: "'True' when current commit has tag"
+    value: ${{ fromJSON(steps.versions.outputs.value).is-release }}
   is-branch-head:
     description: "'True' when current run is from latest commit of branch."
     value: ${{ fromJSON(steps.versions.outputs.value).is-branch-head }}
-  is-release:
-    description: "'True' when current commit has tag"
-    value: ${{ fromJSON(steps.versions.outputs.value).current-tag != '' }}
+  is-latest-version:
+    description: "'True' when current version is the latest version available"
+    value: ${{ fromJSON(steps.versions.outputs.value).is-latest-version }}
+  is-latest-major:
+    description: "'True' when current version is the latest modification (minor+patch) of the major version"
+    value: ${{ fromJSON(steps.versions.outputs.value).is-latest-major }}
 
 runs:
   using: "composite"
