@@ -9,15 +9,15 @@ function cleanup() {
     rm "${gpg_key_file}"
 }
 
-function create-keyfile() {
-  echo "${GIT_CRYPT_PRIVATE_KEY}" |
+function create_keyfile() {
+  echo "${GIT_CRYPT_GPG_KEY}" |
     base64 -d > "${gpg_key_file}"
 
   # schedule keyfile removal on script end by any reason
   trap cleanup exit
 }
 
-function load-gpg-key() {
+function load_gpg_key() {
   gpg --batch --import "${gpg_key_file}"
 
   if [ -z "${GIT_CRYPT_KEY_GRIP:-}" ]; then
@@ -37,6 +37,6 @@ function load-gpg-key() {
     "${GIT_CRYPT_KEY_GRIP}"
 }
 
-create-keyfile
-load-gpg-key
+create_keyfile
+load_gpg_key
 git-crypt unlock
