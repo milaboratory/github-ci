@@ -1,0 +1,37 @@
+name: 'git-crypt unlock'
+description: |
+  Perform 'git crypt unlock' command with given GPG key
+
+inputs:
+  gpg-key:
+    description: |
+      base64-encoded GPG key to use for unlocking
+      Use `gpg --armor --export-secret-keys <key ID> | base64`
+    required: true
+
+  gpg-key-password:
+    description: |
+      Password for given GPG key
+    required: true
+
+  gpg-key-grip:
+    description: |
+      GPG key grip.
+
+      This makes action to use specific GPG key for `git crypt` if
+      you set several gpg keys in 'gpg-key'.
+      Use `gpg --with-keygrip --list-key <key ID>` to get keygrip.
+
+      If 'gpg-key' input keeps single GPG key, just leave
+      <gpg-key-grip> empty, the action will get it automatically.
+
+    required: false
+    default: ''
+
+runs:
+  using: 'docker'
+  image: docker://ghcr.io/milaboratory/github-ci/git-crypt:4997b4515b5c1287c72a7051f91e13b08c10072e
+  env:
+    GIT_CRYPT_PRIVATE_KEY: ${{ inputs.gpg-key }}
+    GIT_CRYPT_KEY_PASSWORD: ${{ inputs.gpg-key-password }}
+    GIT_CRYPT_KEY_GRIP: ${{ inputs.gpg-key-grip }}
