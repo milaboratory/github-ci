@@ -10,7 +10,8 @@ function cleanup() {
 }
 
 function create-keyfile() {
-  echo "${GIT_CRYPT_PRIVATE_KEY}" | base64 -d > "${gpg_key_file}"
+  echo "${GIT_CRYPT_PRIVATE_KEY}" |
+    base64 -d > "${gpg_key_file}"
 
   # schedule keyfile removal on script end by any reason
   trap cleanup exit
@@ -18,6 +19,15 @@ function create-keyfile() {
 
 function load-gpg-key() {
   gpg --batch --import "${gpg_key_file}"
+
+  if [ -z "${GIT_CRYPT_KEY_GRIP:-}" ]; then
+    GIT_CRYPT_KEY_GRIP=$(
+      gpg --with-colons --with-keygrip --show-keys "${gpg_key_file}" |
+        awk -F':' ' $1 == "grp" { grip=$10 }
+                    END { print grip } '
+    )
+  fi
+
   gpgconf --kill gpg-agent
 
   gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
