@@ -1,0 +1,43 @@
+name: Add given suffix to all listed files
+author: 'MiLaboratories'
+description: |
+  Rename all <paths> by adding <suffix> to their names
+
+  File extension is taken into account:
+    - if file has extension (e.g. 'app.zip') and suffix
+      is '-1.3.5', the file would be renamed to 'app-1.3.5.zip'.
+    - if file has no extension, (e.g. 'datafile'), the suffix
+      is appended to the name: datafile-1.3.5
+
+inputs:
+  path:
+    description: |
+      Path to files to read.
+      The file contents will be set to 'content' output
+
+    required: true
+
+outputs:
+  content:
+    description: raw contents of file
+    value: ${{ steps.cat.outputs.content }}
+  path:
+    description: path of read file
+    value: ${{ inputs.path }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - shell: bash
+      id: cat
+      env:
+        FILE_PATH: ${{ inputs.path }}
+      run: |
+        # cat file
+
+        set -o nounset
+        set -o errexit
+
+        source ${{ github.action_path }}/../../lib/sh/ghwa-commands.sh
+        ghwa_set_output "content" "$(cat "${FILE_PATH}")"
