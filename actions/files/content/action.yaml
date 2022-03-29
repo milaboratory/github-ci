@@ -39,5 +39,5 @@ runs:
         set -o nounset
         set -o errexit
 
-        ${{ github.action_path }}/../lib/sh/ghwa-commands.sh
+        source ${{ github.action_path }}/../../lib/sh/ghwa-commands.sh
         ghwa_set_output "content" "$(cat "${FILE_PATH}")"
