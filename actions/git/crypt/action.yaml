@@ -30,7 +30,7 @@ inputs:
 
 runs:
   using: 'docker'
-  image: docker://ghcr.io/milaboratory/github-ci/git-crypt:4997b4515b5c1287c72a7051f91e13b08c10072e
+  image: docker://ghcr.io/milaboratory/github-ci/git-crypt:058fc858c33063fbd80fae0ad6b797f37c8be55d
   env:
     GIT_CRYPT_PRIVATE_KEY: ${{ inputs.gpg-key }}
     GIT_CRYPT_KEY_PASSWORD: ${{ inputs.gpg-key-password }}
