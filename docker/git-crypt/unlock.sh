@@ -31,10 +31,13 @@ function load_gpg_key() {
   gpgconf --kill gpg-agent
 
   gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
-  /usr/libexec/gpg-preset-passphrase \
-    --preset \
-    --passphrase "${GIT_CRYPT_KEY_PASSWORD}" \
-    "${GIT_CRYPT_KEY_GRIP}"
+
+  if [ -n "${GIT_CRYPT_KEY_PASSWORD}" ]; then
+    /usr/libexec/gpg-preset-passphrase \
+      --preset \
+      --passphrase "${GIT_CRYPT_KEY_PASSWORD}" \
+      "${GIT_CRYPT_KEY_GRIP}"
+  fi
 }
 
 create_keyfile
