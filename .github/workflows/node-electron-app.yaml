@@ -23,6 +23,31 @@ on:
         required: true
 
       #
+      # Checkout settings
+      #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+
+        type: boolean
+        required: false
+        default: false
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
       # Environment control
       #
       node-version:
@@ -98,6 +123,17 @@ on:
           Telegram Bot API authorization token
         required: false
 
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
+
 jobs:
   init:
     name: Init
@@ -123,6 +159,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v2
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
