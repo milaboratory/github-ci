@@ -311,7 +311,9 @@ jobs:
     name: Notify build
     runs-on: ubuntu-latest
 
-    if: always() && inputs.notify-telegram
+    if: |-
+         always()
+      && inputs.notify-telegram
 
     needs:
       - build
@@ -370,7 +372,11 @@ jobs:
     name: notify test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test.outputs.status != ''
+    if: |-
+         always()
+      && needs.test.outputs.status != ''
+      && inputs.notify-telegram
+
     needs:
       - test
 
@@ -388,7 +394,12 @@ jobs:
     name: notify review required
     runs-on: ubuntu-latest
 
-    if: always() && needs.test.outputs.status != '' && needs.init.is-release == 'true'
+    if: |-
+         always()
+      && needs.test.outputs.status != ''
+      && needs.init.is-release == 'true'
+      && inputs.notify-telegram
+
     needs:
       - init
       - test
@@ -444,7 +455,11 @@ jobs:
     name: notify release
     runs-on: ubuntu-latest
 
-    if: always() && needs.release.outputs.status != ''
+    if: |-
+         always()
+      && needs.release.outputs.status != ''
+      && inputs.notify-telegram
+
     needs:
       - release
 
@@ -511,7 +526,11 @@ jobs:
     name: notify publish release
     runs-on: ubuntu-latest
 
-    if: always() && needs.publish-release.outputs.status != ''
+    if: |-
+         always()
+      && needs.publish-release.outputs.status != ''
+      && inputs.notify-telegram
+
     needs:
       - publish-release
 
