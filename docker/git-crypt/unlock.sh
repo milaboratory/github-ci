@@ -32,12 +32,15 @@ function load_gpg_key() {
 
   gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
 
-  if [ -n "${GIT_CRYPT_KEY_PASSWORD}" ]; then
-    /usr/libexec/gpg-preset-passphrase \
-      --preset \
-      --passphrase "${GIT_CRYPT_KEY_PASSWORD}" \
-      "${GIT_CRYPT_KEY_GRIP}"
+  if [ -z "${GIT_CRYPT_KEY_PASSWORD}" ]; then
+    echo "Provided passphrase for GPG key is empty."
+    return 0
   fi
+
+  /usr/libexec/gpg-preset-passphrase \
+    --preset \
+    --passphrase "${GIT_CRYPT_KEY_PASSWORD}" \
+    "${GIT_CRYPT_KEY_GRIP}"
 }
 
 create_keyfile
