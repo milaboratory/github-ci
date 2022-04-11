@@ -520,7 +520,7 @@ jobs:
     name: notify review required
     runs-on: ubuntu-latest
 
-    if: always()
+    if:  always()
       && fromJSON(needs.init.outputs.is-release)
       && ( needs.test-unit.outputs.status != '' ||
            needs.test-integration.outputs.status != '' )
@@ -685,7 +685,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
           name: ${{ steps.context.outputs.current-version }}
-          tag: ${{ steps.context.outputs.current-tag }}
+          tag: ${{ steps.context.outputs.current-version-tag }}
 
           assets: |
             release-files/*
@@ -719,7 +719,8 @@ jobs:
     name: notify release
     runs-on: ubuntu-latest
 
-    if: always() && needs.release.outputs.started == 'true'
+    if:  always()
+      && needs.release.outputs.started == 'true'
     needs:
       - release
       - create-release

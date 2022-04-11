@@ -35,7 +35,7 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v2
 
-    - name: Send new release notigication to Telegram
+    - name: Send new release notification to Telegram
       if: inputs.telegram-target != ''
       uses: milaboratory/github-ci/actions/notify/telegram/release@v2
       with:
@@ -44,6 +44,6 @@ runs:
 
         product-name: ${{ inputs.product-name }}
         version: ${{ steps.context.outputs.current-version }}
-        tag: ${{ steps.context.outputs.current-tag }}
+        tag: ${{ steps.context.outputs.current-version-tag }}
 
         additional-info: ${{ inputs.additional-info }}
