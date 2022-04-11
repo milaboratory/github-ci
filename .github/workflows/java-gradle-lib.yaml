@@ -394,7 +394,7 @@ jobs:
 
     if:  always()
       && needs.test.outputs.status != ''
-      && needs.init.is-release == 'true'
+      && fromJSON(needs.init.outputs.is-release)
       && inputs.notify-telegram
 
     needs:
@@ -439,7 +439,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
           name: ${{ steps.context.outputs.current-version }}
-          tag: ${{ steps.context.outputs.current-tag }}
+          tag: ${{ steps.context.outputs.current-version-tag }}
 
           assets: 'release-files/*'
 
