@@ -425,7 +425,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && fromJSON(needs.release.outputs.started)
+      && needs.release.outputs.started == 'true'
 
     needs:
       - release
