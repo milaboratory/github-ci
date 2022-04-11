@@ -1,0 +1,306 @@
+#  Build node static website:
+#   - deploy master branch builds to GitHub Pages
+#   - deploy releases to AWS S3 bucket
+
+name: Build and release static website
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      site-name:
+        description: |
+          Website name in human-readable form.
+          As it is supposed to be shown in notifications and other texts
+        type: string
+        required: false
+        default: ${{ github.repository }}
+      site-name-slug:
+        description: |
+          Website name slug (part of release archive name)
+        type: string
+        required: true
+
+      #
+      # Checkout settings
+      #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+
+        type: boolean
+        required: false
+        default: false
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Build control
+      #
+      artifacts-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+
+      build-script-name:
+        description: |
+          Name of script for application build
+        type: string
+        required: false
+        default: 'build'
+
+      build-script-env:
+        description: |
+          JSON-encoded environment variables to set for 'npm run <build-script-name>':
+          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
+        type: string
+        required: false
+        default: '{}'
+
+      #
+      # Environment control
+      #
+      node-version:
+        description: |
+          Node version to use
+        type: string
+        required: true
+
+      node-cache-version:
+        description: |
+          This is the way to control cache reset: just change the
+          input value to build project from scratch.
+        type: string
+        required: false
+        default: 'v1'
+
+      #
+      # Release control
+      #
+      static-files-path:
+        description: |
+          Path to static files to deploy to GitHub pages and S3.
+          This files will be saved as artifact as a result of 'build' step.
+          Globbing is available: 'dist/**', 'assets/*', ...
+        type: string
+        required: false
+        default: 'dist/**'
+
+      s3-bucket-name:
+        description: |
+          S3 bucket name for static files releases
+        type: string
+        required: true
+
+      s3-bucket-path:
+        description: |
+          Root path for static files in S3 bucket
+        type: string
+        required: false
+        default: ''
+
+      s3-bucket-region:
+        description: |
+          S3 bucket location region
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      AWS_KEY_ID:
+        description: |
+          AWS Key ID for S3 to use when uloading new release.
+        required: true
+      AWS_KEY_SECRET:
+        description: |
+          AWS Key Secet for S3 to use when uploading new release.
+        required: true
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v2
+
+    outputs:
+      current-version: ${{ steps.context.outputs.current-version }}
+      current-tag: ${{ steps.context.outputs.current-tag }}
+      is-release: ${{ steps.context.outputs.is-release }}
+
+  build:
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v2
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: milaboratory/github-ci/actions/node/prepare@v1
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.node-cache-version }}
+
+      - name: Install packages
+        run: npm install
+
+      - name: Set node env
+        uses: milaboratory/github-ci/actions/shell@v2
+        env:
+          IS_RELEASE: ${{ needs.init.outputs.is-release }}
+        with:
+          run: |
+            if [ "${IS_RELEASE}" = 'true' ]; then
+              ghwa_set_env "NODE_ENV" "production"
+            else
+              ghwa_set_env "NODE_ENV" "development"
+            fi
+
+      - name: Build
+        env: ${{ fromJSON(inputs.build-script-env) }}
+        run: npm run ${{ inputs.build-script-name }}
+
+      - name: Save website static files to artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: static-files
+          path: ${{ inputs.static-files-path }}
+
+  # Put docker image build job here.
+  # Assemble nginx + default config for SPA + website static file.
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && inputs.notify-telegram
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v2
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: ${{ needs.build.outputs.status }}
+          product-name: ${{ inputs.site-name }}
+
+  create-release:
+    name: Create release
+
+    runs-on: ubuntu-latest
+    needs:
+      - init
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    env:
+      RELEASE_NAME: ${{ inputs.site-name-slug }}-${{ needs.init.current-version }}
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: static-files
+          path: ${{ env.RELEASE_NAME }}
+
+      - name: Create release archive
+        shell: bash
+        run: |
+          tar czf "${RELEASE_NAME}.tar.gz" "${RELEASE_NAME}/"
+
+      - name: Create release
+        id: release
+        uses: milaboratory/github-ci/actions/release/create@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ needs.init.outputs.current-version }}
+          tag: ${{ needs.init.outputs.current-tag }}
+
+          assets: ${{ env.RELEASE_NAME }}.tar.gz
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+      release-url: ${{ steps.release.outputs.html_url }}
+
+#  deploy-s3:
+#    runs-on: ubuntu-latest
+#
+#    needs:
+#      - init
+#      - create-release
+#
+#    steps:
+#      - name: Download build files
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: static-files
+#          path: static-files
+#
+#      - uses: milaboratory/github-ci/actions/aws/configure@v2
+#        with:
+#          key-id: ${{ secrets.AWS_KEY_ID }}
+#          key-secret: ${{ secrets.AWS_KEY_SECRET }}
+#          region: ${{ inputs.s3-bucket-region }}
+#          append: false
+#
+#      - uses: milaboratory/github-ci/actions/aws@v2
+#        with:
+#          args: |
+#            s3
+#            cp
+#            --recursive
+#            static-files/
+#            s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-path }}
