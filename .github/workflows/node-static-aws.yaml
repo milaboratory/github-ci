@@ -178,7 +178,7 @@ jobs:
 
     outputs:
       current-version: ${{ steps.context.outputs.current-version }}
-      current-tag: ${{ steps.context.outputs.current-tag }}
+      current-version-tag: ${{ steps.context.outputs.current-version-tag }}
       is-release: ${{ steps.context.outputs.is-release }}
 
   build:
@@ -359,7 +359,7 @@ jobs:
       - release
 
     env:
-      RELEASE_NAME: ${{ inputs.site-name-slug }}-${{ needs.init.current-version }}
+      RELEASE_NAME: ${{ inputs.site-name-slug }}-${{ needs.init.outputs.current-version }}
 
     steps:
       - uses: actions/download-artifact@v3
@@ -379,7 +379,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
           name: ${{ needs.init.outputs.current-version }}
-          tag: ${{ needs.init.outputs.current-tag }}
+          tag: ${{ needs.init.outputs.current-version-tag }}
 
           assets: ${{ env.RELEASE_NAME }}.tar.gz
 
