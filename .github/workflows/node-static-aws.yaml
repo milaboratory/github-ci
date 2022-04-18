@@ -436,12 +436,14 @@ jobs:
 
       - name: invalidation paths list
         id: cloudfront-invalidate-paths
+        if: inputs.cloudfront-invalidate-paths != ''
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: ${{ inputs.cloudfront-invalidate-paths }}
 
       - name: invalidate CDN caches
-        if: inputs.cloudfront-distribution-id != ''
+        if:  inputs.cloudfront-distribution-id != ''
+          && inputs.cloudfront-invalidate-paths != ''
         uses: milaboratory/github-ci/actions/aws@v2
         with:
           args: |
