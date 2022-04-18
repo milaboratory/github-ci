@@ -10,7 +10,7 @@ description: |
 inputs:
   input:
     description: |
-      Lines to prefix with <prefix>
+      Items to encode to JSON array, one per line.
     required: true
 
 outputs:
