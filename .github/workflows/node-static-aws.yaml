@@ -434,13 +434,6 @@ jobs:
             s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-path }}
             --delete
 
-      - name: invalidation paths list
-        id: cloudfront-invalidate-paths
-        if: inputs.cloudfront-invalidate-paths != ''
-        uses: milaboratory/github-ci/actions/strings/json-list@v2
-        with:
-          input: ${{ inputs.cloudfront-invalidate-paths }}
-
       - name: invalidate CDN caches
         if:  inputs.cloudfront-distribution-id != ''
           && inputs.cloudfront-invalidate-paths != ''
@@ -452,7 +445,7 @@ jobs:
             --distribution-id
             ${{ inputs.cloudfront-distribution-id }}
             --paths
-            ${{ steps.cloudfront-invalidate-paths.outputs.result }}
+            ${{ inputs.cloudfront-invalidate-paths }}
 
   notify-release:
     name: Notify release
