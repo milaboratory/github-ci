@@ -138,6 +138,20 @@ on:
         required: false
         default: 'eu-central-1'
 
+      cloudfront-distribution-id:
+        description: |
+          CloudFront distribution ID above the S3 bucket with files
+        type: string
+        required: false
+        default: ''
+
+      cloudfront-invalidate-paths:
+        description: |
+          Paths to invalidate CloudFront distribution ID above the S3 bucket with files
+        type: string
+        required: false
+        default: ''
+
       #
       # Notifications
       #
@@ -415,10 +429,23 @@ jobs:
         with:
           args: |
             s3
-            cp
-            --recursive
+            sync
             static-files/
             s3://${{ inputs.s3-bucket-name }}/${{ inputs.s3-bucket-path }}
+            --delete
+
+      - name: invalidate CDN caches
+        if:  inputs.cloudfront-distribution-id != ''
+          && inputs.cloudfront-invalidate-paths != ''
+        uses: milaboratory/github-ci/actions/aws@v2
+        with:
+          args: |
+            cloudfront
+            create-invalidation
+            --distribution-id
+            ${{ inputs.cloudfront-distribution-id }}
+            --paths
+            ${{ inputs.cloudfront-invalidate-paths }}
 
   notify-release:
     name: Notify release
