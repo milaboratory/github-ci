@@ -318,21 +318,39 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-report }}
+        BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
+        REPORT_DIR: reports/tests/test
         REPORT_PATH: ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
       with:
+        dump-stdout: false
         run: |
-          if [ "${UPLOAD_ENABLED}" = 'true' ] && [ -e "${REPORT_PATH}" ]; then
-            echo 'true'
+          if [ "${UPLOAD_ENABLED}" != 'true' ]; then
+            exit 0
           fi
+
+          REPORT_PATH="${BUILD_DIR}/${REPORT_DIR}"
+
+          if ! [ -e "${REPORT_PATH}" ]; then
+            ghwa_notice "Tests report '<build dir>/${REPORT_DIR}' does not exist, nothing to upload."
+            exit 0
+          fi
+
+          if [ -z "$(ls -A ${REPORT_PATH})" ]; then
+            ghwa_error "Tests report '<build dir>/${REPORT_DIR}' is empty, nothing to upload. It seems something broke gradle process."
+            exit 0
+          fi
+
+          ghwa_set_env "REPORT_PATH" "${REPORT_PATH}"
+          ghwa_set_env "UPLOAD_REPORT" "true"
 
     - name: Upload test results
       id: upload-report
-      if: always() && steps.should-upload.outputs.stdout == 'true'
+      if: always() && env.UPLOAD_REPORT == 'true'
       uses: milaboratory/github-ci/actions/aws@v2
       with:
         args: |
           s3
           cp
           --recursive
-          ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
+          ${{ env.REPORT_PATH }}
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}
