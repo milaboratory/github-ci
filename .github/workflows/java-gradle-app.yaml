@@ -655,11 +655,15 @@ jobs:
     needs:
       - init
 
-      # Wait for any of docker image and archive distributions to be ready
+      - build
       - distDocker
       - distArchive
 
-    if: always() && fromJSON(needs.init.outputs.is-release)
+    if:  always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.build.outputs.status != 'failure'
+      && needs.distDocker.outputs.status != 'failure'
+      && needs.distArchive.outputs.status != 'failure'
     environment: release
 
     steps:
