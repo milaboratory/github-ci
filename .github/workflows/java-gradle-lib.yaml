@@ -421,7 +421,10 @@ jobs:
     needs:
       - build
 
-    if: fromJSON(needs.init.outputs.is-release)
+    if:  always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.build.outputs.status != 'failure'
+
     environment: release
 
     steps:
