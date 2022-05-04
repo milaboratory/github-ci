@@ -270,9 +270,12 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - init
-      - build
+      - merge-status
 
-    if: fromJSON(needs.init.outputs.is-release)
+    if:  always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.merge-status.outputs.status == 'success'
+
     environment: release
 
     steps:
