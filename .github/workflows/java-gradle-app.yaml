@@ -659,7 +659,7 @@ jobs:
       - distDocker
       - distArchive
 
-    if: (cancelled() || success()) && fromJSON(needs.init.outputs.is-release)
+    if: always() && fromJSON(needs.init.outputs.is-release)
     environment: release
 
     steps:
