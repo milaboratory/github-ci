@@ -582,7 +582,7 @@ jobs:
       started: 'true'
 
   distDocker:
-    name: :dockerBuildImage
+    name: docker
     runs-on: ubuntu-latest
 
     if: inputs.dist-docker
@@ -631,8 +631,12 @@ jobs:
     if: always() && inputs.notify-telegram
 
     needs:
+      # Get build status from first build job
       - build
+
+      # Wait for docker image and archive to be built before sending notification
       - distDocker
+      - distArchive
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v2
@@ -650,7 +654,10 @@ jobs:
 
     needs:
       - init
+
+      # Wait for any of docker image and archive distributions to be ready
       - distDocker
+      - distArchive
 
     if: (cancelled() || success()) && fromJSON(needs.init.outputs.is-release)
     environment: release
