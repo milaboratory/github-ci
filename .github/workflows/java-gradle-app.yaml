@@ -590,9 +590,6 @@ jobs:
       - build
 
     steps:
-      - shell: bash
-        run: 'false'
-
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
