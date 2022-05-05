@@ -50,6 +50,13 @@ on:
       #
       # Environment control
       #
+      env:
+        description: |
+          JSON-encoded map of environment variables to set for each
+          job in workflow
+        type: string
+        required: false
+        default: '{}'
       java-version:
         description: |
           Version of JAVA to use for build
@@ -331,6 +338,8 @@ on:
         description: |
           Password for GPG key
         required: false
+
+env: ${{ fromJSON(inputs.env) }}
 
 jobs:
   init:
