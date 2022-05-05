@@ -50,6 +50,15 @@ on:
       #
       # Environment control
       #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+        type: string
+        required: false
+        default: '{}'
       node-version:
         description: |
           Node version to use
@@ -133,6 +142,8 @@ on:
         description: |
           Password for GPG key
         required: false
+
+env: ${{ fromJSON(inputs.env) }}
 
 jobs:
   init:
