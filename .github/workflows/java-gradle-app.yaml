@@ -56,6 +56,9 @@ on:
           as JSON-encoded map:
             { "MY_VAR_1": "awesome value",
               "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
         type: string
         required: false
         default: '{}'
@@ -312,8 +315,8 @@ on:
             { "MY_VAR_1": "awesome value",
               "VARIABLE_2": "not so awesome :)" }
 
-          This input's envs are merged with secrets.env
-          This input's envs have lower priority compared than secrets.env
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
         required: false
 
       GRADLE_PROPERTIES:
@@ -352,8 +355,6 @@ on:
           Password for GPG key
         required: false
 
-env: ${{ fromJSON(secrets.env) }}
-
 jobs:
   init:
     name: Init
@@ -374,6 +375,11 @@ jobs:
       - init
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -409,6 +415,11 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -478,6 +489,11 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -570,6 +586,11 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -612,6 +633,11 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
