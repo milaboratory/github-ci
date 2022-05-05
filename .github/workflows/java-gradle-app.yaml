@@ -52,8 +52,10 @@ on:
       #
       env:
         description: |
-          JSON-encoded map of environment variables to set for each
-          job in workflow
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
         type: string
         required: false
         default: '{}'
