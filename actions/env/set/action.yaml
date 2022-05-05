@@ -50,6 +50,10 @@ runs:
         run: |
           echo "${ENV_TO_SET}" |
             while read -r env_line; do
+              if [ -z "${env_line}" ]; then
+                continue
+              fi
+
               name="${env_line%%=*}"
               value="${env_line#*=}"
 
