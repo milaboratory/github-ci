@@ -20,7 +20,14 @@ runs:
         ENV_TO_SET: ${{ inputs.env }}
       with:
         run: |
-          jq 'keys[]' <<<"${ENV_TO_SET}" |
-            while read -r env_name; do
-              ghwa_set_env "${env_name}" "$( jq ".[${env_name}]" <<<"${ENV_TO_SET}" )"
-            done
+          jq -r 'keys[]' <<<"${ENV_TO_SET}" |
+              while read -r env_name; do
+                env_value="$(
+                  jq -r \
+                    --arg "key" "${env_name}" \
+                    '.[$key]' \
+                    <<<"${ENV_TO_SET}"
+                )"
+
+                ghwa_set_env "${env_name}" "${env_value}"
+              done
