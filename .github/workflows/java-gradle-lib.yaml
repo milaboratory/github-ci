@@ -56,6 +56,9 @@ on:
           as JSON-encoded map:
             { "MY_VAR_1": "awesome value",
               "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
         type: string
         required: false
         default: '{}'
@@ -182,6 +185,17 @@ on:
         default: true
 
     secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
       GRADLE_PROPERTIES:
         description: |
           Create properties file with given contents before starting the build
@@ -218,8 +232,6 @@ on:
           Password for GPG key
         required: false
 
-env: ${{ fromJSON(inputs.env) }}
-
 jobs:
   init:
     name: Init
@@ -240,6 +252,11 @@ jobs:
       - init
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -346,6 +363,11 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -492,6 +514,11 @@ jobs:
     environment: release
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
