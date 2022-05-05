@@ -1,0 +1,26 @@
+name: Set environment variables for the next steps
+author: 'MiLaboratories'
+description: |
+  Get JSON-encoded map of environment variables to set
+  and make this variables available for the rest of steps in job.
+
+inputs:
+  env:
+    description: |
+      JSON-encoded map of env variables to set
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set environment variables
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        ENV_TO_SET: ${{ inputs.env }}
+      with:
+        run: |
+          jq 'keys[]' <<<"${ENV_TO_SET}" |
+            while read -r env_name; do
+              ghwa_set_env "${env_name}" "$( jq ".[${env_name}]" <<<"${ENV_TO_SET}" )"
+            done
