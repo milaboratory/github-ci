@@ -56,6 +56,9 @@ on:
           as JSON-encoded map:
             { "MY_VAR_1": "awesome value",
               "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
         type: string
         required: false
         default: '{}'
@@ -123,6 +126,17 @@ on:
         default: true
 
     secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -142,8 +156,6 @@ on:
         description: |
           Password for GPG key
         required: false
-
-env: ${{ fromJSON(inputs.env) }}
 
 jobs:
   init:
@@ -169,6 +181,11 @@ jobs:
       - init
 
     steps:
+      - uses: milaboratory/github-ci/actions/env@v2
+        with:
+          in1: ${{ inputs.env }}
+          in2: ${{ secrets.env }}
+
       - uses: actions/checkout@v2
         with:
           submodules: ${{ inputs.checkout-submodules }}
