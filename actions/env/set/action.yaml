@@ -50,8 +50,8 @@ runs:
         run: |
           echo "${ENV_TO_SET}" |
             while read -r env_line; do
-              declare "${env_line}"
+              name="${env_line%%=*}"
+              value="${env_line#*=}"
 
-              var_name="${env_line%%=*}"
-              ghwa_set_env "${var_name}" "${!var_name}"
+              ghwa_set_env "${name}" "${value}"
             done
