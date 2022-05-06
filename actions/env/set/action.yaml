@@ -18,6 +18,12 @@ inputs:
     required: false
     default: ''
 
+  mask-values:
+    description: |
+      Make action to mask environment variables values
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
@@ -27,25 +33,31 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         ENV_TO_SET: ${{ inputs.json }}
+        MASK: ${{ inputs.mask-values }}
       with:
         run: |
           jq -r 'keys[]' <<<"${ENV_TO_SET}" |
-              while read -r env_name; do
-                env_value="$(
-                  jq -r \
-                    --arg "key" "${env_name}" \
-                    '.[$key]' \
-                    <<<"${ENV_TO_SET}"
-                )"
+            while read -r name; do
+              value="$(
+                jq -r \
+                  --arg "key" "${name}" \
+                  '.[$key]' \
+                  <<<"${ENV_TO_SET}"
+              )"
 
-                ghwa_set_env "${env_name}" "${env_value}"
-              done
+              ghwa_set_env "${name}" "${value}"
+
+              if [ "${MASK}" = 'true' ]; then
+                ghwa_add_mask "${value}"
+              fi
+            done
 
     - name: Set from <list>
       if: inputs.list != ''
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         ENV_TO_SET: ${{ inputs.list }}
+        MASK: ${{ inputs.mask-values }}
       with:
         run: |
           echo "${ENV_TO_SET}" |
@@ -58,4 +70,8 @@ runs:
               value="${env_line#*=}"
 
               ghwa_set_env "${name}" "${value}"
+
+              if [ "${MASK}" = 'true' ]; then
+                ghwa_add_mask "${value}"
+              fi
             done
