@@ -21,13 +21,18 @@ description: |
   in single action call
 
 inputs:
-  in1:
+  inputs:
     description: |
-      JSON-encoded map of env variables to set
+      JSON-encoded map of env variables to set.
+      Values of environment variables will be shown in action logs.
+
+      Use <secrets> input for sensitive data.
     required: true
-  in2:
+
+  secrets:
     description: |
-      JSON-encoded map of env variables to set
+      JSON-encoded map of env variables to set.
+      Values of environment variables will be masked in logs.
     required: true
 
 runs:
@@ -36,8 +41,10 @@ runs:
   steps:
     - uses: milaboratory/github-ci/actions/env/set@v2
       with:
-        json: ${{ inputs.in1 }}
+        json: ${{ inputs.inputs }}
+        mask-values: false
 
     - uses: milaboratory/github-ci/actions/env/set@v2
       with:
-        json: ${{ inputs.in2 }}
+        json: ${{ inputs.secrets }}
+        mask-values: true
