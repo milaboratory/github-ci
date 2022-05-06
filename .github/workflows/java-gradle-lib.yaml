@@ -254,8 +254,8 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/actions/env@v2
         with:
-          in1: ${{ inputs.env }}
-          in2: ${{ secrets.env }}
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
       - uses: actions/checkout@v2
         with:
@@ -365,8 +365,8 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/actions/env@v2
         with:
-          in1: ${{ inputs.env }}
-          in2: ${{ secrets.env }}
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
       - uses: actions/checkout@v2
         with:
@@ -516,8 +516,8 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/actions/env@v2
         with:
-          in1: ${{ inputs.env }}
-          in2: ${{ secrets.env }}
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
       - uses: actions/checkout@v2
         with:
