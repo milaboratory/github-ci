@@ -52,11 +52,15 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          🚀 \[[{{ product["name"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] New release: [{{ release["version"] }}](
+          🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
             )
+          [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          )
+          [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          )
 
           {{ product["additional_info"] }}
 

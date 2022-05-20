@@ -92,26 +92,27 @@ runs:
           {%- endmacro %}
           {%- if job["status"] == "failure" -%}
 
-          ❌ \[[{{ product["name"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
+          ❌ \[{{ product["name"] }}] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
 
           {%- else -%}
 
-          📝 \[[{{ product["name"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
+          📝 \[{{ product["name"] }}] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
 
           {%- endif %}
-            Branch: [{{ github["ref_name"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-            ) ([{{ github["sha"][:8] }}](
+            Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] -}}
             ))
             Packages:
             {%- for i in packages %}
               - ```{{ i }}```
             {%- endfor %}
+
+            [CI logs](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            )
+            [Source code](
+              {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+            )
 
           {{ product["additional_info"] }}
 
