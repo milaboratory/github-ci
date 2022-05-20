@@ -107,12 +107,11 @@ runs:
               - ```{{ i }}```
             {%- endfor %}
 
-            [CI logs](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )
-            [Source code](
+            [ [Source code](
               {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-            )
+            ) | [CI logs](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ) ]
 
           {{ product["additional_info"] }}
 

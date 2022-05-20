@@ -74,12 +74,6 @@ runs:
           {{- category_icons[ build["category"] ] | default ('💚') -}}
           {{- " " -}} 
           \[{{ product["name"] }}] New {{ build["category"] }} build: {{ build["version"] }} on {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
-          [CI logs](
-            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-          )
-          [Source code](
-            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-          )
           
           {%- if docker_images | length > 0 %}
           Docker images:
@@ -94,6 +88,12 @@ runs:
           - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
+
+          [ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          ) ]
 
           {{ product["additional_info"] }}
 
