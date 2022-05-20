@@ -47,7 +47,6 @@ runs:
         message: |
           💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
             Branch: ${{ github.ref_name }} ([${{ steps.short-sha.outputs.stdout }}](${{github.server_url}}/${{github.repository}}/commit/${{github.sha}}))
-
           \[ [Source code](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}}) | [CI logs](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) ]
 
           ${{ inputs.additional-info }}

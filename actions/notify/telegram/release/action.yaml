@@ -55,7 +55,6 @@ runs:
           🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
               {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
             )
-
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](

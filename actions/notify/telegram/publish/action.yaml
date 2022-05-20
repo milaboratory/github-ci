@@ -106,7 +106,6 @@ runs:
             {%- for i in packages %}
               - ```{{ i }}```
             {%- endfor %}
-
             \[ [Source code](
               {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
             ) | [CI logs](
