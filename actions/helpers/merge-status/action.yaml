@@ -4,11 +4,15 @@ description: |
   Merge several CI job statuses into single 'overall' status.
 
   Statuses severeness:
+    <any unknown status>: -1
     canceled: 0
     success: 1
     failure: 2
 
   The merge logic is simple: get maximum of severeness among input statues.
+
+  Unknown statuses are ignored if any of known statuses present in list.
+  If input statuses list keeps only unknown statuses, the merge result is empty string.
 
   Examples:
     input: [ "canceled", "canceled", "canceled" ]
@@ -19,6 +23,9 @@ description: |
 
     input: [ "success", "failure" ]
     result: max([1, 2]) = 2 -> 'failure'
+
+    input: [ "unknown1", "unknown2", "", "alala" ]
+    result: max([-1, -1, -1, -1]) = -1 -> ''
 
 inputs:
   statuses:
@@ -31,7 +38,7 @@ inputs:
 outputs:
   status:
     description: |
-      Status merged by severity
+      Status merged by severity (see the action description)
     value: ''
 
   has-success:
@@ -78,7 +85,10 @@ runs:
           #
           # Calculate result status
           #
-          result_status='cancelled'
+          result_status=''
+          if "${has_cancelled}"; then
+            result_status='cancelled'
+          fi
           if "${has_success}"; then
             result_status='success'
           fi
