@@ -461,7 +461,10 @@ jobs:
           upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
@@ -469,7 +472,7 @@ jobs:
     name: notify unit test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-unit.outputs.status != ''
+    if: always() && needs.test-unit.outputs.started == 'true'
     needs:
       - test-unit
 
@@ -480,7 +483,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          tests-status: ${{ needs.test-unit.outputs.status }}
+          tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
 
@@ -535,7 +538,10 @@ jobs:
           upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
@@ -543,7 +549,7 @@ jobs:
     name: notify integration test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-integration.outputs.status != ''
+    if: always() && needs.test-integration.outputs.started == 'true'
     needs:
       - test-integration
 
@@ -554,7 +560,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.app-name }}
-          tests-status: ${{ needs.test-integration.outputs.status }}
+          tests-status: ${{ needs.test-integration.result }}
           tests-type: 'Integration'
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
@@ -564,8 +570,8 @@ jobs:
 
     if:  always()
       && fromJSON(needs.init.outputs.is-release)
-      && ( needs.test-unit.outputs.status != '' ||
-           needs.test-integration.outputs.status != '' )
+      && ( needs.test-unit.outputs.started == 'true' ||
+           needs.test-integration.outputs.started == 'true' )
 
     needs:
       # Send 'review required' notification only after all tests finished
@@ -623,7 +629,6 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
     outputs:
-      status: ${{ job.status }}
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
@@ -696,7 +701,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.build.outputs.status }}
+          build-status: ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
@@ -713,9 +718,9 @@ jobs:
 
     if:  always()
       && fromJSON(needs.init.outputs.is-release)
-      && needs.build.outputs.status != 'failure'
-      && needs.distDocker.outputs.status != 'failure'
-      && needs.distArchive.outputs.status != 'failure'
+      && needs.build.result != 'failure'
+      && needs.distDocker.result != 'failure'
+      && needs.distArchive.result != 'failure'
     environment: release
 
     steps:
@@ -796,5 +801,9 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.upload-release-s3.result }}
 
           product-name: ${{ inputs.app-name }}
