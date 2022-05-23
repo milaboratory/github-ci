@@ -39,25 +39,26 @@ outputs:
   status:
     description: |
       Status merged by severity (see the action description)
-    value: ''
+    value: ${{ steps.merge.outputs.status }}
 
   has-success:
     description: |
       Gets 'success' if at least one input status is 'success'
       Otherwise equals to 'status' output
-    value: ''
+    value: ${{ steps.merge.outputs.has-success }}
 
   has-cancelled:
     description: |
       Gets 'cancelled' if at least one input status is 'cancelled'
       Otherwise equals to 'status' output
-    value: ''
+    value: ${{ steps.merge.outputs.has-cancelled }}
 
 runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/shell@v2
+    - id: merge
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         INPUT_STATUSES: ${{ inputs.statuses }}
       with:
