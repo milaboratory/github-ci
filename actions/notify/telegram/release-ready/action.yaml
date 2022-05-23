@@ -29,14 +29,16 @@ inputs:
   docker-images:
     description: |
       List of docker images related to build in JSON format
+      Empty string is treated as empty JSON list ('[]') for convenience.
     required: false
-    default: '[]'
+    default: ''
 
   maven-packages:
     description: |
       List of maven packages related to build in JSON format
+      Empty string is treated as empty JSON list ('[]') for convenience.
     required: false
-    default: '[]'
+    default: ''
 
   additional-info:
     description: |
@@ -51,6 +53,17 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v2
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+
     - uses: milaboratory/github-ci/actions/templates/jinja@v2
       id: message
       with:
@@ -63,8 +76,8 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "docker_images": ${{ inputs.docker-images }},
-            "maven_packages": ${{ inputs.maven-packages }} }
+            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }},
+            "maven_packages": ${{ fromJSON(steps.json.outputs.data).maven-packages }} }
 
         template: |
           🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
@@ -91,7 +104,6 @@ runs:
           ) ]
 
           {{ product["additional_info"] }}
-
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v2
       with:

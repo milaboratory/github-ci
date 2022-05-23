@@ -55,7 +55,6 @@ runs:
           ☠️ \[{{ product["name"] }}] Release failed! :(
             Version: {{ release["version"] }}
             Tag: {{ release["tag"] }}
-          
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
