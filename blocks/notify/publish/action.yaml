@@ -19,8 +19,13 @@ inputs:
   job-status:
     description: |
       Publication job status.
+
       To get it, put it into job's outputs (status: {{ job.status }}),
-      then get it from needs.<job-id>.outputs.status
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
     required: true
 
   product-name:
@@ -75,15 +80,20 @@ runs:
             echo "dev"
           fi
 
+    - id: job-status
+      name: Merge publish job statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      with:
+        statuses: ${{ inputs.job-status }}
 
-    - name: Report tests result to Telegram
+    - name: Report publish result to Telegram
       if: inputs.telegram-target != ''
       uses: milaboratory/github-ci/actions/notify/telegram/publish@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
 
-        job-status: ${{ inputs.job-status }}
+        job-status: ${{ steps.job-status.outputs.status }}
 
         product-name: ${{ inputs.product-name }}
         product-type: ${{ inputs.product-type }}
