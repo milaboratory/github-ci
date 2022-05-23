@@ -20,8 +20,13 @@ inputs:
   build-status:
     description: |
       Build job status.
+
       To get it, put it into job's outputs (status: {{ job.status }}),
-      then get it from needs.<job-id>.outputs.status
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
     required: true
 
   product-name:
@@ -70,8 +75,14 @@ runs:
             echo "dev"
           fi
 
+    - id: build-status
+      name: Merge build statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      with:
+        statuses: ${{ inputs.build-status }}
+
     - name: Report build failure to Telegram
-      if: inputs.build-status != 'success'
+      if: steps.build-status.outputs.status != 'success'
       uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
@@ -83,7 +94,7 @@ runs:
         additional-info: ${{ inputs.additional-info }}
 
     - id: json
-      if: inputs.build-status == 'success'
+      if: steps.build-status.outputs.status == 'success'
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
@@ -95,7 +106,7 @@ runs:
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
 
     - name: Report build is ready
-      if: inputs.build-status == 'success'
+      if: steps.build-status.outputs.status == 'success'
       uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}

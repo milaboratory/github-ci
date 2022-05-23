@@ -20,8 +20,13 @@ inputs:
   tests-status:
     description: |
       Tests job status.
+
       To get it, put it into job's outputs (status: {{ job.status }}),
-      then get it from needs.<job-id>.outputs.status
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
     required: true
   tests-type:
     description: |
@@ -55,6 +60,12 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v2
 
+    - id: tests-status
+      name: Merge test statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      with:
+        statuses: ${{ inputs.tests-status }}
+
     - name: Report tests result to Telegram
       if: inputs.telegram-target != ''
       uses: milaboratory/github-ci/actions/notify/telegram/tests@v2
@@ -64,7 +75,7 @@ runs:
 
         product-name: ${{ inputs.product-name }}
         build-version: ${{ steps.context.outputs.current-version }}
-        tests-status: ${{ inputs.tests-status }}
+        tests-status: ${{ steps.tests-status.outputs.status }}
         tests-type: ${{ inputs.tests-type }}
         report-url: ${{ inputs.report-url }}
 
