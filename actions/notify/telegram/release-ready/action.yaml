@@ -1,0 +1,102 @@
+name: Notify new release created
+description: |
+  Notify User or Channel about new release
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+  version:
+    description: |
+      Release version number
+    required: true
+  tag:
+    description: |
+      Release tag
+    required: true
+
+  docker-images:
+    description: |
+      List of docker images related to build in JSON format
+    required: false
+    default: '[]'
+
+  maven-packages:
+    description: |
+      List of maven packages related to build in JSON format
+    required: false
+    default: '[]'
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v2
+
+    - uses: milaboratory/github-ci/actions/templates/jinja@v2
+      id: message
+      with:
+        data: |
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "release": { "version": ${{ toJSON(inputs.version) }},
+                         "tag": ${{ toJSON(inputs.tag) }} },
+
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "docker_images": ${{ inputs.docker-images }},
+            "maven_packages": ${{ inputs.maven-packages }} }
+
+        template: |
+          🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
+            )
+
+          {%- if docker_images | length > 0 %}
+          Docker images:
+          {%- for i in docker_images %}
+            - ```{{ i }}```
+          {%- endfor %}
+          {%- endif %}
+
+          {%- if maven_packages | length > 0 %}
+          Maven packages:
+          {%- for i in maven_packages %}
+            - ```{{ i }}```
+          {%- endfor %}
+          {%- endif %}
+          \[ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          ) ]
+
+          {{ product["additional_info"] }}
+
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v2
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: ${{ steps.message.outputs.data }}

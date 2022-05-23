@@ -52,9 +52,10 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
-            )
+          ☠️ \[{{ product["name"] }}] Release failed! :(
+            Version: {{ release["version"] }}
+            Tag: {{ release["tag"] }}
+          
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
