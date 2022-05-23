@@ -782,9 +782,9 @@ jobs:
           input: |-
             ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
-      outputs:
-        status: ${{ job.status }}
-        libs-list: ${{ steps.libs-list.outputs.result }}
+    outputs:
+      status: ${{ job.status }}
+      libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-build:
     name: Notify build
