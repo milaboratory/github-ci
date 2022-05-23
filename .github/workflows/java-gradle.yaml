@@ -725,6 +725,9 @@ jobs:
 
     outputs:
       status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   distLibrary:
@@ -784,6 +787,9 @@ jobs:
 
     outputs:
       status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-build:
@@ -807,7 +813,12 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.build.outputs.status }}
+          build-status: |
+            ${{ needs.build.outputs.status }}
+            ${{ needs.distDocker.outputs.status }}
+            ${{ needs.distArchive.outputs.status }}
+            ${{ needs.distLibrary.outputs.status }}
+
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
@@ -830,6 +841,7 @@ jobs:
       && needs.distDocker.outputs.status != 'failure'
       && needs.distArchive.outputs.status != 'failure'
       && needs.distLibrary.outputs.status != 'failure'
+
     environment: release
 
     steps:
