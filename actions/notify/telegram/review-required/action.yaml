@@ -61,13 +61,15 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }} }
 
         template: |
-          🧑‍🚀 \[[{{ product["name"] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] {{ message }}
+          🧑‍🚀 \[{{ product["name"] }}] {{ message }}
             {%- if reviewers | length %}
-            {{ reviewers | join(', ') }}, your approval is required.
+            {{ reviewers | join(', ') }}, your [approval is required](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ).
             {%- else %}
-            Approval is required.
+            [Approval is required](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ).
             {%- endif %}
 
           {{ product["additional_info"] }}
