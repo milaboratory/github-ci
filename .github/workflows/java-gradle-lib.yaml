@@ -353,7 +353,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.build.outputs.status }}
+          build-status: ${{ needs.build.result }}
           product-name: ${{ inputs.lib-name }}
           maven-packages: ${{ needs.build.outputs.libs-list }}
 
@@ -398,7 +398,10 @@ jobs:
           upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
@@ -407,7 +410,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && needs.test.outputs.status != ''
+      && needs.test.outputs.started == 'true'
       && inputs.notify-telegram
 
     needs:
@@ -420,7 +423,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.lib-name }}
-          tests-status: ${{ needs.test.outputs.status }}
+          tests-status: ${{ needs.test.result }}
           report-url: ${{ fromJSON(needs.test.outputs.report-uploaded) && needs.test.outputs.report-url || '' }}
 
   notify-release-review:
@@ -428,7 +431,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && needs.test.outputs.status != ''
+      && needs.test.outputs.started == 'true'
       && fromJSON(needs.init.outputs.is-release)
       && inputs.notify-telegram
 
@@ -458,7 +461,7 @@ jobs:
 
     if:  always()
       && fromJSON(needs.init.outputs.is-release)
-      && needs.build.outputs.status != 'failure'
+      && needs.build.result != 'failure'
 
     environment: release
 
@@ -484,14 +487,16 @@ jobs:
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
 
   notify-release:
     name: notify release
     runs-on: ubuntu-latest
 
     if:  always()
-      && needs.release.outputs.status != ''
+      && needs.release.outputs.started == 'true'
       && inputs.notify-telegram
 
     needs:
@@ -502,6 +507,8 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: ${{ needs.release.result }}
 
           product-name: ${{ inputs.lib-name }}
 
@@ -558,7 +565,10 @@ jobs:
             ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-publish-release:
@@ -566,7 +576,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && needs.publish-release.outputs.status != ''
+      && needs.publish-release.outputs.started == 'true'
       && inputs.notify-telegram
 
     needs:
@@ -578,7 +588,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          job-status: ${{ needs.publish-release.outputs.status }}
+          job-status: ${{ needs.publish-release.result }}
 
           product-name: ${{ inputs.lib-name }}
           product-type: library

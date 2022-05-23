@@ -5,9 +5,10 @@ description: |
 
   Statuses severeness:
     <any unknown status>: -1
-    canceled: 0
-    success: 1
-    failure: 2
+    skipped: 0
+    cancelled: 1
+    success: 2
+    failure: 3
 
   The merge logic is simple: get maximum of severeness among input statues.
 
@@ -15,14 +16,14 @@ description: |
   If input statuses list keeps only unknown statuses, the merge result is empty string.
 
   Examples:
-    input: [ "canceled", "canceled", "canceled" ]
-    result: max([0, 0, 0] = 0 -> 'canceled'
+    input: [ "cancelled", "skipped", "cancelled" ]
+    result: max([1, 0, 1] = 1 -> 'canceled'
 
     input: [ "canceled", "success" ]
-    result: max([0, 1]) = 1 -> 'success'
+    result: max([1, 2]) = 2 -> 'success'
 
     input: [ "success", "failure" ]
-    result: max([1, 2]) = 2 -> 'failure'
+    result: max([2, 3]) = 2 -> 'failure'
 
     input: [ "unknown1", "unknown2", "", "alala" ]
     result: max([-1, -1, -1, -1]) = -1 -> ''
@@ -53,6 +54,12 @@ outputs:
       Otherwise equals to 'status' output
     value: ${{ fromJSON(steps.merge.outputs.data).has-cancelled }}
 
+  has-skipped:
+    description: |
+      Gets 'skipped' if at least one input status is 'skipped'
+      Otherwise equals to 'status' output
+    value: ${{ fromJSON(steps.merge.outputs.data).has-skipped }}
+
 runs:
   using: "composite"
 
@@ -68,17 +75,21 @@ runs:
           has_failure=false
           has_success=false
           has_cancelled=false
+          has_skipped=false
 
           while read -r status; do
             case "$( mish_trim "${status}" )" in
+              "skipped")
+                has_skipped=true
+                ;;
+              "cancelled")
+                has_cancelled=true
+                ;;
               "success")
                 has_success=true
                 ;;
               "failure")
                 has_failure=true
-                ;;
-              "cancelled")
-                has_cancelled=true
                 ;;
             esac
           done <<<"${INPUT_STATUSES}"
@@ -87,6 +98,9 @@ runs:
           # Calculate result status
           #
           result_status=''
+          if "${has_skipped}"; then
+            result_status='skipped'
+          fi
           if "${has_cancelled}"; then
             result_status='cancelled'
           fi
@@ -112,4 +126,10 @@ runs:
             ghwa_set_output "has-cancelled" "cancelled"
           else
             ghwa_set_output "has-cancelled" "${result_status}"
+          fi
+
+          if "${has_skipped}"; then
+            ghwa_set_output "has-skipped" "skipped"
+          else
+            ghwa_set_output "has-skipped" "${result_status}"
           fi

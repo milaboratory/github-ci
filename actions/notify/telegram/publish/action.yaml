@@ -29,11 +29,6 @@ inputs:
       Type of published resource (library, package, etc.)
     required: false
     default: 'library'
-  build-category:
-    description: |
-      Build category: 'dev', 'release', 'whatever' :)
-    required: false
-    default: 'dev'
 
   repository-category:
     description: |
@@ -72,11 +67,6 @@ runs:
                          "type": ${{ toJSON(inputs.product-type) }},
                          "additional_info": ${{ toJSON(inputs.additional-info) }} },
 
-            "build": { "category": ${{ toJSON(inputs.build-category) }},
-
-                       "icons": { "dev": "🚧",
-                                  "release": "🔖" } },
-
             "github": ${{ steps.safe-ctx.outputs.github }},
 
             "repository": { "category": ${{ toJSON(inputs.repository-category) }},
@@ -96,7 +86,7 @@ runs:
 
           {%- else -%}
 
-          📝 \[{{ product["name"] }}] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
+          🍾 \[{{ product["name"] }}] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
 
           {%- endif %}
             Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}](

@@ -458,9 +458,6 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-    outputs:
-      status: ${{ job.status }}
-
   test-unit:
     name: :test (unit)
     runs-on: ubuntu-latest
@@ -512,7 +509,10 @@ jobs:
           upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
@@ -520,7 +520,7 @@ jobs:
     name: notify unit test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-unit.outputs.status != ''
+    if: always() && needs.test-unit.outputs.started == 'true'
     needs:
       - test-unit
 
@@ -531,7 +531,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.product-name }}
-          tests-status: ${{ needs.test-unit.outputs.status }}
+          tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
 
@@ -586,7 +586,10 @@ jobs:
           upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
@@ -594,7 +597,7 @@ jobs:
     name: notify integration test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-integration.outputs.status != ''
+    if: always() && needs.test-integration.outputs.started == 'true'
     needs:
       - test-integration
 
@@ -605,7 +608,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           product-name: ${{ inputs.product-name }}
-          tests-status: ${{ needs.test-integration.outputs.status }}
+          tests-status: ${{ needs.test-integration.result }}
           tests-type: 'Integration'
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
@@ -615,8 +618,8 @@ jobs:
 
     if:  always()
       && fromJSON(needs.init.outputs.is-release)
-      && ( needs.test-unit.outputs.status != '' ||
-           needs.test-integration.outputs.status != '' )
+      && ( needs.test-unit.outputs.started == 'true' ||
+           needs.test-integration.outputs.started == 'true' )
 
     needs:
       # Send 'review required' notification only after all tests finished
@@ -674,7 +677,6 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
     outputs:
-      status: ${{ job.status }}
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
@@ -724,7 +726,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   distLibrary:
@@ -783,7 +788,10 @@ jobs:
             ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
-      status: ${{ job.status }}
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-build:
@@ -807,7 +815,12 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.build.outputs.status }}
+          build-status: |
+            ${{ needs.build.result }}
+            ${{ needs.distDocker.result }}
+            ${{ needs.distArchive.result }}
+            ${{ needs.distLibrary.result }}
+
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
@@ -826,10 +839,11 @@ jobs:
 
     if:  always()
       && fromJSON(needs.init.outputs.is-release)
-      && needs.build.outputs.status != 'failure'
-      && needs.distDocker.outputs.status != 'failure'
-      && needs.distArchive.outputs.status != 'failure'
-      && needs.distLibrary.outputs.status != 'failure'
+      && needs.build.result != 'failure'
+      && needs.distDocker.result != 'failure'
+      && needs.distArchive.result != 'failure'
+      && needs.distLibrary.result != 'failure'
+
     environment: release
 
     steps:
@@ -933,6 +947,29 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - id: props
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v2
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v2
+
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v2
+        with:
+          input: |-
+            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      libs-list: ${{ steps.libs-list.outputs.result }}
+
   notify-release:
     name: notify release
     runs-on: ubuntu-latest
@@ -942,7 +979,6 @@ jobs:
     needs:
       - release
 
-      # Wait for all release jobs to finish before notification
       - create-release
       - upload-release-s3
       - publish-release-lib
@@ -953,4 +989,11 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.upload-release-s3.result }}
+            ${{ needs.publish-release-lib.result }}
+
           product-name: ${{ inputs.product-name }}
+
+          maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
