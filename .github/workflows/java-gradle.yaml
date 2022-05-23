@@ -813,7 +813,7 @@ jobs:
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
 
   release:
-    name: Release app
+    name: Confirm release
     runs-on: ubuntu-latest
 
     needs:
@@ -847,14 +847,13 @@ jobs:
 
     needs:
       - release
-      - distArchive
 
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
 
       - uses: actions/download-artifact@v2
-        if: needs.distArchive.outputs.started == 'true'
+        if: inputs.dist-archive
         with:
           name: ${{ inputs.product-name-slug }}
           path: release-files
@@ -876,10 +875,9 @@ jobs:
     name: S3 archive release
     runs-on: ubuntu-latest
 
-    if: inputs.release-to-s3 && needs.distArchive.outputs.started == 'true'
+    if: inputs.release-to-s3 && inputs.dist-archive
     needs:
       - release
-      - distArchive
 
     steps:
       - name: Upload to S3
