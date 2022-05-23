@@ -1,5 +1,9 @@
 # This workflow will prepare given version of Java and use it to build gradle application.
 # All gradle dependencies will be cached for next runs.
+#
+# !!! DEPRECATED !!!
+# Use 'java-gradle' workflow instead
+#
 
 name: Build Java Application
 
@@ -620,8 +624,8 @@ jobs:
 
     outputs:
       status: ${{ job.status }}
-      # Even 'constant' outputs become initialized only for started jobs.
-      # All outputs of 'skipped' job will always be empty.
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
       started: 'true'
 
   distDocker:
@@ -719,6 +723,8 @@ jobs:
         run: 'true'
 
     outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
       started: 'true'
 
   create-release:
