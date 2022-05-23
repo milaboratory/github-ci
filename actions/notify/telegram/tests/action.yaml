@@ -76,9 +76,12 @@ runs:
 
         template: |
           {{- status_icons[ tests["status"] ] | default ('')
-          }} \[[{{ product["name"] }}](
+          }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+          \[ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            )] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+          ) ]
 
           {{ product["additional_info"] }}
 
