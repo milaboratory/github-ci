@@ -1,5 +1,9 @@
 # This workflow will prepare given version of Java and use it to build gradle application.
 # All gradle dependencies will be cached for next runs.
+#
+# !!! DEPRECATED !!!
+# Use 'java-gradle' workflow instead
+#
 
 name: Build Java Library
 
@@ -242,6 +246,7 @@ jobs:
         uses: milaboratory/github-ci/actions/context@v2
 
     outputs:
+      current-version: ${{ steps.context.outputs.current-version }}
       is-release: ${{ steps.context.outputs.is-release }}
 
   build:
@@ -266,9 +271,6 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
-
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v2
 
       - uses: milaboratory/github-ci/blocks/java/build@v2
         with:
@@ -329,7 +331,7 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
-            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ needs.init.outputs.current-version }}
 
     outputs:
       status: ${{ job.status }}
