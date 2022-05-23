@@ -54,6 +54,12 @@ mish_abspath(){
     )
 }
 
+# Trim spaces from the beginning and the end of the string
+mish_trim() {
+  local _text="${1}"
+  xargs <<<"${_text}"
+}
+
 set -o nounset
 set -o errexit
 
