@@ -30,13 +30,13 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         VALUE: ${{ inputs.value }}
-        DEFAULT_VALUE: ${{ inputs.default }}
+        DEFAULT: ${{ inputs.default }}
       with:
         dump-stdout: true
 
         run: |
-          if [ -z "${VALUE}" ]; then
-            echo "${DEFAULT_VALUE}"
+          if [ -n "${VALUE}" ]; then
+            echo "${VALUE}"
+          else
+            echo "${DEFAULT}"
           fi
-
-          echo "${VALUE}"
