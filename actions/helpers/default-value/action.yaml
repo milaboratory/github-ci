@@ -1,0 +1,42 @@
+name: Set default value for input if it is not set (empty string)
+author: 'MiLaboratories'
+description: |
+  Provide default value for input
+
+inputs:
+  value:
+    description: |
+      Value to use with priority
+    required: false
+    default: ''
+
+  default:
+    description: |
+      Value to use if 'input' is empty
+    required: false
+    default: ''
+
+outputs:
+  value:
+    description: |
+      Status merged by severity (see the action description)
+    value: ${{ steps.value.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: value
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        VALUE: ${{ inputs.value }}
+        DEFAULT_VALUE: ${{ inputs.default }}
+      with:
+        dump-stdout: true
+
+        run: |
+          if [ -z "${VALUE}" ]; then
+            echo "${DEFAULT_VALUE}"
+          fi
+
+          echo "${VALUE}"
