@@ -451,6 +451,13 @@ on:
         type: boolean
         default: true
 
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+        required: false
+        type: boolean
+        default: true
+
     secrets:
       env:
         description: |
@@ -701,29 +708,6 @@ jobs:
           tests-type: 'Integration'
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
-  notify-release-review:
-    name: notify review required
-    runs-on: ubuntu-latest
-
-    if:  always()
-      && fromJSON(needs.init.outputs.is-release)
-      && ( needs.test-unit.outputs.started == 'true' ||
-           needs.test-integration.outputs.started == 'true' )
-
-    needs:
-      # Send 'review required' notification only after all tests finished
-      - notify-test-unit
-      - notify-test-integration
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v2
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          message: new version of app is ready for release.
-          product-name: ${{ inputs.product-name }}
-
   distArchive:
     name: archive
     runs-on: ubuntu-latest
@@ -911,7 +895,10 @@ jobs:
     name: Notify build
     runs-on: ubuntu-latest
 
-    if: always() && inputs.notify-telegram
+    if:  always()
+      && inputs.notify-telegram
+      && inputs.notify-build
+      && needs.build.result != 'cancelled'
 
     needs:
       # Get build status from first build job
@@ -938,8 +925,8 @@ jobs:
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
 
-  release:
-    name: Confirm release
+  can-release:
+    name: Can release
     runs-on: ubuntu-latest
 
     needs:
@@ -950,12 +937,60 @@ jobs:
       - distArchive
       - distLibrary
 
-    if:  always()
+    if: always()
       && fromJSON(needs.init.outputs.is-release)
-      && needs.build.result != 'failure'
-      && needs.distDocker.result != 'failure'
+      
+      && needs.build.result       != 'failure'
+      && needs.distDocker.result  != 'failure'
       && needs.distArchive.result != 'failure'
       && needs.distLibrary.result != 'failure'
+      
+      && (
+           needs.distDocker.result  != 'skipped'
+        && needs.distArchive.result != 'skipped'
+        && needs.distLibrary.result != 'skipped'
+      )
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+  notify-release-review:
+    name: Notify review required
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.can-release.result == 'success'
+      && (
+           needs.test-unit.outputs.started        == 'true'
+        || needs.test-integration.outputs.started == 'true'
+      )
+
+    needs:
+      - can-release
+
+      # Send 'review required' notification only after all tests finished
+      - notify-test-unit
+      - notify-test-integration
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v2
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          message: new version of app is ready for release.
+          product-name: ${{ inputs.product-name }}
+
+  release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if:  always()
+      && needs.can-release.result == 'success'
 
     environment: release
 
