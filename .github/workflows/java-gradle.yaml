@@ -223,6 +223,17 @@ on:
         required: false
         default: dockerBuildImage
 
+      dist-docker-image-name:
+        description: |
+          Name of docker image, created by <dist-docker-tasks>, without
+          version part (the text after colon).
+          E.g. for 'ubuntu:20.04' tag we need only 'ubuntu' in this input.
+
+          Defaults to <build-project> input.
+        type: string
+        required: false
+        default: ''
+
       #
       # Archive distribution control
       #
@@ -718,10 +729,16 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - uses: milaboratory/github-ci/actions/helpers/default-value@v2
+        id: project
+        with:
+          value: ${{ inputs.dist-docker-image-name }}
+          default: ${{ inputs.build-project }}
+
       - uses: milaboratory/github-ci/blocks/java/publish/docker@v2
         id: docker-push
         with:
-          project: ${{ inputs.build-project }}
+          project: ${{ steps.project.outputs.value }}
           project-dir: ${{ inputs.build-project-dir }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
