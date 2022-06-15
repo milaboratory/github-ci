@@ -242,6 +242,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v2
+        with:
+          dump-stdout: false
+          run: |
+            ghwa_warning "This workflow is deprecated, migrate to 'java-gradle'"
+
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
 
