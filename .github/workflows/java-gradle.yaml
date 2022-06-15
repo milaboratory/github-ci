@@ -240,9 +240,11 @@ on:
       dist-archive:
         description: |
           Distribute application in archive:
-           - upload to GitHub Artifacts storage
-           - save as GitHub Release asset
-           - upload to S3 bucket (see release-to-s3 input)
+           - upload to GitHub Artifacts storage;
+           - save as GitHub Release asset;
+           - upload to S3 bucket
+             (see <dist-archive-s3> and <release-to-s3> inputs);
+
         type: boolean
         required: false
         default: false
@@ -260,6 +262,79 @@ on:
         type: string
         required: false
         default: './distributions/*.tar'
+
+      dist-archive-s3:
+        description: |
+          Upload application archives to S3 bucket.
+          Archive is uploaded to bucket immediately after creation regardless
+          of build type (release/dev/...).
+
+          This means, that if you use the same upload settings for
+          <dist-archive-s3-*> and <release-s3-*>, the release file will be
+          uploaded to S3 bucket _before_ release confirmation.
+
+        type: boolean
+        required: false
+        default: false
+
+      dist-archive-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      dist-archive-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milaboratory-artefacts-public-files'
+
+      dist-archive-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.event.repository.name }}'
+
+      dist-archive-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+
+      dist-archive-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
 
       #
       # Library distribution control
@@ -305,6 +380,9 @@ on:
       release-to-s3:
         description: |
           Set it to 'true' if you want to upload releases to S3 bucket
+          This feature requires 'dist-archive' feature to be enabled and
+          configured. The file created at 'dist-archive' step is uploaded
+          to S3 storage.
         type: boolean
         required: false
         default: false
@@ -397,7 +475,7 @@ on:
         required: false
       AWS_KEY_SECRET:
         description: |
-          AWS Key Secet for S3 to use when uploading tests report.
+          AWS Key Secret for S3 to use when uploading tests report.
           Empty value disables report upload step.
         required: false
 
@@ -687,10 +765,29 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - name: Upload to S3
+        id: s3
+        if: ${{ inputs.dist-archive-s3 }}
+        uses: milaboratory/github-ci/blocks/release/s3@v2
+        with:
+          artifact-name: ${{ inputs.product-name-slug }}
+          add-version: ${{ inputs.dist-archive-s3-add-version }}
+          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
+
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
+
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
 
   distDocker:
     name: docker
@@ -739,7 +836,6 @@ jobs:
         id: docker-push
         with:
           project: ${{ steps.project.outputs.value }}
-          project-dir: ${{ inputs.build-project-dir }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
