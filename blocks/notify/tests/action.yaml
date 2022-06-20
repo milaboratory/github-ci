@@ -17,6 +17,14 @@ inputs:
       Telegram Bot API authorization token
     required: true
 
+  notification-mode:
+    description: |
+      'true'         - notify both successes and failures
+      'failure-only' - notify only about failed tests
+      'success-only' - notify only about successful tests
+    required: false
+    default: 'true'
+
   tests-status:
     description: |
       Tests job status.
@@ -67,7 +75,12 @@ runs:
         statuses: ${{ inputs.tests-status }}
 
     - name: Report tests result to Telegram
-      if: inputs.telegram-target != ''
+      if:  inputs.telegram-target != ''
+        && !( steps.tests-status.outputs.status != 'failure'
+           && inputs.notification-mode == 'failure-only' )
+        && !( steps.tests-status.outputs.status != 'success'
+           && inputs.notification-mode == 'success-only' )
+
       uses: milaboratory/github-ci/actions/notify/telegram/tests@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
