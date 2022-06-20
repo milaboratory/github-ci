@@ -89,9 +89,29 @@ inputs:
     required: false
     default: ''
 
-  cache-key:
+  gradle-cache-key:
     description: |
       Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+  data-cache-key:
+    description: |
+      Key to use for custom build data caching.
+      Both <data-cache-key> and <data-cache-paths> are required for feature to work.
+
+      Some builds produce project-specific data as a build result,
+      This data can be re-used in subsequent builds.
+    required: false
+    default: ''
+
+  data-cache-paths:
+    description: |
+      Additional paths to cache between runs.
+      Both <data-cache-key> and <data-cache-paths> are required for feature to work.
+
+      Some builds produce project-specific data as a build result,
+      This data can be re-used in subsequent builds.
     required: false
     default: ''
 
@@ -137,6 +157,15 @@ runs:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
 
+    - name: Restore data cache
+      if:  inputs.data-cache-paths != ''
+        && inputs.data-cache-key != ''
+
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.data-cache-key }}
+        path: ${{ inputs.data-cache-paths }}
+
     - name: Set gradle.properties
       if: inputs.properties != ''
       uses: milaboratory/github-ci/actions/java/gradle/properties/set@v2
@@ -171,7 +200,7 @@ runs:
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
-        cache-key: ${{ inputs.cache-key }}
+        cache-key: ${{ inputs.gradle-cache-key }}
 
     - name: Read actual project properties
       id: gradle-props
