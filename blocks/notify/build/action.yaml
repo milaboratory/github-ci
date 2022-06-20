@@ -19,9 +19,9 @@ inputs:
 
   notification-mode:
     description: |
+      'true'         - notify both successes and failures
       'failure-only' - notify only about failed builds
       'success-only' - notify only about successful builds
-      'true' - notify both successes and failures
     required: false
     default: 'true'
 
