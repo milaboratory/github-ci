@@ -463,6 +463,18 @@ on:
         type: string
         default: 'true'
 
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
+
     secrets:
       env:
         description: |
@@ -623,6 +635,7 @@ jobs:
 
     if:  always()
       && needs.test-unit.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
     needs:
       - test-unit
 
@@ -632,9 +645,11 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.product-name }}
+          notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
+
+          product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
 
   test-integration:
@@ -699,7 +714,10 @@ jobs:
     name: notify integration test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-integration.outputs.started == 'true'
+    if:  always()
+      && needs.test-integration.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
     needs:
       - test-integration
 
@@ -709,9 +727,11 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.product-name }}
+          notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-integration.result }}
           tests-type: 'Integration'
+
+          product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
   distArchive:
