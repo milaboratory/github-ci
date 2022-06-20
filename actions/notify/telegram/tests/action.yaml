@@ -71,7 +71,7 @@ runs:
 
             "status_icons": { "success": "✅",
                               "failure": "❌",
-                              "cancelled": "❌" }
+                              "cancelled": "⏹️" }
           }
 
         template: |
