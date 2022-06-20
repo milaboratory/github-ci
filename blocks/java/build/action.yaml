@@ -98,7 +98,9 @@ inputs:
   data-cache-key:
     description: |
       Key to use for custom build data caching.
-      Both <data-cache-key> and <data-cache-paths> are required for feature to work.
+
+      Both <data-cache-key> and <data-cache-paths> are
+      required for feature to work.
 
       Some builds produce project-specific data as a build result,
       This data can be re-used in subsequent builds.
@@ -108,7 +110,9 @@ inputs:
   data-cache-paths:
     description: |
       Additional paths to cache between runs.
-      Both <data-cache-key> and <data-cache-paths> are required for feature to work.
+
+      Both <data-cache-key> and <data-cache-paths> are
+      required for feature to work.
 
       Some builds produce project-specific data as a build result,
       This data can be re-used in subsequent builds.

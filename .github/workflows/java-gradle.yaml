@@ -109,6 +109,32 @@ on:
         required: false
         default: build
 
+      build-data-cache-key:
+        description: |
+          Key to use for custom build data caching.
+
+          Both <build-data-cache-key> and <build-data-cache-paths> are
+          required for feature to work.
+
+          Some builds produce project-specific data as a build result,
+          This data can be re-used in subsequent builds.
+        required: false
+        type: string
+        default: ''
+
+      build-data-cache-paths:
+        description: |
+          Additional paths to cache between runs.
+
+          Both <build-data-cache-key> and <build-data-cache-paths> are
+          required for feature to work.
+
+          Some builds produce project-specific data as a build result,
+          This data can be re-used in subsequent builds.
+        required: false
+        type: string
+        default: ''
+
       artifact-paths:
         description: |
           List of paths to artifacts to save after build run.
@@ -565,6 +591,9 @@ jobs:
           tasks: ${{ inputs.build-tasks }}
           exclude-tasks: test
 
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
           properties: |
             mi-ci-stage=build
             ${{ secrets.GRADLE_PROPERTIES }}
@@ -765,6 +794,9 @@ jobs:
           tasks: ${{ inputs.dist-archive-tasks }}
           exclude-tasks: test
 
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
           artifact-name: ${{ inputs.product-name-slug }}
           artifact-paths: ${{ inputs.dist-archive-paths }}
           artifact-retention: ${{ inputs.artifact-retention }}
@@ -830,6 +862,9 @@ jobs:
           tasks: ${{ inputs.dist-docker-tasks }}
           exclude-tasks: test
 
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
           properties: |
             mi-ci-stage=dist
             ${{ secrets.GRADLE_PROPERTIES }}
@@ -887,6 +922,9 @@ jobs:
           project-dir: ${{ inputs.build-project-dir }}
           tasks: ${{ inputs.dist-library-dev-tasks }}
           exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
 
           properties: |
             mi-ci-stage=publish
@@ -1115,6 +1153,9 @@ jobs:
           project-dir: ${{ inputs.build-project-dir }}
           tasks: ${{ inputs.dist-library-release-tasks }}
           exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
 
           properties: |
             mi-ci-stage=publish
