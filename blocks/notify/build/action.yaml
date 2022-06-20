@@ -17,6 +17,14 @@ inputs:
       Telegram Bot API authorization token
     required: true
 
+  notification-mode:
+    description: |
+      'failure-only' - notify only about failed builds
+      'success-only' - notify only about successful builds
+      'true' - notify both successes and failures
+    required: false
+    default: 'true'
+
   build-status:
     description: |
       Build job status.
@@ -82,7 +90,9 @@ runs:
         statuses: ${{ inputs.build-status }}
 
     - name: Report build failure to Telegram
-      if: steps.build-status.outputs.status != 'success'
+      if:  steps.build-status.outputs.status != 'success'
+        && inputs.notification-mode != 'failure-only'
+
       uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
@@ -94,7 +104,9 @@ runs:
         additional-info: ${{ inputs.additional-info }}
 
     - id: json
-      if: steps.build-status.outputs.status == 'success'
+      if:  steps.build-status.outputs.status == 'success'
+        && inputs.notification-mode != 'success-only'
+
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
@@ -106,7 +118,9 @@ runs:
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
 
     - name: Report build is ready
-      if: steps.build-status.outputs.status == 'success'
+      if:  steps.build-status.outputs.status == 'success'
+        && inputs.notification-mode != 'success-only'
+
       uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v2
       with:
         telegram-target: ${{ inputs.telegram-target }}
