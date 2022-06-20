@@ -454,9 +454,14 @@ on:
       notify-build:
         description: |
           Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: 'true'
 
     secrets:
       env:
@@ -616,7 +621,8 @@ jobs:
     name: notify unit test
     runs-on: ubuntu-latest
 
-    if: always() && needs.test-unit.outputs.started == 'true'
+    if:  always()
+      && needs.test-unit.outputs.started == 'true'
     needs:
       - test-unit
 
@@ -897,7 +903,7 @@ jobs:
 
     if:  always()
       && inputs.notify-telegram
-      && inputs.notify-build
+      && inputs.notify-build != 'false'
       && needs.build.result != 'cancelled'
 
     needs:
@@ -915,6 +921,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
+          notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.build.result }}
             ${{ needs.distDocker.result }}
