@@ -99,7 +99,7 @@ runs:
           {%- if links | length > 0 %}
           Links:
           {%- for i in links %}
-            - ```{{ i }}```
+            - {{ i }}
           {%- endfor %}
           {%- endif %}
           \[ [Source code](
