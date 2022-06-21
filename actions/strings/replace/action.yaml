@@ -13,7 +13,7 @@ inputs:
     required: false
     default: ''
 
-  replace-rules:
+  rules:
     description: |
       Text replacement rules in format <match> -> <replace>
       One rule per line.
@@ -30,4 +30,4 @@ outputs:
 
 runs:
   using: 'node12'
-  main: '../impl/dist/replace-prefixes.js'
+  main: './index.js'

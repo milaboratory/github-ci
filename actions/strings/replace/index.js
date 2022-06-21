@@ -1,7 +1,7 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 268:
+/***/ 569:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -40,7 +40,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
-function replacePrefixes() {
+function replace() {
     return __awaiter(this, void 0, void 0, function* () {
         // Read inputs
         const inputStr = core.getInput('input');
@@ -51,7 +51,7 @@ function replacePrefixes() {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield replacePrefixes();
+            yield replace();
         }
         catch (error) {
             if (error instanceof Error) {
@@ -2207,7 +2207,7 @@ module.exports = require("util");
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(268);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(569);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

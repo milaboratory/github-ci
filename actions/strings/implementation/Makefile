@@ -11,7 +11,7 @@ lint:
 	@npm run -- eslint src/**/*.ts
 
 test:
-	@echo "Runnging tests..."
+	@echo "Running tests..."
 	@npm test
 
 pkg-%:
@@ -21,11 +21,11 @@ pkg-%:
 release: build \
          format \
          lint \
-         replace-prefixes \
+         replace \
 
 all: release \
      test
 
 # Action build targets
-replace-prefixes: build \
-                  pkg-replace-prefixes
+replace: build \
+         pkg-replace
