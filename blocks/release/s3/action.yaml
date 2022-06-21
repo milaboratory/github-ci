@@ -186,10 +186,13 @@ runs:
         S3_PATH: ${{ inputs.s3-path }}
       with:
         run: |
+          S3_PATH="${S3_PATH%/}" # trim trailing '/'
+          S3_PATH="${S3_PATH#/}" # trim leading '/'
+
           cd "${ARTIFACT_PATH}"
-          find . -mindepth 1 -type flp |
+          find . -mindepth 1 -type f,l,p |
             while read -r file_path; do
-              echo "${S3_PATH%/}/${file_path#./}"
+              echo "/${S3_PATH}/${file_path#./}"
             done
 
     - id: uploaded-json
