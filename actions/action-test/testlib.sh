@@ -52,7 +52,7 @@ function test_contains() {
   local _expected="${2}"
   local _actual="${3}"
 
-  if grep -q "${expected}" <<< "${actual}"; then
+  if grep -q "${_expected}" <<< "${_actual}"; then
     return 0
   fi
 

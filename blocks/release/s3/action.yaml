@@ -200,7 +200,7 @@ runs:
     - id: download-list
       uses: milaboratory/github-ci/actions/strings/replace@v2
       with:
-        input: steps.uploaded-list.outputs.stdout
+        input: ${{ steps.uploaded-list.outputs.stdout }}
 
         # Any public S3 object is accessible through special URL:
         #   https://<bucket-name>.s3.<region>.amazonaws.com/<s3-path>
