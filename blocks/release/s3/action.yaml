@@ -187,7 +187,7 @@ runs:
       with:
         run: |
           cd "${ARTIFACT_PATH}"
-          find . -mindepth 1 -type flp |
+          find . -mindepth 1 -type f,l,p |
             while read -r file_path; do
               echo "${S3_PATH%/}/${file_path#./}"
             done
