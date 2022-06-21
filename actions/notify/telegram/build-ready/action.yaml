@@ -39,6 +39,12 @@ inputs:
     required: false
     default: '[]'
 
+  links:
+    description: |
+      URLs to add to notification message. E.g. binary download URL.
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -68,7 +74,8 @@ runs:
                                 "release": "🍾" },
 
             "docker_images": ${{ inputs.docker-images }},
-            "maven_packages": ${{ inputs.maven-packages }} }
+            "maven_packages": ${{ inputs.maven-packages }},
+            "links": ${{ inputs.links }} }
 
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
@@ -85,6 +92,13 @@ runs:
           {%- if maven_packages | length > 0 %}
           Maven packages:
           {%- for i in maven_packages %}
+            - ```{{ i }}```
+          {%- endfor %}
+          {%- endif %}
+
+          {%- if links | length > 0 %}
+          Links:
+          {%- for i in links %}
             - ```{{ i }}```
           {%- endfor %}
           {%- endif %}

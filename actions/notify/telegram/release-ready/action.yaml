@@ -40,6 +40,12 @@ inputs:
     required: false
     default: ''
 
+  links:
+    description: |
+      URLs to add to notification message. E.g. binary download URL.
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -58,11 +64,13 @@ runs:
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
+        LINKS: ${{ inputs.links }}
       with:
         dump-stdout: false
         run: |
           ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "links" "${LINKS:-[]}"
 
     - uses: milaboratory/github-ci/actions/templates/jinja@v2
       id: message
@@ -77,7 +85,8 @@ runs:
             "github": ${{ steps.safe-ctx.outputs.github }},
 
             "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }},
-            "maven_packages": ${{ fromJSON(steps.json.outputs.data).maven-packages }} }
+            "maven_packages": ${{ fromJSON(steps.json.outputs.data).maven-packages }},
+            "links": ${{ fromJSON(steps.json.outputs.data).links }} }
 
         template: |
           🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
@@ -94,6 +103,13 @@ runs:
           {%- if maven_packages | length > 0 %}
           Maven packages:
           {%- for i in maven_packages %}
+            - ```{{ i }}```
+          {%- endfor %}
+          {%- endif %}
+
+          {%- if links | length > 0 %}
+          Links:
+          {%- for i in links %}
             - ```{{ i }}```
           {%- endfor %}
           {%- endif %}
