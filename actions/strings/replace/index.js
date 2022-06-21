@@ -29,38 +29,74 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StringReplacer = exports.Rule = void 0;
 const core = __importStar(__nccwpck_require__(186));
+class Rule {
+    constructor(src, target) {
+        this.re = src;
+        this.replace = target;
+    }
+    static parse(ruleStr) {
+        const rule = ruleStr.split(' -> ', 2);
+        if (rule.length < 2) {
+            throw Error('wrong replace rule format');
+        }
+        const rePart = rule[0].replace('\\-\\>', '->');
+        const match = new RegExp(rePart);
+        const replacement = rule[1];
+        return new Rule(match, replacement);
+    }
+    apply(str) {
+        const match = str.match(this.re) != null;
+        if (match) {
+            str = str.replace(this.re, this.replace);
+        }
+        return [str, match];
+    }
+}
+exports.Rule = Rule;
+class StringReplacer {
+    constructor(rulesStr) {
+        this.rules = [];
+        for (const ruleLine of rulesStr.split('\n')) {
+            this.rules.push(Rule.parse(ruleLine));
+        }
+    }
+    apply(line) {
+        for (const rule of this.rules) {
+            let match;
+            [line, match] = rule.apply(line);
+            if (match) {
+                break;
+            }
+        }
+        return line;
+    }
+}
+exports.StringReplacer = StringReplacer;
 function replace() {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Read inputs
-        const inputStr = core.getInput('input');
-        // const rulesStr: string = core.getInput('replace-rules')
-        core.setOutput('result', inputStr);
-    });
+    // Read inputs
+    const inputStr = core.getInput('input');
+    const rulesStr = core.getInput('rules');
+    const rules = new StringReplacer(rulesStr);
+    const result = [];
+    for (const line of inputStr.split('\n')) {
+        result.push(rules.apply(line));
+    }
+    core.setOutput('result', result.join('\n'));
 }
 function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield replace();
+    try {
+        replace();
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error.message);
+            return;
         }
-        catch (error) {
-            if (error instanceof Error) {
-                core.setFailed(error.message);
-                return;
-            }
-            throw error;
-        }
-    });
+        throw error;
+    }
 }
 run();
 
