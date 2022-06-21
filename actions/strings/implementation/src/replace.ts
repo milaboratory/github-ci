@@ -35,11 +35,20 @@ export class Rule {
 export class StringReplacer {
   rules: Rule[]
 
-  constructor(rulesStr: string) {
-    this.rules = []
+  constructor(rules: Rule[]) {
+    this.rules = rules
+  }
+
+  static parse(rulesStr: string): StringReplacer {
+    const rules: Rule[] = []
     for (const ruleLine of rulesStr.split('\n')) {
-      this.rules.push(Rule.parse(ruleLine))
+      if (ruleLine.trim().length === 0) {
+        continue
+      }
+      rules.push(Rule.parse(ruleLine))
     }
+
+    return new StringReplacer(rules)
   }
 
   apply(line: string): string {
@@ -61,7 +70,7 @@ function replace(): void {
   const inputStr: string = core.getInput('input')
   const rulesStr: string = core.getInput('rules')
 
-  const rules = new StringReplacer(rulesStr)
+  const rules = StringReplacer.parse(rulesStr)
 
   const result: string[] = []
   for (const line of inputStr.split('\n')) {

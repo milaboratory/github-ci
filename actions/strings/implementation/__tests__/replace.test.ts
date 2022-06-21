@@ -44,6 +44,7 @@ const ruleParserTests: ruleParserTest[] = [
 describe('Test rule parse', () => {
   test.each(ruleParserTests)(
     "parse '$rule'",
+
     async ({rule, expectRE, expectReplace, expectError}) => {
       const t = () => {
         const r = replace.Rule.parse(rule)
@@ -104,6 +105,44 @@ describe('Test rule apply', () => {
 
       expect(result).toBe(expectedString)
       expect(replaced).toBe(expectReplaced)
+    }
+  )
+})
+
+interface stringReplacerTest {
+  name: string
+  rules: string
+  sourceString: string
+  expectedResult: string
+}
+
+const stringReplacerTests: stringReplacerTest[] = [
+  {
+    name: 'empty strings ignored',
+    rules: 'a -> e\n' + ' \n' + 'c -> d',
+    sourceString: 'a\nb\nc',
+    expectedResult: 'e\nb\nd'
+  },
+  {
+    name: 'single rule applied',
+    rules: 'a -> b\n' + 'b -> c\n' + 'c -> d',
+    sourceString: 'a\nb\nc',
+    expectedResult: 'b\nc\nd'
+  }
+]
+
+describe('Test replacer', () => {
+  test.each(stringReplacerTests)(
+    '$name',
+    async ({rules, sourceString, expectedResult}) => {
+      const replacer = replace.StringReplacer.parse(rules)
+
+      const result: string[] = []
+      for (const s of sourceString.split('\n')) {
+        result.push(replacer.apply(s))
+      }
+
+      expect(result.join('\n')).toBe(expectedResult)
     }
   )
 })
