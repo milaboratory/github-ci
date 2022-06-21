@@ -319,6 +319,13 @@ on:
         type: string
         default: 'milaboratory-artefacts-public-files'
 
+      dist-archive-s3-url-alteration:
+        description: See blocks/release/s3 alternative-urls input description
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
       dist-archive-s3-path:
         description: |
           Upload application release artifact's files to given 'path'
@@ -412,6 +419,7 @@ on:
         type: boolean
         required: false
         default: false
+
       release-s3-region:
         description: |
           Upload application release artifact's files to
@@ -419,6 +427,7 @@ on:
         type: string
         required: false
         default: 'eu-central-1'
+
       release-s3-bucket:
         description: |
           Upload application release artifact's files to
@@ -426,6 +435,7 @@ on:
         required: false
         type: string
         default: 'milaboratory-artefacts-public-files'
+
       release-s3-path:
         description: |
           Upload application release artifact's files to given 'path'
@@ -437,6 +447,14 @@ on:
         type: string
         required: false
         default: 'cdn/software/${{ github.event.repository.name }}'
+
+      release-s3-url-alteration:
+        description: See blocks/release/s3 alternative-urls input description
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
       release-s3-add-version:
         description: |
           Add version number to all files uploaded to S3 bucket.
@@ -823,6 +841,8 @@ jobs:
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-path: ${{ inputs.dist-archive-s3-path }}
 
+          alternative-urls: ${{ inputs.dist-archive-s3-url-alteration }}
+
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
@@ -830,6 +850,8 @@ jobs:
 
       s3-files: ${{ steps.s3.outputs.uploaded }}
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
 
   distDocker:
     name: docker
@@ -989,6 +1011,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+          links: ${{ needs.distArchive.outputs.download-json }}
 
   can-release:
     name: Can release
@@ -1107,7 +1130,8 @@ jobs:
       - release
 
     steps:
-      - name: Upload to S3
+      - id: s3
+        name: Upload to S3
         uses: milaboratory/github-ci/blocks/release/s3@v2
         with:
           artifact-name: ${{ inputs.product-name-slug }}
@@ -1120,6 +1144,14 @@ jobs:
           s3-region: ${{ inputs.release-s3-region }}
           s3-bucket: ${{ inputs.release-s3-bucket }}
           s3-path: ${{ inputs.release-s3-path }}
+
+          alternative-urls: ${{ inputs.release-s3-url-alteration }}
+
+    outputs:
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
 
   publish-release-lib:
     name: library release
@@ -1213,3 +1245,4 @@ jobs:
           product-name: ${{ inputs.product-name }}
 
           maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
+          links: ${{ needs.upload-release-s3.outputs.download-json }}
