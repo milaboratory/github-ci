@@ -46,7 +46,7 @@ describe('Test rule parse', () => {
     "parse '$rule'",
 
     async ({rule, expectRE, expectReplace, expectError}) => {
-      const t = () => {
+      const t = (): void => {
         const r = replace.Rule.parse(rule)
 
         expect(r.re).toEqual(expectRE)
@@ -119,13 +119,13 @@ interface stringReplacerTest {
 const stringReplacerTests: stringReplacerTest[] = [
   {
     name: 'empty strings ignored',
-    rules: 'a -> e\n' + ' \n' + 'c -> d',
+    rules: 'a -> e\n \nc -> d',
     sourceString: 'a\nb\nc',
     expectedResult: 'e\nb\nd'
   },
   {
     name: 'single rule applied',
-    rules: 'a -> b\n' + 'b -> c\n' + 'c -> d',
+    rules: 'a -> b\nb -> c\nc -> d',
     sourceString: 'a\nb\nc',
     expectedResult: 'b\nc\nd'
   }
