@@ -47,6 +47,21 @@ function test_not_empty() {
   fi
 }
 
+function test_contains() {
+  local _test_name="${1}"
+  local _expected="${2}"
+  local _actual="${3}"
+
+  if grep -q "${expected}" <<< "${actual}"; then
+    return 0
+  fi
+
+  ghwa_error "${_test_name}: substring not found
+      substring: ${_expected}
+      checked value: ${_actual}"
+  _status_failed
+}
+
 function fail_test() {
   local _message="${1}"
 
