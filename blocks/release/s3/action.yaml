@@ -70,6 +70,27 @@ inputs:
 
     required: true
 
+  alternative-urls:
+    description: |
+      Any S3 file with public access could be downloaded from special URL with
+      bucket name and region:
+        https://<bucket-name>.s3.<region>.amazonaws.com/<s3-path>
+
+      These URLs are placed to action's outputs by default.
+
+      <alternative-urls> allows to customize URLs for some of the paths by
+      applying alternation rules:
+        <path> -> <custom URL>
+
+      Example:
+        Rule
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+        will make action to generate URL to cdn.milaboratory.com for any
+        file inside /cdn/software/ directory in S3 storage.
+
+    required: false
+    default: ''
+
 outputs:
   uploaded:
     description: |
@@ -79,7 +100,16 @@ outputs:
   uploaded-json:
     description: |
       'uploaded' in JSON format
-    value: ${{ steps.uploaded-json.outputs.stdout }}
+    value: ${{ steps.uploaded-json.outputs.result }}
+
+  download:
+    description: |
+      Newline-separated list of download links for files in S3
+    value: ${{ steps.download-list.outputs.result }}
+  download-json:
+    description: |
+      'download' in JSON format
+    value: ${{ steps.download-json.outputs.result }}
 
 runs:
   using: "composite"
@@ -157,7 +187,7 @@ runs:
       with:
         run: |
           cd "${ARTIFACT_PATH}"
-          find . -mindepth 1 |
+          find . -mindepth 1 -type flp |
             while read -r file_path; do
               echo "${S3_PATH%/}/${file_path#./}"
             done
@@ -166,3 +196,23 @@ runs:
       uses: milaboratory/github-ci/actions/strings/json-list@v2
       with:
         input: ${{ steps.uploaded-list.outputs.stdout }}
+
+    - id: download-list
+      uses: milaboratory/github-ci/actions/strings/replace@v2
+      with:
+        input: steps.uploaded-list.outputs.stdout
+
+        # Any public S3 object is accessible through special URL:
+        #   https://<bucket-name>.s3.<region>.amazonaws.com/<s3-path>
+        #
+        # The last replace rule generates this default URL for
+        # all S3 paths not handled by 'alternative-urls'.
+        rules: |
+          ${{ inputs.alternative-urls }}
+
+          ^/ -> https://${{ inputs.s3-bucket }}.s3.${{ inputs.s3-region }}.amazonaws.com/
+
+    - id: download-json
+      uses: milaboratory/github-ci/actions/strings/json-list@v2
+      with:
+        input: ${{ steps.download-list.outputs.result }}
