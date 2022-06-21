@@ -12,7 +12,7 @@ export class Rule {
   static parse(ruleStr: string): Rule {
     const rule = ruleStr.split(' -> ', 2)
     if (rule.length < 2) {
-      throw Error('wrong replace rule format')
+      throw Error(`wrong replace rule format in string '${ruleStr}'`)
     }
 
     const rePart = rule[0].replace('\\-\\>', '->')

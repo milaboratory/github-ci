@@ -40,7 +40,7 @@ class Rule {
     static parse(ruleStr) {
         const rule = ruleStr.split(' -> ', 2);
         if (rule.length < 2) {
-            throw Error('wrong replace rule format');
+            throw Error(`wrong replace rule format in string '${ruleStr}'`);
         }
         const rePart = rule[0].replace('\\-\\>', '->');
         const match = new RegExp(rePart);
@@ -57,11 +57,18 @@ class Rule {
 }
 exports.Rule = Rule;
 class StringReplacer {
-    constructor(rulesStr) {
-        this.rules = [];
+    constructor(rules) {
+        this.rules = rules;
+    }
+    static parse(rulesStr) {
+        const rules = [];
         for (const ruleLine of rulesStr.split('\n')) {
-            this.rules.push(Rule.parse(ruleLine));
+            if (ruleLine.trim().length === 0) {
+                continue;
+            }
+            rules.push(Rule.parse(ruleLine));
         }
+        return new StringReplacer(rules);
     }
     apply(line) {
         for (const rule of this.rules) {
@@ -79,7 +86,7 @@ function replace() {
     // Read inputs
     const inputStr = core.getInput('input');
     const rulesStr = core.getInput('rules');
-    const rules = new StringReplacer(rulesStr);
+    const rules = StringReplacer.parse(rulesStr);
     const result = [];
     for (const line of inputStr.split('\n')) {
         result.push(rules.apply(line));
