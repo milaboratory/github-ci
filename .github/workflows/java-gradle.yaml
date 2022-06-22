@@ -319,10 +319,10 @@ on:
         type: string
         default: 'milaboratory-artefacts-public-files'
 
-      dist-archive-s3-url-alteration:
+      dist-archive-s3-alternative-urls:
         description: |
-          Allows to customize URLs of particular objects uploaded to S3
-          in notifications.
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
 
           For more information see:
             blocks/release/s3/action.yaml -> inputs -> alternative-urls
@@ -454,10 +454,10 @@ on:
         required: false
         default: 'cdn/software/${{ github.event.repository.name }}'
 
-      release-s3-url-alteration:
+      release-s3-alternative-urls:
         description: |
-          Allows to customize URLs of particular objects uploaded to S3
-          in notifications.
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
 
           For more information see:
             blocks/release/s3/action.yaml -> inputs -> alternative-urls
@@ -853,7 +853,7 @@ jobs:
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-path: ${{ inputs.dist-archive-s3-path }}
 
-          alternative-urls: ${{ inputs.dist-archive-s3-url-alteration }}
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1157,7 +1157,7 @@ jobs:
           s3-bucket: ${{ inputs.release-s3-bucket }}
           s3-path: ${{ inputs.release-s3-path }}
 
-          alternative-urls: ${{ inputs.release-s3-url-alteration }}
+          alternative-urls: ${{ inputs.release-s3-alternative-urls }}
 
     outputs:
       s3-files: ${{ steps.s3.outputs.uploaded }}
