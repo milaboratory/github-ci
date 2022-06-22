@@ -320,7 +320,13 @@ on:
         default: 'milaboratory-artefacts-public-files'
 
       dist-archive-s3-url-alteration:
-        description: See blocks/release/s3 alternative-urls input description
+        description: |
+          Allows to customize URLs of particular objects uploaded to S3
+          in notifications.
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
         required: false
         type: string
         default: |
@@ -449,7 +455,13 @@ on:
         default: 'cdn/software/${{ github.event.repository.name }}'
 
       release-s3-url-alteration:
-        description: See blocks/release/s3 alternative-urls input description
+        description: |
+          Allows to customize URLs of particular objects uploaded to S3
+          in notifications.
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
         required: false
         type: string
         default: |
