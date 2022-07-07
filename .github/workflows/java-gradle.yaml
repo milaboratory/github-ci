@@ -479,6 +479,7 @@ on:
         type: boolean
         required: false
         default: true
+
       release-s3-add-sha:
         description: |
           Add SHA to all files uploaded to S3 bucket.
@@ -980,7 +981,7 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
-            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
