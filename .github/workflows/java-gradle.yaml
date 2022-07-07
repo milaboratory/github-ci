@@ -135,25 +135,18 @@ on:
         type: string
         default: ''
 
-      artifact-paths:
-        description: |
-          List of paths to artifacts to save after build run.
-          Empty list disables artifacts storage.
-
-          Relative paths are relative to gradle 'buildDir' project's property.
-          Absolute paths (starting with '/') are relative to repository root.
-          Patterns ('*', '**', etc.) are supported.
-
-        type: string
-        required: false
-        default: ''
-
-      artifact-retention:
-        description: |
-          Time in days to keep build artifacts before removing them
-        type: number
-        required: false
-        default: 7
+      # artifact-paths:
+      #   description: |
+      #     List of paths to artifacts to save after build run.
+      #     Empty list disables artifacts storage.
+      #
+      #     Relative paths are relative to gradle 'buildDir' project's property.
+      #     Absolute paths (starting with '/') are relative to repository root.
+      #     Patterns ('*', '**', etc.) are supported.
+      #
+      #   type: string
+      #   required: false
+      #   default: ''
 
       #
       # Tests control
@@ -288,6 +281,13 @@ on:
         type: string
         required: false
         default: './distributions/*.tar'
+
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
 
       dist-archive-s3:
         description: |
@@ -830,7 +830,7 @@ jobs:
 
           artifact-name: ${{ inputs.product-name-slug }}
           artifact-paths: ${{ inputs.dist-archive-paths }}
-          artifact-retention: ${{ inputs.artifact-retention }}
+          artifact-retention: ${{ inputs.dist-artifact-retention }}
 
           properties: |
             mi-ci-stage=dist
