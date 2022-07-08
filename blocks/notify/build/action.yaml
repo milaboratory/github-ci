@@ -58,6 +58,13 @@ inputs:
     required: false
     default: ''
 
+  download-links:
+    description: |
+      List of distribution download links libraries in JSON format to put into notification.
+      Empty string is silently converted to '[]' for convenience.
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Any additional text to append to notification.
@@ -111,11 +118,13 @@ runs:
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
       with:
         dump-stdout: false
         run: |
           ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
 
     - name: Report build is ready
       if:  steps.build-status.outputs.status == 'success'
@@ -132,4 +141,5 @@ runs:
 
         docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
         maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
+        download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
         additional-info: ${{ inputs.additional-info }}
