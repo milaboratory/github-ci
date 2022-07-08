@@ -48,6 +48,13 @@ inputs:
     required: false
     default: ''
 
+  download-links:
+    description: |
+      List of distribution download links libraries in JSON format to put into notification.
+      Empty string is silently converted to '[]' for convenience.
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Additional text to append to message
@@ -93,4 +100,5 @@ runs:
 
         docker-images: ${{ inputs.docker-images }}
         maven-packages: ${{ inputs.maven-packages }}
+        download-links: ${{ inputs.download-links }}
         additional-info: ${{ inputs.additional-info }}

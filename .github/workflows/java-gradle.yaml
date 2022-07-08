@@ -1024,7 +1024,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
-          download-links: ${{ needs.distArchive.outputs.download-json }}
+          download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
 
   can-release:
     name: Can release
@@ -1258,4 +1258,4 @@ jobs:
           product-name: ${{ inputs.product-name }}
 
           maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
-          links: ${{ needs.upload-release-s3.outputs.download-json }}
+          download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
