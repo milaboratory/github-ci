@@ -337,7 +337,7 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
-            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ needs.init.outputs.current-version }}
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ needs.init.outputs.current-version }}
 
     outputs:
       status: ${{ job.status }}

@@ -980,7 +980,7 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
-            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1221,7 +1221,7 @@ jobs:
         uses: milaboratory/github-ci/actions/strings/json-list@v2
         with:
           input: |-
-            ${{ steps.props.outputs.group}}.${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
