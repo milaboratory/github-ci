@@ -86,11 +86,6 @@ on:
         type: number
         required: false
         default: 7
-      build-version:
-        description: |
-          Set version number in 'package.json' file to given value.
-        type: string
-        required: false
       build-script-name:
         description: |
           Name of script for application build
@@ -332,7 +327,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          tests: ${{ fromJSON( inpits.test-static-list ) }}
+          tests: ${{ fromJSON( inputs.test-static-list ) }}
 
       name: :test (static)
       runs-on: ubuntu-latest
@@ -445,3 +440,4 @@ jobs:
     outputs:
       release-id: ${{ steps.release.outputs.id }}
       release-url: ${{ steps.release.outputs.html_url }}
+      

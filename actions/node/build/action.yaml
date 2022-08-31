@@ -149,3 +149,4 @@ runs:
         ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
       run: |
           npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
+          
