@@ -147,9 +147,9 @@ runs:
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always" "EndOfValue"
           else
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "" "EndOfValue"
           fi
 
           if [ "${RUNNER_OS}" = "Linux" ]; then
