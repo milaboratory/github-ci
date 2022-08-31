@@ -4,10 +4,6 @@ description: |
   Prepare agent for running a npm test for the Node project.
   Install Node specific version, download package, create cache e.t.c
 
-defaults:
-  run:
-    shell: 'bash'
-
 inputs:
   test-name:
     description: |
@@ -42,10 +38,13 @@ runs:
           cache-version: ${{ inputs.cache-version }}
 
       - name: Install node packages with npm
-        run: |
-          npm ci
+        uses: milaboratory/github-ci/actions/shell@v2
+        with:
+          run: |
+           npm ci
 
       - name: Run test - ${{ inputs.test-name }}
-        run: |
-          npm run ${{ inpust.test-name }} --if-present
-          
+        uses: milaboratory/github-ci/actions/shell@v2
+        with:
+          run: |
+           npm run ${{ inpust.test-name }} --if-present

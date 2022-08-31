@@ -4,10 +4,6 @@ description: |
   Prepare agent for building a Node project.
   Install Node specific version, download package, create cache e.t.c
 
-defaults:
-  run:
-    shell: 'bash'
-
 inputs:
   app-name:
     description: |
@@ -52,6 +48,26 @@ inputs:
     required: false
     default: false
 
+  mac_sign_cert:
+    description: |
+      base64-encoded p12 certificate file for the macOS
+    required: false
+
+  mac_sign_cert_pwd:
+    description: |
+      password to decrypt the p12 signing certificate for the macOS
+    required: false
+
+  win_sign_cert:
+    description: |
+      base64-encoded p12 certificate file for the Windows
+    required: false
+
+  win_sign_cert_pwd:
+    description: |
+      password to decrypt the p12 signing certificate for the Windows
+    required: false
+
   node-version:
     description: |
       Node version to use.
@@ -79,8 +95,10 @@ runs:
         cache-version: ${{ inputs.cache-version }}
 
     - name: Install node packages with npm
-      run: |
-       npm ci
+      uses: milaboratory/github-ci/actions/shell@v2
+      with:
+        run: |
+         npm ci
 
     - name: Patch package version
       uses: milaboratory/github-ci/actions/node/patch-version@v2
@@ -88,12 +106,14 @@ runs:
         version: ${{ inputs.build-version }}
 
     - name: Run build script
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         BUILD_SCRIPT: ${{ inputs.build-script-name }}
-      run: |
-        npm run "${BUILD_SCRIPT}" --if-present
+      with:
+        run: |
+          npm run "${BUILD_SCRIPT}" --if-present
 
-    - name: Set important env variables for the electron builder
+    - name: Set important env and output variables for the electron builder
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
@@ -108,12 +128,12 @@ runs:
             ghwa_set_env "ELECTRON_BUILD_COMMAND" "electron-builder"
           fi
 
-          if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ secrets.MAC_SIGN_CERT }}" ]; then
-            ghwa_set_env "CSC_LINK" "${{ secrets.MAC_SIGN_CERT }}"
-            ghwa_set_env "CSC_KEY_PASSWORD" "${{ secrets.MAC_SIGN_CERT_PWD }}"
-          elif [ "${RUNNER_OS}" = "Windows" ] && [ ! -z "${{ secrets.WIN_SIGN_CERT }}" ]; then
-            ghwa_set_env "CSC_LINK" "${{ secrets.WIN_SIGN_CERT }}"
-            ghwa_set_env "CSC_KEY_PASSWORD" "${{ secrets.WIN_SIGN_CERT_PWD }}"
+          if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ inputs.mac_sign_cert }}" ]; then
+            ghwa_set_env "CSC_LINK" "${{ inputs.mac_sign_cert }}"
+            ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.mac_sign_cert_pwd }}"
+          elif [ "${RUNNER_OS}" = "Windows" ] && [ ! -z "${{ inputs.win_sign_cert }}" ]; then
+            ghwa_set_env "CSC_LINK" "${{ inputs.win_sign_cert }}"
+            ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.win_sign_cert_pwd }}"
           else
             exit 0
           fi
@@ -144,9 +164,10 @@ runs:
           fi
 
     - name: Build Electron Application
+      uses: milaboratory/github-ci/actions/shell@v2
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
         ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
-      run: |
-          npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
-          
+      with:
+        run: |
+           npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
