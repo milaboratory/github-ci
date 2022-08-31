@@ -113,21 +113,10 @@ runs:
         run: |
           npm run "${BUILD_SCRIPT}" --if-present
 
-    - name: Set important env and output variables for the electron builder
+    - name: Set env variables for signing the application
       uses: milaboratory/github-ci/actions/shell@v2
-      env:
-        IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
-        IS_RELEASE: ${{ inputs.is-release }}
-        APP_NAME_SLUG: ${{ inputs.app-name-slug }}
       with:
-        dump-stdout: false
         run: |
-          if [ "${IS_VUE_PROJECT}" = "true" ]; then
-            ghwa_set_env "ELECTRON_BUILD_COMMAND" "vue-cli-service electron:build"
-          else
-            ghwa_set_env "ELECTRON_BUILD_COMMAND" "electron-builder"
-          fi
-
           if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ inputs.mac_sign_cert }}" ]; then
             ghwa_set_env "CSC_LINK" "${{ inputs.mac_sign_cert }}"
             ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.mac_sign_cert_pwd }}"
@@ -135,7 +124,21 @@ runs:
             ghwa_set_env "CSC_LINK" "${{ inputs.win_sign_cert }}"
             ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.win_sign_cert_pwd }}"
           else
-            exit 0
+            prinf "No certificate for the: %s." "${RUNNER_OS}"
+          fi
+
+    - name: Set env variables for the electron builder
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
+        IS_RELEASE: ${{ inputs.is-release }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${IS_VUE_PROJECT}" = "true" ]; then
+            ghwa_set_env "ELECTRON_BUILD_COMMAND" "vue-cli-service electron:build"
+          else
+            ghwa_set_env "ELECTRON_BUILD_COMMAND" "electron-builder"
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
@@ -147,20 +150,9 @@ runs:
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always" "EndOfValue"
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
           else
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "" "EndOfValue"
-          fi
-
-          if [ "${RUNNER_OS}" = "Linux" ]; then
-            ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
-            ghwa_set_output "path" "dist_electron/*.AppImage"
-          elif [ "${RUNNER_OS}" = "macOS" ]; then
-            ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
-            ghwa_set_output "path" "dist_electron/*.dmg"
-          else
-            ghwa_set_output "name" ""
-            ghwa_set_output "path" ""
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
           fi
 
     - name: Build Electron Application
@@ -171,3 +163,21 @@ runs:
       with:
         run: |
            npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
+
+    - name: Set output variables for the application name
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+         APP_NAME_SLUG: ${{ inputs.app-name-slug }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
+            ghwa_set_output "path" "dist_electron/*.AppImage"
+          elif [ "${RUNNER_OS}" = "macOS" ]; then
+            ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
+            ghwa_set_output "path" "dist_electron/*.dmg"
+          else
+            ghwa_set_output "name" ""
+            ghwa_set_output "path" ""
+          fi
