@@ -140,7 +140,7 @@ runs:
           if [ "${IS_VUE_PROJECT}" = "true" ]; then
             ghwa_set_env "ELECTRON_CMD" "vue-cli-service electron:build"
           else
-            ghwa_set_env "ELECTRON_CMD" "electron-builder"
+            ghwa_set_env "ELECTRON_CMD" "electron-builder build"
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
