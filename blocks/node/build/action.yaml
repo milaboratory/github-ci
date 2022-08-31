@@ -116,6 +116,7 @@ runs:
     - name: Set env variables for signing the application
       uses: milaboratory/github-ci/actions/shell@v2
       with:
+        dump-stdout: false 
         run: |
           if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ inputs.mac_sign_cert }}" ]; then
             ghwa_set_env "CSC_LINK" "${{ inputs.mac_sign_cert }}"
@@ -168,6 +169,7 @@ runs:
         VITE_APP_VERSION: ${{ inputs.build-version }}
       with:
         run: |
+           echo "${ELECTRON_BUILD_COMMAND} ${ELECTRON_BUILD_PLATFORM} ${ELECTRON_PUBLISH_RELEASE} ${ELECTRON_BUILD_ARGS}"
            npx --no-install "${ELECTRON_BUILD_COMMAND}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
 
     - name: Set output variables for the application name
