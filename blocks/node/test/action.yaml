@@ -1,28 +1,51 @@
-name: Run Node project tests
+name: Run a npm test for the Node project
 author: 'MiLaboratories'
-description:
-  Run Node project tests, it  can be a list of unit tests
-  or just static tests like lint or typecheck.
+description: |
+  Prepare agent for running a npm test for the Node project.
+  Install Node specific version, download package, create cache e.t.c
 
-  Requiremetns:
+defaults:
+  run:
+    shell: 'bash'
 
-on:
-  workflow_call:
-     node-test:
-       description: |
-         A test to run.
-         If unsure about individual test,
-         please the check scripts section in the 'package.json' file.
-       type: string
-       required: true
+inputs:
+  test-name:
+    description: |
+      Provide a name of a test to run via npm
+    type: string
+    required: true
 
-jobs:
-  run-test:
-     steps:
-       - id: context
-         uses: milaboratory/github-ci/actions/context@v2
+   node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
+    required: true
 
-       - name: Run npm command
-         run: |
-            npm run ${{ inputs.node-test }} --if-present
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
 
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+runs:
+  using: "composite"
+
+  steps:
+      - name: Prepare env for Node application build
+        uses: milaboratory/github-ci/actions/node/prepare@v2
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+
+      - name: Install node packages with npm
+        run: |
+          npm ci
+
+      - name: Run test - ${{ inputs.test-name }}
+        run: |
+          npm run ${{ inpust.test-name }} --if-present
+          
