@@ -152,13 +152,13 @@ runs:
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "-p always"
           else
             ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
           fi
 
           if [ ! -z "${ELECTRON_BUILD_SCRIPT_ARGS}" ]; then
-            ghwa_set_env "ELECTRON_BUILD_ARGS" "--config \'${ELECTRON_BUILD_SCRIPT_ARGS}\'"
+            ghwa_set_env "ELECTRON_BUILD_ARGS" "-c ${ELECTRON_BUILD_SCRIPT_ARGS}"
           else
             ghwa_set_env "ELECTRON_BUILD_ARGS" ""
           fi
