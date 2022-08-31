@@ -128,40 +128,36 @@ runs:
             printf "No certificate for the: %s." "${RUNNER_OS}"
           fi
 
-    - name: Set env variables for the electron builder
+    - name: Build electron command
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
-        ELECTRON_BUILD_SCRIPT_ARGS: ${{ inputs.electron-build-script-args }}
+        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
       with:
         dump-stdout: false
         run: |
           if [ "${IS_VUE_PROJECT}" = "true" ]; then
-            ghwa_set_env "ELECTRON_BUILD_COMMAND" "vue-cli-service electron:build"
+            ELECTRON_CMD="vue-cli-service electron:build"
           else
-            ghwa_set_env "ELECTRON_BUILD_COMMAND" "electron-builder"
+            ELECTRON_CMD="electron-builder build"
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--mac"
+            ELECTRON_BUILD_PLATFORM="--mac"
           elif [ "${RUNNER_OS}" = "Windows" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--windows"
+            ELECTRON_BUILD_PLATFORM="--windows"
           else
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--linux"
+            ELECTRON_BUILD_PLATFORM="--linux"
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "-p always"
+            ELECTRON_PUBLISH_RELEASE="--publish always"
           else
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
+            ELECTRON_PUBLISH_RELEASE=""
           fi
 
-          if [ ! -z "${ELECTRON_BUILD_SCRIPT_ARGS}" ]; then
-            ghwa_set_env "ELECTRON_BUILD_ARGS" "-c ${ELECTRON_BUILD_SCRIPT_ARGS}"
-          else
-            ghwa_set_env "ELECTRON_BUILD_ARGS" ""
-          fi
+          ghwa_set_env "ELECTRON_BUILD_COMMAND" "${ELECTRON_CMD} ${ELECTRON_BUILD_PLATFORM} ${ELECTRON_BUILD_ARGS} ${ELECTRON_PUBLISH_RELEASE}"
 
     - name: Build Electron Application
       uses: milaboratory/github-ci/actions/shell@v2
@@ -169,7 +165,7 @@ runs:
         VITE_APP_VERSION: ${{ inputs.build-version }}
       with:
         run: |
-           npx --no-install "${ELECTRON_BUILD_COMMAND}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_BUILD_ARGS}" "${ELECTRON_PUBLISH_RELEASE}"
+           npx --no-install "${ELECTRON_BUILD_COMMAND}"
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
