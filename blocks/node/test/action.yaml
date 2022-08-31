@@ -1,0 +1,28 @@
+name: Run Node project tests
+author: 'MiLaboratories'
+description:
+  Run Node project tests, it  can be a list of unit tests
+  or just static tests like lint or typecheck.
+
+  Requiremetns:
+
+on:
+  workflow_call:
+     node-test:
+       description: |
+         A test to run.
+         If unsure about individual test,
+         please the check scripts section in the 'package.json' file.
+       type: string
+       required: true
+
+jobs:
+  run-test:
+     steps:
+       - id: context
+         uses: milaboratory/github-ci/actions/context@v2
+
+       - name: Run npm command
+         run: |
+            npm run ${{ inputs.node-test }} --if-present
+

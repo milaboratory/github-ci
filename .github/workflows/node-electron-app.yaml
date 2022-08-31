@@ -86,18 +86,59 @@ on:
         type: number
         required: false
         default: 7
+      build-version:
+        description: |
+          Set version number in 'package.json' file to given value.
+        type: string
+        required: false
       build-script-name:
         description: |
           Name of script for application build
         type: string
         required: false
-        default: 'electron:build'
-      vue-project:
+        default: 'build'
+      electron-build-script-args:
+        description: |
+          Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+        type: string
+        required: false
+        default: ''
+      is-vue-project:
         description: |
           This is vue-based project. Use 'vue-cli' toolkit
         type: boolean
         required: false
-        default: true
+        default: false
+
+      #
+      # Test control
+      #
+      test-unit:
+        description: |
+          Run unit tests
+        type: boolean
+        required: false
+        default: false
+      test-unit-list:
+        description: |
+         Comma-separated list of unit tests.
+         e.g. test:e2e, test:main e.t.c
+         type: string
+         required: false
+         default: ''
+      test-static:
+        description: |
+          Run static tests
+        type: boolean
+        required: false
+        default: false
+      test-static-list:
+        description: |
+         Comma-separated list of static tests.
+         e.g. lint, typecheck e.t.c
+        type: string
+        required: false
+        default: ''
 
       #
       # Release control
@@ -157,6 +198,28 @@ on:
           Password for GPG key
         required: false
 
+      MAC_SIGN_CERT:
+        description: |
+          base64-encoded p12 certificate file for the macOS
+          (more info here https://www.electron.build/code-signing)
+        required: false
+
+      MAC_SIGN_CERT_PWD:
+        description: |
+          password to decrypt the p12 signing certificate for the macOS
+        required: false
+
+      WIN_SIGN_CERT:
+        description: |
+          base64-encoded p12 certificate file for the Windows
+          (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
+        required: false
+
+      WIN_SIGN_CERT_PWD:
+         description: |
+          password to decrypt the p12 signing certificate for the Windows
+         required: false
+
 jobs:
   init:
     name: Init
@@ -196,50 +259,16 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v2
-
-      - name: Prepare env for Node application build
-        uses: milaboratory/github-ci/actions/node/prepare@v2
+      - uses: milaboratory/github-ci/blocks/node/build@v3-beta
+        id: artifact
         with:
+          build-version: ${{ steps.context.outputs.current-version }}
+          build-script-name: ${{ inputs.build-script-name }}
+          electron-build-script-args: ${{ inputs.electron-build-script-args }}
+          is-vue-project: ${{ inputs.is-vue-project }}
+          is-release: ${{ needs.init.outputs.is-release }}
           node-version: ${{ inputs.node-version }}
-          cache-version: 'v1'
-
-      - name: Install node packages with npm
-        run: npm install
-        shell: bash
-
-      - name: Patch package version
-        uses: milaboratory/github-ci/actions/node/patch-version@v2
-        with:
-          version: ${{ steps.context.outputs.current-version }}
-
-      - name: Build application
-        env:
-          BUILD_SCRIPT: ${{ inputs.build-script-name }}
-        run: |
-          npm run "${BUILD_SCRIPT}"
-
-      - id: artifact
-        uses: milaboratory/github-ci/actions/shell@v2
-        env:
-          APP_NAME_SLUG: ${{ inputs.app-name-slug }}
-        with:
-          dump-stdout: false
-          run: |
-            if [ "${RUNNER_OS}" = "Linux" ]; then
-              ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
-              ghwa_set_output "path" "dist_electron/*.AppImage"
-
-            elif [ "${RUNNER_OS}" = "macOS" ]; then
-              ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
-              ghwa_set_output "path" "dist_electron/*.dmg"
-
-            else
-              ghwa_set_output "name" ""
-              ghwa_set_output "path" ""
-
-            fi
+          cache-version: ${{ inputs.cache-version }}
 
       - name: Save artifact with application
         uses: actions/upload-artifact@v2
@@ -251,11 +280,94 @@ jobs:
 
       - name: Upload app to release artifact
         uses: actions/upload-artifact@v2
-        if: fromJSON( steps.artifact.outputs.data ).name != ''
         with:
           name: release-files
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.artifacts-retention }}
+
+  test-unit:
+      strategy:
+        fail-fast: false
+        matrix:
+          os: ${{ fromJSON( inputs.os ) }}
+          tests: ${{ fromJSON( inputs.test-unit-list ) }}
+
+      name: :test (unit)
+      runs-on: ${{ matrix.os }}
+
+      if: inputs.test-unit
+      needs:
+        - build
+
+      steps:
+        - uses: milaboratory/github-ci/actions/env@v2
+          with:
+            inputs: ${{ inputs.env }}
+            secrets: ${{ secrets.env }}
+
+        - uses: actions/checkout@v2
+          with:
+            submodules: ${{ inputs.checkout-submodules }}
+
+        - uses: milaboratory/github-ci/actions/git/crypt@v2
+          if: inputs.git-crypt-unlock
+          with:
+            gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+            gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+        - id: test
+          uses: milaboratory/github-ci/blocks/node/test@v3-beta
+          with:
+            test-name: ${{ matrix.tests }}
+            node-version: ${{ inputs.node-version }}
+            cache-version: ${{ inputs.cache-version }}
+
+      outputs:
+        # Even constant outputs become initialized only after job start.
+        # All outputs of skipped jobs are always empty.
+        started: 'true'
+
+
+  test-static:
+      strategy:
+        fail-fast: false
+        matrix:
+          tests: ${{ fromJSON( inpits.test-static-list ) }}
+
+      name: :test (static)
+      runs-on: ubuntu-latest
+
+      if: inputs.test-static
+      needs:
+        - build
+
+      steps:
+        - uses: milaboratory/github-ci/actions/env@v2
+          with:
+            inputs: ${{ inputs.env }}
+            secrets: ${{ secrets.env }}
+
+        - uses: actions/checkout@v2
+          with:
+            submodules: ${{ inputs.checkout-submodules }}
+
+        - uses: milaboratory/github-ci/actions/git/crypt@v2
+          if: inputs.git-crypt-unlock
+          with:
+            gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+            gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+        - id: test
+          uses: milaboratory/github-ci/blocks/node/test@v3-beta
+          with:
+            test-name: ${{ matrix.tests }}
+            node-version: ${{ inputs.node-version }}
+            cache-version: ${{ inputs.cache-version }}
+
+      outputs:
+        # Even constant outputs become initialized only after job start.
+        # All outputs of skipped jobs are always empty.
+        started: 'true'
 
   merge-status:
     name: merge build statuses
@@ -263,6 +375,8 @@ jobs:
 
     needs:
       - build
+      - test-unit
+      - test-static
 
     # This hacky job gets 'success' status only when all build jobs succeed
     # If any of jobs in 'build' matrix fails, <merge-status> gets canceled and

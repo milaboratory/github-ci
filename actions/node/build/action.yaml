@@ -1,0 +1,151 @@
+name: Build Node project
+author: 'MiLaboratories'
+description: |
+  Prepare agent for building a Node project.
+  Install Node specific version, download package, create cache e.t.c
+
+defaults:
+  run:
+    shell: 'bash'
+
+inputs:
+  app-name:
+    description: |
+      Application name in human-readable form.
+      As it is supposed to be shown in texts
+    type: string
+    required: false
+    default: ${{ github.repository }}
+  app-name-slug:
+    description: |
+      Application name slug (part of release file name)
+    type: string
+    required: true
+
+  build-version:
+    description: |
+       Set version number in 'package.json' file to given value.
+    type: string
+    required: false
+  build-script-name:
+    description: |
+      Name of script for application build
+    type: string
+    required: false
+    default: 'build'
+  electron-build-script-args:
+    description: |
+      Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+    type: string
+    required: false
+    default: ''
+  is-vue-project:
+    description: |
+      This is vue-based project. Use 'vue-cli' toolkit
+    type: boolean
+    required: false
+    default: false
+  is-release:
+    description: |
+      Set If you would like to mark the current version as a release version.
+    type: boolean
+    required: false
+    default: false
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare env for Node application build
+      uses: milaboratory/github-ci/actions/node/prepare@v2
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - name: Install node packages with npm
+      run: |
+       npm ci
+
+    - name: Patch package version
+      uses: milaboratory/github-ci/actions/node/patch-version@v2
+      with:
+        version: ${{ inputs.build-version }}
+
+    - name: Run build script
+      env:
+        BUILD_SCRIPT: ${{ inputs.build-script-name }}
+      run: |
+        npm run "${BUILD_SCRIPT}" --if-present
+
+    - name: Set important env variables for the electron builder
+      uses: milaboratory/github-ci/actions/shell@v2
+      env:
+        IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
+        IS_RELEASE: ${{ inputs.is-release }}
+        APP_NAME_SLUG: ${{ inputs.app-name-slug }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${IS_VUE_PROJECT}" = "true" ]; then
+            ghwa_set_env "ELECTRON_BUILD_COMMAND" "vue-cli-service electron:build"
+          else
+            ghwa_set_env "ELECTRON_BUILD_COMMAND" "electron-builder"
+          fi
+
+          if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ secrets.MAC_SIGN_CERT }}" ]; then
+            ghwa_set_env "CSC_LINK" "${{ secrets.MAC_SIGN_CERT }}"
+            ghwa_set_env "CSC_KEY_PASSWORD" "${{ secrets.MAC_SIGN_CERT_PWD }}"
+          elif [ "${RUNNER_OS}" = "Windows" ] && [ ! -z "${{ secrets.WIN_SIGN_CERT }}" ]; then
+            ghwa_set_env "CSC_LINK" "${{ secrets.WIN_SIGN_CERT }}"
+            ghwa_set_env "CSC_KEY_PASSWORD" "${{ secrets.WIN_SIGN_CERT_PWD }}"
+          else
+            exit 0
+          fi
+
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "mac"
+          elif [ "${RUNNER_OS}" = "Windows" ]; then
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "windows"
+          else
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "linux"
+          fi
+
+          if [ "${IS_RELEASE}" = "true" ]; then
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
+          else
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
+          fi
+
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
+            ghwa_set_output "path" "dist_electron/*.AppImage"
+          elif [ "${RUNNER_OS}" = "macOS" ]; then
+            ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
+            ghwa_set_output "path" "dist_electron/*.dmg"
+          else
+            ghwa_set_output "name" ""
+            ghwa_set_output "path" ""
+          fi
+
+    - name: Build Electron Application
+      env:
+        VITE_APP_VERSION: ${{ inputs.build-version }}
+        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
+      run: |
+          npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
