@@ -132,6 +132,7 @@ runs:
       env:
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
+        ELECTRON_BUILD_SCRIPT_ARGS: ${{ inputs.electron-build-script-args }}
       with:
         dump-stdout: false
         run: |
@@ -142,11 +143,11 @@ runs:
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "mac"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--mac"
           elif [ "${RUNNER_OS}" = "Windows" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "windows"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--windows"
           else
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "linux"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--linux"
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
@@ -155,14 +156,19 @@ runs:
             ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
           fi
 
+          if [ ! -z "${ELECTRON_BUILD_SCRIPT_ARGS}" ]; then
+            ghwa_set_env "ELECTRON_BUILD_ARGS" "--config ${ELECTRON_BUILD_SCRIPT_ARGS}"
+          else
+            ghwa_set_env "ELECTRON_BUILD_ARGS" ""
+          fi
+
     - name: Build Electron Application
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
-        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
       with:
         run: |
-           npx --no-install "${ELECTRON_BUILD_COMMAND}" --"${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
+           npx --no-install "${ELECTRON_BUILD_COMMAND}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}" "${ELECTRON_BUILD_ARGS}"
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
