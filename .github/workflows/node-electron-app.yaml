@@ -92,7 +92,17 @@ on:
         type: string
         required: false
         default: 'build'
-      electron-build-script-args:
+      electron-build-cmd-name:
+        description: |
+          Command to invoke the 'electron-builder' with.
+          e.g. 'electron-builder build'
+
+          For more information please check the official documentation.
+          https://www.electron.build/cli.html
+        type: string
+        required: false
+        default: ''
+      electron-build-cmd-args:
         description: |
           Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
         type: string
@@ -259,7 +269,8 @@ jobs:
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
-          electron-build-script-args: ${{ inputs.electron-build-script-args }}
+          electron-build-cmd-name: ${{ inputs.electron-build-command }}
+          electron-build-cmd-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
           is-release: ${{ needs.init.outputs.is-release }}
           node-version: ${{ inputs.node-version }}

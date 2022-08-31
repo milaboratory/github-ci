@@ -25,11 +25,21 @@ inputs:
     required: false
   build-script-name:
     description: |
-      Name of script for application build
+      Name of script for application build.
     type: string
     required: false
     default: 'build'
-  electron-build-script-args:
+  electron-build-cmd-name:
+    description: |
+       Command to invoke the 'electron-builder'.
+       e.g. 'electron-builder build'
+
+       For more information please check the official documentation.
+       https://www.electron.build/cli.html
+    type: string
+    required: false
+    default: 'build'
+  electron-build-cmd-args:
     description: |
       Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
     type: string
@@ -133,39 +143,38 @@ runs:
       env:
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
-        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-script-args }}
       with:
         dump-stdout: false
         run: |
           if [ "${IS_VUE_PROJECT}" = "true" ]; then
             ghwa_set_env "ELECTRON_CMD" "vue-cli-service electron:build"
           else
-            ghwa_set_env "ELECTRON_CMD" "electron-builder build"
+            ghwa_set_env "ELECTRON_CMD" "electron-builder"
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
-            ELECTRON_BUILD_PLATFORM="--mac"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--mac"
           elif [ "${RUNNER_OS}" = "Windows" ]; then
-            ELECTRON_BUILD_PLATFORM="--windows"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--windows"
           else
-            ELECTRON_BUILD_PLATFORM="--linux"
+            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--linux"
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ELECTRON_PUBLISH_RELEASE="--publish always"
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
           else
-            ELECTRON_PUBLISH_RELEASE=""
+            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
           fi
-
-          ghwa_set_env "ELECTRON_BUILD_PARAMS" "${ELECTRON_BUILD_PLATFORM} ${ELECTRON_BUILD_ARGS} ${ELECTRON_PUBLISH_RELEASE}"
 
     - name: Build Electron Application
       uses: milaboratory/github-ci/actions/shell@v2
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
+        ELECTRON_BUILD_CMD_NAME: ${{ inputs.electron-build-cmd-name }}
+        ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
       with:
         run: |
-           npx --no-install "${ELECTRON_CMD}" "${ELECTRON_BUILD_PARAMS}"
+           npx --no-install "${ELECTRON_CMD}" "${ELECTRON_BUILD_CMD_NAME}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_BUILD_CMD_ARGS}" "${ELECTRON_PUBLISH_RELEASE}"
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
