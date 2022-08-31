@@ -158,7 +158,7 @@ runs:
           fi
 
           if [ ! -z "${ELECTRON_BUILD_SCRIPT_ARGS}" ]; then
-            ghwa_set_env "ELECTRON_BUILD_ARGS" "--config ${ELECTRON_BUILD_SCRIPT_ARGS}"
+            ghwa_set_env "ELECTRON_BUILD_ARGS" "--config \'${ELECTRON_BUILD_SCRIPT_ARGS}\'"
           else
             ghwa_set_env "ELECTRON_BUILD_ARGS" ""
           fi
@@ -169,7 +169,6 @@ runs:
         VITE_APP_VERSION: ${{ inputs.build-version }}
       with:
         run: |
-           echo "${ELECTRON_BUILD_COMMAND} ${ELECTRON_BUILD_PLATFORM} ${ELECTRON_BUILD_ARGS} ${ELECTRON_PUBLISH_RELEASE}"
            npx --no-install "${ELECTRON_BUILD_COMMAND}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_BUILD_ARGS}" "${ELECTRON_PUBLISH_RELEASE}"
 
     - name: Set output variables for the application name
