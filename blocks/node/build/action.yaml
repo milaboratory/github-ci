@@ -174,7 +174,7 @@ runs:
         ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
       with:
         run: |
-           npx --no-install "${ELECTRON_CMD}" "${ELECTRON_BUILD_CMD_NAME}" "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_BUILD_CMD_ARGS}" "${ELECTRON_PUBLISH_RELEASE}"
+           npx --no-install "${ELECTRON_CMD}" "${ELECTRON_BUILD_CMD_NAME} ${ELECTRON_BUILD_PLATFORM} ${ELECTRON_BUILD_CMD_ARGS} ${ELECTRON_PUBLISH_RELEASE}"
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
