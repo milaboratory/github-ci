@@ -117,10 +117,10 @@ on:
       test-unit-list:
         description: |
          Comma-separated list of unit tests.
-         e.g. test:e2e, test:main e.t.c
-         type: string
-         required: false
-         default: ''
+         e.g. 'test:e2e', 'test:main' e.t.c
+        type: string
+        required: false
+        default: ''
       test-static:
         description: |
           Run static tests
@@ -130,7 +130,7 @@ on:
       test-static-list:
         description: |
          Comma-separated list of static tests.
-         e.g. lint, typecheck e.t.c
+         e.g. 'lint', 'typecheck' e.t.c
         type: string
         required: false
         default: ''
@@ -440,4 +440,3 @@ jobs:
     outputs:
       release-id: ${{ steps.release.outputs.id }}
       release-url: ${{ steps.release.outputs.html_url }}
-      
