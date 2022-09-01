@@ -87,6 +87,9 @@ runs:
   using: "composite"
 
   steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v2
+
     - name: Prepare env for Node application build
       uses: milaboratory/github-ci/actions/node/prepare@v2
       with:
@@ -102,7 +105,7 @@ runs:
     - name: Patch package version
       uses: milaboratory/github-ci/actions/node/patch-version@v2
       with:
-        version: ${{ inputs.build-version }}
+        version: ${{ steps.context.outputs.current-version }}
 
     - name: Run build script
       uses: milaboratory/github-ci/actions/shell@v2
@@ -130,7 +133,7 @@ runs:
     - name: Build Electron application
       uses: milaboratory/github-ci/actions/shell@v2
       env:
-        VITE_APP_VERSION: ${{ inputs.build-version }}
+        VITE_APP_VERSION: ${{ steps.context.outputs.current-version }}
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
         ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
