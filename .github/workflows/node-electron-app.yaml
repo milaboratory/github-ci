@@ -120,12 +120,6 @@ on:
         type: boolean
         required: false
         default: false
-      github_token:
-        description: |
-          GitHub token, automatically provided to the action.
-          (No need to define this secret in the repo settings)
-        type: string
-        required: false
 
       #
       # Test control
@@ -237,6 +231,7 @@ on:
           password to decrypt the p12 signing certificate for the Windows
          required: false
 
+
 jobs:
   init:
     name: Init
@@ -279,7 +274,7 @@ jobs:
       - uses: milaboratory/github-ci/blocks/node/build@v3-beta
         id: artifact
         with:
-          github_token: ${{ inputs.github_token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           electron-config-args: ${{ inputs.electron-config-args }}
           electron-build-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}

@@ -57,7 +57,7 @@ inputs:
     type: boolean
     required: false
     default: false
-  github_token:
+  token:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
     type: string
@@ -149,7 +149,7 @@ runs:
     - name: Build Electron application
       uses: milaboratory/github-ci/actions/shell@v2
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.token }}
         VITE_APP_VERSION: ${{ steps.context.outputs.current-version }}
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
