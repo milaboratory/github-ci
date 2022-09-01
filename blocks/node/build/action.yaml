@@ -23,14 +23,19 @@ inputs:
        Set version number in 'package.json' file to given value.
     type: string
     required: false
-  electron-build-cmd-args:
+  electron-config-args:
     description: |
-      List of additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
-
-      One argument per line
-        '--config electron-builder.yml'
-        '--x64'
-
+      The path to an electron-builder config.
+      Defaults to 'electron-builder.yml' (or 'json', or 'json5')
+    type: string
+    required: false
+    default: '.electron-builder.config.js'
+  electron-build-args:
+    description: |
+      List of additional build arguments.
+      One argument per line:
+      '--x64'
+      '--arm64'
     type: string
     required: false
     default: ''
@@ -136,7 +141,8 @@ runs:
         VITE_APP_VERSION: ${{ steps.context.outputs.current-version }}
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
-        ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
+        ELECTRON_CONFIG_ARGS: ${{ inputs.electron-config-args }}
+        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-args }}
       with:
         dump-stdout: false
         run: |
@@ -169,16 +175,24 @@ runs:
             fi
           done
 
-          build_args=()
+          config_args=()
           while read -r _arg; do
             if [ -n "${_arg}" ]; then
-              build_args+=( "${_arg}" )
+              config_args+=( --config "${_arg}" )
             fi
-          done <<<"${ELECTRON_BUILD_CMD_ARGS}"
+          done <<<"${ELECTRON_CONFIG_ARGS}"
+
+          build_args=()
+          while read -r _b_arg; do
+            if [ -n "${_b_arg}" ]; then
+              build_args+=( "${_b_arg}" )
+            fi
+          done <<<"${ELECTRON_BUILD_ARGS}"
 
           npx --no-install \
             "${cmd_bin[@]}" \
             "${calculated_args[@]}" \
+            "${config_args[@]}" \
             "${build_args[@]}"
 
     - name: Set output variables for the application name

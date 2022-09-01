@@ -86,14 +86,19 @@ on:
         type: number
         required: false
         default: 7
-      electron-build-cmd-args:
+      electron-config-args:
         description: |
-          List of additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
-
+          The path to an electron-builder config.
+          Defaults to 'electron-builder.yml' (or 'json', or 'json5')
+        type: string
+        required: false
+        default: '.electron-builder.config.js'
+      electron-build-args:
+        description: |
+          List of additional build arguments.
           One argument per line
-            '--config electron-builder.yml'
-            '--x64'
-
+          '--x64'
+          '--arm64'
         type: string
         required: false
         default: ''
@@ -262,7 +267,8 @@ jobs:
       - uses: milaboratory/github-ci/blocks/node/build@v3-beta
         id: artifact
         with:
-          electron-build-cmd-args: ${{ inputs.electron-build-cmd-args }}
+          electron-config-args: ${{ inputs.electron-config-args }}
+          electron-build-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
           is-release: ${{ needs.init.outputs.is-release }}
           node-version: ${{ inputs.node-version }}
