@@ -277,13 +277,12 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/blocks/node/build@v3-beta
-        id: artifact
         with:
           app-name: ${{ inputs.app-name }}
           app-name-slug: ${{ inputs.app-name-slug }}
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
-          build-max_attempts: ${{ inputs.build-max-attempts }}
+          build-max-attempts: ${{ inputs.build-max-attempts }}
           build-package-root: ${{ inputs.build-package-root }}
           skip-build: ${{ inputs.skip-build }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -296,6 +295,27 @@ jobs:
           win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
+
+      - id: artifact
+        uses: milaboratory/github-ci/actions/shell@v2
+        env:
+          APP_NAME_SLUG: ${{ inputs.app-name-slug }}
+        with:
+          dump-stdout: false
+          run: |
+            if [ "${RUNNER_OS}" = "Linux" ]; then
+              ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
+              ghwa_set_output "path" "dist/*.AppImage"
+
+            elif [ "${RUNNER_OS}" = "macOS" ]; then
+              ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
+              ghwa_set_output "path" "dist/*.dmg"
+
+            else
+              ghwa_set_output "name" ""
+              ghwa_set_output "path" ""
+
+            fi
 
       - name: Save artifact with application
         uses: actions/upload-artifact@v2

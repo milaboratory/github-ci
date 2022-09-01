@@ -44,7 +44,7 @@ inputs:
     description: Whether the action should execute the NPM build script before running 'electron-builder'
     type: string
     required: false
-    default: false  
+    default: false
   electron-build-args:
     description: |
       Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
@@ -145,21 +145,3 @@ runs:
         mac_sign_cert_pwd: ${{ inputs.mac_sign_cert_pwd }}
         win_sign_cert: ${{ inputs.win_sign_cert }}
         win_sign_cert_pwd: ${{ inputs.win_sign_cert_pwd }}
-    
-    - name: Set output variables for the application name
-      uses: milaboratory/github-ci/actions/shell@v2
-      env:
-         APP_NAME_SLUG: ${{ inputs.app-name-slug }}
-      with:
-        dump-stdout: false
-        run: |
-          if [ "${RUNNER_OS}" = "Linux" ]; then
-            ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
-            ghwa_set_output "path" "dist/*.AppImage"
-          elif [ "${RUNNER_OS}" = "macOS" ]; then
-            ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
-            ghwa_set_output "path" "dist/*.dmg"
-          else
-            ghwa_set_output "name" ""
-            ghwa_set_output "path" ""
-          fi
