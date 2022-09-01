@@ -23,25 +23,14 @@ inputs:
        Set version number in 'package.json' file to given value.
     type: string
     required: false
-  build-script-name:
-    description: |
-      Name of script for application build.
-    type: string
-    required: false
-    default: 'build'
-  electron-build-cmd-name:
-    description: |
-       Command to invoke the 'electron-builder'.
-       e.g. 'electron-builder build'
-
-       For more information please check the official documentation.
-       https://www.electron.build/cli.html
-    type: string
-    required: false
-    default: 'build'
   electron-build-cmd-args:
     description: |
-      Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+      List of additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+
+      One argument per line
+        '--config electron-builder.yml'
+        '--x64'
+
     type: string
     required: false
     default: ''
@@ -138,43 +127,56 @@ runs:
             printf "No certificate for the: %s." "${RUNNER_OS}"
           fi
 
-    - name: Build electron command
+    - name: Build Electron application
       uses: milaboratory/github-ci/actions/shell@v2
       env:
+        VITE_APP_VERSION: ${{ inputs.build-version }}
         IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
         IS_RELEASE: ${{ inputs.is-release }}
+        ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
       with:
         dump-stdout: false
         run: |
           if [ "${IS_VUE_PROJECT}" = "true" ]; then
-            ghwa_set_env "ELECTRON_CMD" "vue-cli-service electron:build"
+            ELECTRON_CMD="vue-cli-service electron:build"
           else
-            ghwa_set_env "ELECTRON_CMD" "electron-builder"
+            ELECTRON_CMD="electron-builder"
           fi
 
           if [ "${RUNNER_OS}" = "macOS" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--mac"
+            ELECTRON_BUILD_PLATFORM="--mac"
           elif [ "${RUNNER_OS}" = "Windows" ]; then
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--windows"
+            ELECTRON_BUILD_PLATFORM="--windows"
           else
-            ghwa_set_env "ELECTRON_BUILD_PLATFORM" "--linux"
+            ELECTRON_BUILD_PLATFORM="--linux"
           fi
 
           if [ "${IS_RELEASE}" = "true" ]; then
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" "--publish always"
+            ELECTRON_PUBLISH_RELEASE="--publish always"
           else
-            ghwa_set_env "ELECTRON_PUBLISH_RELEASE" ""
+            ELECTRON_PUBLISH_RELEASE=""
           fi
 
-    - name: Build Electron Application
-      uses: milaboratory/github-ci/actions/shell@v2
-      env:
-        VITE_APP_VERSION: ${{ inputs.build-version }}
-        ELECTRON_BUILD_CMD_NAME: ${{ inputs.electron-build-cmd-name }}
-        ELECTRON_BUILD_CMD_ARGS: ${{ inputs.electron-build-cmd-args }}
-      with:
-        run: |
-           npx --no-install "${ELECTRON_CMD}" "${ELECTRON_BUILD_CMD_NAME} ${ELECTRON_BUILD_PLATFORM} ${ELECTRON_BUILD_CMD_ARGS} ${ELECTRON_PUBLISH_RELEASE}"
+          cmd_bin=("${ELECTRON_CMD}")
+
+          calculated_args=()
+          for _c_arg in "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}"; do
+            if [ -n "${_c_arg}" ];then
+              calculated_args+=("${_c_arg}")
+            fi
+          done
+
+          build_args=()
+          while read -r _arg; do
+            if [ -n "${_arg}" ]; then
+              build_args+=( "${ELECTRON_CMD}" "${_arg}" )
+            fi
+          done <<<"${ELECTRON_BUILD_CMD_ARGS}"
+
+          npx --no-install \
+            "${cmd_bin[@]}" \
+            "${calculated_args[@]}" \
+            "${build_args[@]}"
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
@@ -185,10 +187,10 @@ runs:
         run: |
           if [ "${RUNNER_OS}" = "Linux" ]; then
             ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
-            ghwa_set_output "path" "dist_electron/*.AppImage"
+            ghwa_set_output "path" "dist/*.AppImage"
           elif [ "${RUNNER_OS}" = "macOS" ]; then
             ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
-            ghwa_set_output "path" "dist_electron/*.dmg"
+            ghwa_set_output "path" "dist/*.dmg"
           else
             ghwa_set_output "name" ""
             ghwa_set_output "path" ""

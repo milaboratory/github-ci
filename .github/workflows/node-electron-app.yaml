@@ -86,31 +86,26 @@ on:
         type: number
         required: false
         default: 7
-      build-script-name:
-        description: |
-          Name of script for application build
-        type: string
-        required: false
-        default: 'build'
-      electron-build-cmd-name:
-        description: |
-          Command to invoke the 'electron-builder' with.
-          e.g. 'electron-builder build'
-
-          For more information please check the official documentation.
-          https://www.electron.build/cli.html
-        type: string
-        required: false
-        default: ''
       electron-build-cmd-args:
         description: |
-          Additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+          List of additional arguments to pass to the `electron-builder`. command, e.g. configuration overrides
+
+          One argument per line
+            '--config electron-builder.yml'
+            '--x64'
+
         type: string
         required: false
         default: ''
       is-vue-project:
         description: |
           This is vue-based project. Use 'vue-cli' toolkit
+        type: boolean
+        required: false
+        default: false
+      is-release:
+        description: |
+          Set If you would like to mark the current version as a release version.
         type: boolean
         required: false
         default: false
@@ -268,8 +263,6 @@ jobs:
         id: artifact
         with:
           build-version: ${{ steps.context.outputs.current-version }}
-          build-script-name: ${{ inputs.build-script-name }}
-          electron-build-cmd-name: ${{ inputs.electron-build-command }}
           electron-build-cmd-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
           is-release: ${{ needs.init.outputs.is-release }}
