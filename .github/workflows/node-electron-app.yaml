@@ -116,7 +116,7 @@ on:
         default: false
       is-release:
         description: |
-          Set If you would like to mark the current version as a release version.
+          Set if you would like to mark the current version as a release version.
         type: boolean
         required: false
         default: false

@@ -172,11 +172,15 @@ runs:
             ELECTRON_BUILD_PLATFORM="--linux"
           fi
 
-          if [ "${IS_RELEASE}" = "true" ]; then
-            ELECTRON_PUBLISH_RELEASE="--publish always"
-          else
-            ELECTRON_PUBLISH_RELEASE=""
-          fi
+          # Force the electron-builder to publish artifacts because,
+          # in addition to GitHub, we need to be able
+          # to upload them to the AWS s3 bucket.
+
+          ELECTRON_PUBLISH_RELEASE="--publish always"
+
+          #
+          # Prepare electron-builder cmd command
+          #
 
           cmd_bin=("${ELECTRON_CMD}")
 
