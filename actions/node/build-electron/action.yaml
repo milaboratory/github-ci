@@ -8,68 +8,67 @@ inputs:
        Set version number in 'package.json' file to given value.
     type: string
     required: false
-  build-script-name:
+   build-script-name:
     description: |
       Name of script for application build
     type: string
     required: true
     default: 'build'
-  build-max-attempts:
+   build-max-attempts:
     description: |
       Maximum number of attempts for completing the build and release step
     type: string
     required: false
     default: '1'
-  build-package-root:
+   build-package-root:
     description: Directory where NPM/Yarn commands should be run
     type: string
     required: false
     default: '.'
-  skip-build:
+   skip-build:
     description: Whether the action should execute the NPM build script before running 'electron-builder'
     type: string
     required: false
     default: false
-  electron-build-args:
+   electron-build-args:
     description: |
       Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
     type: string
     required: false
     default: ''
-  is-vue-project:
+   is-vue-project:
     description: |
       This is vue-based project. Use 'vue-cli' toolkit
     type: boolean
     required: false
     default: false
-  is-release:
+   is-release:
     description: |
       Set If you would like to mark the current version as a release version.
     type: boolean
     required: false
     default: false
-  token:
+   token:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
     type: string
     required: true
-  mac_sign_cert:
+   mac_sign_cert:
     description: |
       base64-encoded p12 certificate file for the macOS
     required: false
-  mac_sign_cert_pwd:
+   mac_sign_cert_pwd:
     description: |
       password to decrypt the p12 signing certificate for the macOS
     required: false
-  win_sign_cert:
+   win_sign_cert:
     description: |
       base64-encoded p12 certificate file for the Windows
     required: false
-  win_sign_cert_pwd:
+   win_sign_cert_pwd:
     description: |
       password to decrypt the p12 signing certificate for the Windows
     required: false
-
 
 runs:
   using: "composite"
