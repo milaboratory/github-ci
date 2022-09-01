@@ -86,25 +86,34 @@ on:
         type: number
         required: false
         default: 7
+      build-version:
+        description: |
+          Set version number in 'package.json' file to given value.
+        type: string
+        required: false
       build-script-name:
         description: |
           Name of script for application build
         type: string
-        required: false
+        required: true
         default: 'build'
-      electron-config-args:
+      build-max-attempts:
         description: |
-          The path to an electron-builder config.
-          Defaults to 'electron-builder.yml' (or 'json', or 'json5')
+          Maximum number of attempts for completing the build and release step
         type: string
         required: false
-        default: '.electron-builder.config.js'
+        default: '1'
+      build-package-root:
+        description: Directory where NPM/Yarn commands should be run
+        required: false
+        default: '.'
+      skip-build:
+        description: Whether the action should execute the NPM build script before running `electron-builder`
+        required: false
+        default: false
       electron-build-args:
         description: |
-          List of additional build arguments.
-          One argument per line
-          '--x64'
-          '--arm64'
+          Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
         type: string
         required: false
         default: ''
@@ -116,10 +125,15 @@ on:
         default: false
       is-release:
         description: |
-          Set if you would like to mark the current version as a release version.
+          Set If you would like to mark the current version as a release version.
         type: boolean
         required: false
         default: false
+      token:
+        description: |
+          Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
+        type: string
+        required: true
 
       #
       # Test control
@@ -276,11 +290,19 @@ jobs:
         with:
           app-name: ${{ inputs.app-name }}
           app-name-slug: ${{ inputs.app-name-slug }}
+          build-version: ${{ steps.context.outputs.current-version }}
+          build-script-name: ${{ inputs.build-script-name }}
+          build-max_attempts: ${{ inputs.build-max-attempts }}
+          build-package-root: ${{ inputs.build-package-root }}
+          skip-build: ${{ inputs.skip-build }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          electron-config-args: ${{ inputs.electron-config-args }}
           electron-build-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
-          is-release: ${{ needs.init.outputs.is-release }}
+          is-release: ${{ inputs.is-release }}
+          mac_sign_cert: ${{ secrets.MAC_SIGN_CERT }}
+          mac_sign_cert_pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+          win_sign_cert: ${{ secrets.WIN_SIGN_CERT }}
+          win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
 

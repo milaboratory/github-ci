@@ -29,19 +29,23 @@ inputs:
     type: string
     required: true
     default: 'build'
-  electron-config-args:
+  build-max-attempts:
     description: |
-      The path to an electron-builder config.
-      Defaults to 'electron-builder.yml' (or 'json', or 'json5')
+      Maximum number of attempts for completing the build and release step
     type: string
-    required: true
-    default: '.electron-builder.config.js'
+    required: false
+    default: '1'
+  build-package-root:
+    description: Directory where NPM/Yarn commands should be run
+    required: false
+    default: '.'
+  skip-build:
+    description: Whether the action should execute the NPM build script before running `electron-builder`
+    required: false
+    default: false
   electron-build-args:
     description: |
-      List of additional build arguments.
-      One argument per line:
-      '--x64'
-      '--arm64'
+      Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
     type: string
     required: false
     default: ''
@@ -123,93 +127,22 @@ runs:
       with:
         version: ${{ steps.context.outputs.current-version }}
 
-    - name: Run build script
-      uses: milaboratory/github-ci/actions/shell@v2
-      env:
-        BUILD_SCRIPT: ${{ inputs.build-script-name }}
-      with:
-        run: |
-          npm run "${BUILD_SCRIPT}" --if-present
-
-    - name: Set env variables for signing the application
-      uses: milaboratory/github-ci/actions/shell@v2
-      with:
-        dump-stdout: false
-        run: |
-          if [ "${RUNNER_OS}" = "macOS" ] && [ ! -z "${{ inputs.mac_sign_cert }}" ]; then
-            ghwa_set_env "CSC_LINK" "${{ inputs.mac_sign_cert }}"
-            ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.mac_sign_cert_pwd }}"
-          elif [ "${RUNNER_OS}" = "Windows" ] && [ ! -z "${{ inputs.win_sign_cert }}" ]; then
-            ghwa_set_env "CSC_LINK" "${{ inputs.win_sign_cert }}"
-            ghwa_set_env "CSC_KEY_PASSWORD" "${{ inputs.win_sign_cert_pwd }}"
-          else
-            printf "No certificate for the: %s." "${RUNNER_OS}"
-          fi
-
     - name: Build Electron application
-      uses: milaboratory/github-ci/actions/shell@v2
-      env:
-        GH_TOKEN: ${{ inputs.token }}
-        VITE_APP_VERSION: ${{ steps.context.outputs.current-version }}
-        IS_VUE_PROJECT: ${{ inputs.is-vue-project }}
-        IS_RELEASE: ${{ inputs.is-release }}
-        ELECTRON_CONFIG_ARGS: ${{ inputs.electron-config-args }}
-        ELECTRON_BUILD_ARGS: ${{ inputs.electron-build-args }}
+      uses: milaboratory/github-ci/actions/node/build-electron@v3-beta
       with:
-        dump-stdout: false
-        run: |
-          if [ "${IS_VUE_PROJECT}" = "true" ]; then
-            ELECTRON_CMD="vue-cli-service electron:build"
-          else
-            ELECTRON_CMD="electron-builder"
-          fi
-
-          if [ "${RUNNER_OS}" = "macOS" ]; then
-            ELECTRON_BUILD_PLATFORM="--mac"
-          elif [ "${RUNNER_OS}" = "Windows" ]; then
-            ELECTRON_BUILD_PLATFORM="--windows"
-          else
-            ELECTRON_BUILD_PLATFORM="--linux"
-          fi
-
-          # Force the electron-builder to publish artifacts because,
-          # in addition to GitHub, we need to be able
-          # to upload them to the AWS s3 bucket.
-
-          ELECTRON_PUBLISH_RELEASE="--publish always"
-
-          #
-          # Prepare electron-builder cmd command
-          #
-
-          cmd_bin=("${ELECTRON_CMD}")
-
-          calculated_args=()
-          for _c_arg in "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}"; do
-            if [ -n "${_c_arg}" ];then
-              calculated_args+=( "${_c_arg}" )
-            fi
-          done
-
-          config_args=()
-          while read -r _arg; do
-            if [ -n "${_arg}" ]; then
-              config_args+=( --config "${_arg}" )
-            fi
-          done <<<"${ELECTRON_CONFIG_ARGS}"
-
-          build_args=()
-          while read -r _b_arg; do
-            if [ -n "${_b_arg}" ]; then
-              build_args+=( "${_b_arg}" )
-            fi
-          done <<<"${ELECTRON_BUILD_ARGS}"
-
-          npx --no-install \
-            "${cmd_bin[@]}" \
-            "${calculated_args[@]}" \
-            "${config_args[@]}" \
-            "${build_args[@]}"
+        build-version: ${{ steps.context.outputs.current-version }}
+        build-script-name: ${{ inputs.build-script-name }}
+        build-max_attempts: ${{ inputs.build-max-attempts }}
+        build-package-root: ${{ inputs.build-package-root }}
+        skip-build: ${{ inputs.skip-build }}
+        token: ${{ inputs.token }}
+        electron-build-args: ${{ inputs.electron-build-args }}
+        is-vue-project: ${{ inputs.is-vue-project }}
+        is-release: ${{ inputs.is-release }}
+        mac_sign_cert: ${{ inputs.mac_sign_cert }}
+        mac_sign_cert_pwd: ${{ inputs.mac_sign_cert_pwd }}
+        win_sign_cert: ${{ inputs.win_sign_cert }}
+        win_sign_cert_pwd: ${{ inputs.win_sign_cert_pwd }}
 
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
