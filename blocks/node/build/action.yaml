@@ -165,14 +165,14 @@ runs:
           calculated_args=()
           for _c_arg in "${ELECTRON_BUILD_PLATFORM}" "${ELECTRON_PUBLISH_RELEASE}"; do
             if [ -n "${_c_arg}" ];then
-              calculated_args+=("${_c_arg}")
+              calculated_args+=( "${_c_arg}" )
             fi
           done
 
           build_args=()
           while read -r _arg; do
             if [ -n "${_arg}" ]; then
-              build_args+=( "${ELECTRON_CMD}" "${_arg}" )
+              build_args+=( "${_arg}" )
             fi
           done <<<"${ELECTRON_BUILD_CMD_ARGS}"
 
