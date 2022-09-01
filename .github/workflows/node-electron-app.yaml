@@ -125,17 +125,6 @@ on:
         type: boolean
         required: false
         default: false
-      is-release:
-        description: |
-          Set If you would like to mark the current version as a release version.
-        type: boolean
-        required: false
-        default: false
-      token:
-        description: |
-          Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
-        type: string
-        required: true
 
       #
       # Test control
@@ -300,7 +289,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           electron-build-args: ${{ inputs.electron-build-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
-          is-release: ${{ inputs.is-release }}
+          is-release: ${{ needs.init.outputs.is-release }}
           mac_sign_cert: ${{ secrets.MAC_SIGN_CERT }}
           mac_sign_cert_pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
           win_sign_cert: ${{ secrets.WIN_SIGN_CERT }}

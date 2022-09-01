@@ -81,7 +81,11 @@ runs:
       with:
         build_script_name: ${{ inputs.build-script-name }}
         args: ${{ inputs.electron-build-args }}
-        release: ${{ inputs.is-release }}
+        #
+        # Forse release of the application as we need to publish it
+        # not only on Github but also on the AWS S3
+        #
+        release: true
         github_token: ${{ inputs.token }}
 
         package_root: ${{ inputs.build-package-root }}
