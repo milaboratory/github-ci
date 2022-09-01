@@ -23,6 +23,12 @@ inputs:
        Set version number in 'package.json' file to given value.
     type: string
     required: false
+  build-script-name:
+    description: |
+      Name of script for application build
+    type: string
+    required: false
+    default: 'build'
   electron-config-args:
     description: |
       The path to an electron-builder config.
