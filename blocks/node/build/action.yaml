@@ -37,12 +37,14 @@ inputs:
     default: '1'
   build-package-root:
     description: Directory where NPM/Yarn commands should be run
+    type: string
     required: false
     default: '.'
   skip-build:
-    description: Whether the action should execute the NPM build script before running `electron-builder`
+    description: Whether the action should execute the NPM build script before running 'electron-builder'
+    type: string
     required: false
-    default: false
+    default: false  
   electron-build-args:
     description: |
       Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
@@ -143,7 +145,7 @@ runs:
         mac_sign_cert_pwd: ${{ inputs.mac_sign_cert_pwd }}
         win_sign_cert: ${{ inputs.win_sign_cert }}
         win_sign_cert_pwd: ${{ inputs.win_sign_cert_pwd }}
-
+    
     - name: Set output variables for the application name
       uses: milaboratory/github-ci/actions/shell@v2
       env:
