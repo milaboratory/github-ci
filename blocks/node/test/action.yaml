@@ -50,4 +50,4 @@ runs:
         uses: milaboratory/github-ci/actions/shell@v2
         with:
           run: |
-           npm run ${{ inpust.test-name }} --if-present
+           npm run ${{ inputs.test-name }} --if-present
