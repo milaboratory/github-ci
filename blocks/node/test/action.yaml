@@ -31,6 +31,9 @@ runs:
   using: "composite"
 
   steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v2
+
       - name: Prepare env for Node application build
         uses: milaboratory/github-ci/actions/node/prepare@v2
         with:
