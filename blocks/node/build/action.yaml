@@ -27,14 +27,14 @@ inputs:
     description: |
       Name of script for application build
     type: string
-    required: false
+    required: true
     default: 'build'
   electron-config-args:
     description: |
       The path to an electron-builder config.
       Defaults to 'electron-builder.yml' (or 'json', or 'json5')
     type: string
-    required: false
+    required: true
     default: '.electron-builder.config.js'
   electron-build-args:
     description: |
@@ -61,7 +61,7 @@ inputs:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
     type: string
-    required: false
+    required: true
 
   mac_sign_cert:
     description: |

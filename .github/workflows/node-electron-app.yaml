@@ -274,6 +274,8 @@ jobs:
       - uses: milaboratory/github-ci/blocks/node/build@v3-beta
         id: artifact
         with:
+          app-name: ${{ inputs.app-name }}
+          app-name-slug: ${{ inputs.app-name-slug }}
           token: ${{ secrets.GITHUB_TOKEN }}
           electron-config-args: ${{ inputs.electron-config-args }}
           electron-build-args: ${{ inputs.electron-build-args }}
