@@ -263,7 +263,7 @@ jobs:
         id: artifact
         with:
           build-version: ${{ steps.context.outputs.current-version }}
-          electron-build-cmd-args: ${{ inputs.electron-build-args }}
+          electron-build-cmd-args: ${{ inputs.electron-build-cmd-args }}
           is-vue-project: ${{ inputs.is-vue-project }}
           is-release: ${{ needs.init.outputs.is-release }}
           node-version: ${{ inputs.node-version }}
