@@ -134,7 +134,7 @@ runs:
       with:
         build-version: ${{ steps.context.outputs.current-version }}
         build-script-name: ${{ inputs.build-script-name }}
-        build-max_attempts: ${{ inputs.build-max-attempts }}
+        build-max-attempts: ${{ inputs.build-max-attempts }}
         build-package-root: ${{ inputs.build-package-root }}
         skip-build: ${{ inputs.skip-build }}
         token: ${{ inputs.token }}
