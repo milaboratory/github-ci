@@ -450,6 +450,7 @@ jobs:
     if:  always()
       && needs.test-unit.outputs.started == 'true'
       && inputs.notify-tests != 'false'
+
     needs:
       - test-unit
 
@@ -463,7 +464,7 @@ jobs:
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
 
-          product-name: ${{ inputs.product-name }}
+          product-name: ${{ inputs.app-name }}
 
   test-static:
       strategy:
@@ -513,6 +514,7 @@ jobs:
     if:  always()
       && needs.test-static.outputs.started == 'true'
       && inputs.notify-tests != 'false'
+
     needs:
       - test-static
 
@@ -526,7 +528,7 @@ jobs:
           tests-status: ${{ needs.test-static.result }}
           tests-type: 'Static'
 
-          product-name: ${{ inputs.product-name }}
+          product-name: ${{ inputs.app-name }}
 
   merge-status:
     name: merge build statuses
@@ -549,7 +551,10 @@ jobs:
     name: Notify build
     runs-on: ubuntu-latest
 
-    if: always() && inputs.notify-telegram
+    if:  always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build.result != 'cancelled'
 
     needs:
       - merge-status
