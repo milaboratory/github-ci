@@ -130,7 +130,7 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
 
     - name: Build Electron application
-      uses: milaboratory/github-ci/actions/node/build-electron@v3-beta
+      uses: milaboratory/github-ci/actions/node/build-electron@v3
       with:
         build-version: ${{ steps.context.outputs.current-version }}
         build-script-name: ${{ inputs.build-script-name }}

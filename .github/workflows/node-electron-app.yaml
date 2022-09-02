@@ -297,7 +297,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
 
-      - uses: milaboratory/github-ci/actions/release/delete-draft/@v3-beta
+      - uses: milaboratory/github-ci/actions/release/delete-draft/@v3
         with:
           draft-ttl-threshold: ${{ inputs.draft-ttl-threshold }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -345,7 +345,7 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build@v3-beta
+      - uses: milaboratory/github-ci/blocks/node/build@v3
         with:
           app-name: ${{ inputs.app-name }}
           app-name-slug: ${{ inputs.app-name-slug }}
@@ -432,7 +432,7 @@ jobs:
             gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
         - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v3-beta
+          uses: milaboratory/github-ci/blocks/node/test@v3
           with:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
@@ -496,7 +496,7 @@ jobs:
             gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
         - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v3-beta
+          uses: milaboratory/github-ci/blocks/node/test@v3
           with:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
