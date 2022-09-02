@@ -18,7 +18,7 @@ inputs:
 
       type: string
       required: false
-      default: '7d'
+
    token:
       description: |
         Copy "github_token" input variable to "GITHUB_TOKEN" env variable.

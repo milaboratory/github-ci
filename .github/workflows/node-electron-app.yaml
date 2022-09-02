@@ -168,6 +168,7 @@ on:
            Delete drafts older than the set threshold (e.g. '1s', '5d', '1y')
         type: string
         required: false
+        default: '7d'
 
       changelog-exclude-types:
         description: |
@@ -310,6 +311,7 @@ jobs:
           draft: true
           pre-release: true
           name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-version }}
 
           assets: release-files/*
 
