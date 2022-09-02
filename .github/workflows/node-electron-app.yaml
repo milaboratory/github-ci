@@ -310,7 +310,6 @@ jobs:
           draft: true
           pre-release: true
           name: ${{ steps.context.outputs.current-version }}
-          tag: ${{ steps.context.outputs.current-version-tag }}
 
           assets: release-files/*
 
