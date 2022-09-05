@@ -368,44 +368,6 @@ on:
         default: 'false'
 
       #
-      # Docker setup control
-      #
-      docker-version:
-        description: Docker Version
-        default: "20.10"
-        required: false
-      docker-nightly-version:
-        # https://github.com/AkihiroSuda/moby-snapshot/releases
-        description: Docker nightly Version
-        default: snapshot-20210202
-        required: false
-      docker-channel:
-        # https://download.docker.com/linux/ubuntu/dists/focal/pool/
-        description: Docker Channel
-        default: stable
-        # test
-        # nightly # this channel use https://github.com/AkihiroSuda/moby-snapshot
-        required: false
-      docker-buildx:
-        # https://docs.docker.com/engine/reference/commandline/buildx/
-        description: Enable Buildx
-        default: true
-        required: false
-      docker-cli-experimental:
-        # https://docs.docker.com/engine/reference/commandline/cli/#experimental-features
-        description: docker cli experimental
-        default: enabled
-        required: false
-      docker-daemon-json:
-        # https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
-        description: /etc/docker/daemon.json
-        default: |
-          {
-            "experimental": true
-          }
-        required: false
-
-      #
       # Notifications
       #
       notify-telegram:
