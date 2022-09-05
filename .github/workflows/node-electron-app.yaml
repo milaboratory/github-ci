@@ -413,6 +413,17 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
+      AWS_KEY_ID:
+        description: |
+          AWS Key ID for S3 to use when uloading tests report.
+          Empty value disables report upload step.
+        required: false
+      AWS_KEY_SECRET:
+        description: |
+          AWS Key Secret for S3 to use when uploading tests report.
+          Empty value disables report upload step.
+        required: false
+
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -584,7 +595,7 @@ jobs:
 
 
   upload-s3:
-    name: S3 archive release
+    name: Upload archive to s3
     runs-on: ubuntu-latest
 
     if: ${{ inputs.dist-archive-s3 }}
@@ -756,6 +767,7 @@ jobs:
 
     needs:
       - build
+      - upload-s3
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v2
@@ -763,7 +775,9 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: ${{ needs.merge-status.outputs.status != '' && needs.merge-status.outputs.status || 'failure' }}
+          build-status: |
+             ${{ needs.build.result }}
+             ${{ needs.upload-s3.result }}
           product-name: ${{ needs.build.outputs.artifact-app-name }}
           download-links: ${{ needs.upload-s3.outputs.s3-urls-json }}
 
@@ -867,7 +881,7 @@ jobs:
       release-url: ${{ steps.release.outputs.html_url }}
 
   upload-release-s3:
-      name: S3 archive release
+      name: Upload archive release to s3
       runs-on: ubuntu-latest
 
       if: inputs.release-to-s3 && inputs.dist-archive
