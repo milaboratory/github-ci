@@ -42,7 +42,15 @@ runs:
         set -o nounset
         set -o errexit
 
-        mapfile -t input_paths <<<"${PATHS}"
+        if [ "${RUNNER_OS}" = "macOS" ]; then
+          input_paths=()
+          while read -r _m_input_path; do
+            _rm_traling_newline="${_m_input_path%$'\r'}"
+            input_paths+=( "${_rm_traling_newline}" )
+          done <<<"${PATHS}"
+        else
+          mapfile -t input_paths <<<"${PATHS}"
+        fi
 
         for input_path in "${input_paths[@]}"; do
           if [ -z "${input_path}" ]; then
