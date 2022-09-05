@@ -5,19 +5,6 @@ description: |
   Install Node specific version, download package, create cache e.t.c
 
 inputs:
-  app-name:
-    description: |
-      Application name in human-readable form.
-      As it is supposed to be shown in texts
-    type: string
-    required: false
-    default: ${{ github.repository }}
-  app-name-slug:
-    description: |
-      Application name slug (part of release file name)
-    type: string
-    required: true
-
   build-version:
     description: |
        Set version number in 'package.json' file to given value.

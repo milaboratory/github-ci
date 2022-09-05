@@ -80,12 +80,6 @@ on:
       #
       # Build control
       #
-      artifacts-retention:
-        description: |
-          Time in days to keep build artifacts before removing them
-        type: number
-        required: false
-        default: 7
       build-version:
         description: |
           Set version number in 'package.json' file to given value.
@@ -161,6 +155,114 @@ on:
         default: ''
 
       #
+      # Archive distribution control
+      #
+      dist-archive:
+        description: |
+          Distribute application in archive:
+           - upload to GitHub Artifacts storage;
+           - save as GitHub Release asset;
+           - upload to S3 bucket
+             (see <dist-archive-s3> and <release-to-s3> inputs);
+
+        type: boolean
+        required: false
+        default: false
+
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+
+      dist-archive-s3:
+        description: |
+          Upload application archives to S3 bucket.
+          Archive is uploaded to bucket immediately after creation regardless
+          of build type (release/dev/...).
+
+          This means, that if you use the same upload settings for
+          <dist-archive-s3-*> and <release-s3-*>, the release file will be
+          uploaded to S3 bucket _before_ release confirmation.
+
+        type: boolean
+        required: false
+        default: false
+
+      dist-archive-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      dist-archive-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milaboratory-artefacts-public-files'
+
+      dist-archive-s3-alternative-urls:
+        description: |
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
+      dist-archive-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.event.repository.name }}'
+
+      dist-archive-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+
+      dist-archive-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
+
+      #
       # Release control
       #
       draft-ttl-threshold:
@@ -183,7 +285,89 @@ on:
         required: false
         default: doc,chore
 
-     #
+      release-to-s3:
+        description: |
+          Set it to 'true' if you want to upload releases to S3 bucket
+          This feature requires 'dist-archive' feature to be enabled and
+          configured. The file created at 'dist-archive' step is uploaded
+          to S3 storage.
+        type: boolean
+        required: false
+        default: false
+
+      release-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      release-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milaboratory-artefacts-public-files'
+
+      release-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.event.repository.name }}'
+
+      release-s3-alternative-urls:
+        description: |
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
+      release-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+
+      release-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -317,7 +501,6 @@ jobs:
 
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
-
   build:
     strategy:
       matrix:
@@ -345,10 +528,8 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build@v3
+      - uses: milaboratory/github-ci/blocks/node/build@v3-beta
         with:
-          app-name: ${{ inputs.app-name }}
-          app-name-slug: ${{ inputs.app-name-slug }}
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
           build-max-attempts: ${{ inputs.build-max-attempts }}
@@ -368,38 +549,60 @@ jobs:
       - id: artifact
         uses: milaboratory/github-ci/actions/shell@v2
         env:
+          APP_NAME: ${{ inputs.app-name }}
           APP_NAME_SLUG: ${{ inputs.app-name-slug }}
         with:
           dump-stdout: false
           run: |
             if [ "${RUNNER_OS}" = "Linux" ]; then
-              ghwa_set_output "name" "${APP_NAME_SLUG}-linux"
+              ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-linux"
               ghwa_set_output "path" "dist/*.AppImage"
+              ghwa_set_output "app_name" "${APP_NAME} Linux"
 
             elif [ "${RUNNER_OS}" = "macOS" ]; then
-              ghwa_set_output "name" "${APP_NAME_SLUG}-mac"
+              ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-mac"
               ghwa_set_output "path" "dist/*.dmg"
+              ghwa_set_output "app_name" "${APP_NAME} Mac"
 
             else
-              ghwa_set_output "name" ""
+              ghwa_set_output "app_name_slug" ""
               ghwa_set_output "path" ""
-
+              ghwa_set_output "app_name" ""
             fi
 
-      - name: Save artifact with application
+      - name: Save build artifacts
         uses: actions/upload-artifact@v2
-        if: fromJSON( steps.artifact.outputs.data ).name != ''
+        if: fromJSON( steps.artifact.outputs.data ).app_name_slug != ''
         with:
-          name: ${{ fromJSON( steps.artifact.outputs.data ).name }}
+          name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
-          retention-days: ${{ inputs.artifacts-retention }}
+          retention-days: ${{ inputs.dist-artifact-retention }}
 
-      - name: Upload app to release artifact
-        uses: actions/upload-artifact@v2
+      - name: Upload to S3
+        id: s3
+        if: ${{ inputs.dist-archive-s3 }}
+        uses: milaboratory/github-ci/blocks/release/s3@v2
         with:
-          name: release-files
-          path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
-          retention-days: ${{ inputs.artifacts-retention }}
+          artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+          add-version: ${{ inputs.dist-archive-s3-add-version }}
+          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
+
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+
+    outputs:
+      artifact-app-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
+      artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
 
   test-unit:
       strategy:
@@ -464,7 +667,7 @@ jobs:
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
 
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ needs.build.outputs.artifact-app-name }}
 
   test-static:
       strategy:
@@ -528,24 +731,7 @@ jobs:
           tests-status: ${{ needs.test-static.result }}
           tests-type: 'Static'
 
-          product-name: ${{ inputs.app-name }}
-
-  merge-status:
-    name: merge build statuses
-    runs-on: ubuntu-latest
-
-    needs:
-      - build
-
-    # This hacky job gets 'success' status only when all build jobs succeed
-    # If any of jobs in 'build' matrix fails, <merge-status> gets canceled and
-    # has '' (empty string) in <status> output
-    steps:
-      - shell: bash
-        run: 'true'
-
-    outputs:
-      status: ${{ job.status }}
+          product-name: ${{ needs.build.outputs.artifact-app-name }}
 
   notify-build:
     name: Notify build
@@ -557,7 +743,7 @@ jobs:
       && needs.build.result != 'cancelled'
 
     needs:
-      - merge-status
+      - build
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v2
@@ -566,19 +752,79 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           build-status: ${{ needs.merge-status.outputs.status != '' && needs.merge-status.outputs.status || 'failure' }}
-          product-name: ${{ inputs.app-name }}
+          product-name: ${{ needs.build.outputs.artifact-app-name }}
+          download-links: ${{ needs.build.outputs.s3-urls-json }}
+
+  can-release:
+      name: Can release
+      runs-on: ubuntu-latest
+
+      needs:
+        - init
+        - build
+
+      if: always()
+        && fromJSON(needs.init.outputs.is-release)
+        && needs.build.result != 'failure'
+
+      steps:
+        - shell: bash
+          run: 'true'
+
+  notify-release-review:
+      name: Notify review required
+      runs-on: ubuntu-latest
+
+      if:  always()
+        && needs.can-release.result == 'success'
+        && (
+            needs.test-unit.outputs.started        == 'true'
+          || needs.test-static.outputs.started == 'true'
+        )
+
+      needs:
+        - can-release
+
+        # Send 'review required' notification only after all tests finished
+        - notify-test-unit
+        - notify-test-static
+
+      steps:
+        - uses: milaboratory/github-ci/blocks/notify/review-required@v2
+          with:
+            telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+            telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+            message: new version of app is ready for release.
+            product-name: ${{ needs.build.outputs.artifact-app-name }}
 
   release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if:  always()
+      && needs.can-release.result == 'success'
+
+    environment: release
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  create-release:
     name: Create release
 
     runs-on: ubuntu-latest
     needs:
-      - init
-      - merge-status
-
-    if:  always()
-      && fromJSON(needs.init.outputs.is-release)
-      && needs.merge-status.outputs.status == 'success'
+     - release
 
     environment: release
 
@@ -607,3 +853,59 @@ jobs:
     outputs:
       release-id: ${{ steps.release.outputs.id }}
       release-url: ${{ steps.release.outputs.html_url }}
+
+  upload-release-s3:
+      name: S3 archive release
+      runs-on: ubuntu-latest
+
+      if: inputs.release-to-s3 && inputs.dist-archive
+      needs:
+        - release
+
+      steps:
+        - id: s3
+          name: Upload to S3
+          uses: milaboratory/github-ci/blocks/release/s3@v2
+          with:
+            artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+            add-version: ${{ inputs.release-s3-add-version }}
+            add-sha: ${{ inputs.release-s3-add-sha }}
+
+            s3-key-id: ${{ secrets.AWS_KEY_ID }}
+            s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+
+            s3-region: ${{ inputs.release-s3-region }}
+            s3-bucket: ${{ inputs.release-s3-bucket }}
+            s3-path: ${{ inputs.release-s3-path }}
+
+            alternative-urls: ${{ inputs.release-s3-alternative-urls }}
+
+      outputs:
+        s3-files: ${{ steps.s3.outputs.uploaded }}
+        s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+        s3-urls: ${{ steps.s3.outputs.download }}
+        s3-urls-json: ${{ steps.s3.outputs.download-json }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.release.outputs.started == 'true'
+    needs:
+      - release
+      - create-release
+      - upload-release-s3
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v2
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.upload-release-s3.result }}
+
+          product-name: ${{ needs.build.outputs.artifact-app-name  }}
+          download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
