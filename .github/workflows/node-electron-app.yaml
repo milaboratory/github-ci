@@ -581,7 +581,7 @@ jobs:
       - name: Upload to S3
         id: s3
         if: ${{ inputs.dist-archive-s3 }}
-        uses: milaboratory/github-ci/blocks/release/s3@v2
+        uses: milaboratory/github-ci/blocks/release/s3@v3-beta
         with:
           artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
@@ -865,7 +865,7 @@ jobs:
       steps:
         - id: s3
           name: Upload to S3
-          uses: milaboratory/github-ci/blocks/release/s3@v2
+          uses: milaboratory/github-ci/blocks/release/s3@v3-beta
           with:
             artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
             add-version: ${{ inputs.release-s3-add-version }}
