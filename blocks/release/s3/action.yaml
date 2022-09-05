@@ -140,7 +140,7 @@ runs:
 
     - name: Add version
       if: inputs.add-version == 'true'
-      uses: milaboratory/github-ci/actions/files/add-suffix@v3-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v2
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
@@ -164,7 +164,7 @@ runs:
 
     - name: Add SHA
       if: steps.sha.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v3-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v2
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'

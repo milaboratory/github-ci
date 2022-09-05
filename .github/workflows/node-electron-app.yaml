@@ -616,42 +616,43 @@ jobs:
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
-      - name: Setup Docker on macOS
-        if: runner.os == 'macOS'
-        uses: milaboratory/github-ci/actions/docker/setup@v3-beta
-        with:
-           docker-version: ${{ inputs.docker-version }}
-           docker-nightly-version: ${{ inputs.docker-nightly-version }}
-           docker-channel: ${{ inputs.docker-channel }}
-           docker-buildx: ${{ inputs.docker-buildx }}
-           docker-cli-experimental: ${{ inputs.docker-cli-experimental }}
-           docker-daemon-json: ${{ inputs.docker-daemon-json }}
-
-      - name: Upload to S3
-        id: s3
-        if: ${{ inputs.dist-archive-s3 }}
-        uses: milaboratory/github-ci/blocks/release/s3@v3-beta
-        with:
-          artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
-          add-version: ${{ inputs.dist-archive-s3-add-version }}
-          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
-
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-
-          s3-region: ${{ inputs.dist-archive-s3-region }}
-          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
-          s3-path: ${{ inputs.dist-archive-s3-path }}
-
-          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
-
     outputs:
       artifact-app-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
       artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+
+
+  upload-s3:
+    name: S3 archive release
+    runs-on: ubuntu-latest
+
+    if: ${{ inputs.dist-archive-s3 }}
+    needs:
+      - build
+
+    steps:
+     - id: s3
+       name: Upload to S3
+       uses: milaboratory/github-ci/blocks/release/s3@v3
+       with:
+        artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
+        add-version: ${{ inputs.dist-archive-s3-add-version }}
+        add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+
+        s3-key-id: ${{ secrets.AWS_KEY_ID }}
+        s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+
+        s3-region: ${{ inputs.dist-archive-s3-region }}
+        s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+        s3-path: ${{ inputs.dist-archive-s3-path }}
+
+        alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+
+    outputs:
       s3-files: ${{ steps.s3.outputs.uploaded }}
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
+
 
   test-unit:
       strategy:
@@ -802,7 +803,7 @@ jobs:
 
           build-status: ${{ needs.merge-status.outputs.status != '' && needs.merge-status.outputs.status || 'failure' }}
           product-name: ${{ needs.build.outputs.artifact-app-name }}
-          download-links: ${{ needs.build.outputs.s3-urls-json }}
+          download-links: ${{ needs.upload-s3.outputs.s3-urls-json }}
 
   can-release:
       name: Can release
@@ -914,9 +915,9 @@ jobs:
       steps:
         - id: s3
           name: Upload to S3
-          uses: milaboratory/github-ci/blocks/release/s3@v3-beta
+          uses: milaboratory/github-ci/blocks/release/s3@v3
           with:
-            artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+            artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
             add-version: ${{ inputs.release-s3-add-version }}
             add-sha: ${{ inputs.release-s3-add-sha }}
 
