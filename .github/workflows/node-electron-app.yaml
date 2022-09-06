@@ -668,6 +668,7 @@ jobs:
         # Even constant outputs become initialized only after job start.
         # All outputs of skipped jobs are always empty.
         started: 'true'
+        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
 
   notify-test-unit:
     name: notify unit test
@@ -690,7 +691,7 @@ jobs:
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
 
-          product-name: ${{ jobs.build.outputs.artifact-app-name }}
+          product-name: ${{ needs.test-unit.outputs.artifact-app-name }}
 
   test-static:
       strategy:
@@ -732,6 +733,7 @@ jobs:
         # Even constant outputs become initialized only after job start.
         # All outputs of skipped jobs are always empty.
         started: 'true'
+        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
 
   notify-test-static:
     name: notify static test
@@ -754,7 +756,7 @@ jobs:
           tests-status: ${{ needs.test-static.result }}
           tests-type: 'Static'
 
-          product-name: ${{ jobs.build.outputs.artifact-app-name }}
+          product-name: ${{ needs.test-static.outputs.artifact-app-name }}
 
   notify-build:
     name: Notify build
@@ -797,6 +799,10 @@ jobs:
         - shell: bash
           run: 'true'
 
+      outputs:
+        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
+        artifact-app-name-slug: ${{ needs.build.outputs.artifact-app-name-slug }}
+
   notify-release-review:
       name: Notify review required
       runs-on: ubuntu-latest
@@ -822,7 +828,7 @@ jobs:
             telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
             message: new version of app is ready for release.
-            product-name: ${{ jobs.build.outputs.artifact-app-name }}
+            product-name: ${{ needs.can-release.outputs.artifact-app-name }}
 
   release:
     name: Confirm release
@@ -844,6 +850,8 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
+      artifact-app-name: ${{ needs.can-release.outputs.artifact-app-name }}
+      artifact-app-name-slug: ${{ needs.can-release.outputs.artifact-app-name-slug }}
 
   create-release:
     name: Create release
@@ -893,7 +901,7 @@ jobs:
           name: Upload to S3
           uses: milaboratory/github-ci/blocks/release/s3@v3
           with:
-            artifact-name: ${{ jobs.build.outputs.artifact-app-name-slug }}
+            artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}
             add-version: ${{ inputs.release-s3-add-version }}
             add-sha: ${{ inputs.release-s3-add-sha }}
 
@@ -933,5 +941,5 @@ jobs:
             ${{ needs.create-release.result }}
             ${{ needs.upload-release-s3.result }}
 
-          product-name: ${{ jobs.build.outputs.artifact-app-name  }}
+          product-name: ${{ needs.release.outputs.artifact-app-name  }}
           download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
