@@ -231,6 +231,12 @@ on:
         type: string
         required: false
         default: ''
+      test-integration-python-version:
+        description: |
+           Version of Python to install
+        type: string
+        required: false
+        default: ''
 
       #
       # Docker distribution control
@@ -750,6 +756,8 @@ jobs:
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
           test-data-cache-key: ${{ inputs.test-integration-cache-key }}
 
+          python-version: ${{ inputs.test-integration-python-version }}
+
           properties: |
             mi-ci-stage=test
             mi-ci-test-type=integration
@@ -1039,12 +1047,12 @@ jobs:
 
     if: always()
       && fromJSON(needs.init.outputs.is-release)
-      
+
       && needs.build.result       != 'failure'
       && needs.distDocker.result  != 'failure'
       && needs.distArchive.result != 'failure'
       && needs.distLibrary.result != 'failure'
-      
+
       && (
            needs.distDocker.result  != 'skipped'
         && needs.distArchive.result != 'skipped'
