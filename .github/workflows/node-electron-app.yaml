@@ -558,6 +558,7 @@ jobs:
           cache-version: ${{ inputs.cache-version }}
 
       - id: artifact
+        if: always()
         uses: milaboratory/github-ci/actions/shell@v2
         env:
           APP_NAME: ${{ inputs.app-name }}
