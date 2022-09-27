@@ -2,13 +2,13 @@ name: Run Java project tests and publish results
 author: 'MiLaboratories'
 description: |
   Run Java project tests with gradle.
-  
+
   Upload test results to remote storage so developer could see the report.
 
   This action cares about caching and re-using build results.
   This means tests use results build jobs finished before this
   action has started.
-  
+
   Requirements:
     - initialized context (actions/context/init)
     - configured AWS environment (actions/aws/configure)
@@ -139,7 +139,7 @@ inputs:
   s3-path-prefix:
     description: |
       Prefix for all uploaded test files.
-      
+
       Tests report will be uploaded to:
         's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
 
@@ -162,6 +162,14 @@ inputs:
       for complete list of supported distributions.
     required: false
     default: 'temurin'
+
+  python-version:
+    description: |
+      Version of Python to install.
+
+      Empty value makes action to skip environment preparation step.
+    required: false
+    default: ''
 
   properties:
     description: |
@@ -213,6 +221,12 @@ runs:
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
+
+    - name: Install Python on the env
+      if: inputs.python-version != ''
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
 
     - name: Set gradle.properties
       uses: milaboratory/github-ci/actions/java/gradle/properties/set@v2
