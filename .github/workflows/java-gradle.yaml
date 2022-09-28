@@ -135,25 +135,18 @@ on:
         type: string
         default: ''
 
-      artifact-paths:
-        description: |
-          List of paths to artifacts to save after build run.
-          Empty list disables artifacts storage.
-
-          Relative paths are relative to gradle 'buildDir' project's property.
-          Absolute paths (starting with '/') are relative to repository root.
-          Patterns ('*', '**', etc.) are supported.
-
-        type: string
-        required: false
-        default: ''
-
-      artifact-retention:
-        description: |
-          Time in days to keep build artifacts before removing them
-        type: number
-        required: false
-        default: 7
+      # artifact-paths:
+      #   description: |
+      #     List of paths to artifacts to save after build run.
+      #     Empty list disables artifacts storage.
+      #
+      #     Relative paths are relative to gradle 'buildDir' project's property.
+      #     Absolute paths (starting with '/') are relative to repository root.
+      #     Patterns ('*', '**', etc.) are supported.
+      #
+      #   type: string
+      #   required: false
+      #   default: ''
 
       #
       # Tests control
@@ -294,6 +287,13 @@ on:
         type: string
         required: false
         default: './distributions/*.tar'
+
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
 
       dist-archive-s3:
         description: |
@@ -485,6 +485,7 @@ on:
         type: boolean
         required: false
         default: true
+
       release-s3-add-sha:
         description: |
           Add SHA to all files uploaded to S3 bucket.
@@ -837,7 +838,7 @@ jobs:
 
           artifact-name: ${{ inputs.product-name-slug }}
           artifact-paths: ${{ inputs.dist-archive-paths }}
-          artifact-retention: ${{ inputs.artifact-retention }}
+          artifact-retention: ${{ inputs.dist-artifact-retention }}
 
           properties: |
             mi-ci-stage=dist
@@ -1031,7 +1032,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
-          download-links: ${{ needs.distArchive.outputs.download-json }}
+          download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
 
   can-release:
     name: Can release
@@ -1265,4 +1266,4 @@ jobs:
           product-name: ${{ inputs.product-name }}
 
           maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
-          download-links: ${{ needs.upload-release-s3.outputs.download-json }}
+          download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
