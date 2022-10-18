@@ -1065,8 +1065,8 @@ jobs:
       
       && (
            needs.distDocker.result  != 'skipped'
-        && needs.distArchive.result != 'skipped'
-        && needs.distLibrary.result != 'skipped'
+        || needs.distArchive.result != 'skipped'
+        || needs.distLibrary.result != 'skipped'
       )
 
     steps:
