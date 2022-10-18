@@ -422,6 +422,15 @@ on:
         required: false
         default: doc,chore
 
+      release-github-draft:
+        description: |
+          Create GitHub Release draft instead of final release.
+          This makes developer to manually confirm release publication, but
+          also allows to update release description and changelog before publication.
+        type: string
+        required: false
+        default: false
+
       release-to-s3:
         description: |
           Set it to 'true' if you want to upload releases to S3 bucket
@@ -1136,6 +1145,7 @@ jobs:
 
           name: ${{ steps.context.outputs.current-version }}
           tag: ${{ steps.context.outputs.current-version-tag }}
+          draft: ${{ inputs.release-github-draft }}
 
           assets: |
             release-files/*
