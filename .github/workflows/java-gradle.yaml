@@ -278,6 +278,8 @@ on:
       dist-archive-paths:
         description: |
           Files to save as build artifact, release asset and to upload to S3
+          Each file matched by this patterns would be added to GitHub action
+          as individual asset.
         type: string
         required: false
         default: './distributions/*.tar'
