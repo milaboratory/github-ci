@@ -421,7 +421,7 @@ on:
           Create GitHub Release draft instead of final release.
           This makes developer to manually confirm release publication, but
           also allows to update release description and changelog before publication.
-        type: string
+        type: boolean
         required: false
         default: false
 
