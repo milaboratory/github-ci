@@ -1128,6 +1128,9 @@ jobs:
     needs:
       - release
 
+    if:  always()
+      && needs.release.result == 'success'
+
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
@@ -1156,7 +1159,11 @@ jobs:
     name: S3 archive release
     runs-on: ubuntu-latest
 
-    if: inputs.release-to-s3 && inputs.dist-archive
+    if:  always()
+      && needs.release.result == 'success'
+      && inputs.release-to-s3
+      && inputs.dist-archive
+
     needs:
       - release
 
@@ -1188,7 +1195,9 @@ jobs:
     name: library release
     runs-on: ubuntu-latest
 
-    if:  inputs.dist-library
+    if:  always()
+      && needs.release.result == 'success'
+      && inputs.dist-library
       && inputs.dist-library-release-tasks != ''
     needs:
       - release
@@ -1254,7 +1263,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && needs.release.outputs.started == 'true'
+      && needs.release.result == 'success'
     needs:
       - release
 
