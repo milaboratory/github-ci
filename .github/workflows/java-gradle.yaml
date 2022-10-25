@@ -399,6 +399,7 @@ on:
         description: |
           The path to a zero-byte object on an S3 bucket
 
+        type: string  
         default: 'link/software/${{ github.event.repository.name }}'
         required: false
 
@@ -407,7 +408,8 @@ on:
           The name of a zero-byte object.
           In particular it should be a combination
           of the application name, branch name and extention.
-
+          
+        type: string
         default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
         required: false
 
