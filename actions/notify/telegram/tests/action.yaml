@@ -62,7 +62,7 @@ runs:
                          "additional_info": ${{ toJSON(inputs.additional-info) }} },
 
             "build": { "version": ${{ toJSON(inputs.build-version) }} },
-          
+
             "tests": { "status": ${{ toJSON(inputs.tests-status) }},
                        "type": ${{ toJSON(inputs.tests-type) }},
                        "url": ${{ toJSON(inputs.report-url) }} },
@@ -79,7 +79,10 @@ runs:
           }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-          ) | [CI logs](
+          ) | [Report URL](
+            {{- tests["url"] -}}
+          )
+            | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
