@@ -35,7 +35,7 @@ inputs:
   s3-bucket-path:
     description: |
        The path to a zero-byte object on an S3 bucket
-       
+
        Example:
         'link/software/mixcr'
 
@@ -85,7 +85,7 @@ runs:
         args: |
           s3api
           copy-object
-          --copy-source ${{ inputs.s3-bucket }}/{{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
+          --copy-source ${{ inputs.s3-bucket }}/${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
           --bucket ${{ inputs.s3-bucket }}
           --key ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
           --website-redirect-location ${{ inputs.cdn-redirect-link }}
