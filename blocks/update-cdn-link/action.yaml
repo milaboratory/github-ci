@@ -35,8 +35,8 @@ inputs:
   s3-bucket-path:
     description: |
        The path to a zero-byte object on an S3 bucket
-
-      Example:
+       
+       Example:
         'link/software/mixcr'
 
     required: true
@@ -47,7 +47,7 @@ inputs:
        of the application name, branch name and extention.
 
        Example:
-         'mixcr-develop.zip'
+        'mixcr-develop.zip'
 
     required: true
 
