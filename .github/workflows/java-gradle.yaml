@@ -399,7 +399,7 @@ on:
         description: |
           The path to a zero-byte object on an S3 bucket
 
-        type: string  
+        type: string
         default: 'link/software/${{ github.event.repository.name }}'
         required: false
 
@@ -408,7 +408,7 @@ on:
           The name of a zero-byte object.
           In particular it should be a combination
           of the application name, branch name and extention.
-          
+
         type: string
         default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
         required: false
@@ -1054,9 +1054,17 @@ jobs:
       - distArchive
 
     steps:
+      - id: cdn-string
+        uses: milaboratory/github-ci/actions/shell@v2
+        with:
+          dump-stdout: false
+          run: |
+            CDN_URL=$(echo '${{ needs.distArchive.outputs.s3-urls-json }}' | jq -r  -c '.[]')
+            ghwa_set_output "converted_cdn_url" "${CDN_URL}"
+
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v2
         with:
-          cdn-redirect-link: ${{ fromJSON(needs.distArchive.outputs.s3-urls-json) }}
+          cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
           s3-key-id: ${{ secrets.AWS_KEY_ID }}
           s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
