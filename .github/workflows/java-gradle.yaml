@@ -1056,7 +1056,7 @@ jobs:
     steps:
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v2
         with:
-          cdn-redirect-link: ${{ needs.distArchive.outputs.s3-urls-json }}
+          cdn-redirect-link: ${{ fromJSON(needs.distArchive.outputs.s3-urls-json) }}
           s3-key-id: ${{ secrets.AWS_KEY_ID }}
           s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
