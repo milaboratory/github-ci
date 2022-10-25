@@ -384,6 +384,35 @@ on:
         default: 'false'
 
       #
+      # CDN redirect link control
+      #
+      cdn-redirect-s3:
+        description: |
+          Whether or not to enable the CDN link
+          to redirect to the latest build results.
+
+        type: boolean
+        required: false
+        default: false
+
+      cdn-redirect-s3-bucket-path:
+        description: |
+          The path to a zero-byte object on an S3 bucket
+
+        default: 'link/software/${{ github.event.repository.name }}'
+        required: false
+
+      cdn-redirect-s3-bucket-key:
+        description: |
+          The name of a zero-byte object.
+          In particular it should be a combination
+          of the application name, branch name and extention.
+
+        default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
+        required: false
+
+
+      #
       # Library distribution control
       #
       dist-library:
@@ -1009,6 +1038,31 @@ jobs:
 
       libs-list: ${{ steps.libs-list.outputs.result }}
 
+  update-cdn-link:
+    name: Update the latest build link on the CDN
+    runs-on: ubunti-latest
+
+    if: inputs.cdn-redirect-s3
+      &&  needs.build.result != 'cancelled'
+      &&  github.event.repository.name == 'mixcr'
+      &&  github.ref_name == 'develop'
+
+    needs:
+      - build
+      - distArchive
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/update-cdn-link@v2
+        with:
+          cdn-redirect-link: ${{ needs.distArchive.outputs.s3-urls-json }}
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
+          s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
+
+
   notify-build:
     name: Notify build
     runs-on: ubuntu-latest
@@ -1059,12 +1113,12 @@ jobs:
 
     if: always()
       && fromJSON(needs.init.outputs.is-release)
-      
+
       && needs.build.result       != 'failure'
       && needs.distDocker.result  != 'failure'
       && needs.distArchive.result != 'failure'
       && needs.distLibrary.result != 'failure'
-      
+
       && (
            needs.distDocker.result  != 'skipped'
         || needs.distArchive.result != 'skipped'
