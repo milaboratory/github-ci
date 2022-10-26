@@ -33,3 +33,7 @@ to control workflow's parameters based on current context's state.
 # v2
 All workflows here expect outer workflow to call 'context/init' action before starting.
 Without 'context/init' 'v2' workflows can't perform some of their jobs.
+
+# v3
+All workflows here expect outer workflow to call 'context/init' action before starting.
+Without 'context/init' 'v3' workflows can't perform some of their jobs.
