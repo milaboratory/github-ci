@@ -224,6 +224,12 @@ on:
         type: string
         required: false
         default: ''
+      test-integration-python-version:
+        description: |
+           Version of Python to install
+        type: string
+        required: false
+        default: ''
 
       #
       # Docker distribution control
@@ -376,6 +382,37 @@ on:
         type: string
         required: false
         default: 'false'
+
+      #
+      # CDN redirect link control
+      #
+      cdn-redirect-s3:
+        description: |
+          Whether or not to enable the CDN link
+          to redirect to the latest build results.
+
+        type: boolean
+        required: false
+        default: false
+
+      cdn-redirect-s3-bucket-path:
+        description: |
+          The path to a zero-byte object on an S3 bucket
+
+        type: string
+        default: 'link/software/${{ github.event.repository.name }}'
+        required: false
+
+      cdn-redirect-s3-bucket-key:
+        description: |
+          The name of a zero-byte object.
+          In particular it should be a combination
+          of the application name, branch name and extention.
+
+        type: string
+        default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
+        required: false
+
 
       #
       # Library distribution control
@@ -762,6 +799,8 @@ jobs:
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
           test-data-cache-key: ${{ inputs.test-integration-cache-key }}
 
+          python-version: ${{ inputs.test-integration-python-version }}
+
           properties: |
             mi-ci-stage=test
             mi-ci-test-type=integration
@@ -1001,6 +1040,39 @@ jobs:
 
       libs-list: ${{ steps.libs-list.outputs.result }}
 
+  update-cdn-link:
+    name: Update the latest build link on the CDN
+    runs-on: ubuntu-latest
+
+    if: inputs.cdn-redirect-s3
+      &&  needs.build.result != 'cancelled'
+      &&  github.event.repository.name == 'mixcr'
+      &&  github.ref_name == 'develop'
+
+    needs:
+      - build
+      - distArchive
+
+    steps:
+      - id: cdn-string
+        uses: milaboratory/github-ci/actions/shell@v2
+        with:
+          dump-stdout: false
+          run: |
+            CDN_URL=$(echo '${{ needs.distArchive.outputs.s3-urls-json }}' | jq -r  -c '.[]')
+            ghwa_set_output "converted_cdn_url" "${CDN_URL}"
+
+      - uses: milaboratory/github-ci/blocks/update-cdn-link@v2
+        with:
+          cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
+          s3-key-id: ${{ secrets.AWS_KEY_ID }}
+          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
+          s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
+
+
   notify-build:
     name: Notify build
     runs-on: ubuntu-latest
@@ -1051,12 +1123,12 @@ jobs:
 
     if: always()
       && fromJSON(needs.init.outputs.is-release)
-      
+
       && needs.build.result       != 'failure'
       && needs.distDocker.result  != 'failure'
       && needs.distArchive.result != 'failure'
       && needs.distLibrary.result != 'failure'
-      
+
       && (
            needs.distDocker.result  != 'skipped'
         || needs.distArchive.result != 'skipped'
