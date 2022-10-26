@@ -84,14 +84,10 @@ runs:
       with:
         args: |
           s3api
-          copy-object
-          --copy-source
-          ${{ inputs.s3-bucket }}/${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
+          put-object
           --bucket
           ${{ inputs.s3-bucket }}
           --key
           ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
           --website-redirect-location
           ${{ inputs.cdn-redirect-link }}
-          --metadata-directive
-          REPLACE
