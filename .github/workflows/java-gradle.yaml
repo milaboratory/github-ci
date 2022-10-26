@@ -1046,8 +1046,6 @@ jobs:
 
     if: inputs.cdn-redirect-s3
       &&  needs.build.result != 'cancelled'
-      &&  github.event.repository.name == 'mixcr'
-      &&  github.ref_name == 'develop'
 
     needs:
       - build
