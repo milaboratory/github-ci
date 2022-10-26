@@ -474,7 +474,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -490,7 +490,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
       - uses: milaboratory/github-ci/actions/release/delete-draft/@v3
         with:
@@ -499,7 +499,7 @@ jobs:
 
       - name: Draft release
         id: draft-release
-        uses: milaboratory/github-ci/actions/release/create@v2
+        uses: milaboratory/github-ci/actions/release/create@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -524,7 +524,7 @@ jobs:
       - init
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v2
+      - uses: milaboratory/github-ci/actions/env@v3
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -533,7 +533,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v2
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -559,7 +559,7 @@ jobs:
 
       - id: artifact
         if: always()
-        uses: milaboratory/github-ci/actions/shell@v2
+        uses: milaboratory/github-ci/actions/shell@v3
         env:
           APP_NAME: ${{ inputs.app-name }}
           APP_NAME_SLUG: ${{ inputs.app-name-slug }}
@@ -643,7 +643,7 @@ jobs:
         - build
 
       steps:
-        - uses: milaboratory/github-ci/actions/env@v2
+        - uses: milaboratory/github-ci/actions/env@v3
           with:
             inputs: ${{ inputs.env }}
             secrets: ${{ secrets.env }}
@@ -652,7 +652,7 @@ jobs:
           with:
             submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v2
+        - uses: milaboratory/github-ci/actions/git/crypt@v3
           if: inputs.git-crypt-unlock
           with:
             gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -683,7 +683,7 @@ jobs:
       - test-unit
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v2
+      - uses: milaboratory/github-ci/blocks/notify/tests@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -708,7 +708,7 @@ jobs:
         - build
 
       steps:
-        - uses: milaboratory/github-ci/actions/env@v2
+        - uses: milaboratory/github-ci/actions/env@v3
           with:
             inputs: ${{ inputs.env }}
             secrets: ${{ secrets.env }}
@@ -717,7 +717,7 @@ jobs:
           with:
             submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v2
+        - uses: milaboratory/github-ci/actions/git/crypt@v3
           if: inputs.git-crypt-unlock
           with:
             gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -748,7 +748,7 @@ jobs:
       - test-static
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v2
+      - uses: milaboratory/github-ci/blocks/notify/tests@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -773,7 +773,7 @@ jobs:
       - upload-s3
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v2
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -823,7 +823,7 @@ jobs:
         - notify-test-static
 
       steps:
-        - uses: milaboratory/github-ci/blocks/notify/review-required@v2
+        - uses: milaboratory/github-ci/blocks/notify/review-required@v3
           with:
             telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
             telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -865,7 +865,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
       - uses: actions/download-artifact@v2
         with:
@@ -874,7 +874,7 @@ jobs:
 
       - name: Create release
         id: release
-        uses: milaboratory/github-ci/actions/release/create@v2
+        uses: milaboratory/github-ci/actions/release/create@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -933,7 +933,7 @@ jobs:
       - upload-release-s3
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v2
+      - uses: milaboratory/github-ci/blocks/notify/release@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

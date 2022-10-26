@@ -66,11 +66,11 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v2
+      uses: milaboratory/github-ci/actions/context@v3
 
     - id: tests-status
       name: Merge test statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v3
       with:
         statuses: ${{ inputs.tests-status }}
 
@@ -81,7 +81,7 @@ runs:
         && !( steps.tests-status.outputs.status != 'success'
            && inputs.notification-mode == 'success-only' )
 
-      uses: milaboratory/github-ci/actions/notify/telegram/tests@v2
+      uses: milaboratory/github-ci/actions/notify/telegram/tests@v3
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

@@ -76,10 +76,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v2
+      uses: milaboratory/github-ci/actions/context@v3
 
     - id: category
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
       with:
@@ -92,7 +92,7 @@ runs:
 
     - id: build-status
       name: Merge build statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v3
       with:
         statuses: ${{ inputs.build-status }}
 
@@ -100,7 +100,7 @@ runs:
       if:  steps.build-status.outputs.status != 'success'
         && inputs.notification-mode != 'success-only'
 
-      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v2
+      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v3
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -114,7 +114,7 @@ runs:
       if:  steps.build-status.outputs.status == 'success'
         && inputs.notification-mode != 'failure-only'
 
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
@@ -130,7 +130,7 @@ runs:
       if:  steps.build-status.outputs.status == 'success'
         && inputs.notification-mode != 'failure-only'
 
-      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v2
+      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v3
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

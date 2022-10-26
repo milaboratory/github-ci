@@ -57,10 +57,10 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v2
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v3
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
@@ -72,7 +72,7 @@ runs:
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
           ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v2
+    - uses: milaboratory/github-ci/actions/templates/jinja@v3
       id: message
       with:
         data: |
@@ -121,7 +121,7 @@ runs:
 
           {{ product["additional_info"] }}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v2
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

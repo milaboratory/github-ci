@@ -178,7 +178,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -195,23 +195,23 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v2
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
       - name: Build Docker Image
-        uses: milaboratory/github-ci/actions/docker/build@v2
+        uses: milaboratory/github-ci/actions/docker/build@v3
         with:
           dockerfile: ${{ inputs.dockerfile }}
           context: ${{ inputs.build-context }}
           tags: 'build:local'
 
-      - uses: milaboratory/github-ci/actions/shell@v2
+      - uses: milaboratory/github-ci/actions/shell@v3
         id: tags
         env:
           PUSH_DEV_TARGETS: ${{ inputs.push-dev-targets }}
@@ -286,7 +286,7 @@ jobs:
               done
             done
 
-      - uses: milaboratory/github-ci/actions/docker/push@v2
+      - uses: milaboratory/github-ci/actions/docker/push@v3
         id: push
         with:
           source: 'build:local'
@@ -309,7 +309,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v2
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -331,11 +331,11 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
       - id: create-release
         name: Create release
-        uses: milaboratory/github-ci/actions/release/create@v2
+        uses: milaboratory/github-ci/actions/release/create@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

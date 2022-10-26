@@ -30,7 +30,7 @@ runs:
   steps:
     - name: Set from <json>
       if: inputs.json != ''
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         ENV_TO_SET: ${{ inputs.json }}
         MASK: ${{ inputs.mask-values }}
@@ -54,7 +54,7 @@ runs:
 
     - name: Set from <list>
       if: inputs.list != ''
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         ENV_TO_SET: ${{ inputs.list }}
         MASK: ${{ inputs.mask-values }}

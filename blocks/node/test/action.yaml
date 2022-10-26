@@ -32,22 +32,22 @@ runs:
 
   steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v2
+        uses: milaboratory/github-ci/actions/context@v3
 
       - name: Prepare env for Node application build
-        uses: milaboratory/github-ci/actions/node/prepare@v2
+        uses: milaboratory/github-ci/actions/node/prepare@v3
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
 
       - name: Install node packages with npm
-        uses: milaboratory/github-ci/actions/shell@v2
+        uses: milaboratory/github-ci/actions/shell@v3
         with:
           run: |
            npm ci
 
       - name: Run test - ${{ inputs.test-name }}
-        uses: milaboratory/github-ci/actions/shell@v2
+        uses: milaboratory/github-ci/actions/shell@v3
         with:
           run: |
            npm run ${{ inputs.test-name }} --if-present

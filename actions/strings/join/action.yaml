@@ -37,7 +37,7 @@ runs:
   steps:
     - name: Join lines
       id: join
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         INPUT_TEXT: ${{ inputs.input }}
         SEPARATOR: ${{ inputs.separator }}

@@ -65,7 +65,7 @@ runs:
 
   steps:
     - id: merge
-      uses: milaboratory/github-ci/actions/shell@v2
+      uses: milaboratory/github-ci/actions/shell@v3
       env:
         INPUT_STATUSES: ${{ inputs.statuses }}
       with:

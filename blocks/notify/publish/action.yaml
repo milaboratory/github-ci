@@ -66,9 +66,9 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v2
+      uses: milaboratory/github-ci/actions/context@v3
 
-    - uses: milaboratory/github-ci/actions/shell@v2
+    - uses: milaboratory/github-ci/actions/shell@v3
       id: category
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
@@ -82,13 +82,13 @@ runs:
 
     - id: job-status
       name: Merge publish job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v2
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v3
       with:
         statuses: ${{ inputs.job-status }}
 
     - name: Report publish result to Telegram
       if: inputs.telegram-target != ''
-      uses: milaboratory/github-ci/actions/notify/telegram/publish@v2
+      uses: milaboratory/github-ci/actions/notify/telegram/publish@v3
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
