@@ -65,7 +65,12 @@ inputs:
       fail on attempt to re-create existing release
     required: false
     default: 'true'
-
+  update-only-unreleased:
+    description: |
+      When allowUpdates is enabled, this will fail the action
+      if the release it is updating is not a draft or a prerelease.
+    required: false
+    deafult: 'true'
   #
   # Changelog generation settings
   #
@@ -127,13 +132,14 @@ runs:
 
     - name: Create release
       id: create
-      uses: ncipollo/release-action@c4bf6c1ab090090498fb7f3ddc9f99ba5ab619b9
+      uses: ncipollo/release-action@3ac4132803a6419fa2a7f4e9dbd1d93fceb690b9
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
         tag: ${{ inputs.tag }}
         body: ${{ steps.changelog.outputs.changes }}
 
+        updateOnlyUnreleased: ${{ inputs.update-only-unreleased }}
         allowUpdates: ${{ inputs.allow-updates }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.pre-release }}
