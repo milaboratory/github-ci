@@ -1206,7 +1206,7 @@ jobs:
           path: release-files
 
       - name: Create release
-        uses: milaboratory/github-ci/actions/release/create@v3-beta
+        uses: milaboratory/github-ci/actions/release/create@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
