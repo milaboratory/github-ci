@@ -1,6 +1,6 @@
 # This workflow will build and push docker image to the aws ecr.
 
-name: Build Docker image
+name: Build Docker image (ecr)
 
 on:
   workflow_call:
