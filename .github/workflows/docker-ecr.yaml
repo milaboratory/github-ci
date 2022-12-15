@@ -94,7 +94,7 @@ on:
       docker-qemu-platforms:
         description: |
           Comma separted string of platforms
-          to install (e.g. amd64,arm64,riscv64 )
+          to install (e.g. amd64,arm64,riscv64)
         type: string
         required: false
         default: 'all'
@@ -108,9 +108,9 @@ on:
           as JSON-encoded map. You can provide several images
           if you have additional containers for deployment.
          
-         You need to pass flavor-suffix if you have
-         additional container in the same repo
-         and you want to push it into one registry but with a different tag. 
+          You need to pass flavor-suffix if you have
+          additional container in the same repo
+          and you want to push it into one registry but with a different tag. 
          
            { "dockerfile": "./path/do/docker/file",
              "image": "docker_image_name",
@@ -119,6 +119,7 @@ on:
              "image": "docker_image_name",
              "flavor-suffix": "-migration"}
 
+        type: string
         required: false
         default: ''
 
@@ -129,6 +130,7 @@ on:
           
           ARG_1=VALUE_OF_ARG_1
           ARG_2=VALUE_OF_ARG_2
+        type: string
         required: false
         default: ''
 
@@ -140,6 +142,7 @@ on:
           However, if you do so, first,
           you need to install qemu.
           (e.g. linux/amd64,linux/arm64)
+        type: string
         required: false
         default: 'linux/amd64'
 
