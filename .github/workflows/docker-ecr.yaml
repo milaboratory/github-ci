@@ -212,6 +212,24 @@ jobs:
     outputs:
       matrix-combinations: ${{ steps.setup-matrix-combinations.outputs.matrix-combinations }}
 
+  test-output:
+    name: :test-output
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      -  setup-matrix
+
+    steps:
+      - uses: milaboratory/github-ci/actions/shell@v
+        env:
+          MATRIX: ${{ fromJson(needs.setup-matrix.outputs.matrix-combinations) }}
+        with:
+         dump-stdout: false
+         run: |
+           echo "$MATRIX"
+
+
   build:
     name: :build
     runs-on: ubuntu-latest
