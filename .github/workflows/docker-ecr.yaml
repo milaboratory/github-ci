@@ -158,9 +158,13 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      DOCKER_SENSITIVE_BUILD_ARGS:
+      DOCKER_BUILD_SECRETS:
         description: |
-          Add sensitive docker build arguments to secrets.
+          List of build secrets. (RUN --mount=secret)
+          One line one secret
+          
+          SECRET_1=VALUE_OF_SECRET_1
+          SECRET_2=VALUE_OF_SECRET_2
         required: false
 
       TELEGRAM_NOTIFICATION_TARGET:
@@ -274,17 +278,20 @@ jobs:
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
             type=ref,event=branch
+            type=ref,event=tagvim
             type=semver,pattern={{raw}}
             type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - uses: docker/build-push-action@v3
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platform: ${{ inputs.docker-platform }}
+          platforms: ${{ inputs.docker-platform }}
           build-args: |
               ${{ inputs.docker-images-build-args }}
-              ${{ secrets.DOCKER_SENSITIVE_BUILD_ARGS }}
+          secrets: |
+              ${{ secrets.DOCKER_BUILD_SECRETS }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
