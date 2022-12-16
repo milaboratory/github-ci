@@ -210,7 +210,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            ghwa_set_output "matrix-combinations" "{"include":[$MATRIX_PARAMS_COMBINATIONS]}"
+            ghwa_set_output "matrix-combinations" "{\"include\":[$MATRIX_PARAMS_COMBINATIONS]}"
 
     outputs:
       matrix-combinations: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-combinations }}
@@ -238,7 +238,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ needs.setup-matrix.outputs.matrix-combinations }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-combinations) }}
 
     needs:
       - init
