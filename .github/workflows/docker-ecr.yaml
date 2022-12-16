@@ -213,7 +213,7 @@ jobs:
             ghwa_set_output "matrix-combinations" "{"include":[$MATRIX_PARAMS_COMBINATIONS]}"
 
     outputs:
-      matrix-combinations: ${{ steps.setup-matrix-combinations.outputs.matrix-combinations }}
+      matrix-combinations: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-combinations }}
 
   test-output:
     name: :test-output
@@ -221,7 +221,7 @@ jobs:
 
     needs:
       - init
-      -  setup-matrix
+      - setup-matrix
 
     steps:
       - uses: milaboratory/github-ci/actions/shell@v3
@@ -238,7 +238,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix-combinations) }}
+      matrix: ${{ needs.setup-matrix.outputs.matrix-combinations }}
 
     needs:
       - init
