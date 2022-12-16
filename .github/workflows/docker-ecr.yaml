@@ -199,6 +199,9 @@ jobs:
     name: :setup-matrix
     runs-on: ubuntu-latest
 
+    needs:
+      - init
+
     steps:
       - id: setup-matrix-combinations
         uses: milaboratory/github-ci/actions/shell@v3
@@ -221,7 +224,7 @@ jobs:
       -  setup-matrix
 
     steps:
-      - uses: milaboratory/github-ci/actions/shell@v
+      - uses: milaboratory/github-ci/actions/shell@v3
         env:
           MATRIX: ${{ fromJson(needs.setup-matrix.outputs.matrix-combinations) }}
         with:
