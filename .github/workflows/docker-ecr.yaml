@@ -235,6 +235,9 @@ jobs:
       contents: read
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
       - uses: milaboratory/github-ci/actions/env@v3
         with:
           inputs: ${{ inputs.env }}
