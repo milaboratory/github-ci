@@ -275,8 +275,8 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            TRIMMED_SHA=${CURRENT_SHA:0:8}
-            TRIMMED_VERSION=$( echo "$CURRENT_VERSION" | grep -E -o ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-(0|[1-9]\d*))
+            TRIMMED_SHA="${CURRENT_SHA:0:8}"
+            TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-(0|[1-9]\d*){1,}")
             
             ghwa_set_output transformed_version "${TRIMMED_VERSION}-${TRIMMED_SHA}"
 
