@@ -8,52 +8,43 @@ inputs:
   build-version:
     description: |
        Set version number in 'package.json' file to given value.
-    type: string
     required: false
   build-script-name:
     description: |
       Name of script for application build
-    type: string
     required: true
     default: 'build'
   build-max-attempts:
     description: |
       Maximum number of attempts for completing the build and release step
-    type: string
     required: false
     default: '1'
   build-package-root:
     description: Directory where NPM/Yarn commands should be run
-    type: string
     required: false
     default: '.'
   skip-build:
     description: Whether the action should execute the NPM build script before running 'electron-builder'
-    type: string
     required: false
-    default: false
+    default: 'false'
   electron-build-args:
     description: |
       Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
-    type: string
     required: false
     default: ''
   is-vue-project:
     description: |
       This is vue-based project. Use 'vue-cli' toolkit
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   is-release:
     description: |
       Set If you would like to mark the current version as a release version.
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   token:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
-    type: string
     required: true
 
   mac_sign_cert:

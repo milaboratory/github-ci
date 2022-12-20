@@ -62,6 +62,10 @@ on:
         type: string
         required: false
         default: '{}'
+
+      #
+      # NodeJS and OS settings
+      #
       node-version:
         description: |
           Node version to use
@@ -125,6 +129,7 @@ on:
         description: |
           If 'true' enables cache for an Electron application,
           if 'false', enables cache for a generic NodeJS application.
+        type: string
         required: false
         default: 'true'
 

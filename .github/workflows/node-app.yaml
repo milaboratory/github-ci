@@ -90,6 +90,7 @@ on:
         description: |
           If 'true' enables cache for an Electron application,
           if 'false', enables cache for a generic NodeJS application.
+        type: string
         required: false
         default: 'true'
 
@@ -104,7 +105,8 @@ on:
         default: false
       test-script-name:
         description: |
-          The name of a test script
+          The name of a test
+        type: string
         required: false
         default: 'test'
 
@@ -114,6 +116,7 @@ on:
       dist-archive-path:
         description:
           The name of a distribution folder for nodejs application.
+        type: string
         required: false
         default: 'dist'
 
@@ -158,7 +161,7 @@ on:
           Invalidate the cache on the AWS Cloudfornt for a given distribution
         type: string
         required: false
-        default: true
+        default: 'true'
 
     #
     # Notifications
@@ -168,7 +171,7 @@ on:
         Enable Telegram notifications
       required: false
       type: boolean
-      default: true
+      default: 'true'
 
     notify-build:
       description: |

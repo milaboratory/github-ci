@@ -8,13 +8,11 @@ inputs:
   build-version:
     description: |
       Set version number in 'package.json' file to given value.
-    type: string
     required: false
 
   build-script-name:
     description: |
       Name of script for application build
-    type: string
     required: true
     default: 'build'
 
@@ -22,6 +20,7 @@ inputs:
     description: |
       Node version to use.
       Examples: '16.x', '14.x'
+
     required: true
 
   cache-version:
