@@ -163,39 +163,39 @@ on:
         required: false
         default: 'true'
 
-    #
-    # Notifications
-    #
-    notify-telegram:
-      description: |
-        Enable Telegram notifications
-      required: false
-      type: boolean
-      default: 'true'
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: 'true'
 
-    notify-build:
-      description: |
-        Enable notifications about build status (build ready/failed)
-        Possible values are:
-         - 'true' - send all notifications about build status (both success and failed)
-         - 'failure-only' - send notification about failed builds, don't notify on success
-         - 'success-only' - send notification about success builds, don't notify on failures
-         - 'false' - don't send notifications about build results at all.
-      required: false
-      type: string
-      default: 'true'
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
 
-    notify-tests:
-      description: |
-        Enable notifications about tests status (ready/failed)
-        Possible values are:
-         - 'true' - send all notifications about tests status (both success and failed)
-         - 'failure-only' - send notification about failed tests, don't notify on success
-         - 'success-only' - send notification about success tests, don't notify on failures
-         - 'false' - don't send notifications about tests results at all.
-      required: false
-      type: string
-      default: 'true'
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
 
     secrets:
       env:
