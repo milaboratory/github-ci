@@ -325,6 +325,10 @@ jobs:
       - build
       - test
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
