@@ -331,8 +331,8 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: release-files
-          path: release-files
+          name: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.app-name-slug }}
 
       - uses: milaboratory/github-ci/actions/aws/cloudfront@v3-beta
         with:
@@ -341,7 +341,7 @@ jobs:
           aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
           aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
           aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
-          dist-assets: release-files/*
+          dist-assets: ${{ inputs.app-name-slug }}/*
 
 
   notify-test:
