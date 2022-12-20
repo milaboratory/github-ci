@@ -27,6 +27,13 @@ inputs:
     required: false
     default: 'v1'
 
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
@@ -35,10 +42,11 @@ runs:
         uses: milaboratory/github-ci/actions/context@v3
 
       - name: Prepare env for Node application build
-        uses: milaboratory/github-ci/actions/node/prepare@v3
+        uses: milaboratory/github-ci/actions/node/prepare@v3-beta
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
 
       - name: Install node packages with npm
         uses: milaboratory/github-ci/actions/shell@v3

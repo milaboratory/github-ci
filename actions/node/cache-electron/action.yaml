@@ -29,7 +29,6 @@ runs:
         path: |
           ~/.cache/electron/
           ~/Library/Caches/electron/
-
         key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
@@ -39,7 +38,6 @@ runs:
       uses: actions/cache@v2
       with:
         path: node_modules
-
         key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-

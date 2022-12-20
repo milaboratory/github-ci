@@ -275,13 +275,18 @@ jobs:
         env:
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
           CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
+          IS_RELEASE: ${{ steps.context.outputs.is-release }}
         with:
           dump-stdout: false
           run: |
             TRIMMED_SHA="${CURRENT_SHA:0:8}"
             TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
             
-            ghwa_set_output transformed_version "${TRIMMED_VERSION}-${TRIMMED_SHA}"
+            if [ "$IS_RELEASE" ];then
+              ghwa_set_output transformed_version "${TRIMMED_VERSION}"
+            else
+              ghwa_set_output transformed_version "${TRIMMED_VERSION}-${TRIMMED_SHA}"
+            fi
 
       - id: image-metadata
         uses: docker/metadata-action@v3
@@ -294,9 +299,10 @@ jobs:
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
             type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
-      - uses: docker/build-push-action@v3
+      - id: build-push
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: ${{ matrix.dockerfile }}

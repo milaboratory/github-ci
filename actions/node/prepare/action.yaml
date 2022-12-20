@@ -20,18 +20,32 @@ inputs:
     required: false
     default: 'v1'
 
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
   steps:
     - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
 
-    - name: Cache electron libs
-      uses: milaboratory/github-ci/actions/node/electron/cache@v2
+    - name: Cache Electron libs
+      if:  ${{ inputs.is-electron-application }}
+      uses: milaboratory/github-ci/actions/node/cache-electron@v3-beta
       with:
         cache-version: ${{ inputs.cache-version }}
         local-cache: 'on'
+
+    - name: Cache NodeJS libs
+      if: !${{ inputs.is-electron-application }}
+      uses: milaboratory/github-ci/actions/node/cache-generic@v3-beta
+      with:
+        cache-version: ${{ inputs.cache-version }}

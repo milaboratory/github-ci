@@ -121,6 +121,12 @@ on:
         type: boolean
         required: false
         default: false
+      is-electron-application:
+        description: |
+          If 'true' enables cache for an Electron application,
+          if 'false', enables cache for a generic NodeJS application.
+        required: false
+        default: 'true'
 
       #
       # Test control
@@ -539,7 +545,7 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build@v3
+      - uses: milaboratory/github-ci/blocks/node/build/electron@v3
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -556,6 +562,7 @@ jobs:
           win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
 
       - id: artifact
         if: always()
@@ -583,7 +590,7 @@ jobs:
             fi
 
       - name: Save build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: fromJSON( steps.artifact.outputs.data ).app_name_slug != ''
         with:
           name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
@@ -664,6 +671,7 @@ jobs:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
             cache-version: ${{ inputs.cache-version }}
+            is-electron-application: ${{ inputs.is-electron-application }}
 
       outputs:
         # Even constant outputs become initialized only after job start.
@@ -729,6 +737,7 @@ jobs:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
             cache-version: ${{ inputs.cache-version }}
+            is-electron-application: ${{ inputs.is-electron-application }}
 
       outputs:
         # Even constant outputs become initialized only after job start.
@@ -867,7 +876,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: release-files
           path: release-files
