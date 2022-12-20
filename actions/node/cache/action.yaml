@@ -1,7 +1,7 @@
-name: Cache Electron
+name: Cache NodeJs/Electron
 author: 'MiLaboratories'
 description: |
-  Cache Electon modules and (optionally) local node_modules
+  Cache Electon or NodeJS modules and (optionally) local node_modules
 
 inputs:
   local-cache:
@@ -19,12 +19,20 @@ inputs:
     required: false
     default: 'v1'
 
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
   steps:
     - name: Cache Electron libs
       uses: actions/cache@v2
+      if: inputs.is-electron-application == 'true'
       with:
         path: |
           ~/.cache/electron/
@@ -34,10 +42,19 @@ runs:
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
 
     - name: Cache local 'node_modules'
-      if: inputs.local-cache == 'on'
+      if: inputs.local-cache == 'on' && inputs.is-electron-application == 'true'
       uses: actions/cache@v2
       with:
         path: node_modules
         key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
+
+    - name: Cache Node modules
+      uses: actions/cache@v3
+      if: inputs.is-electron-application == 'false'
+      with:
+        path: ~/.npm
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-      

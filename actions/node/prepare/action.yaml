@@ -37,15 +37,9 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
 
-    - name: Cache Electron libs
-      if:  ${{ inputs.is-electron-application }}
-      uses: milaboratory/github-ci/actions/node/cache-electron@v3-beta
+    - name: Cache NodeJS/Electron libs
+      uses: milaboratory/github-ci/actions/node/cache@v3-beta
       with:
+        is-electron-application: ${{ inputs.is-electron-application }}
         cache-version: ${{ inputs.cache-version }}
         local-cache: 'on'
-
-    - name: Cache NodeJS libs
-      if: !${{ inputs.is-electron-application }}
-      uses: milaboratory/github-ci/actions/node/cache-generic@v3-beta
-      with:
-        cache-version: ${{ inputs.cache-version }}
