@@ -88,7 +88,7 @@ inputs:
       If 'true' enables cache for an Electron application,
       if 'false', enables cache for a generic NodeJS application.
     required: false
-    default: 'true'
+    default: true
 
 runs:
   using: "composite"
