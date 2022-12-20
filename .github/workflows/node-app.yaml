@@ -345,7 +345,7 @@ jobs:
           aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
           aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
           aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
-          dist-assets: ${{ inputs.app-name-slug }}/*
+          dist-assets: ${{ inputs.app-name-slug }}/
 
 
   notify-test:
