@@ -50,7 +50,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@
+      uses: milaboratory/github-ci/actions/context@v3
 
     - uses: aws-actions/configure-aws-credentials@v1
       with:
