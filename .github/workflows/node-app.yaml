@@ -275,7 +275,7 @@ jobs:
       - id: artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ inputs.app_name_slug }}
+          name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.dist-archive-path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
