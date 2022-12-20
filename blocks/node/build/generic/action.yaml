@@ -38,7 +38,7 @@ inputs:
       If 'true' enables cache for an Electron application,
       if 'false', enables cache for a generic NodeJS application.
     required: false
-    default: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -66,5 +66,7 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
 
     - name: Build NodeJS application
-      run: |
-        npm run ${{ inputs.build-script-name }}
+      uses: milaboratory/github-ci/actions/shell@v3
+      with:
+        run: |
+          npm run ${{ inputs.build-script-name }}
