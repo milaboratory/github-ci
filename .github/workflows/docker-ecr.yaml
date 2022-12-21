@@ -339,29 +339,20 @@ jobs:
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
 
-    outputs:
-      docker-tags: ${{ steps.image-metadata.outputs.tags }}
-      docker-labels: ${{ steps.image-metadata.outputs.labels }}
-
-  notify-build:
-    name: Notify build
-    runs-on: ubuntu-latest
-
-    if: always()
-      && inputs.notify-telegram
-      && inputs.notify-build != 'false'
-      && needs.build.result != 'cancelled'
-
-    needs:
-      - build
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v3
+      - id: notify-build
+        if: always()
+          && inputs.notify-telegram
+          && inputs.notify-build != 'false'
+          && steps.build-push.conclusion != 'cancelled'
+        uses: milaboratory/github-ci/blocks/notify/build@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           build-status: |
-            ${{ needs.build.result }}
+            ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
-          docker-images: ${{ needs.build.outputs.docker-tags }}
+          docker-images: ${{ fromJSON(steps.image-metadata.outputs.json).tags }}
+
+    outputs:
+      docker-metadata-json: ${{ steps.image-metadata.outputs.json }}
