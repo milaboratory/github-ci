@@ -339,6 +339,17 @@ jobs:
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
 
+      - uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          metadataJSON: ${{ steps.image-metadata.outputs.json }}
+          metadataTags: ${{ fromJSON(steps.image-metadata.outputs.json).tags }}
+        with:
+          dump-stdout: false
+          run: |
+            echo "$metadataJSON"
+            echo "-----------------"
+            echo "$metadataTags"
+
       - id: notify-build
         if: always()
           && inputs.notify-telegram
@@ -352,7 +363,7 @@ jobs:
           build-status: |
             ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
-          docker-images: ${{ fromJSON(steps.image-metadata.outputs.json).tags }}
+          docker-images: ${{ steps.image-metadata.outputs.tags }}
 
     outputs:
       docker-metadata-json: ${{ steps.image-metadata.outputs.json }}
