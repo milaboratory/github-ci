@@ -342,7 +342,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/shell@v3
         env:
           metadataJSON: ${{ steps.image-metadata.outputs.json }}
-          metadataTags: ${{ fromJSON(steps.image-metadata.outputs.json).tags }}
+          metadataTags: ${{ fromJSON(steps.image-metadata.outputs.tags) }}
         with:
           dump-stdout: false
           run: |
@@ -363,7 +363,7 @@ jobs:
           build-status: |
             ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
-          docker-images: ${{ steps.image-metadata.outputs.tags }}
+          docker-images: ${{ fromJSON(steps.image-metadata.outputs.tags) }}
 
     outputs:
       docker-metadata-json: ${{ steps.image-metadata.outputs.json }}
