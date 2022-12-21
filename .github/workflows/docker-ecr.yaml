@@ -339,31 +339,24 @@ jobs:
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
 
-      - uses: milaboratory/github-ci/actions/shell@v3
-        env:
-          metadataJSON: ${{ steps.image-metadata.outputs.json }}
-          metadataTags: ${{ fromJSON(steps.image-metadata.outputs.tags) }}
-        with:
-          dump-stdout: false
-          run: |
-            echo "$metadataJSON"
-            echo "-----------------"
-            echo "$metadataTags"
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
 
-      - id: notify-build
-        if: always()
-          && inputs.notify-telegram
-          && inputs.notify-build != 'false'
-          && steps.build-push.conclusion != 'cancelled'
-        uses: milaboratory/github-ci/blocks/notify/build@v3
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build.result != 'cancelled'
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           build-status: |
-            ${{ steps.build-push.conclusion }}
+            ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
-          docker-images: ${{ fromJSON(steps.image-metadata.outputs.tags) }}
-
-    outputs:
-      docker-metadata-json: ${{ steps.image-metadata.outputs.json }}
