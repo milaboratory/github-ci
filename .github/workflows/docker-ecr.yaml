@@ -107,11 +107,11 @@ on:
           Provide docker images build configuration
           as JSON-encoded map. You can provide several images
           if you have additional containers for deployment.
-         
+
           You need to pass flavor-suffix if you have
           additional container in the same repo
-          and you want to push it into one registry but with a different tag. 
-         
+          and you want to push it into one registry but with a different tag.
+
            { "dockerfile": "./path/do/docker/file",
              "image": "docker_image_name",
              "flavor-suffix": "",
@@ -129,7 +129,7 @@ on:
         description: |
           List of build args (ARG Dockerfile instruction)
           One line one argument.
-          
+
           ARG_1=VALUE_OF_ARG_1
           ARG_2=VALUE_OF_ARG_2
         type: string
@@ -139,7 +139,7 @@ on:
       docker-platform:
         description: |
           --platform option for build.
-          You can specify several platforms for 
+          You can specify several platforms for
           the multi-architecture build.
           However, if you do so, first,
           you need to install qemu.
@@ -147,6 +147,28 @@ on:
         type: string
         required: false
         default: 'linux/amd64'
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
 
     secrets:
       env:
@@ -164,7 +186,7 @@ on:
         description: |
           List of build secrets. (RUN --mount=secret)
           One line one secret
-          
+
           SECRET_1=VALUE_OF_SECRET_1
           SECRET_2=VALUE_OF_SECRET_2
         required: false
@@ -283,7 +305,7 @@ jobs:
           run: |
             TRIMMED_SHA="${CURRENT_SHA:0:8}"
             TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
-            
+
             if [ "$IS_RELEASE" ];then
               ghwa_set_output transformed_version "${TRIMMED_VERSION}"
             else
@@ -316,3 +338,30 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
+
+    outputs:
+      docker-tags: ${{ steps.image-metadata.outputs.tags }}
+      docker-labels: ${{ steps.image-metadata.outputs.labels }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build.result != 'cancelled'
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
+          docker-images: ${{ needs.build.outputs.docker-tags }}
