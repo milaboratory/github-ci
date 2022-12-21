@@ -114,10 +114,12 @@ on:
          
            { "dockerfile": "./path/do/docker/file",
              "image": "docker_image_name",
-             "flavor-suffix": "" },
+             "flavor-suffix": "",
+             "context": "." },
            { "dockerfile": "./path/do/additional/docker/file",
              "image": "docker_image_name",
-             "flavor-suffix": "-migration"}
+             "flavor-suffix": "-migration",
+             "context": "."}
 
         type: string
         required: false
@@ -304,7 +306,7 @@ jobs:
       - id: build-push
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: ${{ inputs.docker-platform }}
           build-args: |

@@ -273,7 +273,7 @@ jobs:
           is-electron-application: ${{ inputs.is-electron-application }}
 
       - id: artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.dist-archive-path }}
