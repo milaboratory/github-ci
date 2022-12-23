@@ -323,7 +323,6 @@ jobs:
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
             type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - id: build-push
         uses: docker/build-push-action@v3
