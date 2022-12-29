@@ -242,6 +242,8 @@ jobs:
           APP_NAME: ${{ inputs.app-name-slug }}
         with:
           pull: true
+          files: |
+            ${{ inputs.docker-bake-file-path }}
           set: |
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }}
