@@ -179,6 +179,8 @@ jobs:
   setup-matrix:
     name: :setup-matrix
     runs-on: ubuntu-latest
+    needs:
+      - init
     steps:
       - uses: actions/checkout@v3
       - id: setup-matrix-combinations
@@ -200,12 +202,31 @@ jobs:
     name: :setup-cache
     runs-on: ubuntu-latest
     needs:
+      - init
       - setup-matrix
     strategy:
       fail-fast: false
       matrix:
         platform: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
       - uses: milaboratory/github-ci/actions/shell@v3
         with:
           dump-stdout: false
@@ -225,6 +246,7 @@ jobs:
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }}
             *.cache-to=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }},mode=max
+
   build:
     name: :build
     runs-on: [ubuntu-latest]
@@ -239,7 +261,24 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix-bake-targets) }}
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
       - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
       - uses: milaboratory/github-ci/actions/shell@v3
         env:
           APP_NAME: ${{ inputs.app-name-slug }}
