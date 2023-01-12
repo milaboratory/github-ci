@@ -142,18 +142,6 @@ on:
         type: boolean
         required: false
         default: false
-      helm-chart-repo:
-        description: |
-          Helm charts repository name
-        type: string
-        required: false
-        default: 'milaboratory/helm-charts'
-      helm-chart-repo-ref:
-        description: |
-          Helm charts repository branch name
-        type: string
-        required: false
-        default: 'main'
       helm-release-name:
         description: |
           Helm chart release name
@@ -489,9 +477,12 @@ jobs:
           secrets: ${{ secrets.env }}
 
       - uses: actions/checkout@v3
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
         with:
-          repository: ${{ inputs.helm-chart-repo }}
-          ref: ${{ inputs.helm-chart-repo-ref }}
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
