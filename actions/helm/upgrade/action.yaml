@@ -94,6 +94,6 @@ runs:
           "oci://${HELM_CHART_REGISTRY}/${HELM_CHART_NAME}" \
           "${options[@]}" \
           "${set_values[@]}" \
-          --timeout "${HELM-CHART_WAIT_TIMEOUT}" \
+          --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
           --namespace "${NAMESPACE}"
 
