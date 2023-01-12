@@ -68,12 +68,12 @@ inputs:
     description: |
       Version of kubectl
     required: false
-    default: '1.24.9'
+    default: 'v1.24.0'
   helm-version:
     description: |
       Version of helm
     required: false
-    default: '3.10.3'
+    default: 'v3.10.3'
 
 runs:
   using: "composite"
