@@ -197,11 +197,13 @@ on:
           Version of kubectl
         type: string
         required: false
+        default: 'v1.24.0'
       helm-version:
         description: |
           Version of helm
         type: string
         required: false
+        default: 'v3.10.3'
       #
       # Notifications
       #
