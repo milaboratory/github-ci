@@ -68,7 +68,7 @@ inputs:
     description: |
       Version of kubectl
     required: false
-    default: '1.24'
+    default: '1.24.9'
   helm-version:
     description: |
       Version of helm
