@@ -208,13 +208,13 @@ on:
         description: |
           Version of kubectl
         type: string
-        required: true
+        required: false
         default: '1.24'
       helm-version:
         description: |
           Version of helm
         type: string
-        required: true
+        required: false
         default: '3.10.3'
       #
       # Notifications
