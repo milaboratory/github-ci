@@ -189,7 +189,7 @@ on:
         description: |
           time to wait for any individual Kubernetes operation
           (like Jobs for hooks) (default 5m0s)
-        type: false
+        type: string
         required: false
         default: '5m0s'
       cluster-name:
