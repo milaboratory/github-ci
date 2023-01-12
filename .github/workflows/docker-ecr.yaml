@@ -84,7 +84,7 @@ on:
         default: true
       docker-qemu-platforms:
         description: |
-          Comma separted string of platforms
+          Comma separated string of platforms
           to install (e.g. amd64,arm64,riscv64)
         type: string
         required: false
@@ -93,31 +93,129 @@ on:
       # Docker images settings
       #
       docker-bake-build-config:
+        description: |
+          Provide docker's images build configuration
+          as JSON-encoded map. You can pass several images
+          if you have additional containers for deployment.
+
+          You also need to pass flavor-suffix if you have
+          additional container in the same repo
+          and you want to push it into one registry but with a different tag.
+
+          Note here, bake_target should be the same as in the docker-bake.hcl file.
+          Example:
+            { "bake_target": "app",
+              "flavor-suffix": "",
+              "helm_value": "app.image.tag" },
+            { "bake_target": "migration",
+              "flavor-suffix": "-migration",
+              "helm_value": "app.initContainers.image.tag" }
         required: false
         type: string
-        default: |
-          { "bake_target": "app",
-            "flavor-suffix": "" },
-          { "bake_target": "migration",
-            "flavor-suffix": "-migration" }
+        default: '{}'
       docker-bake-file-path:
+        description: |
+          Path to docker bake file
         required: false
         type: string
         default: './docker-bake.hcl'
       docker-images-build-args:
         description: |
           List of build args (ARG Dockerfile instruction)
-          One line one argument. Provided in the
-          following format accepted by docker buildx bake
-          
-          build_target_name.args.parameter_name="parameter_value"   
-          
+          One line one argument, provided in the
+          following format.
+
+          build_target_name.args.parameter_name="parameter_value"
+
           Example:
            app.args.someparam="somevalue"
            migration.args.someparam="somevalue"
         type: string
         required: false
         default: ''
+      #
+      # Deployment control
+      #
+      helm-deployment:
+        description: |
+          Enable deployment to the AWS EKS Cluster
+        type: boolean
+        required: false
+        default: false
+      helm-chart-repo:
+        description: |
+          Helm charts repository name
+        type: string
+        required: false
+        default: 'milaboratory/helm-charts'
+      helm-chart-repo-ref:
+        description: |
+          Helm charts repository branch name
+        type: string
+        required: false
+        default: 'main'
+      helm-release-name:
+        description: |
+          Helm chart release name
+        type: string
+        required: false
+        default: ''
+      helm-chart-name:
+        description: |
+          Helm chart name
+        type: string
+        required: false
+        default: ''
+      helm-chart-values-file:
+        description: |
+          Path to Helm chart values (in YAML format)
+        type: string
+        required: false
+        default: ''
+      helm-chart-atomic-upgrade:
+        description: |
+          if set, upgrade process rolls back changes
+          made in case of failed upgrade.
+          The --wait flag will be set automatically if --atomic is used
+
+          If --wait flag is set, will wait until all Pods, PVCs, Services,
+          and minimum number of Pods of a Deployment, StatefulSet,
+          or ReplicaSet are in a ready state before marking
+          the release as successful. It will wait for as long as --timeout
+        type: boolean
+        required: false
+        default: true
+      helm-chart-wait-timeout:
+        description: |
+          time to wait for any individual Kubernetes operation
+          (like Jobs for hooks) (default 5m0s)
+        type: false
+        required: false
+        default: '5m0s'
+      cluster-name:
+        description: |
+          AWS EKS cluster name
+        type: string
+        required: false
+        default: 'milab-euce1-prod-eks-cluster'
+      namespace:
+        description: |
+          Kubernetes namespace name
+        type: string
+        required: false
+        default: ''
+      kubectl-version:
+        description: |
+          Version of kubectl
+        type: string
+        required: true
+        default: '1.24'
+      helm-version:
+        description: |
+          Version of helm
+        type: string
+        required: true
+        default: '3.10.3'
       #
       # Notifications
       #
@@ -261,7 +359,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix-bake-targets) }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-bake-targets) }}
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
@@ -322,9 +420,9 @@ jobs:
           run: |
             TRIMMED_SHA="${CURRENT_SHA:0:8}"
             TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
-            
+
             ghwa_set_output image "${REGISTRY}/${REPOSITORY}"
-            
+
             if [ "$IS_RELEASE" == "true" ];then
               ghwa_set_output transformed_version "${TRIMMED_VERSION}"
             else
@@ -341,7 +439,7 @@ jobs:
           labels: |
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
-            type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}  
+            type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}
 
       - id: build-push
         uses: docker/bake-action@v2
@@ -361,7 +459,7 @@ jobs:
           input: ${{ steps.image-metadata.outputs.tags }}
 
       - id: notify-build
-        if: always() 
+        if: always()
           && inputs.notify-telegram
           && inputs.notify-build != 'false'
           && steps.build-push.conclusion != 'cancelled'
@@ -373,3 +471,74 @@ jobs:
             ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ steps.pushed-tags.outputs.result }}
+
+  deployment:
+    if: inputs.helm-deployment
+    name: :deployment
+    runs-on: [ self-hosted ]
+    needs:
+      - build
+      - setup-matrix
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.helm-chart-repo }}
+          ref: ${{ inputs.helm-chart-repo-ref }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+          CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
+          IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          MATRIX_BAKE_TARGETS: ${{ needs.setup-matrix.outputs.matrix-bake-targets }}
+        with:
+          dump-stdout: false
+          run: |
+            TRIMMED_SHA="${CURRENT_SHA:0:8}"
+            TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
+
+            if [ "$IS_RELEASE" == "true" ];then
+              DEPLOYMENT_VERSION="${TRIMMED_VERSION}"
+            else
+              DEPLOYMENT_VERSION="${TRIMMED_VERSION}-${TRIMMED_SHA}"
+            fi
+
+            image_tags=()
+            for row in $(echo "$MATRIX_BAKE_TARGETS" | jq -r '.include[] | @base64'); do
+              _jq() {
+                echo $row | base64 --decode | jq -r $1
+            }
+
+              IMAGE_FLAVOR_SUFFIX=$(_jq '."flavor-suffix"')
+              HELM_VALUE=$(_jq '."helm_value"')
+              image_tags+="$HELM_VALUE=$DEPLOYMENT_VERSION$IMAGE_FLAVOR_SUFFIX\n"
+            done
+            IMAGE_TAGS=$(echo -e "$image_tags")
+            ghwa_set_env "IMAGE_TAGS" "$IMAGE_TAGS"
+
+      - id: helm-deployment
+        uses: milaboratory/github-ci/actions/deployment@docker-hcl-deployment
+        with:
+          kubectl-version: ${{ inputs.kubectl-version }}
+          helm-version: ${{ inputs.helm-version }}
+          helm-release-name: ${{ inputs.helm-release-name }}
+          helm-chart-registry: ${{ steps.login-ecr.outputs.registry }}
+          helm-chart-name: ${{ inputs.helm-chart-name }}
+          helm-chart-values-file: ${{ inputs.helm-chart-values-file }}
+          helm-chart-atomic-upgrade: ${{ inputs.helm-chart-atomic-upgrade }}
+          helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
+          cluster-name: ${{ inputs.cluster-name }}
+          namespace: ${{ inputs.namespace }}
+          helm-chart-values: |
+            ${{ env.IMAGE_TAGS }}
