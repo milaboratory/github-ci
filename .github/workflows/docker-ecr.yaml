@@ -528,7 +528,7 @@ jobs:
             ghwa_set_env "IMAGE_TAGS" "$IMAGE_TAGS"
 
       - id: helm-deployment
-        uses: milaboratory/github-ci/actions/deployment@docker-hcl-deployment
+        uses: milaboratory/github-ci/blocks/eks/deployment@docker-hcl-deployment
         with:
           kubectl-version: ${{ inputs.kubectl-version }}
           helm-version: ${{ inputs.helm-version }}
