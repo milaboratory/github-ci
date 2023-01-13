@@ -209,7 +209,7 @@ on:
           Version of regctl
         type: string
         required: false
-        deafult: 'v0.4.5'
+        default: 'v0.4.5'
       #
       # Notifications
       #
