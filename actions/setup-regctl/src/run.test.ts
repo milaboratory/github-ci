@@ -73,7 +73,7 @@ describe('Testing all functions in run file.', () => {
          jest.spyOn(os, 'type').mockReturnValue('Windows_NT')
 
          const regctlWindowsUrl = util.format(
-            'https://github.com/regclient/regclient/releases/download/v0.4.5/regctl-windows-%s.exe'
+            'https://github.com/regclient/regclient/releases/download/v0.4.5/regctl-windows-%s.exe',
             arch
          )
          expect(getregctlDownloadURL('v0.4.5', arch)).toBe(regctlWindowsUrl)
