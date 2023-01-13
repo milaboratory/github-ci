@@ -204,6 +204,12 @@ on:
         type: string
         required: false
         default: 'v3.10.3'
+      regctl-version:
+        description: |
+          Version of regctl
+        type: string
+        required: false
+        deafult: 'v0.4.5'
       #
       # Notifications
       #
@@ -440,6 +446,35 @@ jobs:
           set: |
             ${{ env.CACHE_FROMS }}
             ${{ inputs.docker-images-build-args }}
+
+      - uses: milaboratory/github-ci/actions/setup-regctl@docker-hcl-deployment
+        with:
+          version: ${{ inputs.regctl-version }}
+
+      - id: re-tag-images
+        uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ inputs.app-name-slug }}
+          TAG: ${{ steps.image-metadata.outputs.version }}
+        with:
+          dump-stdout: false
+          run: |
+            DOCKER_MANIFEST_JSON=$(docker buildx imagetools inspect --raw "${REGISTRY}/${REPOSITORY}:${TAG}")
+
+            for row in $(echo "${DOCKER_MANIFEST_JSON}" | jq -r '.manifests[] | @base64'); do
+              _jq() {
+                echo $row | base64 --decode | jq -r $1
+              }
+
+            DIGEST=$(_jq '.digest')
+            ARCH=$(_jq '."platform".architecture')
+            OS=$(_jq '."platform".os')
+
+            regctl image copy \
+            "${REGISTRY}/${REPOSITORY}"@"${DIGEST}" \
+            "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
+            done
 
       - id: pushed-tags
         uses: milaboratory/github-ci/actions/strings/json-list@v3
