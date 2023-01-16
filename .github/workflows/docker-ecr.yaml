@@ -1,7 +1,6 @@
 # This workflow will build and push docker image to the aws ecr.
 
 name: Build Docker image (ecr)
-
 on:
   workflow_call:
     inputs:
@@ -15,13 +14,12 @@ on:
         type: string
         required: false
         default: ${{ github.repository }}
-
       app-name-slug:
         description: |
-          Application name slug (part of release file name)
+          Application name slug and also
+          used as the aws ecr repository name
         type: string
         required: true
-
       #
       # Checkout settings
       #
@@ -32,11 +30,9 @@ on:
           NOTE: don't forget to set the following secrets:
                   - GIT_CRYPT_GPG_KEY
                   - GIT_CRYPT_KEY_PASSWORD
-
         type: boolean
         required: false
         default: false
-
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -46,7 +42,6 @@ on:
         type: string
         required: false
         default: ''
-
       #
       # Environment settings
       #
@@ -62,7 +57,6 @@ on:
         type: string
         required: false
         default: '{}'
-
       #
       # AWS settings
       #
@@ -72,14 +66,12 @@ on:
           assumed role credentials.
         type: string
         required: true
-
       aws-region:
         description: |
           The AWS region
         type: string
         required: true
         default: 'eu-central-1'
-
       #
       # Docker multiarch settings
       #
@@ -90,64 +82,134 @@ on:
         type: boolean
         required: false
         default: true
-
       docker-qemu-platforms:
         description: |
-          Comma separted string of platforms
+          Comma separated string of platforms
           to install (e.g. amd64,arm64,riscv64)
         type: string
         required: false
         default: 'all'
-
       #
       # Docker images settings
       #
-      docker-images-build-config:
+      docker-bake-build-config:
         description: |
-          Provide docker images build configuration
-          as JSON-encoded map. You can provide several images
+          Provide docker's images build configuration
+          as JSON-encoded map. You can pass several images
           if you have additional containers for deployment.
 
-          You need to pass flavor-suffix if you have
+          You also need to pass flavor-suffix if you have
           additional container in the same repo
           and you want to push it into one registry but with a different tag.
 
-           { "dockerfile": "./path/do/docker/file",
-             "image": "docker_image_name",
-             "flavor-suffix": "",
-             "context": "." },
-           { "dockerfile": "./path/do/additional/docker/file",
-             "image": "docker_image_name",
-             "flavor-suffix": "-migration",
-             "context": "."}
-
-        type: string
+          Note here, bake_target should be the same as in the docker-bake.hcl file.
+          Example:
+            { "bake_target": "app",
+              "flavor-suffix": "",
+              "helm_value": "app.image.tag" },
+            { "bake_target": "migration",
+              "flavor-suffix": "-migration",
+              "helm_value": "app.initContainers.image.tag" }
         required: false
-        default: ''
-
+        type: string
+        default: '{}'
+      docker-bake-file-path:
+        description: |
+          Path to docker bake file
+        required: false
+        type: string
+        default: './docker-bake.hcl'
       docker-images-build-args:
         description: |
           List of build args (ARG Dockerfile instruction)
-          One line one argument.
+          One line one argument, provided in the
+          following format.
 
-          ARG_1=VALUE_OF_ARG_1
-          ARG_2=VALUE_OF_ARG_2
+          build_target_name.args.parameter_name="parameter_value"
+
+          Example:
+           app.args.someparam="somevalue"
+           migration.args.someparam="somevalue"
         type: string
         required: false
         default: ''
-
-      docker-platform:
+      #
+      # Deployment control
+      #
+      helm-deployment:
         description: |
-          --platform option for build.
-          You can specify several platforms for
-          the multi-architecture build.
-          However, if you do so, first,
-          you need to install qemu.
-          (e.g. linux/amd64,linux/arm64)
+          Enable deployment to the AWS EKS Cluster
+        type: boolean
+        required: false
+        default: false
+      helm-release-name:
+        description: |
+          Helm chart release name
         type: string
         required: false
-        default: 'linux/amd64'
+        default: ''
+      helm-chart-name:
+        description: |
+          Helm chart name
+        type: string
+        required: false
+        default: ''
+      helm-chart-values-file:
+        description: |
+          Path to Helm chart values (in YAML format)
+        type: string
+        required: false
+        default: ''
+      helm-chart-atomic-upgrade:
+        description: |
+          if set, upgrade process rolls back changes
+          made in case of failed upgrade.
+          The --wait flag will be set automatically if --atomic is used
 
+          If --wait flag is set, will wait until all Pods, PVCs, Services,
+          and minimum number of Pods of a Deployment, StatefulSet,
+          or ReplicaSet are in a ready state before marking
+          the release as successful. It will wait for as long as --timeout
+        type: boolean
+        required: false
+        default: true
+      helm-chart-wait-timeout:
+        description: |
+          time to wait for any individual Kubernetes operation
+          (like Jobs for hooks) (default 5m0s)
+        type: string
+        required: false
+        default: '5m0s'
+      cluster-name:
+        description: |
+          AWS EKS cluster name
+        type: string
+        required: false
+        default: 'milab-euce1-prod-eks-cluster'
+      namespace:
+        description: |
+          Kubernetes namespace name
+        type: string
+        required: false
+        default: ''
+      kubectl-version:
+        description: |
+          Version of kubectl
+        type: string
+        required: false
+        default: 'v1.24.0'
+      helm-version:
+        description: |
+          Version of helm
+        type: string
+        required: false
+        default: 'v3.10.3'
+      regctl-version:
+        description: |
+          Version of regctl
+        type: string
+        required: false
+        default: 'v0.4.5'
       #
       # Notifications
       #
@@ -157,7 +219,6 @@ on:
         required: false
         type: boolean
         default: true
-
       notify-build:
         description: |
           Enable notifications about build status (build ready/failed)
@@ -169,7 +230,6 @@ on:
         required: false
         type: string
         default: 'true'
-
     secrets:
       env:
         description: |
@@ -181,16 +241,6 @@ on:
           This input's envs are merged with inputs.env
           This input's envs have HIGHER priority compared than inputs.env
         required: false
-
-      DOCKER_BUILD_SECRETS:
-        description: |
-          List of build secrets. (RUN --mount=secret)
-          One line one secret
-
-          SECRET_1=VALUE_OF_SECRET_1
-          SECRET_2=VALUE_OF_SECRET_2
-        required: false
-
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -199,65 +249,57 @@ on:
         description: |
           Telegram Bot API authorization token
         required: false
-
       GIT_CRYPT_GPG_KEY:
         description: |
           base64-encoded GPG key pair
           (see actions/git/crypt inputs description)
         required: false
-
       GIT_CRYPT_KEY_PASSWORD:
         description: |
           Password for GPG key
         required: false
-
 jobs:
   init:
     name: Init
     runs-on: ubuntu-latest
-
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
-
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
   setup-matrix:
     name: :setup-matrix
     runs-on: ubuntu-latest
-
     needs:
       - init
-
     steps:
+      - uses: actions/checkout@v3
       - id: setup-matrix-combinations
         uses: milaboratory/github-ci/actions/shell@v3
         env:
-          MATRIX_PARAMS_COMBINATIONS: ${{ inputs.docker-images-build-config }}
+          BAKE_FILE: ${{ inputs.docker-bake-file-path }}
+          DOCKER_BAKE_BUILD_CONFIG: ${{ inputs.docker-bake-build-config }}
         with:
           dump-stdout: false
           run: |
-            ghwa_set_output "matrix-combinations" "{\"include\":[$MATRIX_PARAMS_COMBINATIONS]}"
-
+            MATRIX_PLATFORMS="$(docker buildx bake base --print -f $BAKE_FILE | jq -rc '.target."base".platforms')"
+            ghwa_set_output "matrix-platforms" "$MATRIX_PLATFORMS"
+            ghwa_set_output "matrix-bake-targets" "{\"include\":[$DOCKER_BAKE_BUILD_CONFIG]}"
     outputs:
-      matrix-combinations: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-combinations }}
+      matrix-platforms: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-platforms }}
+      matrix-bake-targets: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-bake-targets }}
 
-  build:
-    name: :build
+  setup-cache:
+    name: :setup-cache
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-combinations) }}
-
     needs:
       - init
       - setup-matrix
-
-    permissions:
-      id-token: write
-      contents: read
-
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
@@ -277,11 +319,76 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: docker/setup-qemu-action@v2
-        if: inputs.docker-qemu-setup
+      - uses: milaboratory/github-ci/actions/shell@v3
         with:
-          platforms: ${{ inputs.docker-qemu-platforms }}
+          dump-stdout: false
+          run: |
+            platform=${{ matrix.platform }}
+            ghwa_set_env "PLATFORM_PAIR" "${platform//\//-}"
 
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/bake-action@v2
+        env:
+          APP_NAME: ${{ inputs.app-name-slug }}
+        with:
+          pull: true
+          files: |
+            ${{ inputs.docker-bake-file-path }}
+          set: |
+            *.platform=${{ matrix.platform }}
+            *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }}
+            *.cache-to=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }},mode=max
+
+  build:
+    name: :build
+    runs-on: [ubuntu-latest]
+    needs:
+      - init
+      - setup-matrix
+      - setup-cache
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-bake-targets) }}
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          APP_NAME: ${{ inputs.app-name-slug }}
+          BAKE_FILE: ${{ inputs.docker-bake-file-path }}
+        with:
+          dump-stdout: false
+          run: |
+            cfroms=
+            while read -r platform; do
+              if [ -n "$cfroms" ]; then cfroms="${cfroms}\n"; fi
+              cfroms="${cfroms}*.cache-from=type=gha,scope=${APP_NAME}-${platform//\//-}"
+            done < <(docker buildx bake base --print -f $BAKE_FILE | jq -r '.target."base".platforms[]')
+            CACHE_FROMS=$(echo -e "$cfroms")
+            ghwa_set_env "CACHE_FROMS" "$CACHE_FROMS"
+
+      - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
       - uses: aws-actions/configure-aws-credentials@v1
@@ -300,13 +407,17 @@ jobs:
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
           CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
           IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ inputs.app-name-slug }}
         with:
           dump-stdout: false
           run: |
             TRIMMED_SHA="${CURRENT_SHA:0:8}"
             TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
 
-            if [ "$IS_RELEASE" ];then
+            ghwa_set_output image "${REGISTRY}/${REPOSITORY}"
+
+            if [ "$IS_RELEASE" == "true" ];then
               ghwa_set_output transformed_version "${TRIMMED_VERSION}"
             else
               ghwa_set_output transformed_version "${TRIMMED_VERSION}-${TRIMMED_SHA}"
@@ -316,7 +427,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            ${{ matrix.image }}
+            ${{ fromJSON( steps.transform-version.outputs.data ).image }}
           flavor: |
             suffix=${{ matrix.flavor-suffix }}
           labels: |
@@ -325,18 +436,45 @@ jobs:
             type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}
 
       - id: build-push
-        uses: docker/build-push-action@v3
+        uses: docker/bake-action@v2
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: ${{ inputs.docker-platform }}
-          build-args: |
-              ${{ inputs.docker-images-build-args }}
-          secrets: |
-              ${{ secrets.DOCKER_BUILD_SECRETS }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.image-metadata.outputs.tags }}
-          labels: ${{ steps.image-metadata.outputs.labels }}
+          targets: ${{ matrix.bake_target }}
+          push: true
+          files: |
+            ${{ inputs.docker-bake-file-path }}
+            ${{ steps.image-metadata.outputs.bake-file }}
+          set: |
+            ${{ env.CACHE_FROMS }}
+            ${{ inputs.docker-images-build-args }}
+
+      - uses: milaboratory/github-ci/actions/setup-regctl@v3-beta
+        with:
+          version: ${{ inputs.regctl-version }}
+
+      - id: re-tag-images
+        uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ inputs.app-name-slug }}
+          TAG: ${{ steps.image-metadata.outputs.version }}
+        with:
+          dump-stdout: false
+          run: |
+            DOCKER_MANIFEST_JSON=$(docker buildx imagetools inspect --raw "${REGISTRY}/${REPOSITORY}:${TAG}")
+
+            for row in $(echo "${DOCKER_MANIFEST_JSON}" | jq -r '.manifests[] | @base64'); do
+              _jq() {
+                echo $row | base64 --decode | jq -r $1
+              }
+
+            DIGEST=$(_jq '.digest')
+            ARCH=$(_jq '."platform".architecture')
+            OS=$(_jq '."platform".os')
+
+            regctl image copy \
+            "${REGISTRY}/${REPOSITORY}"@"${DIGEST}" \
+            "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
+            done
 
       - id: pushed-tags
         uses: milaboratory/github-ci/actions/strings/json-list@v3
@@ -352,8 +490,153 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
           build-status: |
             ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ steps.pushed-tags.outputs.result }}
+
+  can-release:
+    name: Can release
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+      - setup-matrix
+
+    if: always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.build.result         != 'failure'
+      && needs.setup-matrix.result  != 'failure'
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+  notify-release-review:
+    name: Notify review required
+    runs-on: ubuntu-latest
+
+    if: always() && needs.can-release.result == 'success'
+    needs:
+      - can-release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          message: new version of app is ready for deployment
+          product-name: ${{ inputs.app-name }}
+
+  release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if: always() && needs.can-release.result == 'success'
+    environment: release
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  deployment:
+    if: inputs.helm-deployment && needs.release.result == 'success'
+    name: :deployment
+    runs-on: [ self-hosted ]
+    needs:
+      - release
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+          CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
+          IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          MATRIX_BAKE_TARGETS: ${{ needs.setup-matrix.outputs.matrix-bake-targets }}
+        with:
+          dump-stdout: false
+          run: |
+            TRIMMED_SHA="${CURRENT_SHA:0:8}"
+            TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
+
+            if [ "$IS_RELEASE" == "true" ];then
+              DEPLOYMENT_VERSION="${TRIMMED_VERSION}"
+            else
+              DEPLOYMENT_VERSION="${TRIMMED_VERSION}-${TRIMMED_SHA}"
+            fi
+
+            image_tags=()
+            for row in $(echo "$MATRIX_BAKE_TARGETS" | jq -r '.include[] | @base64'); do
+              _jq() {
+                echo $row | base64 --decode | jq -r $1
+            }
+
+              IMAGE_FLAVOR_SUFFIX=$(_jq '."flavor-suffix"')
+              HELM_VALUE=$(_jq '."helm_value"')
+              image_tags+="$HELM_VALUE=$DEPLOYMENT_VERSION$IMAGE_FLAVOR_SUFFIX\n"
+            done
+            IMAGE_TAGS=$(echo -e "$image_tags")
+            ghwa_set_env "IMAGE_TAGS" "$IMAGE_TAGS"
+
+      - id: helm-deployment
+        uses: milaboratory/github-ci/blocks/eks/deployment@v3-beta
+        with:
+          kubectl-version: ${{ inputs.kubectl-version }}
+          helm-version: ${{ inputs.helm-version }}
+          helm-release-name: ${{ inputs.helm-release-name }}
+          helm-chart-registry: ${{ steps.login-ecr.outputs.registry }}
+          helm-chart-name: ${{ inputs.helm-chart-name }}
+          helm-chart-values-file: ${{ inputs.helm-chart-values-file }}
+          helm-chart-atomic-upgrade: ${{ inputs.helm-chart-atomic-upgrade }}
+          helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
+          cluster-name: ${{ inputs.cluster-name }}
+          namespace: ${{ inputs.namespace }}
+          helm-chart-values: |
+            ${{ env.IMAGE_TAGS }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.deployment.result == 'success'
+    needs:
+      - deployment
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.deployment.result }}
+          product-name: ${{ inputs.app-name }}
