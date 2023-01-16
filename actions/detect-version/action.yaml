@@ -13,6 +13,16 @@ description: |
   It only sets outputs the user can then pass to other workflows/jobs/steps.
 
 inputs:
+  branch-versioning:
+    description: |
+      Put a branch name here to activate simple branch versioning mode:
+        - 'current-version' is always "<GitHub Run Number>-<short commit hash>";
+        - 'is-release' is true only for runs from <branch-versioning> branch;
+        - '*-tag' is always empty;
+        - 'previous-sha' and 'latest-sha' are always 'unknown';
+        - 'is-latest-version' is true for runs from HEAD of <branch-versioning> branch;
+        - 'is-latest-major' is always equal to 'is-latest-version';
+
   fetch-depth:
     description: |
       The number of commits of git history from current HEAD to fetch

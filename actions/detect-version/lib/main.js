@@ -64,12 +64,42 @@ function genDevVersion(baseVersion, baseRef) {
         };
     });
 }
-function detectVersions() {
+function loadBranchVersions(targetBranch) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Read inputs
-        const fetchDepth = parseInt(core.getInput('fetch-depth'));
-        yield prepareRepository(fetchDepth);
-        const isRemoteLatestCommit = yield utils.isBranchHead();
+        const refType = process.env.GITHUB_REF_TYPE;
+        const refName = process.env.GITHUB_REF_NAME;
+        const runNumber = process.env.GITHUB_RUN_NUMBER;
+        const currentSha = yield milib_1.git.resolveRef('HEAD');
+        const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`;
+        const currentVersion = milib_1.version.parse(currentVersionStr);
+        const isRelease = refType === 'branch' && refName === targetBranch;
+        const isBranchHead = yield utils.isBranchHead();
+        setOutputs({
+            current: {
+                v: currentVersion,
+                tag: '',
+                sha: currentSha
+            },
+            previous: {
+                v: milib_1.version.parse('unknown'),
+                tag: '',
+                sha: 'unknown'
+            },
+            latest: {
+                v: milib_1.version.parse('unknown'),
+                tag: '',
+                sha: 'unknown'
+            },
+            isRelease,
+            isBranchHead,
+            isLatestVersion: isBranchHead && isRelease,
+            isLatestMajor: isBranchHead && isRelease
+        });
+    });
+}
+function loadTagVersions(depth) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield prepareRepository(depth);
         const knownVersions = yield utils.getVersions();
         const latestTag = utils.latestVersionTag(knownVersions);
         const latestSha = yield milib_1.git.resolveRef(latestTag);
@@ -91,28 +121,63 @@ function detectVersions() {
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
-        core.debug(`current version: '${curVersion.original}'
-current tag: '${curTag}'
+        setOutputs({
+            current: {
+                v: curVersion,
+                tag: curTag,
+                sha: curSha
+            },
+            previous: {
+                v: prevVersion,
+                tag: prevTag,
+                sha: prevSha
+            },
+            latest: {
+                v: latestVersion,
+                tag: latestTag,
+                sha: latestSha
+            },
+            isRelease: curTag !== '',
+            isBranchHead: yield utils.isBranchHead(),
+            isLatestVersion: milib_1.version.compare(latestVersion, curVersion) === 0,
+            isLatestMajor: utils.isLatestMajor(knownVersions, curVersion)
+        });
+    });
+}
+function setOutputs(p) {
+    core.debug(`current version: '${p.current.v.original}'
+current tag: '${p.current.tag}'
 
-previous version: '${prevVersion.original}'
-previous tag: '${prevTag}'
+previous version: '${p.previous.v.original}'
+previous tag: '${p.previous.tag}'
 
-latest version: '${latestVersion.original}'
-latest tag: '${latestTag}'
+latest version: '${p.latest.v.original}'
+latest tag: '${p.latest.tag}'
 `);
-        core.setOutput('current-version', milib_1.version.toString(curVersion));
-        core.setOutput('current-tag', curTag);
-        core.setOutput('current-sha', curSha);
-        core.setOutput('previous-version', milib_1.version.toString(prevVersion));
-        core.setOutput('previous-tag', prevTag);
-        core.setOutput('previous-sha', prevSha);
-        core.setOutput('latest-version', milib_1.version.toString(latestVersion));
-        core.setOutput('latest-tag', latestTag);
-        core.setOutput('latest-sha', latestSha);
-        core.setOutput('is-release', curTag !== '');
-        core.setOutput('is-branch-head', isRemoteLatestCommit);
-        core.setOutput('is-latest-version', milib_1.version.compare(latestVersion, curVersion) === 0);
-        core.setOutput('is-latest-major', utils.isLatestMajor(knownVersions, curVersion));
+    core.setOutput('current-version', milib_1.version.toString(p.current.v));
+    core.setOutput('current-tag', p.current.tag);
+    core.setOutput('current-sha', p.current.sha);
+    core.setOutput('previous-version', milib_1.version.toString(p.previous.v));
+    core.setOutput('previous-tag', p.previous.tag);
+    core.setOutput('previous-sha', p.previous.sha);
+    core.setOutput('latest-version', milib_1.version.toString(p.latest.v));
+    core.setOutput('latest-tag', p.latest.tag);
+    core.setOutput('latest-sha', p.latest.sha);
+    core.setOutput('is-release', p.isRelease);
+    core.setOutput('is-branch-head', p.isBranchHead);
+    core.setOutput('is-latest-version', p.isLatestVersion);
+    core.setOutput('is-latest-major', p.isLatestMajor);
+}
+function detectVersions() {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Read inputs
+        const fetchDepth = parseInt(core.getInput('fetch-depth'));
+        const branchVersioning = core.getInput('branch-versioning');
+        if (branchVersioning !== '') {
+            yield loadBranchVersions(branchVersioning);
+            return;
+        }
+        yield loadTagVersions(fetchDepth);
     });
 }
 function run() {

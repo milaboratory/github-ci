@@ -40,13 +40,43 @@ async function genDevVersion(
   } as version.versionInfo
 }
 
-async function detectVersions(): Promise<void> {
-  // Read inputs
-  const fetchDepth: number = parseInt(core.getInput('fetch-depth'))
+async function loadBranchVersions(targetBranch: string): Promise<void> {
+  const refType = process.env.GITHUB_REF_TYPE as string
+  const refName = process.env.GITHUB_REF_NAME as string
 
-  await prepareRepository(fetchDepth)
+  const runNumber: string = process.env.GITHUB_RUN_NUMBER as string
+  const currentSha: string = await git.resolveRef('HEAD')
+  const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`
 
-  const isRemoteLatestCommit = await utils.isBranchHead()
+  const currentVersion = version.parse(currentVersionStr)
+  const isRelease = refType === 'branch' && refName === targetBranch
+  const isBranchHead = await utils.isBranchHead()
+
+  setOutputs({
+    current: {
+      v: currentVersion,
+      tag: '',
+      sha: currentSha
+    },
+    previous: {
+      v: version.parse('unknown'),
+      tag: '',
+      sha: 'unknown'
+    },
+    latest: {
+      v: version.parse('unknown'),
+      tag: '',
+      sha: 'unknown'
+    },
+    isRelease,
+    isBranchHead,
+    isLatestVersion: isBranchHead && isRelease,
+    isLatestMajor: isBranchHead && isRelease
+  })
+}
+
+async function loadTagVersions(depth: number): Promise<void> {
+  await prepareRepository(depth)
 
   const knownVersions = await utils.getVersions()
 
@@ -75,40 +105,85 @@ async function detectVersions(): Promise<void> {
     curVersion = await genDevVersion(prevVersion, prevTag)
   }
 
+  setOutputs({
+    current: {
+      v: curVersion,
+      tag: curTag,
+      sha: curSha
+    },
+    previous: {
+      v: prevVersion,
+      tag: prevTag,
+      sha: prevSha
+    },
+    latest: {
+      v: latestVersion,
+      tag: latestTag,
+      sha: latestSha
+    },
+    isRelease: curTag !== '',
+    isBranchHead: await utils.isBranchHead(),
+    isLatestVersion: version.compare(latestVersion, curVersion) === 0,
+    isLatestMajor: utils.isLatestMajor(knownVersions, curVersion)
+  })
+}
+
+interface versionInfo {
+  v: version.versionInfo
+  tag: string
+  sha: string
+}
+
+function setOutputs(p: {
+  current: versionInfo
+  previous: versionInfo
+  latest: versionInfo
+  isRelease: boolean
+  isBranchHead: boolean
+  isLatestVersion: boolean
+  isLatestMajor: boolean
+}): void {
   core.debug(
-    `current version: '${curVersion.original}'
-current tag: '${curTag}'
+    `current version: '${p.current.v.original}'
+current tag: '${p.current.tag}'
 
-previous version: '${prevVersion.original}'
-previous tag: '${prevTag}'
+previous version: '${p.previous.v.original}'
+previous tag: '${p.previous.tag}'
 
-latest version: '${latestVersion.original}'
-latest tag: '${latestTag}'
+latest version: '${p.latest.v.original}'
+latest tag: '${p.latest.tag}'
 `
   )
 
-  core.setOutput('current-version', version.toString(curVersion))
-  core.setOutput('current-tag', curTag)
-  core.setOutput('current-sha', curSha)
+  core.setOutput('current-version', version.toString(p.current.v))
+  core.setOutput('current-tag', p.current.tag)
+  core.setOutput('current-sha', p.current.sha)
 
-  core.setOutput('previous-version', version.toString(prevVersion))
-  core.setOutput('previous-tag', prevTag)
-  core.setOutput('previous-sha', prevSha)
+  core.setOutput('previous-version', version.toString(p.previous.v))
+  core.setOutput('previous-tag', p.previous.tag)
+  core.setOutput('previous-sha', p.previous.sha)
 
-  core.setOutput('latest-version', version.toString(latestVersion))
-  core.setOutput('latest-tag', latestTag)
-  core.setOutput('latest-sha', latestSha)
+  core.setOutput('latest-version', version.toString(p.latest.v))
+  core.setOutput('latest-tag', p.latest.tag)
+  core.setOutput('latest-sha', p.latest.sha)
 
-  core.setOutput('is-release', curTag !== '')
-  core.setOutput('is-branch-head', isRemoteLatestCommit)
-  core.setOutput(
-    'is-latest-version',
-    version.compare(latestVersion, curVersion) === 0
-  )
-  core.setOutput(
-    'is-latest-major',
-    utils.isLatestMajor(knownVersions, curVersion)
-  )
+  core.setOutput('is-release', p.isRelease)
+  core.setOutput('is-branch-head', p.isBranchHead)
+  core.setOutput('is-latest-version', p.isLatestVersion)
+  core.setOutput('is-latest-major', p.isLatestMajor)
+}
+
+async function detectVersions(): Promise<void> {
+  // Read inputs
+  const fetchDepth: number = parseInt(core.getInput('fetch-depth'))
+  const branchVersioning: string = core.getInput('branch-versioning')
+
+  if (branchVersioning !== '') {
+    await loadBranchVersions(branchVersioning)
+    return
+  }
+
+  await loadTagVersions(fetchDepth)
 }
 
 async function run(): Promise<void> {
