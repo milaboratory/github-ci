@@ -495,13 +495,66 @@ jobs:
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ steps.pushed-tags.outputs.result }}
 
+  can-release:
+    name: Can release
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+      - setup-matrix
+
+    if: always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.build.result         != 'failure'
+      && needs.setup-matrix.result  != 'failure'
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+  notify-release-review:
+    name: Notify review required
+    runs-on: ubuntu-latest
+
+    if: always() && needs.can-release.result == 'success'
+    needs:
+      - can-release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          message: new version of app is ready for deployment
+          product-name: ${{ inputs.app-name }}
+
+  release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if: always() && needs.can-release.result == 'success'
+    environment: release
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
   deployment:
-    if: inputs.helm-deployment
+    if: inputs.helm-deployment && needs.release.result == 'success'
     name: :deployment
     runs-on: [ self-hosted ]
     needs:
-      - build
-      - setup-matrix
+      - release
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
@@ -568,3 +621,22 @@ jobs:
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
             ${{ env.IMAGE_TAGS }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.deployment.result == 'success'
+    needs:
+      - deployment
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.deployment.result }}
+          product-name: ${{ inputs.app-name }}
