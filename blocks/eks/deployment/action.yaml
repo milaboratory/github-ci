@@ -90,7 +90,7 @@ runs:
       with:
         version: ${{ inputs.helm-version }}
 
-    - uses: milaboratory/github-ci/actions/helm/upgrade@docker-hcl-deployment
+    - uses: milaboratory/github-ci/actions/helm/upgrade@v3-beta
       with:
         helm-release-name: ${{ inputs.helm-release-name }}
         helm-chart-name: ${{ inputs.helm-chart-name }}

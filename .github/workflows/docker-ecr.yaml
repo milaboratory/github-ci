@@ -447,7 +447,7 @@ jobs:
             ${{ env.CACHE_FROMS }}
             ${{ inputs.docker-images-build-args }}
 
-      - uses: milaboratory/github-ci/actions/setup-regctl@docker-hcl-deployment
+      - uses: milaboratory/github-ci/actions/setup-regctl@v3-beta
         with:
           version: ${{ inputs.regctl-version }}
 
@@ -607,7 +607,7 @@ jobs:
             ghwa_set_env "IMAGE_TAGS" "$IMAGE_TAGS"
 
       - id: helm-deployment
-        uses: milaboratory/github-ci/blocks/eks/deployment@docker-hcl-deployment
+        uses: milaboratory/github-ci/blocks/eks/deployment@v3-beta
         with:
           kubectl-version: ${{ inputs.kubectl-version }}
           helm-version: ${{ inputs.helm-version }}
