@@ -538,7 +538,7 @@ jobs:
       - can-release
 
     if: always() && needs.can-release.result == 'success'
-    environment: release
+    environment: deployment
 
     steps:
       - shell: bash
