@@ -79,9 +79,6 @@ runs:
   using: "composite"
 
   steps:
-    - id: context
-      uses: milaboratory/github-ci/actions/context@v3
-
     - uses: azure/setup-kubectl@v3
       with:
         version: ${{ inputs.kubectl-version }}

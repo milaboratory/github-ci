@@ -29,7 +29,7 @@ runs:
 
     - uses: actions/checkout@v2
     - id: versions
-      uses: milaboratory/github-ci/actions/detect-version@v3
+      uses: milaboratory/github-ci/actions/detect-version@v3-beta
       with:
         canonize: ${{ inputs.version-canonize }}
         fetch-depth: ${{ inputs.version-fetch-depth }}
