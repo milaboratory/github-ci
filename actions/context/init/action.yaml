@@ -8,6 +8,11 @@ description: |
   blocks (`blocks/*` actions) with information they require.
 
 inputs:
+  branch-versioning:
+    description: |
+      Put a branch name here to activate simple branch versioning mode
+    required: false
+
   version-canonize:
     description: |
       Canonize version number to make it always look like regular semver: '<major>.<minor>.<patch>'.
@@ -33,6 +38,7 @@ runs:
       with:
         canonize: ${{ inputs.version-canonize }}
         fetch-depth: ${{ inputs.version-fetch-depth }}
+        branch-versioning: ${{ inputs.branch-versioning }}
 
     - uses: milaboratory/github-ci/actions/context/put@v3
       with:
