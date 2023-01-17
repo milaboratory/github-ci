@@ -544,6 +544,7 @@ jobs:
     runs-on: [ self-hosted ]
     needs:
       - release
+      - setup-matrix
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
@@ -605,7 +606,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if: always()
-      && needs.deployment.result == 'success'
+      && inputs.notify-telegram
     needs:
       - deployment
 
