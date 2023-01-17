@@ -301,9 +301,6 @@ jobs:
       matrix:
         platform: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v3
-
       - uses: milaboratory/github-ci/actions/env@v3
         with:
           inputs: ${{ inputs.env }}
