@@ -405,23 +405,13 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v3
         env:
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
-          CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
-          IS_RELEASE: ${{ steps.context.outputs.is-release }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ inputs.app-name-slug }}
         with:
           dump-stdout: false
           run: |
-            TRIMMED_SHA="${CURRENT_SHA:0:8}"
-            TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
-
             ghwa_set_output image "${REGISTRY}/${REPOSITORY}"
-
-            if [ "$IS_RELEASE" == "true" ];then
-              ghwa_set_output transformed_version "${TRIMMED_VERSION}"
-            else
-              ghwa_set_output transformed_version "${TRIMMED_VERSION}-${TRIMMED_SHA}"
-            fi
+            ghwa_set_output image_tag "${CURRENT_VERSION}"
 
       - id: image-metadata
         uses: docker/metadata-action@v3
@@ -433,13 +423,13 @@ jobs:
           labels: |
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
-            type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).transformed_version }}
+            type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).image_tag }}
 
       - id: build-push
         uses: docker/bake-action@v2
         with:
           targets: ${{ matrix.bake_target }}
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           files: |
             ${{ inputs.docker-bake-file-path }}
             ${{ steps.image-metadata.outputs.bake-file }}
@@ -452,6 +442,7 @@ jobs:
           version: ${{ inputs.regctl-version }}
 
       - id: re-tag-images
+        if: github.event_name != 'pull_request'
         uses: milaboratory/github-ci/actions/shell@v3
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -505,6 +496,7 @@ jobs:
       - setup-matrix
 
     if: always()
+      && inputs.helm-deployment
       && fromJSON(needs.init.outputs.is-release)
       && needs.build.result         != 'failure'
       && needs.setup-matrix.result  != 'failure'
@@ -577,34 +569,23 @@ jobs:
 
       - uses: milaboratory/github-ci/actions/shell@v3
         env:
-          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
-          CURRENT_SHA: ${{ steps.context.outputs.current-version-sha }}
-          IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          DEPLOYMENT_VERSION: ${{ steps.context.outputs.current-version }}
           MATRIX_BAKE_TARGETS: ${{ needs.setup-matrix.outputs.matrix-bake-targets }}
         with:
           dump-stdout: false
           run: |
-            TRIMMED_SHA="${CURRENT_SHA:0:8}"
-            TRIMMED_VERSION=$(echo "$CURRENT_VERSION" | grep -E -o "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?(0|[1-9]\d*)*")
-
-            if [ "$IS_RELEASE" == "true" ];then
-              DEPLOYMENT_VERSION="${TRIMMED_VERSION}"
-            else
-              DEPLOYMENT_VERSION="${TRIMMED_VERSION}-${TRIMMED_SHA}"
-            fi
-
             image_tags=()
-            for row in $(echo "$MATRIX_BAKE_TARGETS" | jq -r '.include[] | @base64'); do
+            for row in $(echo "${MATRIX_BAKE_TARGETS}" | jq -r '.include[] | @base64'); do
               _jq() {
                 echo $row | base64 --decode | jq -r $1
             }
 
               IMAGE_FLAVOR_SUFFIX=$(_jq '."flavor-suffix"')
               HELM_VALUE=$(_jq '."helm_value"')
-              image_tags+="$HELM_VALUE=$DEPLOYMENT_VERSION$IMAGE_FLAVOR_SUFFIX\n"
+              image_tags+="${HELM_VALUE}=${DEPLOYMENT_VERSION}${IMAGE_FLAVOR_SUFFIX}\n"
             done
             IMAGE_TAGS=$(echo -e "$image_tags")
-            ghwa_set_env "IMAGE_TAGS" "$IMAGE_TAGS"
+            ghwa_set_env "IMAGE_TAGS" "${IMAGE_TAGS}"
 
       - id: helm-deployment
         uses: milaboratory/github-ci/blocks/eks/deployment@v3-beta
