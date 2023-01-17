@@ -11,7 +11,7 @@ const latestVersionTestMap: utils.versionsMap = {
   'v1.5': version.parse('1.5'),
   '1.4.2': version.parse('1.4.2'),
   'v1.4.2.1': version.parse('1.4.2.1'),
-  '1.4.beta': version.parse('1.4.beta'),
+  '1.4.beta': version.parse('1.4.beta')
 }
 
 test('Test getLatestVersionTag', async () => {
