@@ -459,9 +459,14 @@ jobs:
             ARCH=$(_jq '."platform".architecture')
             OS=$(_jq '."platform".os')
 
-            regctl image copy \
-            "${REGISTRY}/${REPOSITORY}"@"${DIGEST}" \
-            "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
+            if [ "${ARCH}" == "unknown" ] || [ "${OS}" == "unknown" ];then
+              printf "Skip re-tagging. Docker architecture: %s, os: %s\n" "${ARCH}" "${OS}"
+            else
+              printf "Re-tagging: %s\n" "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
+              regctl image copy \
+              "${REGISTRY}/${REPOSITORY}"@"${DIGEST}" \
+              "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
+            fi
             done
 
       - id: pushed-tags
