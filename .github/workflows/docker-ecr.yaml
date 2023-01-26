@@ -442,31 +442,30 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: milaboratory/github-ci/actions/shell@v3
         env:
+          BAKE_FILE: ${{ inputs.docker-bake-file-path }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ inputs.app-name-slug }}
           TAG: ${{ steps.image-metadata.outputs.version }}
         with:
           dump-stdout: false
           run: |
-            DOCKER_MANIFEST_JSON=$(docker buildx imagetools inspect --raw "${REGISTRY}/${REPOSITORY}:${TAG}")
+            DOCKER_PLATFORM_JSON=$(docker buildx bake base --print -f $BAKE_FILE | jq -r '[ .target."base".platforms[] | { "platform": . } ]')
 
-            for row in $(echo "${DOCKER_MANIFEST_JSON}" | jq -r '.manifests[] | @base64'); do
+            for row in $(echo "${DOCKER_PLATFORM_JSON}" | jq -r '.[] | @base64'); do
               _jq() {
                 echo $row | base64 --decode | jq -r $1
               }
 
-            DIGEST=$(_jq '.digest')
-            ARCH=$(_jq '."platform".architecture')
-            OS=$(_jq '."platform".os')
+            IMAGE="${REGISTRY}/${REPOSITORY}"
+            PLATFORM=$(_jq '.platform')
+            PLATFORM_SANITIZED=$(echo $PLATFORM | sed 's:/:-:g')
+            DIGEST=$(regctl image digest --platform $PLATFORM $IMAGE:$TAG)
 
-            if [ "${ARCH}" == "unknown" ] || [ "${OS}" == "unknown" ];then
-              printf "Skip re-tagging. Docker architecture: %s, os: %s\n" "${ARCH}" "${OS}"
-            else
-              printf "Re-tagging: %s\n" "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
-              regctl image copy \
-              "${REGISTRY}/${REPOSITORY}"@"${DIGEST}" \
-              "${REGISTRY}/${REPOSITORY}:${TAG}-${OS}-${ARCH}"
-            fi
+            regctl image copy \
+            "${IMAGE}@${DIGEST}" \
+            "${IMAGE}:${TAG}-${PLATFORM_SANITIZED}"
+            printf "Re-tagging: %s\n" "${IMAGE}:${TAG}-${PLATFORM_SANITIZED}"
+
             done
 
       - id: pushed-tags
