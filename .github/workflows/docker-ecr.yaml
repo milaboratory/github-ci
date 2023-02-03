@@ -610,6 +610,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if: always()
+      && inputs.helm-deployment
       && inputs.notify-telegram
     needs:
       - deployment
