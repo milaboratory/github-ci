@@ -82,8 +82,9 @@ runs:
       env:
         NPM_REGISTRY_URL: ${{ inputs.npm-registry-url }}
         NPM_REGISTRY_SCOPE: ${{ inputs.npm-registry-scope }}
-      working-directory: ${{ inputs.build-results-path }}
+        BUILD_RESULTS_PATH: ${{ inputs.build-results-path }}
       with:
+        working-directory: ${{ env.BUILD_RESULTS_PATH }}
         run: |
           NPM_REGISTRY_URL_WO_HTTP=$(echo "${NPM_REGISTRY_URL}" | sed -E 's/^\s*.*:\/\///g')
           
@@ -93,9 +94,10 @@ runs:
 
     - name: Publish NodeJS application
       uses: milaboratory/github-ci/actions/shell@v3
-      working-directory: ${{ inputs.build-results-path }}
       env:
         NPM_AUTH_TOKEN: ${{ inputs.github-token }}
+        BUILD_RESULTS_PATH: ${{ inputs.build-results-path }}
       with:
+        working-directory: ${{ env.BUILD_RESULTS_PATH }}
         run: |
           npm publish
