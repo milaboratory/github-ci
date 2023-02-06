@@ -79,7 +79,9 @@ runs:
         NPM_REGISTRY_SCOPE: ${{ inputs.npm-registry-scope }}
       with:
         run: |
-          echo '//'${NPM_REGISTRY_URL}'/:_authToken=${NPM_AUTH_TOKEN}' > ./.npmrc
+          NPM_REGISTRY_URL_WO_HTTP=$(echo "${NPM_REGISTRY_URL}" | gsed -E 's/^\s*.*:\/\///g')
+          
+          echo '//'${NPM_REGISTRY_URL_WO_HTTP}'/:_authToken=${NPM_AUTH_TOKEN}' > ./.npmrc
           echo "@${NPM_REGISTRY_SCOPE}:registry=${NPM_REGISTRY_URL}" >> ./.npmrc
           echo "always-auth=true" >> ./.npmrc
 
