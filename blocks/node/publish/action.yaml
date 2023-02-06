@@ -42,6 +42,10 @@ inputs:
     required: false
     default: ${{ github.repository_owner }}
 
+  github-token:
+    description: |
+      Repository scope github actions token.
+    required: false
 
 runs:
   using: "composite"
@@ -82,7 +86,7 @@ runs:
     - name: Publish NodeJS application
       uses: milaboratory/github-ci/actions/shell@v3
       env:
-        NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_AUTH_TOKEN: ${{ inputs.github-token }}
       with:
         run: |
           npm publish

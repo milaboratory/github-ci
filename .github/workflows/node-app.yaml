@@ -415,6 +415,7 @@ jobs:
           is-electron-application: ${{ inputs.is-electron-application }}
           npm-registry-url: ${{ inputs.npm-registry-url }}
           npm-registry-scope: ${{ inputs.npm-registry-scope }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
