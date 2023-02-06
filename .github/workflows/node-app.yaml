@@ -376,7 +376,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.dist-archive-path }}
 
       - uses: milaboratory/github-ci/blocks/node/publish@v3-beta
         with:
@@ -386,6 +386,7 @@ jobs:
           npm-registry-url: ${{ inputs.npm-registry-url }}
           npm-registry-scope: ${{ inputs.npm-registry-scope }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          build-results-path: ${{ inputs.dist-archive-path }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
