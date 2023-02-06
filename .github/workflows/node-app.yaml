@@ -322,7 +322,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           message: new version of library is ready for release.
-          product-name: ${{ inputs.product-name }}
+          product-name: ${{ inputs.app-name }}
 
   release:
     name: Confirm release
