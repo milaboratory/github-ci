@@ -1,21 +1,10 @@
-name: Build NodeJS application
+name: Publish NodeJS application
 author: 'MiLaboratories'
 description: |
-  Prepare agent for building a NodeJS project..
-  Install NodeJS specific version, download package, create cache e.t.c
+  Prepare agent for building a Electron project.
+  Install Node specific version, download package, create cache e.t.c
 
 inputs:
-  build-version:
-    description: |
-      Set version number in 'package.json' file to given value.
-    required: false
-
-  build-script-name:
-    description: |
-      Name of script for application build
-    required: true
-    default: 'build'
-
   node-version:
     description: |
       Node version to use.
@@ -40,6 +29,20 @@ inputs:
     required: false
     default: 'false'
 
+  npm-registry-url:
+    description: |
+      The npm registry url to set up for auth 
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  npm-registry-scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ github.repository_owner }}
+
+
 runs:
   using: "composite"
 
@@ -47,7 +50,7 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v3
 
-    - name: Prepare env for Node application build
+    - name: Prepare env for Node application publishing
       uses: milaboratory/github-ci/actions/node/prepare@v3-beta
       with:
         node-version: ${{ inputs.node-version }}
@@ -65,8 +68,21 @@ runs:
       with:
         version: ${{ steps.context.outputs.current-version }}
 
-    - name: Build NodeJS application
+    - name: Create .npmrc file
       uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        NPM_REGISTRY_URL: ${{ inputs.npm-registry-url }}
+        NPM_REGISTRY_SCOPE: ${{ inputs.npm-registry-scope }}
       with:
         run: |
-          npm run ${{ inputs.build-script-name }}
+          echo '//'${NPM_REGISTRY_URL}'/:_authToken=${NPM_AUTH_TOKEN}' > ./.npmrc
+          echo "${NPM_REGISTRY_SCOPE}:registry=${NPM_REGISTRY_URL}" >> ./.npmrc
+          echo "always-auth=true" >> ./.npmrc
+
+    - name: Publish NodeJS application
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        run: |
+          npm publish

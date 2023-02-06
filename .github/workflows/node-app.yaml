@@ -1,6 +1,6 @@
-# This workflow will build and deploy application on the aws cloudfront.
+# This workflow will build and upload application on the github's npm registry.
 
-name: Build and Deploy Application (AWS Cloudfront)
+name: Build and Upload Application
 
 on:
   workflow_call:
@@ -95,22 +95,6 @@ on:
         default: 'true'
 
       #
-      # Test control
-      #
-      test:
-        description: |
-          Run tests
-        type: boolean
-        required: false
-        default: false
-      test-script-name:
-        description: |
-          The name of a test
-        type: string
-        required: false
-        default: 'test'
-
-      #
       # Archive distribution control
       #
       dist-archive-path:
@@ -128,40 +112,47 @@ on:
         default: 7
 
       #
-      # AWS settings
+      # NPM registry settings
       #
-      aws-iam-role-to-assume:
+      npm-registry-url:
         description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        type: string
-        required: true
-
-      aws-region:
-        description: |
-          The AWS region
-        type: string
-        required: true
-        default: 'us-east-1'
-
-      aws-cloudfront-distribution-id:
-        description: |
-          The ID of an AWS Cloudfront distribution
-        type: string
-        required: true
-
-      aws-cloudfront-s3-bucket-name:
-        description: |
-          The name of an aws s3 bucket to sync static files
-        type: string
-        required: true
-
-      aws-cloudfront-cache-invalidation:
-        description: |
-          Invalidate the cache on the AWS Cloudfornt for a given distribution
+          The npm registry url to set up for auth
+          and publication of the node js package.
         type: string
         required: false
-        default: 'true'
+        default: 'https://npm.pkg.github.com'
+
+      npm-registry-scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: ${{ github.repository_owner }}
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
+
+      release-github-draft:
+        description: |
+          Create GitHub Release draft instead of final release.
+          This makes developer to manually confirm release publication, but
+          also allows to update release description and changelog before publication.
+        type: boolean
+        required: false
+        default: false
 
       #
       # Notifications
@@ -279,98 +270,6 @@ jobs:
           path: ${{ inputs.dist-archive-path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
-  test:
-    name: :test
-    runs-on: ubuntu-latest
-
-    if: inputs.test
-    needs:
-      - build
-
-    steps:
-      - uses: milaboratory/github-ci/actions/env@v3
-        with:
-          inputs: ${{ inputs.env }}
-          secrets: ${{ secrets.env }}
-
-      - uses: actions/checkout@v3
-        with:
-          submodules: ${{ inputs.checkout-submodules }}
-
-      - uses: milaboratory/github-ci/actions/git/crypt@v3
-        if: inputs.git-crypt-unlock
-        with:
-          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
-
-      - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v3-beta
-        with:
-          test-name: ${{ inputs.test-script-name }}
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          is-electron-application: ${{ inputs.is-electron-application }}
-
-    outputs:
-      # Even constant outputs become initialized only after job start.
-      # All outputs of skipped jobs are always empty.
-      started: 'true'
-
-  deployDist:
-    name: deploy
-    runs-on: ubuntu-latest
-
-    needs:
-      - init
-      - build
-      - test
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v3
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.app-name-slug }}
-
-      - uses: milaboratory/github-ci/actions/aws/cloudfront@v3-beta
-        with:
-          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
-          aws-region: ${{ inputs.aws-region }}
-          aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
-          aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
-          aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
-          dist-assets: ${{ inputs.app-name-slug }}/
-
-
-  notify-test:
-    name: notify test
-    runs-on: ubuntu-latest
-
-    if:  always()
-      && needs.test.outputs.started == 'true'
-      && inputs.notify-tests != 'false'
-
-    needs:
-      - test
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v3
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          notification-mode: ${{ inputs.notify-tests }}
-          tests-status: ${{ needs.test.result }}
-          tests-type: 'Unit'
-
-          product-name: ${{ inputs.app-name }}
-
   notify-build:
     name: Notify build
     runs-on: ubuntu-latest
@@ -391,4 +290,156 @@ jobs:
 
           build-status: |
             ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
+
+  can-release:
+    name: Can release
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+
+    if: always() && fromJSON(needs.init.outputs.is-release) && needs.build.result != 'failure'
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+  notify-release-review:
+    name: Notify review required
+    runs-on: ubuntu-latest
+
+    if: always() && needs.can-release.result == 'success'
+
+    needs:
+      - can-release
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          message: new version of library is ready for release.
+          product-name: ${{ inputs.product-name }}
+
+  release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if: always() && needs.can-release.result == 'success'
+
+    environment: release
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  create-release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+
+    needs:
+      - release
+
+    if: always() && needs.release.result == 'success'
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}
+          path: release-files
+
+      - name: Create release
+        uses: milaboratory/github-ci/actions/release/create@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-version-tag }}
+          draft: ${{ inputs.release-github-draft }}
+          assets: |
+            release-files/**
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+  publish-to-npm:
+    name: publish
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.release.result == 'success'
+
+    needs:
+      - release
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.app-name-slug }}
+
+      - uses: milaboratory/github-ci/blocks/node/publish@v3-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          npm-registry-url: ${{ inputs.npm-registry-url }}
+          npm-registry-scope: ${{ inputs.npm-registry-scope }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.release.result == 'success'
+    needs:
+      - release
+      - create-release
+      - publish-to-npm
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/release@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.publish-to-npm.result }}
+
           product-name: ${{ inputs.app-name }}

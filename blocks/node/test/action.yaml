@@ -1,8 +1,8 @@
 name: Run a npm test for the Node project
 author: 'MiLaboratories'
 description: |
-  Prepare agent for running a npm test for the Node project.
-  Install Node specific version, download package, create cache e.t.c
+  Prepare agent for running a npm test for the NodeJS project.
+  Install NodeJS specific version, download package, create cache e.t.c
 
 inputs:
   test-name:
@@ -38,9 +38,6 @@ runs:
   using: "composite"
 
   steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v3
-
       - name: Prepare env for Node application build
         uses: milaboratory/github-ci/actions/node/prepare@v3-beta
         with:
