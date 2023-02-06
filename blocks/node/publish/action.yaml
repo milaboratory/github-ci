@@ -80,7 +80,7 @@ runs:
       with:
         run: |
           echo '//'${NPM_REGISTRY_URL}'/:_authToken=${NPM_AUTH_TOKEN}' > ./.npmrc
-          echo "${NPM_REGISTRY_SCOPE}:registry=${NPM_REGISTRY_URL}" >> ./.npmrc
+          echo "@${NPM_REGISTRY_SCOPE}:registry=${NPM_REGISTRY_URL}" >> ./.npmrc
           echo "always-auth=true" >> ./.npmrc
 
     - name: Publish NodeJS application
