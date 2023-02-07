@@ -81,7 +81,9 @@ runs:
       with:
         version: ${{ steps.context.outputs.current-version }}
 
-    - run: |
+    - name: Print npmrc
+      shell: bash
+      run: |
         cat ${{ env.NPM_CONFIG_USERCONFIG }}
 
     - name: Publish NodeJS application
