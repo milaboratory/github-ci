@@ -81,10 +81,11 @@ runs:
       with:
         version: ${{ steps.context.outputs.current-version }}
 
+    - run: |
+        cat ${{ env.NPM_CONFIG_USERCONFIG }}
+
     - name: Publish NodeJS application
-      uses: milaboratory/github-ci/actions/shell@v3
       env:
         NODE_AUTH_TOKEN: ${{ inputs.github-token }}
-      with:
-        run: |
-          npm publish
+      shell: bash
+      run: npm publish
