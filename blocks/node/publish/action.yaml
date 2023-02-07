@@ -29,14 +29,14 @@ inputs:
     required: false
     default: 'false'
 
-  npm-registry-url:
+  registry-url:
     description: |
       The npm registry url to set up for auth
       and publication of the node js package.
     required: false
     default: 'https://npm.pkg.github.com'
 
-  npm-registry-scope:
+  scope:
     description: |
       Scope for authenticating against npm registries.
     required: false
@@ -46,6 +46,12 @@ inputs:
     description: |
       Repository scope github actions token.
     required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -60,8 +66,9 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         is-electron-application: ${{ inputs.is-electron-application }}
-        registry-url: ${{ inputs.npm-registry-url }}
-        scope: ${{ inputs.npm-registry-scope }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
 
     - name: Install node packages with npm
       uses: milaboratory/github-ci/actions/shell@v3
