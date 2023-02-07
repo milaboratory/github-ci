@@ -27,6 +27,19 @@ inputs:
     required: false
     default: 'true'
 
+  npm-registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  npm-registry-scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
 runs:
   using: "composite"
 
@@ -36,6 +49,8 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
+        registry-url: ${{ inputs.npm-registry-url }}
+        scope: ${{ inputs.npm-registry-scope }}
 
     - name: Cache NodeJS/Electron libs
       uses: milaboratory/github-ci/actions/node/cache@v3-beta

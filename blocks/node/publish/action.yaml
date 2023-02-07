@@ -15,7 +15,7 @@ inputs:
   cache-version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
-      
+
       Just change the value of this parameter and the next run will
       not find build cache and will have to start from scratch.
 
@@ -31,7 +31,7 @@ inputs:
 
   npm-registry-url:
     description: |
-      The npm registry url to set up for auth 
+      The npm registry url to set up for auth
       and publication of the node js package.
     required: false
     default: 'https://npm.pkg.github.com'
@@ -40,16 +40,11 @@ inputs:
     description: |
       Scope for authenticating against npm registries.
     required: false
-    default: ${{ github.repository_owner }}
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
 
   github-token:
     description: |
       Repository scope github actions token.
-    required: false
-
-  build-results-path:
-    description: |
-      Path to the build results.
     required: false
 
 runs:
@@ -65,6 +60,8 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         is-electron-application: ${{ inputs.is-electron-application }}
+        registry-url: ${{ inputs.npm-registry-url }}
+        scope: ${{ inputs.npm-registry-scope }}
 
     - name: Install node packages with npm
       uses: milaboratory/github-ci/actions/shell@v3
@@ -77,27 +74,10 @@ runs:
       with:
         version: ${{ steps.context.outputs.current-version }}
 
-    - name: Create .npmrc file
-      uses: milaboratory/github-ci/actions/shell@v3
-      env:
-        NPM_REGISTRY_URL: ${{ inputs.npm-registry-url }}
-        NPM_REGISTRY_SCOPE: ${{ inputs.npm-registry-scope }}
-        BUILD_RESULTS_PATH: ${{ inputs.build-results-path }}
-      with:
-        working-directory: ${{ env.BUILD_RESULTS_PATH }}
-        run: |
-          NPM_REGISTRY_URL_WO_HTTP=$(echo "${NPM_REGISTRY_URL}" | sed -E 's/^\s*.*:\/\///g')
-          
-          echo '//'${NPM_REGISTRY_URL_WO_HTTP}'/:_authToken=${NPM_AUTH_TOKEN}' > ./.npmrc
-          echo "@${NPM_REGISTRY_SCOPE}:registry=${NPM_REGISTRY_URL}" >> ./.npmrc
-          echo "always-auth=true" >> ./.npmrc
-
     - name: Publish NodeJS application
       uses: milaboratory/github-ci/actions/shell@v3
       env:
-        NPM_AUTH_TOKEN: ${{ inputs.github-token }}
-        BUILD_RESULTS_PATH: ${{ inputs.build-results-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.github-token }}
       with:
-        working-directory: ${{ env.BUILD_RESULTS_PATH }}
         run: |
           npm publish
