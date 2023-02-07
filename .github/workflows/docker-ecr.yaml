@@ -605,8 +605,8 @@ jobs:
           helm-chart-values: |
             ${{ env.IMAGE_TAGS }}
 
-  notify-release:
-    name: notify release
+  notify-deployment:
+    name: notify deployment
     runs-on: ubuntu-latest
 
     if: always()
@@ -616,7 +616,7 @@ jobs:
       - deployment
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v3
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v3-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

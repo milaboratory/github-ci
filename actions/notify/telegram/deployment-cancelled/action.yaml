@@ -1,6 +1,6 @@
-name: Notify about failed release
+name: Notify about cancelled deployment
 description: |
-  Notify User or Channel about failed release
+  Notify User or Channel about cancelled deployment
 
 inputs:
   telegram-target:
@@ -14,7 +14,7 @@ inputs:
 
   product-name:
     description: |
-      Name of product that was built
+      Name of product that was deployed
     required: false
     default: ${{ github.repository }}
   version:
@@ -25,6 +25,13 @@ inputs:
     description: |
       Release tag
     required: true
+
+  docker-images:
+    description: |
+      List of docker images related to build in JSON format
+      Empty string is treated as empty JSON list ('[]') for convenience.
+    required: false
+    default: ''
 
   additional-info:
     description: |
@@ -39,6 +46,15 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v3
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+
     - uses: milaboratory/github-ci/actions/templates/jinja@v3
       id: message
       with:
@@ -49,12 +65,22 @@ runs:
             "release": { "version": ${{ toJSON(inputs.version) }},
                          "tag": ${{ toJSON(inputs.tag) }} },
 
-            "github": ${{ steps.safe-ctx.outputs.github }} }
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }},
 
         template: |
-          ☠️ \[{{ product["name"] }}] Release failed! :(
-            Version: {{ release["version"] }}
-            Tag: {{ release["tag"] }}
+          ☑️ \[{{ product["name"] }}] Deployment has been cancelled: [{{ release["version"] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/releases/tag/{{ release["tag"] -}}
+            )
+
+          {%- if docker_images | length > 0 %}
+          Docker images:
+          {%- for i in docker_images %}
+            - ```{{ i }}```
+          {%- endfor %}
+          {%- endif %}
+
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
@@ -62,7 +88,6 @@ runs:
           ) ]
 
           {{ product["additional_info"] }}
-
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
       with:
