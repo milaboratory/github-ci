@@ -135,7 +135,7 @@ on:
         required: false
         type: string
         default: 'true'
-        notify-deployment:
+      notify-deployment:
           description: |
             Enable notifications about deployment status (deployment ready/failed)
             Possible values are:
