@@ -204,9 +204,8 @@ jobs:
       - uses: milaboratory/github-ci/actions/shell@v3
         with:
           dump-stdout: false
-          working-directory: /opt/
           run: |
-            sudo curl -s -L "https://github.com/plantuml/plantuml/releases/download/v${{ inputs.plantuml-version }}/plantuml-${{ inputs.plantuml-version }}.jar" --output plantuml.jar
+            sudo curl -s -L "https://github.com/plantuml/plantuml/releases/download/v${{ inputs.plantuml-version }}/plantuml-${{ inputs.plantuml-version }}.jar" --output /opt/plantuml.jar
 
       - uses: milaboratory/github-ci/actions/shell@v3
         with:
@@ -214,7 +213,7 @@ jobs:
           run: |
             echo '#!/bin/bash' > /usr/local/bin/plantuml
             echo 'java $PLANTUML_JAVAOPTS -jar /opt/plantuml.jar ${@}' >> /usr/local/bin/plantuml
-            chmod +x /usr/local/bin/plantum
+            chmod +x /usr/local/bin/plantuml
 
       - uses: milaboratory/github-ci/actions/shell@v3
         with:
