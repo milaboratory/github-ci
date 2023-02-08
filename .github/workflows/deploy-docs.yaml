@@ -135,6 +135,15 @@ on:
         required: false
         type: string
         default: 'true'
+        notify-deployment:
+          description: |
+            Enable notifications about deployment status (deployment ready/failed)
+            Possible values are:
+             - 'true' - send all notifications about deployment status (both success and failed)
+             - 'false' - don't send notifications about deployment results at all.
+          required: false
+          type: string
+          default: 'true'
     secrets:
       env:
         description: |
@@ -234,8 +243,26 @@ jobs:
           path: ${{ inputs.dist-archive-path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
-  deployDocs:
-    name: :deploy
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+    if: always() 
+      && inputs.notify-telegram 
+      && inputs.notify-build != 'false' 
+      && needs.build.result != 'cancelled'
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          build-status: |
+            ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
+
+  deployment:
+    name: :deployment
     runs-on: ubuntu-latest
     needs:
       - init
@@ -261,18 +288,22 @@ jobs:
           aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
           dist-assets: ${{ inputs.app-name-slug }}/
 
-  notify-build:
-    name: Notify build
+  notify-deployment:
+    name: notify deployment
     runs-on: ubuntu-latest
-    if: always() && inputs.notify-telegram && inputs.notify-build != 'false' && needs.build.result != 'cancelled'
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-deployment != 'false'
     needs:
-      - build
-      - deployDocs
+      - deployment
+
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v3
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v3-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-          build-status: |
-            ${{ needs.build.result }}
+
+          job-status: |
+            ${{ needs.deployment.result }}
           product-name: ${{ inputs.app-name }}

@@ -71,6 +71,7 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
 
+        docker-images: ${{ inputs.docker-images }}
         additional-info: ${{ inputs.additional-info }}
 
     - name: Report 'deployment success' to Telegram
@@ -85,6 +86,7 @@ runs:
         tag: ${{ steps.context.outputs.current-version-tag }}
 
         docker-images: ${{ inputs.docker-images }}
+        additional-info: ${{ inputs.additional-info }}
 
     - name: Report 'deployment canceled' to Telegram
       if: steps.job-status.outputs.status == 'cancelled'
@@ -98,3 +100,4 @@ runs:
         tag: ${{ steps.context.outputs.current-version-tag }}
 
         docker-images: ${{ inputs.docker-images }}
+        additional-info: ${{ inputs.additional-info }}
