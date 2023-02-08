@@ -1,7 +1,7 @@
-name: Send notifications about release creation
+name: Send notifications about deployment results
 author: 'MiLaboratories'
 description: |
-  Send notifications about release creation
+  Send notifications about deployment results
 
   Requirements:
     - initialized context (actions/context/init)

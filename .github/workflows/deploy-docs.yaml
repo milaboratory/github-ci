@@ -202,9 +202,9 @@ jobs:
             sudo apt-get install -y graphviz
 
       - uses: milaboratory/github-ci/actions/shell@v3
-        working-directory: /opt/
         with:
           dump-stdout: false
+          working-directory: /opt/
           run: |
             sudo curl -s -L "https://github.com/plantuml/plantuml/releases/download/v${{ inputs.plantuml-version }}/plantuml-${{ inputs.plantuml-version }}.jar" --output plantuml.jar
 
