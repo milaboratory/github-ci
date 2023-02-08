@@ -67,7 +67,7 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }},
+            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }} }
 
         template: |
           ☑️ \[{{ product["name"] }}] Deployment has been cancelled: [{{ release["version"] }}](
