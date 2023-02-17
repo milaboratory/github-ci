@@ -86,6 +86,13 @@ on:
         type: string
         required: true
         default: 'build'
+      build-script-env:
+        description: |
+          JSON-encoded environment variables to set for 'npm run <build-script-name>':
+          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
+        type: string
+        required: false
+        default: '{}'
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
@@ -265,6 +272,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/blocks/node/build/generic@v3-beta
+        env: ${{ fromJSON(inputs.build-script-env) }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
