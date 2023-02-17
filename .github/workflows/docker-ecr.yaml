@@ -211,6 +211,20 @@ on:
         required: false
         default: 'v0.4.5'
       #
+      # Github Actions runner control
+      #
+      gha-environment-name:
+        description: |
+          The name of gtihub actions environment
+        type: string
+        required: false
+        default: 'deployment'
+      gha-runner-label:
+        description: |
+          The label for github actions self-hosted runner
+        type: string
+        default: 'gha-custom-runner'
+      #
       # Notifications
       #
       notify-telegram:
@@ -531,7 +545,8 @@ jobs:
       - can-release
 
     if: always() && needs.can-release.result == 'success'
-    environment: deployment
+    environment:
+      name: ${{ inputs.gha-environment-name }}
 
     steps:
       - shell: bash
@@ -545,7 +560,7 @@ jobs:
   deployment:
     if: inputs.helm-deployment && needs.release.result == 'success'
     name: :deployment
-    runs-on: [ self-hosted ]
+    runs-on: [ self-hosted, "${{ inputs.gha-runner-label }}" ]
     needs:
       - release
       - setup-matrix
