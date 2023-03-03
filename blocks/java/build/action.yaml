@@ -183,7 +183,7 @@ runs:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
           --exclude-task
-          :${{ inputs.project }}:
+          ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Generate build tasks
       id: tasks
