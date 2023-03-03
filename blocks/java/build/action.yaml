@@ -190,7 +190,7 @@ runs:
       uses: milaboratory/github-ci/actions/strings/prefix@v3
       with:
         input: ${{ inputs.tasks }}
-        prefix: ':${{ inputs.project }}:'
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Build project
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v3
