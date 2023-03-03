@@ -58,8 +58,8 @@ runs:
       working-directory: ${{ inputs.project-dir }}
       env:
         ACTION_PATH: ${{ github.action_path }}
-        PROJECT_NAME: ${{ inputs.project-name }}
+        TASK_PREFIX: ${{ inputs.project-name && format(':{0}:', inputs.project-name) || ':' }}
 
       run: |
-        ./gradlew --quiet ":${PROJECT_NAME}:properties" |
+        ./gradlew --quiet "${TASK_PREFIX}properties" |
           "${ACTION_PATH}/dump-props.sh"
