@@ -259,7 +259,7 @@ runs:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
           --exclude-task
-          :${{ inputs.project }}:
+          ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Download cached test data
       if: inputs.test-data-cache-enabled == 'true' && inputs.test-data-cache-paths != '' && inputs.test-data-cache-key != ''
@@ -274,7 +274,7 @@ runs:
       uses: milaboratory/github-ci/actions/strings/prefix@v3
       with:
         input: ${{ inputs.before-hooks-tasks }}
-        prefix: ':${{ inputs.project }}:'
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run before-hooks tasks
       if: steps.before-hooks-tasks.outputs.result != ''
@@ -303,7 +303,7 @@ runs:
       uses: milaboratory/github-ci/actions/strings/prefix@v3
       with:
         input: ${{ inputs.tasks }}
-        prefix: ':${{ inputs.project }}:'
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run tests
       if: steps.test-tasks.outputs.result != ''
