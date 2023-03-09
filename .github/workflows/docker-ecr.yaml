@@ -209,7 +209,7 @@ on:
           Version of regctl
         type: string
         required: false
-        default: 'v0.4.5'
+        default: 'v0.4.7'
       #
       # Github Actions runner control
       #
@@ -297,23 +297,27 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            MATRIX_PLATFORMS="$(docker buildx bake base --print -f $BAKE_FILE | jq -rc '.target."base".platforms')"
+            MATRIX_PLATFORMS="$(docker buildx bake base --print -f $BAKE_FILE | jq -rc '[ .target."base".platforms[] | { "agent": "ubuntu-latest", "platform": . } ] | map((select(.platform == "linux/arm64") | .agent) |= "linux-arm64") | { "include": . }')"
+            MATRIX_BUILD=$(jq --argjson j "$DOCKER_BAKE_BUILD_CONFIG" --argjson k "$MATRIX_PLATFORMS" -n '{ include: ($k.include | map(. * $j)) }')
+
             ghwa_set_output "matrix-platforms" "$MATRIX_PLATFORMS"
             ghwa_set_output "matrix-bake-targets" "{\"include\":[$DOCKER_BAKE_BUILD_CONFIG]}"
+            ghwa_set_output "matrix-build" "$MATRIX_BUILD"
+
     outputs:
       matrix-platforms: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-platforms }}
       matrix-bake-targets: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-bake-targets }}
+      matrix-build: ${{ fromJSON(steps.setup-matrix-combinations.outputs.data).matrix-build }}
 
   setup-cache:
     name: :setup-cache
-    runs-on: ubuntu-latest
     needs:
       - init
       - setup-matrix
     strategy:
       fail-fast: false
-      matrix:
-        platform: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
+    runs-on: ${{ matrix.agent }}
     steps:
       - uses: milaboratory/github-ci/actions/env@v3
         with:
@@ -335,11 +339,20 @@ jobs:
           dump-stdout: false
           run: |
             platform=${{ matrix.platform }}
-            ghwa_set_env "PLATFORM_PAIR" "${platform//\//-}"
+            ghwa_set_env "PLATFORM" "${platform//\//-}"
 
       - uses: actions/checkout@v3
-      - uses: docker/setup-qemu-action@v2
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            docker context create builders
+
       - uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+          endpoint: builders
+
       - uses: docker/bake-action@v2
         env:
           APP_NAME: ${{ inputs.app-name-slug }}
@@ -349,12 +362,11 @@ jobs:
             ${{ inputs.docker-bake-file-path }}
           set: |
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }}
-            *.cache-to=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM_PAIR }},mode=max
+            *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM }}
+            *.cache-to=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM }},mode=max
 
   build:
     name: :build
-    runs-on: [ubuntu-latest]
     needs:
       - init
       - setup-matrix
@@ -364,7 +376,8 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-bake-targets) }}
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-build) }}
+    runs-on: ${{ matrix.agent }}
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v3
@@ -385,22 +398,15 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/actions/shell@v3
-        env:
-          APP_NAME: ${{ inputs.app-name-slug }}
-          BAKE_FILE: ${{ inputs.docker-bake-file-path }}
         with:
           dump-stdout: false
           run: |
-            cfroms=
-            while read -r platform; do
-              if [ -n "$cfroms" ]; then cfroms="${cfroms}\n"; fi
-              cfroms="${cfroms}*.cache-from=type=gha,scope=${APP_NAME}-${platform//\//-}"
-            done < <(docker buildx bake base --print -f $BAKE_FILE | jq -r '.target."base".platforms[]')
-            CACHE_FROMS=$(echo -e "$cfroms")
-            ghwa_set_env "CACHE_FROMS" "$CACHE_FROMS"
+            docker context create builders
 
-      - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+          endpoint: builders
 
       - uses: aws-actions/configure-aws-credentials@v1
         if: github.event_name != 'pull_request'
@@ -424,13 +430,20 @@ jobs:
             ghwa_set_output image "${REGISTRY}/${REPOSITORY}"
             ghwa_set_output image_tag "${CURRENT_VERSION}"
 
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            platform=${{ matrix.platform }}
+            ghwa_set_env "PLATFORM" "${platform//\//-}"
+
       - id: image-metadata
         uses: docker/metadata-action@v3
         with:
           images: |
             ${{ fromJSON( steps.transform-version.outputs.data ).image }}
           flavor: |
-            suffix=${{ matrix.flavor-suffix }}
+            suffix=${{ matrix.flavor-suffix }}-${{ env.PLATFORM }}
           labels: |
             org.opencontainers.image.vendor=MiLaboratories
           tags: |
@@ -438,6 +451,8 @@ jobs:
 
       - id: build-push
         uses: docker/bake-action@v2
+        env:
+          APP_NAME: ${{ inputs.app-name-slug }}
         with:
           targets: ${{ matrix.bake_target }}
           push: ${{ github.event_name != 'pull_request' }}
@@ -445,7 +460,8 @@ jobs:
             ${{ inputs.docker-bake-file-path }}
             ${{ steps.image-metadata.outputs.bake-file }}
           set: |
-            ${{ env.CACHE_FROMS }}
+            *.platform=${{ matrix.platform }}
+            *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM }}
             ${{ inputs.docker-images-build-args }}
 
       - uses: milaboratory/github-ci/actions/setup-regctl@v3-beta
@@ -460,27 +476,17 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ inputs.app-name-slug }}
           TAG: ${{ steps.image-metadata.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
         with:
           dump-stdout: false
           run: |
-            DOCKER_PLATFORM_JSON=$(docker buildx bake base --print -f $BAKE_FILE | jq -r '[ .target."base".platforms[] | { "platform": . } ]')
-
-            for row in $(echo "${DOCKER_PLATFORM_JSON}" | jq -r '.[] | @base64'); do
-              _jq() {
-                echo $row | base64 --decode | jq -r $1
-              }
-
             IMAGE="${REGISTRY}/${REPOSITORY}"
-            PLATFORM=$(_jq '.platform')
-            PLATFORM_SANITIZED=$(echo $PLATFORM | sed 's:/:-:g')
             DIGEST=$(regctl image digest --platform $PLATFORM $IMAGE:$TAG)
 
             regctl image copy \
             "${IMAGE}@${DIGEST}" \
-            "${IMAGE}:${TAG}-${PLATFORM_SANITIZED}"
-            printf "Re-tagging: %s\n" "${IMAGE}:${TAG}-${PLATFORM_SANITIZED}"
-
-            done
+            "${IMAGE}:${TAG}"
+            printf "Re-tagging: %s\n" "${IMAGE}:${TAG}"
 
       - id: pushed-tags
         uses: milaboratory/github-ci/actions/strings/json-list@v3
@@ -501,6 +507,81 @@ jobs:
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ steps.pushed-tags.outputs.result }}
 
+  push-manifest:
+    if: github.event_name != 'pull_request'
+    name: Push Docker Manifest to ECR
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+      - setup-matrix
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - uses: milaboratory/github-ci/actions/setup-regctl@v3-beta
+        with:
+          version: ${{ inputs.regctl-version }}
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        env:
+          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ inputs.app-name-slug }}
+          MATRIX_BUILD: ${{ needs.setup-matrix.outputs.matrix-build }}
+        with:
+          dump-stdout: false
+          run: |
+            IMAGE_TAGS=()
+            IMAGE_SUFFIX=""
+            for row in $(echo "${MATRIX_BUILD}" | jq -r '.include[] | @base64'); do
+              _jq() {
+                echo $row | base64 --decode | jq -r $1
+            }
+
+            IMAGE_FLAVOR_SUFFIX=$(_jq '."flavor-suffix"')
+            IMAGE_PLATFORM=$(_jq '."platform"')
+            IMAGE_PLATFORM_SANITIZED=$(echo $IMAGE_PLATFORM | sed 's:/:-:g')
+            IMAGE="${REGISTRY}/${REPOSITORY}"
+
+            IMAGE_TAGS+="${IMAGE}:${CURRENT_VERSION}${IMAGE_FLAVOR_SUFFIX}-${IMAGE_PLATFORM_SANITIZED}\n"
+            IMAGE_SUFFIX="${IMAGE_FLAVOR_SUFFIX}"
+            done
+
+            _image_tags=$(echo -e $IMAGE_TAGS)
+            _manifest_name="${REGISTRY}/${REPOSITORY}:${CURRENT_VERSION}${IMAGE_SUFFIX}"
+
+            _image_refs=()
+            while read -r _ref; do
+              if [ -n "${_ref}" ]; then
+              _image_refs+=( --ref "${_ref}" )
+              fi
+            done <<<"${_image_tags}"
+
+            regctl index create \
+             "${_manifest_name}" \
+             "${_image_refs[@]}"
+
+            regctl manifest get \
+              "${_manifest_name}"
+
   can-release:
     name: Can release
     runs-on: ubuntu-latest
@@ -509,12 +590,14 @@ jobs:
       - init
       - build
       - setup-matrix
+      - push-manifest
 
     if: always()
       && inputs.helm-deployment
       && fromJSON(needs.init.outputs.is-release)
       && needs.build.result         != 'failure'
       && needs.setup-matrix.result  != 'failure'
+      && needs.push-manifest.result  != 'failure'
 
     steps:
       - shell: bash
