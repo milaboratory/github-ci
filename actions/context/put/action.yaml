@@ -30,13 +30,13 @@ runs:
 
       run: rm -rf "${CTX_PATH}"
 
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v3
       with:
         name: context
         path: ${{ github.action_path }}/../ctx
 
     - id: create_key
-      uses: milaboratory/github-ci/actions/shell@v3
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
         CTX_KEY: ${{ inputs.key }}
@@ -55,7 +55,7 @@ runs:
           printf "%s" "${CTX_VALUE}" > "${file_path}"
           echo "$(mish_abspath "${file_path}")"
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: context
         path: ${{ steps.create_key.outputs.stdout }}

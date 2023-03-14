@@ -52,9 +52,9 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v3
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v3
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
       id: message
       with:
         data: |
@@ -88,7 +88,7 @@ runs:
 
           {{ product["additional_info"] }}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

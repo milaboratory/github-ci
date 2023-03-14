@@ -44,14 +44,14 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v3
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - uses: aws-actions/configure-aws-credentials@v1
       with:
         role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
 
-    - uses: milaboratory/github-ci/actions/shell@v3
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CF_DIST_ID: ${{ inputs.aws-cloudfront-distribution-id }}
         CF_S3_BUCKET_NAME: ${{ inputs.aws-cloudfront-s3-bucket-name }}

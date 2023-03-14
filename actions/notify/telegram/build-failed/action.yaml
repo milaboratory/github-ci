@@ -33,12 +33,12 @@ runs:
 
   steps:
     - id: short-sha
-      uses: milaboratory/github-ci/actions/shell@v3
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
           echo "${GITHUB_SHA:0:8}"
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

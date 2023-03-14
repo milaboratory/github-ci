@@ -243,7 +243,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v3
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -256,7 +256,7 @@ jobs:
       - init
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v3
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -265,13 +265,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v3
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v3-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         env: ${{ fromJSON(inputs.build-script-env) }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
@@ -296,7 +296,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v3
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -305,14 +305,14 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v3
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v3-beta
+        uses: milaboratory/github-ci/blocks/node/test@v4-beta
         with:
           test-name: ${{ inputs.test-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -339,14 +339,14 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v3
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
       - uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.app-name-slug }}
 
-      - uses: milaboratory/github-ci/actions/aws/cloudfront@v3-beta
+      - uses: milaboratory/github-ci/actions/aws/cloudfront@v4-beta
         with:
           aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}
@@ -368,7 +368,7 @@ jobs:
       - test
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests@v3
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -392,7 +392,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v3
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

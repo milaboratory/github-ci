@@ -52,17 +52,17 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v3
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v3-beta
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
       with:
         statuses: ${{ inputs.job-status }}
 
     - name: Report 'deployment failed' to Telegram
       if: steps.job-status.outputs.status == 'failure'
-      uses: milaboratory/github-ci/actions/notify/telegram/deployment-failed@v3-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/deployment-failed@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -76,7 +76,7 @@ runs:
 
     - name: Report 'deployment success' to Telegram
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/deployment-success@v3-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/deployment-success@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -90,7 +90,7 @@ runs:
 
     - name: Report 'deployment canceled' to Telegram
       if: steps.job-status.outputs.status == 'cancelled'
-      uses: milaboratory/github-ci/actions/notify/telegram/deployment-cancelled@v3-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/deployment-cancelled@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

@@ -70,7 +70,7 @@ function ghwa_set_output() {
   local _value
   _value="$(ghwa_escape "${2}")"
 
-  _ghwa_command "set-output" "${_value}" "name=${_name}"
+  echo "${_name}=${_value}" >> "${GITHUB_OUTPUT}" 
 }
 
 # GitHub Workflow command 'notice'

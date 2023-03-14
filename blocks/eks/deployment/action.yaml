@@ -79,15 +79,15 @@ runs:
   using: "composite"
 
   steps:
-    - uses: azure/setup-kubectl@v3
+    - uses: azure/setup-kubectl@v4-beta
       with:
         version: ${{ inputs.kubectl-version }}
 
-    - uses: azure/setup-helm@v3
+    - uses: azure/setup-helm@v4-beta
       with:
         version: ${{ inputs.helm-version }}
 
-    - uses: milaboratory/github-ci/actions/helm/upgrade@v3-beta
+    - uses: milaboratory/github-ci/actions/helm/upgrade@v4-beta
       with:
         helm-release-name: ${{ inputs.helm-release-name }}
         helm-chart-name: ${{ inputs.helm-chart-name }}

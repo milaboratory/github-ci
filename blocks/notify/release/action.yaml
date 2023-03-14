@@ -66,17 +66,17 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v3
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v3
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
       with:
         statuses: ${{ inputs.job-status }}
 
     - name: Report 'release failed' to Telegram
       if: steps.job-status.outputs.status != 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/release-failed@v3
+      uses: milaboratory/github-ci/actions/notify/telegram/release-failed@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -89,7 +89,7 @@ runs:
 
     - name: Report 'new release' to Telegram
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v3
+      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

@@ -45,28 +45,28 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v3
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - name: Prepare env for Node application build
-      uses: milaboratory/github-ci/actions/node/prepare@v3-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         is-electron-application: ${{ inputs.is-electron-application }}
 
     - name: Install node packages with npm
-      uses: milaboratory/github-ci/actions/shell@v3
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
           npm ci
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v3
+      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
       with:
         version: ${{ steps.context.outputs.current-version }}
 
     - name: Build NodeJS application
-      uses: milaboratory/github-ci/actions/shell@v3
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
           npm run ${{ inputs.build-script-name }}

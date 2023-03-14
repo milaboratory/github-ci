@@ -5,7 +5,7 @@
 Acceptable values are latest or any semantic version string like `v0.4.5`. Use this action in workflow to define which version of regctl will be used.
 
 ```yaml
-- uses: milaboratory/github-ci/actions/setup-regctl@v3
+- uses: milaboratory/github-ci/actions/setup-regctl@v4-beta
   with:
      version: '<version>' # default is latest
 ```

@@ -51,7 +51,7 @@ runs:
 
   steps:
     - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4-beta
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
@@ -60,7 +60,7 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Cache NodeJS/Electron libs
-      uses: milaboratory/github-ci/actions/node/cache@v3-beta
+      uses: milaboratory/github-ci/actions/node/cache@v4-beta
       with:
         is-electron-application: ${{ inputs.is-electron-application }}
         cache-version: ${{ inputs.cache-version }}

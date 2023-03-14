@@ -178,7 +178,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v3
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -191,27 +191,27 @@ jobs:
       - init
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v3
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: context
-        uses: milaboratory/github-ci/actions/context@v3
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
       - name: Build Docker Image
-        uses: milaboratory/github-ci/actions/docker/build@v3
+        uses: milaboratory/github-ci/actions/docker/build@v4-beta
         with:
           dockerfile: ${{ inputs.dockerfile }}
           context: ${{ inputs.build-context }}
           tags: 'build:local'
 
-      - uses: milaboratory/github-ci/actions/shell@v3
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
         id: tags
         env:
           PUSH_DEV_TARGETS: ${{ inputs.push-dev-targets }}
@@ -286,7 +286,7 @@ jobs:
               done
             done
 
-      - uses: milaboratory/github-ci/actions/docker/push@v3
+      - uses: milaboratory/github-ci/actions/docker/push@v4-beta
         id: push
         with:
           source: 'build:local'
@@ -309,7 +309,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v3
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -331,11 +331,11 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v3
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
       - id: create-release
         name: Create release
-        uses: milaboratory/github-ci/actions/release/create@v3
+        uses: milaboratory/github-ci/actions/release/create@v4-beta
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

@@ -124,7 +124,7 @@ runs:
         exclude_types: ${{ inputs.changelog-exclude-types }}
 
     - id: assets
-      uses: milaboratory/github-ci/actions/strings/join@v3
+      uses: milaboratory/github-ci/actions/strings/join@v4-beta
       with:
         input: ${{ inputs.assets }}
         separator: ','
