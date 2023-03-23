@@ -1,0 +1,29 @@
+name: Setup cache for a Golang application
+author: 'MiLaboratories'
+description: |
+  Setup cache for a Golang application
+
+inputs:
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Cache Golang modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}

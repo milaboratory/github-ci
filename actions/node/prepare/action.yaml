@@ -1,7 +1,7 @@
-name: Prepare environment for Node project
+name: Prepare environment for NodeJS/Electron application
 author: 'MiLaboratories'
 description: |
-  Prepare environment: get specific version of Node, download package caches and so on.
+  Prepare environment: install specific version of Node, restore cache for modules.
 
 inputs:
   node-version:
@@ -50,8 +50,8 @@ runs:
   using: "composite"
 
   steps:
-    - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4-beta
+    - name: Install NodeJS ${{ inputs.node-version }}
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
@@ -59,7 +59,7 @@ runs:
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
 
-    - name: Cache NodeJS/Electron libs
+    - name: Setup cache for a NodeJS/Electron application
       uses: milaboratory/github-ci/actions/node/cache@v4-beta
       with:
         is-electron-application: ${{ inputs.is-electron-application }}

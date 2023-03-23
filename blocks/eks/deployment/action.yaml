@@ -73,17 +73,17 @@ inputs:
     description: |
       Version of helm
     required: false
-    default: 'v3.10.3'
+    default: 'v3.11.1'
 
 runs:
   using: "composite"
 
   steps:
-    - uses: azure/setup-kubectl@v4-beta
+    - uses: azure/setup-kubectl@v3
       with:
         version: ${{ inputs.kubectl-version }}
 
-    - uses: azure/setup-helm@v4-beta
+    - uses: azure/setup-helm@v3
       with:
         version: ${{ inputs.helm-version }}
 

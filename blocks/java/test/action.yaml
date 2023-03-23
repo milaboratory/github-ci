@@ -217,7 +217,7 @@ runs:
         append: false
 
     - name: Prepare env for Java application build
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}

@@ -1,0 +1,33 @@
+name: 'deb-s3 tool installer'
+description: |
+  deb-s3 is a simple utility to make creating and managing APT repositories on S3.
+
+inputs:
+  deb-repository-url:
+    description: deb-s3 apt repository url
+    required: false
+    default: deb-s3-repo.s3.us-east-2.amazonaws.com
+  deb-repository-key-url:
+    description: deb-s3 apt repository gpg key url
+    required: false
+    default: https://raw.githubusercontent.com/deb-s3/deb-s3/master/deb-s3-archive-keyring.gpg
+
+runs:
+  using: "composite"
+  steps:
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        DEB_REPO_URL: ${{ inputs.deb-repository-url }}
+        DEP_REPO_KEY_URL: ${{ inputs.deb-repository-key-url }}
+      with:
+        dump-stdout: false
+        run: |
+          # Add repository key
+          sudo wget -O /etc/apt/trusted.gpg.d/deb-s3-archive-keyring.gpg ${DEP_REPO_KEY_URL}
+
+          # Add repository
+          echo "deb http://${DEB_REPO_URL}/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
+
+          # Install package
+          sudo apt-get update
+          sudo apt-get install deb-s3

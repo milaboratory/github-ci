@@ -1,0 +1,35 @@
+name: Prepare environment for building a Golang application
+author: 'MiLaboratories'
+description: |
+  Prepare environment: install specific version of Golang, restore cache for modules.
+  
+inputs:
+  golang-version:
+    description: |
+      Node version to use.
+      Examples: '1.19', '1.20'
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install Golang ${{ inputs.golang-version }}
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ inputs.golang-version }}
+
+    - name: Setup Cache for Golang project
+      uses: milaboratory/github-ci/actions/golang/cache@v4-beta
+      with:
+        cache-version: ${{ inputs.cache-version }}
