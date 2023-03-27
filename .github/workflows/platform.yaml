@@ -141,7 +141,7 @@ jobs:
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
-  gibuild:
+  build:
     name: :build
     runs-on: ubuntu-latest
     needs:
