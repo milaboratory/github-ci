@@ -62,13 +62,19 @@ function ghwa_escape() {
 # GitHub Workflow command 'set-output'
 #
 # Usage:
-#   ghwa_set_output <output_name> <output_value>
+#   ghwa_set_output "<var name>" "<var value>"
+#   ghwa_set_output "<var name>" "<var value>" "EndOfValue"
 #
 function ghwa_set_output() {
   local _name="${1}"
   local _value="${2}"
+  local _eof_marker="${3:-EndOfValue}"
 
-  echo "${_name}=${_value}" >> "${GITHUB_OUTPUT}" 
+  {
+    echo "${_name}<<${_eof_marker}"
+    echo "${_value}"
+    echo "${_eof_marker}"
+  } >> "${GITHUB_OUTPUT}"
 }
 
 # GitHub Workflow command 'notice'
