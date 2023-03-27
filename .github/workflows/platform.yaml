@@ -103,34 +103,34 @@ on:
         type: string
         required: true
         default: 'milab-euce1-prod-pkgs-s3-apt-repository'
-      secrets:
-        env:
-          description: |
-            custom environment variables to set for all jobs in workflow
-            as JSON-encoded map:
-              { "MY_VAR_1": "awesome value",
-                "VARIABLE_2": "not so awesome :)" }
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
 
-            This input's envs are merged with inputs.env
-            This input's envs have HIGHER priority compared than inputs.env
-          required: false
-        TELEGRAM_NOTIFICATION_TARGET:
-          description: |
-            ID of Telegram Channel or User to notify on build results.
-          required: false
-        TELEGRAM_API_TOKEN:
-          description: |
-            Telegram Bot API authorization token
-          required: false
-        GIT_CRYPT_GPG_KEY:
-          description: |
-            base64-encoded GPG key pair
-            (see actions/git/crypt inputs description)
-          required: false
-        GIT_CRYPT_KEY_PASSWORD:
-          description: |
-            Password for GPG key
-          required: false
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
 jobs:
   init:
     name: Init
