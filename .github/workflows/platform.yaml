@@ -1,7 +1,6 @@
 # This workflow will install given version of Golang and use it to build Platform.
 
 name: Build Platform
-
 on:
   workflow_call:
     inputs:
@@ -15,13 +14,11 @@ on:
         type: string
         required: false
         default: ${{ github.repository }}
-
       app-name-slug:
         description: |
           Application name slug (part of release file name)
         type: string
         required: true
-
       #
       # Checkout settings
       #
@@ -32,11 +29,9 @@ on:
           NOTE: don't forget to set the following secrets:
                   - GIT_CRYPT_GPG_KEY
                   - GIT_CRYPT_KEY_PASSWORD
-
         type: boolean
         required: false
         default: false
-
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -46,7 +41,6 @@ on:
         type: string
         required: false
         default: ''
-
       #
       # Environment control
       #
@@ -62,7 +56,6 @@ on:
         type: string
         required: false
         default: '{}'
-
       #
       # Golang settings
       #
@@ -71,29 +64,24 @@ on:
           Version of Golang to use for build
         type: string
         required: true
-
       cache-version:
         description: |
           Simple hack, that allows to 'reset' cache for particular job.
 
           Just change the value of this parameter and the next run will
           not find build cache and will have to start from scratch.
-
         type: string
         required: false
         default: 'v1'
-
       #
       # Build control
       #
       bootstrap-ci-script-name:
         description: |
           Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
-
         type: string
         required: true
         default: 'bootstrap-ci.sh'
-
       #
       # AWS settings
       #
@@ -102,17 +90,16 @@ on:
           The ARN of a IAM role to assume and configure the Actions environment with
           assumed role credentials.
         required: true
-        aws-region:
-          description: |
-            The AWS region
-          required: true
-          default: 'eu-central-1'
-        aws-s3-apt-repository-bucket-name:
-          description: |
-            AWS S3 APT repository bucket name
-          required: true
-          default: 'milab-euce1-prod-pkgs-s3-apt-repository'
-
+      aws-region:
+        description: |
+          The AWS region
+        required: true
+        default: 'eu-central-1'
+      aws-s3-apt-repository-bucket-name:
+        description: |
+          AWS S3 APT repository bucket name
+        required: true
+        default: 'milab-euce1-prod-pkgs-s3-apt-repository'
       secrets:
         env:
           description: |
@@ -124,7 +111,6 @@ on:
             This input's envs are merged with inputs.env
             This input's envs have HIGHER priority compared than inputs.env
           required: false
-
         TELEGRAM_NOTIFICATION_TARGET:
           description: |
             ID of Telegram Channel or User to notify on build results.
@@ -133,13 +119,11 @@ on:
           description: |
             Telegram Bot API authorization token
           required: false
-
         GIT_CRYPT_GPG_KEY:
           description: |
             base64-encoded GPG key pair
             (see actions/git/crypt inputs description)
           required: false
-
         GIT_CRYPT_KEY_PASSWORD:
           description: |
             Password for GPG key
@@ -157,10 +141,8 @@ jobs:
     build:
       name: :build
       runs-on: ubuntu-latest
-
       needs:
         - init
-
       steps:
         - uses: milaboratory/github-ci/actions/env@v4-beta
           with:
@@ -191,7 +173,7 @@ jobs:
               # Install apt s3 transport package
               sudo apt-get update
               sudo apt-get install apt-transport-s3
-              
+
               # Add repository
               echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
 
