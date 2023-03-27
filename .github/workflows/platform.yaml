@@ -141,47 +141,47 @@ jobs:
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
-    build:
-      name: :build
-      runs-on: ubuntu-latest
-      needs:
-        - init
-      steps:
-        - uses: milaboratory/github-ci/actions/env@v4-beta
-          with:
-            inputs: ${{ inputs.env }}
-            secrets: ${{ secrets.env }}
+  gibuild:
+    name: :build
+    runs-on: ubuntu-latest
+    needs:
+      - init
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
-        - uses: actions/checkout@v3
-          with:
-            submodules: ${{ inputs.checkout-submodules }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
-          if: inputs.git-crypt-unlock
-          with:
-            gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-            gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-        - uses: aws-actions/configure-aws-credentials@v1
-          with:
-            role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
-            aws-region: ${{ inputs.aws-region }}
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
 
-        - uses: milaboratory/github-ci/actions/shell@v4-beta
-          env:
-            APT_REPO_S3_BUCKET_NAME: ${{ inputs.aws-s3-apt-repository-bucket-name }}
-          with:
-            dump-stdout: false
-            run: |
-              # Install apt s3 transport package
-              sudo apt-get update
-              sudo apt-get install apt-transport-s3
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          APT_REPO_S3_BUCKET_NAME: ${{ inputs.aws-s3-apt-repository-bucket-name }}
+        with:
+          dump-stdout: false
+          run: |
+            # Install apt s3 transport package
+            sudo apt-get update
+            sudo apt-get install apt-transport-s3
 
-              # Add repository
-              echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
+            # Add repository
+            echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
 
-        - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
-          with:
-            golang-version: ${{ inputs.golang-version }}
-            cache-version: ${{ inputs.cache-version }}
-            bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+      - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
