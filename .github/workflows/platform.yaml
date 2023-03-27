@@ -89,15 +89,18 @@ on:
         description: |
           The ARN of a IAM role to assume and configure the Actions environment with
           assumed role credentials.
+        type: string
         required: true
       aws-region:
         description: |
           The AWS region
+        type: string
         required: true
         default: 'eu-central-1'
       aws-s3-apt-repository-bucket-name:
         description: |
           AWS S3 APT repository bucket name
+        type: string
         required: true
         default: 'milab-euce1-prod-pkgs-s3-apt-repository'
       secrets:
