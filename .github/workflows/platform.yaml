@@ -161,8 +161,8 @@ jobs:
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
-          run: |
-            git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf https://github.com/    
+          run: |          
+            git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf https://github.com/    
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
@@ -192,7 +192,6 @@ jobs:
         env:
           GOPRIVATE: github.com/milaboratory/pl
           GOPROXY: direct
-          GIT_TERMINAL_PROMPT: 1
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
