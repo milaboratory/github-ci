@@ -6,7 +6,7 @@ description: |
   Prepare agent for building a Golang project.
   Install Golang specific version, cache dependencies, re-use build results
   uploading selected build results into GitHub Actions artifacts storage.
-  
+
 inputs:
   bootstrap-ci-script-name:
     description: |
@@ -23,7 +23,7 @@ inputs:
   cache-version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
-      
+
       Just change the value of this parameter and the next run will
       not find build cache and will have to start from scratch.
 
@@ -40,6 +40,16 @@ runs:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
 
+    - name: Setup git credentials to access private go modules
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        run: |
+          git config --global user.email "ci@milaboratories.com"
+          git config --global user.name "MiLab CI/CD Robot"
+          git config --global url."https://${GIT_TOKEN}@github.com/".insteadOf https://github.com/
+
     - name: Run golang project ci bootstrap script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
@@ -51,5 +61,5 @@ runs:
            else
              printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
            fi
-           
-          
+
+
