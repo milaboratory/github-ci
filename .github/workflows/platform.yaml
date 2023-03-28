@@ -189,8 +189,10 @@ jobs:
             sudo apt-get update
             sudo apt-get install apt-transport-s3
 
-            # Add repository
+            # Add Milaboratory s3 repository
             echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME}/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
+            echo "Region='${AWS_REGION}'" | sudo tee -a /etc/apt/s3auth.conf > /dev/null
+            sudo apt-get update
 
       - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
         env:
