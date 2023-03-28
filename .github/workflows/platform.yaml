@@ -162,9 +162,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            git config --global user.email "ci@milaboratories.com"
-            git config --global user.name "MiLab CI/CD Robot"
-            git config --global url."https://${{ secrets.GITHUB_TOKEN }}:x-oauth-basic@github.com/".insteadOf https://github.com/    
+            git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf https://github.com/    
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
@@ -193,6 +191,7 @@ jobs:
       - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
         env:
           GOPRIVATE: github.com/milaboratory/pl
+          GOPROXY: direct
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
