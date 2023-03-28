@@ -146,6 +146,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - init
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
