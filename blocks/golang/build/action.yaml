@@ -52,4 +52,10 @@ runs:
              printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
            fi
 
+    - name: Run make build
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          make build
+
 
