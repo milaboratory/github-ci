@@ -163,8 +163,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          run: |          
-            git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic x-access-token:${GH_TOKEN}"
+          run: |
+            BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+            git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
             git clone "https://github.com/milaboratory/pl" pl_local
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
