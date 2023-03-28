@@ -192,6 +192,7 @@ jobs:
         env:
           GOPRIVATE: github.com/milaboratory/pl
           GOPROXY: direct
+          GIT_TERMINAL_PROMPT: 1
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
