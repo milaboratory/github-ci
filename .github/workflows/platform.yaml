@@ -159,6 +159,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            git config --global user.email "ci@milaboratories.com"
+            git config --global user.name "MiLab CI/CD Robot"
+            git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf https://github.com/    
+
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
         with:
