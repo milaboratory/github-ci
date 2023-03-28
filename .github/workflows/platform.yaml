@@ -191,6 +191,8 @@ jobs:
             echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME}/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
 
       - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
+        env:
+          GOPRIVATE: github.com/milaboratory/pl
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
