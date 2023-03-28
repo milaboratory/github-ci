@@ -42,13 +42,11 @@ runs:
 
     - name: Setup git credentials to access private go modules
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         run: |
           git config --global user.email "ci@milaboratories.com"
           git config --global user.name "MiLab CI/CD Robot"
-          git config --global url."https://${GIT_TOKEN}@github.com/".insteadOf https://github.com/
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf https://github.com/
 
     - name: Run golang project ci bootstrap script
       uses: milaboratory/github-ci/actions/shell@v4-beta
