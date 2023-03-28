@@ -155,21 +155,17 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          run: |
-            git clone "https://$GH_TOKEN@github.com/milaboratory/pl" pl_local
-
       - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           run: |          
-            git config --global url."https://$GITHUB_TOKEN@github.com/".insteadOf https://github.com/    
+            git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic x-access-token:${GH_TOKEN}"
+            git clone "https://github.com/milaboratory/pl" pl_local
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
