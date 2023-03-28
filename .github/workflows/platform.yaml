@@ -155,6 +155,11 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            git clone https://${{ secrets.GITHUB_TOKEN }}:@github.com/milaboratory/pl pl_local
+
       - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
