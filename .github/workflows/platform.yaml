@@ -164,10 +164,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           run: |
-            #BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
-            #git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
-            git config --global http."https://github.com/".extraHeader "authorization: Bearer ${GH_TOKEN}"
-            git clone "https://github.com/milaboratory/pl" pl_local
+            BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+            git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
+
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
@@ -197,6 +196,7 @@ jobs:
         env:
           GOPRIVATE: github.com/milaboratory/pl
           GOPROXY: direct
+          GOPATH: /home/runner/go
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
