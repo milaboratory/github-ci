@@ -409,7 +409,7 @@ jobs:
           version: latest
           endpoint: builders
 
-      - uses: aws-actions/configure-aws-credentials@v1
+      - uses: aws-actions/configure-aws-credentials@v2
         if: github.event_name != 'pull_request'
         with:
           role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
@@ -529,7 +529,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: aws-actions/configure-aws-credentials@v1
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}

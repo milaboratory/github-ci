@@ -46,7 +46,7 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
 
-    - uses: aws-actions/configure-aws-credentials@v1
+    - uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
