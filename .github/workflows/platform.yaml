@@ -158,7 +158,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            git clone https://${{ secrets.GITHUB_TOKEN }}:@github.com/milaboratory/pl pl_local
+            git clone "https://$GITHUB_TOKEN:@github.com/milaboratory/pl" pl_local
 
       - uses: actions/checkout@v3
         with:
@@ -167,7 +167,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |          
-            git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf https://github.com/    
+            git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf https://github.com/    
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
