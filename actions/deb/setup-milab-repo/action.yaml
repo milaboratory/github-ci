@@ -43,11 +43,11 @@ runs:
 
           # explicitly define the s3auth config because apt s3 transport
           # utility can't pick up aws region from environment variables.
-          cat << EOF | sudo tee -a "${APT_REPO_S3_AUTH_CONF}"
-          "AccessKeyId = ${AWS_ACCESS_KEY_ID}"
-          "SecretAccessKey = ${AWS_SECRET_ACCESS_KEY}"
-          "Token = ${AWS_SESSION_TOKEN}"
-          "Region = ${AWS_REGION}"
+          sudo bash -c 'cat > ${APT_REPO_S3_AUTH_CONF}' << EOF
+          AccessKeyId = "${AWS_ACCESS_KEY_ID}"
+          SecretAccessKey = "${AWS_SECRET_ACCESS_KEY}"
+          Token = "${AWS_SESSION_TOKEN}"
+          Region = "${AWS_REGION}"
           EOF
 
           sudo apt-get update
