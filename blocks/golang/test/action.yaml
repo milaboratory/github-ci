@@ -73,4 +73,4 @@ runs:
         TEST_CMD: ${{ inputs.test-command }}
       with:
         run: |
-          "${TEST_CMD}"
+          bash -c "${TEST_CMD}"

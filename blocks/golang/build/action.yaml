@@ -73,6 +73,6 @@ runs:
         BUILD_CMD: ${{ inputs.build-command }}
       with:
         run: |
-          "${BUILD_CMD}"
+          bash -c "${BUILD_CMD}"
 
 
