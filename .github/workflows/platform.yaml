@@ -81,7 +81,7 @@ on:
           Build command (initiate build for the platform)
         type: string
         required: false
-        default: 'make build'
+        default: 'go build ./...'
       bootstrap-ci-script-name:
         description: |
           Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -97,14 +97,12 @@ on:
         type: boolean
         required: false
         default: false
-      test-integration-paths-list:
+      test-integration-command:
         description: |
-          Comma-separated list of integration tests folder paths.
-          Each name is separate folder to run go tests in.
-          e.g. 'controllers/templates', 'controllers/files3' e.t.c
+          Integration Tests command (initiate integration tests for the platform)
         type: string
         required: false
-        default: ''
+        default: 'go test ./...'
       #
       # AWS settings
       #
@@ -203,11 +201,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   test-integration:
-    strategy:
-      fail-fast: false
-      matrix:
-        tests: ${{ fromJSON( inputs.test-integration-paths-list ) }}
-
     name: :test (integration)
     runs-on: ubuntu-latest
 
@@ -244,7 +237,7 @@ jobs:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
-          test-path: ${{ matrix.tests }}
+          test-command: ${{ inputs.test-integration-command }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 

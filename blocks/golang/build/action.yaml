@@ -11,7 +11,7 @@ inputs:
     description: |
       Build command (initiate build for the platform)
     required: false
-    default: 'make build'
+    default: 'go build ./...'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -67,7 +67,7 @@ runs:
             printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
           fi
 
-    - name: Run golang build
+    - name: Run build command for a golang project
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         BUILD_CMD: ${{ inputs.build-command }}

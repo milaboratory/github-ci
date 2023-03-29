@@ -7,10 +7,11 @@ description: |
   Install Golang specific version, cache dependencies, re-use build results
 
 inputs:
-  test-path:
+  test-command:
     description: |
-      The folder path to run go tests in
+      Test command (initiate test for the platform)
     required: true
+    default: 'go test ./...'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -66,10 +67,10 @@ runs:
             printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
           fi
 
-    - name: Run golang test
+    - name: Run test command for a golang project
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        TEST_PATH: ${{ inputs.test-path }}
+        TEST_CMD: ${{ inputs.test-command }}
       with:
         run: |
-          go test "./${TEST_PATH}/..."
+          "${TEST_CMD}"

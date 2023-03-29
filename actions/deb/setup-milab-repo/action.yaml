@@ -32,7 +32,6 @@ runs:
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         APT_REPO_S3_BUCKET_NAME: ${{ inputs.aws-s3-apt-repository-bucket-name }}
-        APT_REPO_S3_AUTH_CONF: /etc/apt/s3auth.conf
       with:
         dump-stdout: false
         run: |
@@ -43,7 +42,7 @@ runs:
 
           # explicitly define the s3auth config because apt s3 transport
           # utility can't pick up aws region from environment variables.
-          sudo bash -c 'cat > ${APT_REPO_S3_AUTH_CONF}' << EOF
+          sudo bash -c "cat > /etc/apt/s3auth.conf" << EOF
           AccessKeyId = "${AWS_ACCESS_KEY_ID}"
           SecretAccessKey = "${AWS_SECRET_ACCESS_KEY}"
           Token = "${AWS_SESSION_TOKEN}"
