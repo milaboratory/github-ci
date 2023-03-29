@@ -76,12 +76,35 @@ on:
       #
       # Build control
       #
+      build-command:
+        description: |
+          Build command (initiate build for the platform)
+        type: string
+        required: false
+        default: 'make build'
       bootstrap-ci-script-name:
         description: |
           Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
         type: string
         required: true
         default: 'bootstrap-ci.sh'
+      #
+      # Test control
+      #
+      test-integration:
+        description: |
+          Run integration tests for the platform
+        type: boolean
+        required: false
+        default: false
+      test-integration-paths-list:
+        description: |
+          Comma-separated list of integration tests folder paths.
+          Each name is separate folder to run go tests in.
+          e.g. 'controllers/templates', 'controllers/files3' e.t.c
+        type: string
+        required: false
+        default: ''
       #
       # AWS settings
       #
@@ -159,14 +182,50 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
         with:
-          run: |
-            BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
-            git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
+        with:
+          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+          aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
+
+      - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          build-command: ${{ inputs.build-command }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        tests: ${{ fromJSON( inputs.test-integration-paths-list ) }}
+
+    name: :test (integration)
+    runs-on: ubuntu-latest
+
+    if: inputs.test-integration
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
@@ -174,36 +233,19 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
         with:
-          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}
+          aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          APT_REPO_S3_BUCKET_NAME: ${{ inputs.aws-s3-apt-repository-bucket-name }}
-        with:
-          dump-stdout: false
-          run: |
-            # Install apt s3 transport package
-            sudo apt-get update
-            sudo apt-get install apt-transport-s3
-
-            # Add Milaboratory s3 repository
-            echo "deb [trusted=yes] s3://${APT_REPO_S3_BUCKET_NAME}/$(lsb_release -is | tr A-Z a-z)/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list > /dev/null
-            # Generate s3auth.conf 
-            echo "AccessKeyId = ${AWS_ACCESS_KEY_ID}" | sudo tee -a /etc/apt/s3auth.conf > /dev/null
-            echo "SecretAccessKey = ${AWS_SECRET_ACCESS_KEY}" | sudo tee -a /etc/apt/s3auth.conf > /dev/null
-            echo "Token = ${AWS_SESSION_TOKEN}" | sudo tee -a /etc/apt/s3auth.conf > /dev/null
-            echo "Region = ${AWS_REGION}" | sudo tee -a /etc/apt/s3auth.conf > /dev/null
-            sudo apt-get update
-
-      - uses: milaboratory/github-ci/blocks/golang/build@v4-beta
-        env:
-          GOPRIVATE: github.com/milaboratory/pl
-          GOPROXY: direct
-          GOPATH: /home/runner/go
+      - uses: milaboratory/github-ci/blocks/golang/test@v4-beta
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          test-path: ${{ matrix.tests }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+
+

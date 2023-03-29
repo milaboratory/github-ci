@@ -1,0 +1,75 @@
+name: Run test for a golang project
+author: 'MiLaboratories'
+description: |
+  Run test for a golang project.
+
+  Prepare agent for running a test for a golang project.
+  Install Golang specific version, cache dependencies, re-use build results
+
+inputs:
+  test-path:
+    description: |
+      The folder path to run go tests in
+    required: true
+  bootstrap-ci-script-name:
+    description: |
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+    required: true
+    default: 'bootstrap-ci.sh'
+  golang-version:
+    description: |
+      Golang version to use.
+      Examples: '1.19', '1.20'
+    required: true
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+  github-token:
+    description: |
+      Github token to authorize git operation in the same repository as the workflow.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a golang application
+      uses:  milaboratory/github-ci/actions/golang/prepare@v4-beta
+      with:
+        golang-version: ${{ inputs.golang-version }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      with:
+        run: |
+          # need this. otherwise, go module can't download dependency modules from private repository
+          BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+          git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
+
+    - name: Run golang project ci bootstrap script
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
+      with:
+        run: |
+          if [ -x "${CI_SCRIPT}" ];then
+            "./${CI_SCRIPT}"
+          else
+            printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
+          fi
+
+    - name: Run golang test
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        TEST_PATH: ${{ inputs.test-path }}
+      with:
+        run: |
+          go test "./${TEST_PATH}/..."
