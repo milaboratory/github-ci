@@ -81,8 +81,7 @@ runs:
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [Report URL](
             {{- tests["url"] -}}
-          )
-            | [CI logs](
+          ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
