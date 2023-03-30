@@ -108,10 +108,11 @@ on:
         default: 'go test ./...'
       test-integration-logs-path:
         description: |
-          The path where the platform write tests logs
+          The path relative to github.workspace
+          where the platform write tests logs.
         type: string
         required: false
-        default: '${{ github.workspace }}/test-logs'
+        default: 'test-logs'
       test-integration-logs-retention:
         description: |
           Time in days to keep platform test logs before removing them
@@ -313,7 +314,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}-test-int-logs
-          path: ${{ inputs.test-integration-logs-path }}
+          path: ${{ format('{0}/{1}', github.workspace, inputs.test-integration-logs-path) }}
           retention-days: ${{ inputs.test-integration-logs-retention }}
 
     outputs:
@@ -326,6 +327,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if: always()
+      && inputs.notify-telegram
       && needs.test-integration.outputs.started == 'true'
       && inputs.notify-tests != 'false'
 
