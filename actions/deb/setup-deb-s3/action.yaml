@@ -1,4 +1,5 @@
 name: 'deb-s3 tool installer'
+author: 'MiLaboratories'
 description: |
   deb-s3 is a simple utility to make creating and managing APT repositories on S3.
 

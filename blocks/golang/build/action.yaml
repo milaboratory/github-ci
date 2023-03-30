@@ -1,4 +1,4 @@
-name: Build a golang project
+name: Run build a golang project
 author: 'MiLaboratories'
 description: |
   Build a golang project.
@@ -46,14 +46,9 @@ runs:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        GH_TOKEN: ${{ inputs.github-token }}
+    - uses: milaboratory/github-ci/actions/git/auth@v4-beta
       with:
-        run: |
-          # need this. otherwise, go module can't download dependency modules from private repository
-          BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
-          git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
+        github-token: ${{ inputs.github-token }}
 
     - name: Run golang project ci bootstrap script
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -65,6 +60,7 @@ runs:
             "./${CI_SCRIPT}"
           else
             printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
+            exit 1
           fi
 
     - name: Run build command for a golang project
@@ -72,6 +68,7 @@ runs:
       env:
         BUILD_CMD: ${{ inputs.build-command }}
       with:
+        dump-stdout: false
         run: |
           bash -c "${BUILD_CMD}"
 

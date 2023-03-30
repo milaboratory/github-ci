@@ -74,6 +74,15 @@ on:
         required: false
         default: 'v1'
       #
+      # Bootstrap control
+      #
+      bootstrap-ci-script-name:
+        description: |
+          Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+        type: string
+        required: true
+        default: 'bootstrap-ci.sh'
+      #
       # Build control
       #
       build-command:
@@ -82,12 +91,6 @@ on:
         type: string
         required: false
         default: 'go build ./...'
-      bootstrap-ci-script-name:
-        description: |
-          Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
-        type: string
-        required: true
-        default: 'bootstrap-ci.sh'
       #
       # Test control
       #

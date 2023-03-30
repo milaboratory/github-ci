@@ -1,7 +1,8 @@
 name: Add milaboratory apt repository
+author: 'MiLaboratories'
 description: |
   This actions adds Milaboratory APT S3 repository with special deb packages
-  needed for building and running tests for Platfrom on the Ubuntu/Debian GNU Linux.
+  needed for building and running tests for the Platform on the Ubuntu/Debian GNU Linux.
 
 
 inputs:

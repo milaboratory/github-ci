@@ -1,0 +1,21 @@
+name: Authenticate in the Github private repository
+author: 'MiLaboratories'
+description: |
+  This actions sets authentication header with base64 encoded github token in the git config
+
+inputs:
+  github-token:
+    description: |
+      Github token to authorize git operation in the same repository as the workflow.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      with:
+        run: |
+          BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+          git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
