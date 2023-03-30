@@ -106,6 +106,19 @@ on:
         type: string
         required: false
         default: 'go test ./...'
+      test-integration-logs-path:
+        description: |
+          The path where the platform write tests logs
+        type: string
+        required: false
+        default: '${{ github.workspace }}/test-logs'
+      test-integration-logs-retention:
+        description: |
+          Time in days to keep platform test logs before removing them
+          from workflow run attachments.
+        type: string
+        required: false
+        default: 7
       #
       # AWS settings
       #
@@ -127,6 +140,37 @@ on:
         type: string
         required: true
         default: 'milab-euce1-prod-pkgs-s3-apt-repository'
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
     secrets:
       env:
         description: |
@@ -157,7 +201,7 @@ on:
         required: false
 jobs:
   init:
-    name: Init
+    name: init
     runs-on: ubuntu-latest
     steps:
       - id: context
@@ -203,6 +247,28 @@ jobs:
           build-command: ${{ inputs.build-command }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  notify-build:
+    name: notify build
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build.result != 'cancelled'
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
+
   test-integration:
     name: :test (integration)
     runs-on: ubuntu-latest
@@ -243,5 +309,39 @@ jobs:
           test-command: ${{ inputs.test-integration-command }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: test-integration-logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}-test-int-logs
+          path: ${{ inputs.test-integration-logs-path }}
+          retention-days: ${{ inputs.test-integration-logs-retention }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  notify-test-integration:
+    name: notify integration test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.test-integration.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-integration
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-integration.result }}
+          tests-type: 'Integration'
+
+          product-name: ${{ inputs.app-name }}
 
 
