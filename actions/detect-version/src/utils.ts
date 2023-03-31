@@ -43,11 +43,19 @@ export function latestVersionTag(v: versionsMap): string {
  */
 export async function isBranchHead(): Promise<boolean> {
   const refType = process.env.GITHUB_REF_TYPE as string
-  const refName = process.env.GITHUB_REF_NAME as string
   const currentSha = process.env.GITHUB_SHA as string
+  const eventName = process.env.GITHUB_EVENT_NAME as string
+  let refName
 
   if (refType !== 'branch') {
     return false
+  }
+
+  if (eventName === 'pull_request') {
+    // For pull requests get refName form the head ref or source branch
+    refName = process.env.GITHUB_HEAD_REF
+  } else {
+    refName = process.env.GITHUB_REF_NAME
   }
 
   await git.fetch({
