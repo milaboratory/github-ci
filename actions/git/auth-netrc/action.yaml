@@ -1,0 +1,26 @@
+name: Sets up netrc credentials
+description: |
+  This actions sets .netrc files with credentials suitable for authentication in a git private repository.
+
+inputs:
+  creds:
+    description: JSON array of object with (`machine`, `login`, `password`) fields.
+    required: false
+  machine:
+    description: machine string to append.
+    required: false
+  login:
+    description: login field to append.
+    required: false
+  password:
+    description: password field to append.
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - uses: bcomnes/netrc-creds@57d60c445517fed0f5fc04d5dfa9a874edb12923
+      with:
+        machine: ${{ inputs.machine }}
+        login: ${{ inputs.login }}
+        password: ${{ inputs.password }}
