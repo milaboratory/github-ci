@@ -1,0 +1,91 @@
+name: Run build the Platform on Windows
+author: 'MiLaboratories'
+description: |
+  Build the Platform
+
+  Prepare agent for building the Platform on Windows.
+  Install Golang specific version, cache dependencies, re-use build results
+
+inputs:
+  build-command:
+    description: |
+      Build command (initiate build for the platform)
+    required: false
+    default: 'go build -ldflags "-linkmode 'external' -extldflags '-static'" .'
+  bootstrap-ci-script-name:
+    description: |
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+    required: true
+    default: 'bootstrap-ci-windows.ps1'
+  pkg-config-path:
+    description: |
+      Path to pre-build libs for the rocksdb
+    required: false
+  golang-version:
+    description: |
+      Golang version to use.
+      Examples: '1.19', '1.20'
+    required: true
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+  netrc-machine:
+    description: |
+      Hostname of a remote machine.
+    required: false
+    default: 'github.com'
+  netrc-login:
+    description: |
+      A user on the remote machine.
+    required: false
+    default: 'x-access-token'
+  netrc-password:
+    description: |
+       A password or a token for the user on the remote machine.
+       E.g: github token.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a golang application
+      uses:  milaboratory/github-ci/actions/golang/prepare@v4-beta
+      with:
+        golang-version: ${{ inputs.golang-version }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - name: run boostrap ci script for windows
+      env:
+        GH_WORKSPACE: ${{ github.workspace }}
+        VCPKG_DISABLE_METRICS: 1
+      run:
+        .\${{ inputs.bootstrap-ci-script-name }}
+
+    - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
+      with:
+        machine: ${{ inputs.netrc-machine }}
+        login: ${{ inputs.netrc-login }}
+        password: ${{ inputs.netrc-password }}
+
+    - name: run build platform
+      env:
+        GOPRIVATE: github.com/milaboratory/pl
+        GOPROXY: direct
+      working-directory: platform\cmd\pl
+      run: |
+        $env:PKG_CONFIG_PATH = "${{ inputs.pkg-config-path }}\lib\pkgconfig"
+        pwsh --command "${{ inputs.build-command }}"
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: pl-bin-win64
+        path: '.\platform\cmd\pl\pl.exe'
+
+

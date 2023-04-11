@@ -1,0 +1,156 @@
+# This workflow will install given version of Golang and use it to build Platform.
+
+name: Build Platform on Windows
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+      #
+      # Checkout settings
+      #
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+      #
+      # Golang settings
+      #
+      golang-version:
+        description: |
+          Version of Golang to use for build
+        type: string
+        required: true
+      cache-version:
+        description: |
+          Simple hack, that allows to 'reset' cache for particular job.
+
+          Just change the value of this parameter and the next run will
+          not find build cache and will have to start from scratch.
+        type: string
+        required: false
+        default: 'v1'
+      #
+      # Bootstrap control
+      #
+      bootstrap-ci-script-name:
+        description: |
+          Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+        type: string
+        required: true
+        default: 'bootstrap-ci-windows.ps1'
+      #
+      # Build control
+      #
+      build-command:
+        description: |
+          Build command (initiate build for the platform)
+        type: string
+        required: false
+        default: 'go build -ldflags "-linkmode 'external' -extldflags '-static'" .'
+      rocksdb-s3-archive-path:
+        description: |
+          The path to the rocksdb pre-build libs archive on the s3 static files bucket
+        type: string
+        required: true
+      #
+      # AWS settings
+      #
+      aws-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: true
+      aws-region:
+        description: |
+          The AWS region
+        type: string
+        required: true
+        default: 'eu-central-1'
+      aws-s3-static-files-bucket-name:
+        description: |
+          AWS S3 APT repository bucket name
+        type: string
+        required: true
+        default: 'milab-euce1-prod-pkgs-s3-static-files'
+jobs:
+  init:
+    name: init
+    runs-on: ubuntu-latest
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+    outputs:
+      is-release: ${{ steps.context.outputs.is-release }}
+
+  build:
+    name: :build-on-windows
+    runs-on: windows-latest
+    needs:
+      - init
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: rocksdb_download_libs
+        name: download pre-build libs for rocksdb
+        env:
+          S3_BUCKET_NAME: ${{ inputs.aws-s3-static-files-bucket-name }}
+          ROCKSDB_S3_ARCHIVE_PATH: ${{ inputs.rocksdb-s3-archive-path }}
+          GH_WORKSPACE: ${{ github.workspace }}
+        run: |
+          $ROCKSDB_LIB_PATH = "${{ env.GH_WORKSPACE }}\rocksdb"
+          $ROCKSDB_ARCHIVE_NAME = Split-Path ${{ env.ROCKSDB_S3_ARCHIVE_PATH }} -leaf
+          
+          Write-Output "Downloading pre-build rocksdb libs..."
+          aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/${{ env.ROCKSDB_S3_ARCHIVE_PATH }} ./
+          
+          Write-Output "Unzip pre-build rocksdb libs to '${ROCKSDB_LIB_PATH}'"
+          New-Item -ItemType directory -Path "${ROCKSDB_LIB_PATH}"
+          7z x -o"${ROCKSDB_LIB_PATH}" "${ROCKSDB_ARCHIVE_NAME}"
+          
+          echo "rocksdb_libs_path=${ROCKSDB_LIB_PATH}" >> ${env:GITHUB_OUTPUT} 
+
+      - uses: milaboratory/github-ci/blocks/pl/windows/build@v4-beta
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pkg-config-path: ${{ steps.rocksdb_download_libs.outputs.rocksdb_libs_path }}
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          build-command: ${{ inputs.build-command }}
+          netrc-password: ${{ secrets.GITHUB_TOKEN }}
+
+
