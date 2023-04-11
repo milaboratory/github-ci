@@ -5,6 +5,7 @@ on:
       vcpkg-triplet:
         description: |
           The vcpkg triplet name
+        type: string
         required: true
         default: 'x64-mingw-static'
       #
