@@ -69,11 +69,12 @@ jobs:
           S3_BUCKET_NAME: ${{ inputs.aws-s3-bucket-name }}
           ROCKSDB_VERSION: ${{ steps.rocksdb_vcpkg_ports_version.outputs.rocksdb_version }}
           VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
+          GH_WORKSPACE: ${{ github.workspace }}
         run: |
           $ROCKSDB_LIB_PATH = "${{ env.VCPKG_ROOT }}\installed\${{ env.VCPKG_TRIPLET }}"
           $ROCKSDB_ARCHIVE_NAME = "rocksdb-lib_${{ env.ROCKSDB_VERSION }}_windows_amd64.7z"
+          $ROCKSDB_ARCHIVE_PATH = "${{ env.GH_WORKSPACE }}\${ROCKSDB_ARCHIVE_NAME}"
 
-          7z a "${ROCKSDB_ARCHIVE_NAME}" "${ROCKSDB_LIB_PATH}\lib" "${ROCKSDB_LIB_PATH}\include"
-
-          aws s3 sync "${ROCKSDB_ARCHIVE_NAME}" s3://${{ env.S3_BUCKET_NAME }}/rocksdb/${{ env.ROCKSDB_VERSION }}/
+          7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}\lib" "${ROCKSDB_LIB_PATH}\include"
+          aws s3 sync "${ROCKSDB_ARCHIVE_PATH}" s3://${{ env.S3_BUCKET_NAME }}/rocksdb/${{ env.ROCKSDB_VERSION }}/
 
