@@ -62,10 +62,11 @@ runs:
         cache-version: ${{ inputs.cache-version }}
 
     - name: run boostrap ci script for windows
+      shell: pwsh
       env:
         GH_WORKSPACE: ${{ github.workspace }}
         VCPKG_DISABLE_METRICS: 1
-      run:
+      run: |
         .\${{ inputs.bootstrap-ci-script-name }}
 
     - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
@@ -75,6 +76,7 @@ runs:
         password: ${{ inputs.netrc-password }}
 
     - name: run build platform
+      shell: pwsh
       env:
         GOPRIVATE: github.com/milaboratory/pl
         GOPROXY: direct
