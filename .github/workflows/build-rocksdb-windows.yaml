@@ -44,6 +44,7 @@ jobs:
       - name: run boostrap ci script for windows
         env:
           GH_WORKSPACE: ${{ github.workspace }}
+          VCPKG_DISABLE_METRICS: 1
         run:
           .\windows\rocksdb\bootstrap-ci-windows.ps1
 
@@ -56,6 +57,7 @@ jobs:
       - name: run build rocksdb
         env:
           VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
+          VCPKG_DISABLE_METRICS: 1
         run: |
           ${{ env.VCPKG_ROOT }}\vcpkg install "rocksdb[core,zlib,zstd,bzip2,lz4,snappy]:${{ env.VCPKG_TRIPLET }}"
 
@@ -76,5 +78,5 @@ jobs:
           $ROCKSDB_ARCHIVE_PATH = "${{ env.GH_WORKSPACE }}\${ROCKSDB_ARCHIVE_NAME}"
 
           7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}\lib" "${ROCKSDB_LIB_PATH}\include"
-          aws s3 sync "${ROCKSDB_ARCHIVE_PATH}" s3://${{ env.S3_BUCKET_NAME }}/rocksdb/${{ env.ROCKSDB_VERSION }}/
+          aws s3 cp "${ROCKSDB_ARCHIVE_PATH}" s3://${{ env.S3_BUCKET_NAME }}/rocksdb/${{ env.ROCKSDB_VERSION }}/
 
