@@ -6,7 +6,7 @@ on:
         description: |
           The vcpkg triplet name
         type: string
-        required: true
+        required: false
         default: 'x64-mingw-static'
       #
       # AWS
