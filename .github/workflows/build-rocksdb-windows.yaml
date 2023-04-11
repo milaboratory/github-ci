@@ -29,7 +29,7 @@ on:
           AWS S3 bucket name
         type: string
         required: false
-        default: 'milab-euce1-prod-pkgs-s3-static-libs'
+        default: 'milab-euce1-prod-pkgs-s3-static-files'
 jobs:
   build:
     name: :build-rocksdb
@@ -71,7 +71,7 @@ jobs:
           VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
         run: |
           $ROCKSDB_LIB_PATH = "${{ env.VCPKG_ROOT }}\installed\${{ env.VCPKG_TRIPLET }}"
-          $ROCKSDB_ARCHIVE_NAME = rocksdb-lib_${{ env.ROCKSDB_VERSION }}_windows_amd64.7z
+          $ROCKSDB_ARCHIVE_NAME = "rocksdb-lib_${{ env.ROCKSDB_VERSION }}_windows_amd64.7z"
 
           7z a "${ROCKSDB_ARCHIVE_NAME}" "${ROCKSDB_LIB_PATH}\lib" "${ROCKSDB_LIB_PATH}\include"
 
