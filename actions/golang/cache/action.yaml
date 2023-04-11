@@ -18,7 +18,8 @@ runs:
   using: "composite"
 
   steps:
-    - name: Cache Golang modules
+    - name: Cache Golang modules on Linux
+      if: startsWith(runner.os, 'Linux')
       uses: actions/cache@v3
       with:
         path: |
@@ -27,3 +28,26 @@ runs:
         key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
+
+    - name: Cache Golang modules on macOS
+      if: startsWith(runner.os, 'macOS')
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/Library/Caches/go-build
+          ~/
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}      
+
+    - name: Cache Golang modules on Windows
+      if: startsWith(runner.os, 'Windows')
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~\AppData\Local\go-build
+          ~\go\pkg\mod
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}      
+          
