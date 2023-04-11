@@ -83,7 +83,7 @@ runs:
       working-directory: platform\cmd\pl
       run: |
         $env:PKG_CONFIG_PATH = "${{ inputs.pkg-config-path }}\lib\pkgconfig"
-        pwsh --command "${{ inputs.build-command }}"
+        ${{ inputs.build-command }}
 
     - uses: actions/upload-artifact@v3
       with:
