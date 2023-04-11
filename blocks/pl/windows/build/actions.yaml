@@ -11,7 +11,7 @@ inputs:
     description: |
       Build command (initiate build for the platform)
     required: false
-    default: 'go build -ldflags "-linkmode 'external' -extldflags '-static'" .'
+    default: 'go build -ldflags "-linkmode external -extldflags -static" .'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)

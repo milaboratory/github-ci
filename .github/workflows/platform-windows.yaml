@@ -65,7 +65,7 @@ on:
           Build command (initiate build for the platform)
         type: string
         required: false
-        default: 'go build -ldflags "-linkmode 'external' -extldflags '-static'" .'
+        default: 'go build -ldflags "-linkmode external -extldflags -static" .'
       rocksdb-s3-archive-path:
         description: |
           The path to the rocksdb pre-build libs archive on the s3 static files bucket
