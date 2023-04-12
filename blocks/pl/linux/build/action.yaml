@@ -1,9 +1,9 @@
-name: Run build a golang project
+name: Run build the Platform on Linux
 author: 'MiLaboratories'
 description: |
-  Build a golang project.
+  Build the Platform
 
-  Prepare agent for building a golang project.
+  Prepare agent for building the Platform on Linux.
   Install Golang specific version, cache dependencies, re-use build results
 
 inputs:
@@ -50,7 +50,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
 
-    - name: Run golang project ci bootstrap script
+    - name: run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
@@ -63,7 +63,7 @@ runs:
             exit 1
           fi
 
-    - name: Run build command for a golang project
+    - name: run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         BUILD_CMD: ${{ inputs.build-command }}

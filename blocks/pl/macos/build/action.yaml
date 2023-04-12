@@ -1,17 +1,17 @@
-name: Run test for a golang project
+name: Run build the Platform on MacOS
 author: 'MiLaboratories'
 description: |
-  Run test for a golang project.
+  Build the Platform
 
-  Prepare agent for running a test for a golang project.
+  Prepare agent for building the Platform on MacOS.
   Install Golang specific version, cache dependencies, re-use build results
 
 inputs:
-  test-command:
+  build-command:
     description: |
-      Test command (initiate test for the platform)
-    required: true
-    default: 'go test ./...'
+      Build command (initiate build for the platform)
+    required: false
+    default: 'go build .'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -50,7 +50,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
 
-    - name: Run golang project ci bootstrap script
+    - name: run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
@@ -63,11 +63,30 @@ runs:
             exit 1
           fi
 
-    - name: Run test command for a golang project
+    - name: run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        TEST_CMD: ${{ inputs.test-command }}
+        BUILD_CMD: ${{ inputs.build-command }}
+      working-directory: platform/cmd/pl
       with:
         dump-stdout: false
         run: |
-          bash -c "${TEST_CMD}"
+          bash -c "${BUILD_CMD}"
+
+    - name: run bundle dylibs
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      working-directory: platform/cmd/pl
+      with:
+        dump-stdout: false
+        run : |
+          dylibbundler \
+            --bundle-deps \
+            --create-dir \
+            --dest-dir ./libs \
+            --install-path '@executable_path/libs/' \
+            --fix-file pl
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: pl-bin-macos-amd64
+        path: './platform/cmd/pl'
