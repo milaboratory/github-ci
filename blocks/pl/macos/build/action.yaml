@@ -67,16 +67,16 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         BUILD_CMD: ${{ inputs.build-command }}
-      working-directory: platform/cmd/pl
       with:
         dump-stdout: false
+        working-directory: platform/cmd/pl
         run: |
           bash -c "${BUILD_CMD}"
 
     - name: run bundle dylibs
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      working-directory: platform/cmd/pl
       with:
+        working-directory: platform/cmd/pl
         dump-stdout: false
         run : |
           dylibbundler \
