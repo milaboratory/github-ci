@@ -373,9 +373,9 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
           build-status: |
             ${{ needs.build.result }}
+            ${{ needs.upload-build-results.result }}
           product-name: ${{ inputs.app-name }}
           download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
 
