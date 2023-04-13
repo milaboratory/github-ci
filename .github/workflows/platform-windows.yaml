@@ -22,6 +22,16 @@ on:
       #
       # Checkout settings
       #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+        type: boolean
+        required: false
+        default: false
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -31,6 +41,21 @@ on:
         type: string
         required: false
         default: ''
+      #
+      # Environment settings
+      #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: '{}'
       #
       # Golang settings
       #
@@ -66,11 +91,71 @@ on:
         type: string
         required: false
         default: 'go build -ldflags "-linkmode external -extldflags -static" .'
+      build-env:
+        description: |
+          JSON-encoded environment variables to set for 'go build .':
+          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
+        type: string
+        required: false
+        default: '{}'
       rocksdb-s3-archive-path:
         description: |
           The path to the rocksdb pre-build libs archive on the s3 static files bucket
         type: string
         required: true
+      #
+      # Distribution control
+      #
+      dist-archive-paths:
+        description: |
+          Files to save as build artifact, release asset and to upload to S3
+        type: string
+        required: false
+        default: '.\platform\cmd\pl\pl.exe'
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+      dist-archive-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+      dist-archive-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milab-euce1-prod-pkgs-s3-static-files'
+      dist-archive-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'pl/windows'
+
+      dist-archive-s3-alternative-urls:
+        description: |
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
+        required: false
+        type: string
+        default: |
+          ^/pl/windows -> s3://milab-euce1-prod-pkgs-s3-static-files/pl/windows/
       #
       # AWS settings
       #
@@ -88,10 +173,62 @@ on:
         default: 'eu-central-1'
       aws-s3-static-files-bucket-name:
         description: |
-          AWS S3 APT repository bucket name
+          AWS S3 static files bucket name.
+          From this bucket we download pre-build libs e.g rocksdb for windows
         type: string
         required: true
         default: 'milab-euce1-prod-pkgs-s3-static-files'
+      #
+      # Notifications control
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
 jobs:
   init:
     name: init
@@ -145,6 +282,8 @@ jobs:
           echo "rocksdb_libs_path=${ROCKSDB_LIB_PATH}" >> ${env:GITHUB_OUTPUT} 
 
       - uses: milaboratory/github-ci/blocks/pl/windows/build@v4-beta
+        env:
+          env: ${{ fromJSON(inputs.build-env) }}
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -152,5 +291,62 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           netrc-password: ${{ secrets.GITHUB_TOKEN }}
+          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-paths: ${{ inputs.dist-archive-paths }}
+          artifact-retention: ${{ inputs.dist-artifact-retention }}
+
+  upload-build-results:
+    name: archive-upload
+    runs-on: ubuntu-latest
+    needs:
+      - build-on-windows
+    steps:
+      - uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+        with:
+          artifact-name: ${{ inputs.app-name-slug }}
+          add-version: ${{ inputs.dist-archive-s3-add-version }}
+          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+
+          s3-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
+
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
+
+  notify-build:
+    name: notify build
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build-on-windows.result != 'cancelled'
+      && needs.upload-build-results.result != 'cancelled'
+
+    needs:
+      - build-on-windows
+      - upload-build-results
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ needs.build-on-windows.result }}
+          product-name: ${{ inputs.app-name }}
+          download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
 
 
