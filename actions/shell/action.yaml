@@ -38,7 +38,7 @@ runs:
         tmp_script_path="${{ github.action_path }}/tmp-script.sh"
 
         # Generate and run script, saving full STDOUT to step's output
-        end_marker="$(date "+%s%N" | shasum -a 256 | awk '{print $1}')"
+        end_marker="$(date "+%s%N" | openssl sha256 | awk '{print $2}')"
         cat >"${tmp_script_path}" <<"EndOfTmpScript-${end_marker}"
         #!/usr/bin/env bash
 
