@@ -331,7 +331,8 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+      - id: s3
+        uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
@@ -362,7 +363,6 @@ jobs:
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && needs.build.result != 'cancelled'
-      && needs.upload-build-results.result != 'cancelled'
 
     needs:
       - build
@@ -375,7 +375,6 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           build-status: |
             ${{ needs.build.result }}
-            ${{ needs.upload-build-results.result }}
           product-name: ${{ inputs.app-name }}
           download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
 
