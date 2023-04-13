@@ -1,7 +1,7 @@
-name: Run test for the Platform on Linux
+name: Run a test for the Platform on Linux
 author: 'MiLaboratories'
 description: |
-  Run test for the Platform on Linux.
+  Run a test for the Platform on Linux.
 
   Prepare agent for running a test for the Platform on Linux.
   Install Golang specific version, cache dependencies, re-use build results
@@ -50,7 +50,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
 
-    - name: run boostrap ci script
+    - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
@@ -63,7 +63,7 @@ runs:
             exit 1
           fi
 
-    - name: run test command for the platform
+    - name: Run test command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         TEST_CMD: ${{ inputs.test-command }}

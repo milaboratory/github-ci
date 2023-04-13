@@ -327,6 +327,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:

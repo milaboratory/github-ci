@@ -1,4 +1,4 @@
-name: Run build the Platform on Linux
+name: Build the Platform on Linux
 author: 'MiLaboratories'
 description: |
   Build the Platform
@@ -50,7 +50,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
 
-    - name: run boostrap ci script
+    - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
@@ -63,7 +63,7 @@ runs:
             exit 1
           fi
 
-    - name: run build command for the platform
+    - name: Run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         BUILD_CMD: ${{ inputs.build-command }}
