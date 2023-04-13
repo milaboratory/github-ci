@@ -143,7 +143,6 @@ on:
         type: string
         required: false
         default: 'pl/windows'
-
       dist-archive-s3-alternative-urls:
         description: |
           Customizes S3 object download URLs in notifications:
@@ -156,6 +155,35 @@ on:
         type: string
         default: |
           ^/pl/windows -> s3://milab-euce1-prod-pkgs-s3-static-files/pl/windows/
+      dist-archive-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+      dist-archive-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
       #
       # AWS settings
       #
