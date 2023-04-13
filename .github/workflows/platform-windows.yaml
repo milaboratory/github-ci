@@ -310,8 +310,7 @@ jobs:
           echo "rocksdb_libs_path=${ROCKSDB_LIB_PATH}" >> ${env:GITHUB_OUTPUT} 
 
       - uses: milaboratory/github-ci/blocks/pl/windows/build@v4-beta
-        env: |
-          ${{ fromJSON(inputs.build-env) }}
+        env: ${{ fromJSON(inputs.build-env) }}
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
