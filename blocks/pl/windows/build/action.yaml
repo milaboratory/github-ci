@@ -108,11 +108,16 @@ runs:
         $env:PKG_CONFIG_PATH = "${{ inputs.pkg-config-path }}\lib\pkgconfig"
         ${{ inputs.build-command }}
 
+    - name: Add build results to the archive
+      shell: pwsh
+      run: |
+       7z a platform\cmd\pl\pl.zip platform\cmd\pl\ "-xr!*.go" "-xr!.zip"
+
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          !platform\cmd\pl\*.go
           ${{ inputs.artifact-paths }}
+          !platform\cmd\pl\*.go
         retention-days: ${{ inputs.artifact-retention }}

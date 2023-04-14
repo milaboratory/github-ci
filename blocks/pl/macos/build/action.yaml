@@ -113,11 +113,18 @@ runs:
             --install-path '@executable_path/libs/' \
             --fix-file pl
 
+    - name: Add build results to the archive
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        dump-stdout: false
+        run: |
+          zip -rT platform/cmd/pl/pl.zip platform/cmd/pl/ -x "*.go" -x "*.zip"
+
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          !platform/cmd/pl/*.go
           ${{ inputs.artifact-paths }}
+          !platform/cmd/pl/*.go
         retention-days: ${{ inputs.artifact-retention }}
