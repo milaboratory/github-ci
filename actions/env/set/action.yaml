@@ -36,7 +36,7 @@ runs:
         MASK: ${{ inputs.mask-values }}
       with:
         run: |
-          jq -r 'keys[]' <<<"${ENV_TO_SET}" |
+          jq -r 'keys[]' <<<"${ENV_TO_SET}" | tr -d '\r' |
             while read -r name; do
               value="$(
                 jq -r \

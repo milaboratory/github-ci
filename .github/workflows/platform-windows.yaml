@@ -111,7 +111,9 @@ on:
           Files to save as build artifact, release asset and to upload to S3
         type: string
         required: false
-        default: '.\platform\cmd\pl\pl.exe'
+        default: |
+           platform\cmd\pl\*.exe
+          !platform\cmd\pl\*.go
       dist-artifact-retention:
         description: |
           Time in days to keep build artifacts before removing them
@@ -154,7 +156,7 @@ on:
         required: false
         type: string
         default: |
-          ^/pl/windows -> s3://milab-euce1-prod-pkgs-s3-static-files/pl/windows/
+          ^/pl/windows -> s3://milab-euce1-prod-pkgs-s3-static-files/pl/windows
       dist-archive-s3-add-version:
         description: |
           Add version number to all files uploaded to S3 bucket.
@@ -184,6 +186,18 @@ on:
         type: string
         required: false
         default: 'false'
+      dist-archive-s3-add-os-arch:
+        description: |
+          Add ARCH to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<ARCH>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<ARCH>'.
+
+        type: boolean
+        required: false
+        default: false
       #
       # AWS settings
       #
@@ -314,10 +328,12 @@ jobs:
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
+
           pkg-config-path: ${{ steps.rocksdb_download_libs.outputs.rocksdb_libs_path }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           netrc-password: ${{ secrets.GITHUB_TOKEN }}
+
           artifact-name: ${{ inputs.app-name-slug }}
           artifact-paths: ${{ inputs.dist-archive-paths }}
           artifact-retention: ${{ inputs.dist-artifact-retention }}
@@ -337,6 +353,7 @@ jobs:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+          add-os-arch: ${{ inputs.dist-archive-s3-add-os-arch }}
 
           s3-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}

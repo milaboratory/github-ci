@@ -39,6 +39,20 @@ inputs:
 
     required: false
     default: 'false'
+  add-os-arch:
+    description: |
+      Add agent's operating system architecture to uploaded files 
+      If a file in the artifact has an extension e.g 'app.zip' and the current ARCH is,
+      for instance, 'amd64', the resulting file name would be: 'app-amd64.zip.'
+      
+      Files without extension ('myfile') will have
+      os architecture appended ('myfile-amd64'). 
+      
+      If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
+      to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
+
+    required: false
+    default: 'false'
 
   s3-iam-role-to-assume:
     description: |
@@ -161,6 +175,33 @@ runs:
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'
+
+    - name: Get ARCH
+      id: os_arch
+      if: inputs.add-os-arch == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          get_os_arch=$(uname -m)
+          case "${get_os_arch}" in          
+            x86_64)
+              echo "amd64"
+              ;;          
+            aarch64 | arm64)
+              echo "arm64"
+              ;;         
+            *)
+              echo "Arch is not in the list: ${get_os_arch}"
+              exit 1
+              ;;
+          esac
+
+    - name: Add ARCH
+      if: steps.os_arch.outputs.stdout != ''
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.os_arch.outputs.stdout }}'
 
     - name: Upload files
       uses: milaboratory/github-ci/actions/shell@v4-beta
