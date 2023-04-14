@@ -447,8 +447,8 @@ jobs:
 
       - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
         with:
-          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
-          aws-region: ${{ inputs.aws-region }}
+          aws-iam-role-to-assume: ${{ inputs.aws-s3-apt-repository-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-s3-apt-repository-region }}
           aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
 
       - uses: milaboratory/github-ci/blocks/pl/linux/test@v4-beta
