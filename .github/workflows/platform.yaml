@@ -90,7 +90,7 @@ on:
           Build command (initiate build for the platform)
         type: string
         required: false
-        default: 'go build ./...'
+        default: 'go build .'
       build-env:
         description: |
           JSON-encoded environment variables to set for 'go build .':
@@ -363,6 +363,7 @@ jobs:
           artifact-retention: ${{ inputs.dist-artifact-retention }}
 
   upload-build-results:
+    if: github.event_name != 'pull_request'
     name: archive-upload
     runs-on: ubuntu-latest
     needs:

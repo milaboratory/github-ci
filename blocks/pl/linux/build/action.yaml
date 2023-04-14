@@ -11,7 +11,7 @@ inputs:
     description: |
       Build command (initiate build for the platform)
     required: false
-    default: 'go build ./...'
+    default: 'go build .'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -94,6 +94,7 @@ runs:
       with:
         dump-stdout: false
         run: |
+          cd platform/cmd/pl
           bash -c "${BUILD_CMD}"
 
     - name: Add build results to the archive
