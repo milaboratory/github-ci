@@ -31,10 +31,34 @@ inputs:
 
     required: false
     default: 'v1'
+  #
+  # Github authentication control
+  #
   github-token:
     description: |
       Github token to authorize git operation in the same repository as the workflow.
     required: true
+  #
+  # Artifact control
+  #
+  artifact-name:
+    description: |
+      Name of build artifact to create when <artifact-paths> input is not empty
+
+    required: false
+    default: 'build-artifacts'
+  artifact-paths:
+    description: |
+      List of paths to artifacts to save after build run.
+      Paths are relative to github workspace (repository root).
+      Patterns ('*', '**', etc.) are supported.
+    required: false
+    default: ''
+  artifact-retention:
+    description: |
+      Time in days to keep build artifacts before removing them
+    required: false
+    default: '7'
 
 runs:
   using: "composite"
@@ -71,5 +95,21 @@ runs:
         dump-stdout: false
         run: |
           bash -c "${BUILD_CMD}"
+
+    - name: Add build results to the archive
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        dump-stdout: false
+        run: |
+          zip -rT platform/cmd/pl/pl.zip platform/cmd/pl/ -x "*.go" -x "*.zip"
+
+    - name: Save build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.artifact-paths }}
+          !platform/cmd/pl/*.go
+        retention-days: ${{ inputs.artifact-retention }}
 
 

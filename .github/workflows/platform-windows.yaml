@@ -118,6 +118,13 @@ on:
         type: number
         required: false
         default: 7
+      dist-archive-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::511903394050:role/milab-euce1-prod-github-oidc-role-pkgs-build'
       dist-archive-s3-region:
         description: |
           Upload application release artifact's files to
@@ -196,28 +203,6 @@ on:
         type: boolean
         required: false
         default: false
-      #
-      # AWS settings
-      #
-      aws-iam-role-to-assume:
-        description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        type: string
-        required: true
-      aws-region:
-        description: |
-          The AWS region
-        type: string
-        required: true
-        default: 'eu-central-1'
-      aws-s3-static-files-bucket-name:
-        description: |
-          AWS S3 static files bucket name.
-          From this bucket we download pre-build libs e.g rocksdb for windows
-        type: string
-        required: true
-        default: 'milab-euce1-prod-pkgs-s3-static-files'
       #
       # Notifications control
       #
@@ -353,7 +338,7 @@ jobs:
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
           add-os-arch: ${{ inputs.dist-archive-s3-add-os-arch }}
 
-          s3-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-path: ${{ inputs.dist-archive-s3-path }}
