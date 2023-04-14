@@ -7,6 +7,9 @@ description: |
   Install Golang specific version, cache dependencies, re-use build results
 
 inputs:
+  #
+  # Build control
+  #
   build-command:
     description: |
       Build command (initiate build for the platform)
@@ -31,10 +34,34 @@ inputs:
 
     required: false
     default: 'v1'
+  #
+  # Github authentication control
+  #
   github-token:
     description: |
       Github token to authorize git operation in the same repository as the workflow.
     required: true
+  #
+  # Artifact control
+  #
+  artifact-name:
+    description: |
+      Name of build artifact to create when <artifact-paths> input is not empty
+
+    required: false
+    default: 'build-artifacts'
+  artifact-paths:
+    description: |
+      List of paths to artifacts to save after build run.
+      Paths are relative to github workspace (repository root).
+      Patterns ('*', '**', etc.) are supported.
+    required: false
+    default: ''
+  artifact-retention:
+    description: |
+      Time in days to keep build artifacts before removing them
+    required: false
+    default: '7'
 
 runs:
   using: "composite"
@@ -86,7 +113,11 @@ runs:
             --install-path '@executable_path/libs/' \
             --fix-file pl
 
-    - uses: actions/upload-artifact@v3
+    - name: Save build artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: pl-bin-macos-amd64
-        path: './platform/cmd/pl'
+        name: ${{ inputs.artifact-name }}
+        path: |
+          !platform/cmd/pl/*.go
+          ${{ inputs.artifact-paths }}
+        retention-days: ${{ inputs.artifact-retention }}
