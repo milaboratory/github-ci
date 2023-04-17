@@ -118,7 +118,7 @@ runs:
         BUILD_PATH: ${{ inputs.build-path }}
       shell: pwsh
       run: |
-       7z a ${{ env.BUILD_PATH }}\pl.zip ${{ env.BUILD_PATH }}\ "-xr!*.go" "-xr!.zip"
+       7z a ${{ env.BUILD_PATH }}\pl.zip ${{ env.BUILD_PATH }}\ "-xr!*.go" "-xr!*.zip" "-xr!*.sum" "-xr!*.mod"
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3

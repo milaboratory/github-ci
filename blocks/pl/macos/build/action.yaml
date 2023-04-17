@@ -128,7 +128,7 @@ runs:
       with:
         dump-stdout: false
         run: |
-          zip -rT "${BUILD_PATH}/pl.zip" "${BUILD_PATH}/" -x "*.go" -x "*.zip"
+          zip -rT "${BUILD_PATH}/pl.zip" "${BUILD_PATH}/" -x "*.go" -x "*.zip" -x "*.sum" -x "*.mod"
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
