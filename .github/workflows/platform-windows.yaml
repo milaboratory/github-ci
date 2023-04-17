@@ -91,6 +91,12 @@ on:
         type: string
         required: false
         default: 'go build -ldflags "-linkmode external -extldflags -static" .'
+      build-path:
+        description: |
+          The path where the build command will run
+        type: string
+        required: false
+        default: 'platform\cmd\pl'
       build-env:
         description: |
           JSON-encoded environment variables to set for 'go build .':
@@ -315,6 +321,7 @@ jobs:
           pkg-config-path: ${{ steps.rocksdb_download_libs.outputs.rocksdb_libs_path }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
+          build-path: ${{ inputs.build-path }}
           netrc-password: ${{ secrets.GITHUB_TOKEN }}
 
           artifact-name: ${{ inputs.app-name-slug }}

@@ -15,6 +15,11 @@ inputs:
       Build command (initiate build for the platform)
     required: false
     default: 'go build -ldflags "-linkmode external -extldflags -static" .'
+  build-path:
+    description: |
+      The path where the build command will run
+    required: false
+    default: 'platform\cmd\pl'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -103,15 +108,17 @@ runs:
 
     - name: Run build command for the platform
       shell: pwsh
-      working-directory: platform\cmd\pl
+      working-directory: ${{ inputs.build-path }}
       run: |
         $env:PKG_CONFIG_PATH = "${{ inputs.pkg-config-path }}\lib\pkgconfig"
         ${{ inputs.build-command }}
 
     - name: Add build results to the archive
+      env:
+        BUILD_PATH: ${{ inputs.build-path }}
       shell: pwsh
       run: |
-       7z a platform\cmd\pl\pl.zip platform\cmd\pl\ "-xr!*.go" "-xr!.zip"
+       7z a ${{ env.BUILD_PATH }}\pl.zip ${{ env.BUILD_PATH }}\ "-xr!*.go" "-xr!.zip"
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
@@ -119,5 +126,5 @@ runs:
         name: ${{ inputs.artifact-name }}
         path: |
           ${{ inputs.artifact-paths }}
-          !platform\cmd\pl\*.go
+          !**\*.go
         retention-days: ${{ inputs.artifact-retention }}

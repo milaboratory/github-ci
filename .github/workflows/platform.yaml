@@ -91,6 +91,12 @@ on:
         type: string
         required: false
         default: 'go build .'
+      build-path:
+        description: |
+          The path where the build command will run
+        type: string
+        required: false
+        default: 'platform/cmd/pl'
       build-env:
         description: |
           JSON-encoded environment variables to set for 'go build .':
@@ -356,6 +362,7 @@ jobs:
 
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
+          build-path: ${{ inputs.build-path }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
           artifact-name: ${{ inputs.app-name-slug }}
