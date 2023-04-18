@@ -38,7 +38,7 @@ Without 'context/init' 'v2' workflows can't perform some of their jobs.
 All workflows here expect outer workflow to call 'context/init' action before starting.
 Without 'context/init' 'v3' workflows can't perform some of their jobs.
 
-In this version following new features were introduced:
+This version introduces the following new features:
   - build node spa (single page application) / node general application
   - deploy to aws cloudfront
   - build docker images with hcl and docker bake
@@ -51,7 +51,7 @@ In this version following new features were introduced:
 All workflows here expect outer workflow to call 'context/init' action before starting.
 Without 'context/init' 'v3' workflows can't perform some of their jobs.
 
-In this version following new features were introduced:
+This version introduces the following new features:
   - switch to node16 because node12 has reached end-of-life
   - build deb packages for ubuntu/debian
   - setup s3 apt repository in workflows

@@ -1,8 +1,8 @@
-name: "Automerge 'v2' to 'master'"
+name: "Automerge 'v4' to 'master'"
 
 on:
   push:
-    branches: [ 'v2' ]
+    branches: [ 'v4' ]
 
 jobs:
   merge:
