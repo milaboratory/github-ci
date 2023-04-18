@@ -37,3 +37,28 @@ Without 'context/init' 'v2' workflows can't perform some of their jobs.
 # v3
 All workflows here expect outer workflow to call 'context/init' action before starting.
 Without 'context/init' 'v3' workflows can't perform some of their jobs.
+
+This version introduces the following new features:
+  - build node spa (single page application) / node general application
+  - deploy to aws cloudfront
+  - build docker images with hcl and docker bake
+  - regtl action (allows work with ecr and docker registries)
+  - deploy application to aws eks cluster with helm
+  - telegram notification for eks deployment
+  - use iam roles with oidc provider to generate aws credentials (no more static keys in secrets)
+
+# v4
+All workflows here expect outer workflow to call 'context/init' action before starting.
+Without 'context/init' 'v3' workflows can't perform some of their jobs.
+
+This version introduces the following new features:
+  - switch to node16 because node12 has reached end-of-life
+  - build deb packages for ubuntu/debian
+  - setup s3 apt repository in workflows
+  - build milaboratory platform on linux/macos/windows
+  - build rocksdb static libs with vcpkg
+  - variety of bash shell fixes, so one action can work on all three os (linux/macos/windows)
+  - changes required for https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/
+
+Breaking changes:
+   - in java-gradle s3-key and s3-secret have been removed in favor of aws iam assume role with oidc provider to generate aws credentials
