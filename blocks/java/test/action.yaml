@@ -201,7 +201,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - name: Configure AWS credentials
       if: inputs.s3-iam-role-to-assume != '' && inputs.upload-report == 'true'
@@ -223,20 +223,20 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - name: Set gradle.properties
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4
       with:
         properties: ${{ inputs.properties }}
 
     - name: Read actual project properties
       id: gradle-props
-      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4
       with:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
 
     - name: Generate upload path
       id: upload-path
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           rand="$(
@@ -248,7 +248,7 @@ runs:
 
     - name: Generate list of tasks to exclude
       id: excludes
-      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      uses: milaboratory/github-ci/actions/strings/prefix@v4
       with:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
@@ -265,14 +265,14 @@ runs:
     - name: Generate before-hooks tasks
       id: before-hooks-tasks
       if: inputs.before-hooks-tasks != ''
-      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      uses: milaboratory/github-ci/actions/strings/prefix@v4
       with:
         input: ${{ inputs.before-hooks-tasks }}
         prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run before-hooks tasks
       if: steps.before-hooks-tasks.outputs.result != ''
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
       with:
         working-directory: ${{ inputs.project-dir }}
         properties: |
@@ -287,21 +287,21 @@ runs:
 
     - name: Run 'before-tests' hook
       if: inputs.hook-before != ''
-      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4
       with:
         script-path: ${{ inputs.hook-before }}
 
     - name: Generate test tasks
       id: test-tasks
       if: inputs.tasks != ''
-      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      uses: milaboratory/github-ci/actions/strings/prefix@v4
       with:
         input: ${{ inputs.tasks }}
         prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run tests
       if: steps.test-tasks.outputs.result != ''
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
       with:
         working-directory: ${{ inputs.project-dir }}
         properties: |
@@ -316,14 +316,14 @@ runs:
 
     - name: Run 'after-tests' hook
       if: inputs.hook-after != ''
-      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4
       with:
         script-path: ${{ inputs.hook-after }}
 
     - name: Check if we should upload results to S3
       id: should-upload
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-report }}
         BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
@@ -354,7 +354,7 @@ runs:
     - name: Upload test results
       id: upload-report
       if: always() && env.UPLOAD_REPORT == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           aws s3 cp --recursive \

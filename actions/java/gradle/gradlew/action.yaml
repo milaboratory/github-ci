@@ -32,7 +32,7 @@ runs:
 
   steps:
     - name: Run 'gradlew ${{ inputs.target }}'
-      uses: milaboratory/github-ci/actions/java/gradle/cache@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/cache@v4
       with:
         job-id: ${{ inputs.cache-key }}
         build-root-directory: ${{ inputs.working-directory }}
