@@ -253,14 +253,14 @@ on:
         required: false
         default: 'milaboratory-artefacts-public-files'
       test-s3-path-prefix:
-          description: |
-            Prefix for all uploaded test files.
+        description: |
+          Prefix for all uploaded test files.
 
-            Tests report will be uploaded to:
-              's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
-
-          required: false
-          default: 'cdn/internal/ci'
+          Tests report will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+        type: string
+        required: false
+        default: 'cdn/internal/ci'
 
       #
       # Docker distribution control
