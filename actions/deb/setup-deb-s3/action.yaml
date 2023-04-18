@@ -16,7 +16,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/shell@v4
       env:
         DEB_REPO_URL: ${{ inputs.deb-repository-url }}
         DEP_REPO_KEY_URL: ${{ inputs.deb-repository-key-url }}
