@@ -57,7 +57,7 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: 'arn:aws:iam::511903394050:role/milab-euce1-prod-github-oidc-role-deb-build'
+        default: 'arn:aws:iam::511903394050:role/milab-euce1-prod-github-oidc-role-pkgs-build'
       aws-region:
         description: |
           The AWS region

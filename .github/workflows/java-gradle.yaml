@@ -230,6 +230,35 @@ on:
         type: string
         required: false
         default: ''
+      #
+      # Test reports control
+      #
+      test-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
+      test-s3-region:
+          description: |
+            AWS region with target S3 bucket
+          required: false
+          default: 'eu-central-1'
+      test-s3-bucket:
+          description: |
+            S3 bucket to use for tests
+          required: false
+          default: 'milaboratory-artefacts-public-files'
+      test-s3-path-prefix:
+          description: |
+            Prefix for all uploaded test files.
+
+            Tests report will be uploaded to:
+              's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+
+          required: false
+          default: 'cdn/internal/ci'
 
       #
       # Docker distribution control
@@ -296,6 +325,14 @@ on:
         type: number
         required: false
         default: 7
+
+      dist-archive-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
 
       dist-archive-s3:
         description: |
@@ -386,6 +423,14 @@ on:
       #
       # CDN redirect link control
       #
+      cdn-redirect-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
+
       cdn-redirect-s3:
         description: |
           Whether or not to enable the CDN link
@@ -473,6 +518,14 @@ on:
         type: boolean
         required: false
         default: false
+
+      release-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
 
       release-s3-region:
         description: |
@@ -597,17 +650,6 @@ on:
           Create properties file with given contents before starting the build
         required: false
 
-      AWS_KEY_ID:
-        description: |
-          AWS Key ID for S3 to use when uloading tests report.
-          Empty value disables report upload step.
-        required: false
-      AWS_KEY_SECRET:
-        description: |
-          AWS Key Secret for S3 to use when uploading tests report.
-          Empty value disables report upload step.
-        required: false
-
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -725,9 +767,11 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-          upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
+          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.test-s3-region }}
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -808,9 +852,11 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-          upload-report: ${{ secrets.AWS_KEY_ID != '' && secrets.AWS_KEY_SECRET != '' }}
+          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.test-s3-region }}
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -897,9 +943,7 @@ jobs:
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-path: ${{ inputs.dist-archive-s3-path }}
@@ -1063,8 +1107,7 @@ jobs:
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v4-beta
         with:
           cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
+          s3-iam-role-to-assume: ${{ inputs.cdn-redirect-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
@@ -1240,9 +1283,7 @@ jobs:
           add-version: ${{ inputs.release-s3-add-version }}
           add-sha: ${{ inputs.release-s3-add-sha }}
 
-          s3-key-id: ${{ secrets.AWS_KEY_ID }}
-          s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-
+          s3-iam-role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.release-s3-region }}
           s3-bucket: ${{ inputs.release-s3-bucket }}
           s3-path: ${{ inputs.release-s3-path }}

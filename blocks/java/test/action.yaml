@@ -115,14 +115,10 @@ inputs:
     required: false
     default: 'true'
 
-  s3-key-id:
+  s3-iam-role-to-assume:
     description: |
-      AWS Key ID for S3 auth
-    required: false
-    default: ''
-  s3-key-secret:
-    description: |
-      AWS Key Secret for S3 auth
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
     required: false
     default: ''
 
@@ -207,14 +203,12 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
 
-    - name: Configure AWS CLI
-      if: inputs.s3-key-id != '' && inputs.upload-report == 'true'
-      uses: milaboratory/github-ci/actions/aws/configure@v4-beta
+    - name: Configure AWS credentials
+      if: inputs.s3-iam-role-to-assume != '' && inputs.upload-report == 'true'
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        key-id: ${{ inputs.s3-key-id }}
-        key-secret: ${{ inputs.s3-key-secret }}
-        region: ${{ inputs.s3-region }}
-        append: false
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
 
     - name: Prepare env for Java application build
       uses: actions/setup-java@v3
@@ -360,11 +354,9 @@ runs:
     - name: Upload test results
       id: upload-report
       if: always() && env.UPLOAD_REPORT == 'true'
-      uses: milaboratory/github-ci/actions/aws@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
-        args: |
-          s3
-          cp
-          --recursive
-          ${{ env.REPORT_PATH }}
+        run: |
+          aws s3 cp --recursive \
+          ${{ env.REPORT_PATH }} \
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}

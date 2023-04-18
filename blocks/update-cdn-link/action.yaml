@@ -21,14 +21,10 @@ inputs:
       Amazon S3 stores the value of this header in the object metadata.
     required: true
 
-  s3-key-id:
+  s3-iam-role-to-assume:
     description: |
-      AWS Key ID for S3 auth
-    required: false
-    default: ''
-  s3-key-secret:
-    description: |
-      AWS Key Secret for S3 auth
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
     required: false
     default: ''
 
@@ -70,24 +66,16 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
 
-    - name: Configure AWS CLI
-      if: inputs.s3-key-id != ''
-      uses: milaboratory/github-ci/actions/aws/configure@v4-beta
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        key-id: ${{ inputs.s3-key-id }}
-        key-secret: ${{ inputs.s3-key-secret }}
-        region: ${{ inputs.s3-region }}
-        append: false
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
 
     - name: Update website-redirect-location metadata in the file
-      uses: milaboratory/github-ci/actions/aws@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
-        args: |
-          s3api
-          put-object
-          --bucket
-          ${{ inputs.s3-bucket }}
-          --key
-          ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
-          --website-redirect-location
-          ${{ inputs.cdn-redirect-link }}
+        run: |
+          aws s3api put-object --bucket ${{ inputs.s3-bucket }} \
+          --key ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }} \
+          --website-redirect-location ${{ inputs.cdn-redirect-link }}
