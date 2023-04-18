@@ -730,6 +730,9 @@ jobs:
     if: inputs.test-unit
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -813,6 +816,9 @@ jobs:
     if: inputs.test-integration
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -899,6 +905,9 @@ jobs:
     if: inputs.dist-archive
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -1096,6 +1105,9 @@ jobs:
     needs:
       - build
       - distArchive
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - id: cdn-string
@@ -1275,6 +1287,9 @@ jobs:
 
     needs:
       - release
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - id: s3
