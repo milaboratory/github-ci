@@ -241,24 +241,26 @@ on:
         required: false
         default: ''
       test-s3-region:
-          description: |
-            AWS region with target S3 bucket
-          required: false
-          default: 'eu-central-1'
+        description: |
+          AWS region with target S3 bucket
+        type: string
+        required: false
+        default: 'eu-central-1'
       test-s3-bucket:
-          description: |
-            S3 bucket to use for tests
-          required: false
-          default: 'milaboratory-artefacts-public-files'
+        description: |
+          S3 bucket to use for tests
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-public-files'
       test-s3-path-prefix:
-          description: |
-            Prefix for all uploaded test files.
+        description: |
+          Prefix for all uploaded test files.
 
-            Tests report will be uploaded to:
-              's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
-
-          required: false
-          default: 'cdn/internal/ci'
+          Tests report will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+        type: string
+        required: false
+        default: 'cdn/internal/ci'
 
       #
       # Docker distribution control
@@ -728,6 +730,9 @@ jobs:
     if: inputs.test-unit
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -811,6 +816,9 @@ jobs:
     if: inputs.test-integration
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -897,6 +905,9 @@ jobs:
     if: inputs.dist-archive
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -1094,6 +1105,9 @@ jobs:
     needs:
       - build
       - distArchive
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - id: cdn-string
@@ -1273,6 +1287,9 @@ jobs:
 
     needs:
       - release
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - id: s3
