@@ -201,6 +201,14 @@ on:
         required: false
         default: false
 
+      dist-archive-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
+
       dist-archive-s3-region:
         description: |
           Upload application release artifact's files to
@@ -305,6 +313,14 @@ on:
         type: boolean
         required: false
         default: false
+
+      release-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
 
       release-s3-region:
         description: |
@@ -424,17 +440,6 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      AWS_KEY_ID:
-        description: |
-          AWS Key ID for S3 to use when uloading tests report.
-          Empty value disables report upload step.
-        required: false
-      AWS_KEY_SECRET:
-        description: |
-          AWS Key Secret for S3 to use when uploading tests report.
-          Empty value disables report upload step.
-        required: false
-
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
@@ -457,13 +462,28 @@ on:
 
       MAC_SIGN_CERT:
         description: |
-          base64-encoded p12 certificate file for the macOS
+          base64-encoded p12 signing certificate file for the macOS
           (more info here https://www.electron.build/code-signing)
         required: false
 
       MAC_SIGN_CERT_PWD:
         description: |
           password to decrypt the p12 signing certificate for the macOS
+        required: false
+
+      MAC_NOTR_API_KEY:
+        description: |
+          base64-encoded content of an API key file
+        required: false
+
+      MAC_NOTR_API_KEY_ID:
+        description: |
+          Key ID found on App Store Connect for the API key file
+        required: false
+
+      MAC_NOTR_API_KEY_ISSUER_ID:
+        description: |
+          Issuer ID found on App Store Connect for the API key file
         required: false
 
       WIN_SIGN_CERT:
@@ -563,6 +583,9 @@ jobs:
           is-release: ${{ needs.init.outputs.is-release }}
           mac_sign_cert: ${{ secrets.MAC_SIGN_CERT }}
           mac_sign_cert_pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+          mac_notr_api_key: ${{ secrets.MAC_NOTR_API_KEY }}
+          mac_notr_api_key_id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
+          mac_notr_api_key_issuer_id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
           win_sign_cert: ${{ secrets.WIN_SIGN_CERT }}
           win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
@@ -614,6 +637,9 @@ jobs:
     if: ${{ inputs.dist-archive-s3 }}
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
      - id: s3
@@ -624,9 +650,7 @@ jobs:
         add-version: ${{ inputs.dist-archive-s3-add-version }}
         add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
-        s3-key-id: ${{ secrets.AWS_KEY_ID }}
-        s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-
+        s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
         s3-region: ${{ inputs.dist-archive-s3-region }}
         s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
         s3-path: ${{ inputs.dist-archive-s3-path }}
@@ -910,6 +934,9 @@ jobs:
       if: inputs.release-to-s3 && inputs.dist-archive
       needs:
         - release
+      permissions:
+        id-token: write
+        contents: read
 
       steps:
         - id: s3
@@ -920,9 +947,7 @@ jobs:
             add-version: ${{ inputs.release-s3-add-version }}
             add-sha: ${{ inputs.release-s3-add-sha }}
 
-            s3-key-id: ${{ secrets.AWS_KEY_ID }}
-            s3-key-secret: ${{ secrets.AWS_KEY_SECRET }}
-
+            s3-iam-role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
             s3-region: ${{ inputs.release-s3-region }}
             s3-bucket: ${{ inputs.release-s3-bucket }}
             s3-path: ${{ inputs.release-s3-path }}

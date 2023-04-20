@@ -46,12 +46,24 @@ inputs:
     required: true
    mac_sign_cert:
     description: |
-      base64-encoded p12 certificate file for the macOS
+      base64-encoded p12 signing certificate file for the macOS
     required: false
    mac_sign_cert_pwd:
     description: |
       password to decrypt the p12 signing certificate for the macOS
     required: false
+   mac_notr_api_key:
+     description: |
+       base64-encoded content of an API key file
+     required: false
+   mac_notr_api_key_id:
+     description: |
+       Key ID found on App Store Connect for the API key file
+     required: false
+   mac_notr_api_key_issuer_id:
+     description: |
+       Issuer ID found on App Store Connect for the API key file
+     required: false
    win_sign_cert:
     description: |
       base64-encoded p12 certificate file for the Windows
@@ -65,9 +77,22 @@ runs:
   using: "composite"
 
   steps:
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: startsWith(runner.os, 'macOS')
+      env:
+        API_KEY: ${{ inputs.mac_notr_api_key }}
+        API_KEY_ID: ${{ inputs.mac_notr_api_key_id }}
+      with:
+        dump-stdout: false
+        run: |
+          mkdir -p ~/private_keys/
+          echo "${API_KEY}" | base64 -d > ~/private_keys/AuthKey_${API_KEY_ID}.p8
+
     - uses: samuelmeuli/action-electron-builder@e4b12cd06ddf023422f1ac4e39632bd76f6e6928
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
+        API_KEY_ID: ${{ inputs.mac_notr_api_key_id }}
+        API_KEY_ISSUER_ID: ${{ inputs.mac_notr_api_key_issuer_id }}
       with:
         build_script_name: ${{ inputs.build-script-name }}
         args: ${{ inputs.electron-build-args }}
