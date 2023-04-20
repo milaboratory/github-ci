@@ -57,6 +57,21 @@ inputs:
       password to decrypt the p12 signing certificate for the macOS
     required: false
 
+  mac_notr_api_key:
+    description: |
+      base64-encoded content of an API key file
+    required: false
+
+  mac_notr_api_key_id:
+    description: |
+      Key ID found on App Store Connect for the API key file
+    required: false
+
+  mac_notr_api_key_issuer_id:
+    description: |
+      Issuer ID found on App Store Connect for the API key file
+    required: false
+
   win_sign_cert:
     description: |
       base64-encoded p12 certificate file for the Windows
@@ -129,5 +144,8 @@ runs:
         is-release: ${{ inputs.is-release }}
         mac_sign_cert: ${{ inputs.mac_sign_cert }}
         mac_sign_cert_pwd: ${{ inputs.mac_sign_cert_pwd }}
+        mac_notr_api_key: ${{ inputs.mac_notr_api_key }}
+        mac_notr_api_key_id: ${{ inputs.mac_notr_api_key_id }}
+        mac_notr_api_key_issuer_id: ${{ inputs.mac_notr_api_key_issuer_id }}
         win_sign_cert: ${{ inputs.win_sign_cert }}
         win_sign_cert_pwd: ${{ inputs.win_sign_cert_pwd }}
