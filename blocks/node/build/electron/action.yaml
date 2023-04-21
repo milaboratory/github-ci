@@ -136,7 +136,7 @@ runs:
       if: inputs.gradle-properties != ''
       uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
       with:
-        gradle-properties: ${{ inputs.gradle-properties }}
+        properties: ${{ inputs.gradle-properties }}
 
     - name: Build Electron application
       uses: milaboratory/github-ci/actions/node/build-electron@v4-beta
