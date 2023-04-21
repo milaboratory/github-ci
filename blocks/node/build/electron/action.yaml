@@ -46,12 +46,18 @@ inputs:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
     required: true
+  gradle-properties:
+    description: |
+      Contents for '~/.gradle/gradle.properties' to be set before gradle command run.
+
+      Empty value makes actions to keep '~/.gradle/gradle.properties' file intact.
+    required: false
+    default: ''
 
   mac_sign_cert:
     description: |
       base64-encoded p12 certificate file for the macOS
     required: false
-
   mac_sign_cert_pwd:
     description: |
       password to decrypt the p12 signing certificate for the macOS
@@ -61,12 +67,10 @@ inputs:
     description: |
       base64-encoded content of an API key file
     required: false
-
   mac_notr_api_key_id:
     description: |
       Key ID found on App Store Connect for the API key file
     required: false
-
   mac_notr_api_key_issuer_id:
     description: |
       Issuer ID found on App Store Connect for the API key file
@@ -76,7 +80,6 @@ inputs:
     description: |
       base64-encoded p12 certificate file for the Windows
     required: false
-
   win_sign_cert_pwd:
     description: |
       password to decrypt the p12 signing certificate for the Windows
@@ -87,7 +90,6 @@ inputs:
       Node version to use.
       Examples: '16.x', '14.x'
     required: true
-
   cache-version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
@@ -129,6 +131,12 @@ runs:
       uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
       with:
         version: ${{ steps.context.outputs.current-version }}
+
+    - name: Set gradle.properties
+      if: inputs.gradle-properties != ''
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
+      with:
+        gradle-properties: ${{ inputs.gradle-properties }}
 
     - name: Build Electron application
       uses: milaboratory/github-ci/actions/node/build-electron@v4-beta

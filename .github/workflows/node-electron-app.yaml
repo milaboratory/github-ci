@@ -440,10 +440,16 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
+      GRADLE_PROPERTIES:
+        description: |
+          Create properties file with given contents before starting the build
+        required: false
+
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
           ID of Telegram Channel or User to notify on build results.
         required: false
+
       TELEGRAM_API_TOKEN:
         description: |
           Telegram Bot API authorization token
@@ -591,6 +597,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
+          gradle-properties: ${{ secrets.GRADLE_PROPERTIES }}
 
       - id: artifact
         if: always()
