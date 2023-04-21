@@ -30,7 +30,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: hugo19941994/delete-draft-releases@f962e497fe892965a04b2266b3b865e1a59ecd06
+    - uses: hugo19941994/delete-draft-releases@1bdca1ea7ffb25ae7f468a7bdb40056dae98175e
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
