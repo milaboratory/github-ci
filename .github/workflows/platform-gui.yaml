@@ -407,7 +407,7 @@ on:
 
       pl-s3-region:
         description: |
-          Download the platform application artifact files 
+          Download the platform application artifact files
           from the given AWS S3 bucket in the given region.
         type: string
         required: false
@@ -420,6 +420,31 @@ on:
         required: false
         type: string
         default: 'milab-euce1-prod-pkgs-s3-static-files'
+
+      #
+      # NPM registry settings
+      #
+      registry-url:
+        description: |
+          The npm registry url to set up for auth
+          and publication of the node js package.
+        type: string
+        required: false
+        default: 'https://npm.pkg.github.com'
+
+      scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+      always-auth:
+        description: |
+          Set always-auth in npmrc.
+        type: string
+        required: false
+        default: 'false
 
       #
       # Notifications
@@ -589,6 +614,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      packages: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -618,13 +644,13 @@ jobs:
         with:
           run: |
             get_os_arch=$(uname -m)
-            case "${get_os_arch}" in          
+            case "${get_os_arch}" in
               x86_64)
                 echo "amd64"
-                ;;          
+                ;;
               aarch64 | arm64)
                 echo "arm64"
-                ;;         
+                ;;
               *)
                 echo "Arch is not in the list: ${get_os_arch}"
                 exit 1
@@ -644,19 +670,19 @@ jobs:
             RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
             PL_ARCHIVE_NAME=$(
               jq -r --arg RUNNER_OS_SANITEZED "${RUNNER_OS_SANITEZED}" --arg RUNNER_OS_ARCH "${RUNNER_OS_ARCH}" '
-              .operating_systems[] 
-              | select(.name == $RUNNER_OS_SANITEZED) 
-              | .architectures[] 
-              | select(.name == $RUNNER_OS_ARCH) 
+              .operating_systems[]
+              | select(.name == $RUNNER_OS_SANITEZED)
+              | .architectures[]
+              | select(.name == $RUNNER_OS_ARCH)
               | .application_archive' pl-version.json
             )
-            
+
             # download archive
             aws s3 cp "s3://${PL_S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_ARCHIVE_NAME}" ./
-            
+
             # unpack archive
             mkdir ./"${PL_DIST}" && \
-            7z x "${PL_ARCHIVE_NAME}" -o"${PL_DIST}"                     
+            7z x "${PL_ARCHIVE_NAME}" -o"${PL_DIST}"
 
       - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
         with:
@@ -678,6 +704,10 @@ jobs:
           win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
           is-electron-application: ${{ inputs.is-electron-application }}
           gradle-properties: ${{ secrets.GRADLE_PROPERTIES }}
 
@@ -693,7 +723,7 @@ jobs:
             case "${RUNNER_OS}" in
               Linux)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-linux"
-                ghwa_set_output "path" "dist/*.AppImage"
+                ghwa_set_output "path" "dist/*.appImage"
                 ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
                 ;;
               macOS)
@@ -774,6 +804,9 @@ jobs:
     if: inputs.test-unit
     needs:
       - build
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -798,6 +831,10 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -840,6 +877,9 @@ jobs:
     if: inputs.test-static
     needs:
       - build
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -864,6 +904,10 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
