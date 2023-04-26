@@ -444,7 +444,7 @@ on:
           Set always-auth in npmrc.
         type: string
         required: false
-        default: 'false
+        default: 'false'
 
       #
       # Notifications
