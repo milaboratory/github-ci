@@ -4,14 +4,7 @@ const path = require('path');
 const { existsSync } = require('fs');
 
 // Writes a message to the console
-function log(message) {
-  console.log(message);
-}
-
-// Returns the value for an environment variable, or null if it's not defined
-function getEnv(name) {
-  return process.env[name] || null;
-}
+const log = console.log.bind(console);
 
 // Sets the specified env variable if the value isn't empty
 function setEnv(name, value) {
@@ -74,7 +67,7 @@ async function run() {
     const macosCertificatePassword = getActionInput('macos-certs-password');
     // Windows code signing
     const windowsCertificate = getActionInput('windows-certs');
-    const windowsCertificatePassword = getActionInput('windwos-certs-password');
+    const windowsCertificatePassword = getActionInput('windows-certs-password');
 
     const packageJsonPath = path.join(workingDirectory, 'package.json');
     
@@ -116,8 +109,4 @@ async function run() {
     log('Electron application built and signed successfully');
 }
 
-try {
-  run();
-} catch (error) {
-  setFailed(`Action failed with error: ${error}`);
-}
+run().catch(error => setFailed(`Action failed with error: ${error}`));

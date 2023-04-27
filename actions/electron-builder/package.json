@@ -1,6 +1,6 @@
 {
   "name": "electron-builder-action",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A GitHub action to build, package, and sign Electron applications using electron-builder",
   "main": "dist/index.js",
   "private": true,
