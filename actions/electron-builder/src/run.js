@@ -67,6 +67,7 @@ async function run() {
     const skipBuild = getActionInput('skip-build') === 'true';
     const electronBuilderArgs = getActionInput('electron-builder-args') || '';
     const workingDirectory = getActionInput('working-directory', true);
+    const githubToken = getActionInput('github-token', true);
     const platform = getCurrentOS();
     // macOS code signing
     const macosCertificate = getActionInput('macos-certs');
@@ -82,7 +83,7 @@ async function run() {
       return;
     }      
     // Copy "github_token" input variable to "GH_TOKEN" env variable (required by `electron-builder`)
-    setEnv('GH_TOKEN', getActionInput('github-token', true));
+    setEnv('GH_TOKEN', githubToken);
  
     if (platform === 'macOS') {
 	setEnv('CSC_LINK', macosCertificate);
@@ -104,7 +105,7 @@ async function run() {
        log('Running the build script…');
        // Set GITHUB_TOKEN as NODE_AUTH_TOKEN for npm ci to be able to download npm packages from a private repository
        // Token must have packages:read permission
-       setEnv('NODE_AUTH_TOKEN', getActionInput('github_token', true));
+       setEnv('NODE_AUTH_TOKEN', githubToken);
        executeShellCommand(`npm run ${buildScriptName} --if-present`, workingDirectory);
     }
 
