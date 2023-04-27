@@ -106,7 +106,7 @@ async function run() {
        // Set GITHUB_TOKEN as NODE_AUTH_TOKEN for npm ci to be able to download npm packages from a private repository
        // Token must have packages:read permission
        setEnv('NODE_AUTH_TOKEN', githubToken);
-       executeShellCommand(`npm run ${buildScriptName} --if-present`, workingDirectory);
+       await executeShellCommand(`npm run ${buildScriptName} --if-present`, workingDirectory);
     }
 
     // Run electron-builder
