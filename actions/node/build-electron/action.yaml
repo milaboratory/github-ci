@@ -12,12 +12,7 @@ inputs:
       Name of script for application build
     required: true
     default: 'build'
-   build-max-attempts:
-    description: |
-      Maximum number of attempts for completing the build and release step
-    required: false
-    default: '1'
-   build-package-root:
+   build-working-directory:
     description: Directory where NPM/Yarn commands should be run
     required: false
     default: '.'
@@ -25,50 +20,45 @@ inputs:
     description: Whether the action should execute the NPM build script before running 'electron-builder'
     required: false
     default: 'false'
-   electron-build-args:
+   electron-builder-args:
     description: |
       Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
     required: false
     default: ''
-   is-vue-project:
-    description: |
-      This is vue-based project. Use 'vue-cli' toolkit
-    required: false
-    default: 'false'
    is-release:
     description: |
       Set If you would like to mark the current version as a release version.
     required: false
     default: 'false'
-   token:
+   github-token:
     description: |
       Copy "github_token" input variable to "GH_TOKEN" env variable (required by 'electron-builder')
     required: true
-   mac_sign_cert:
+   mac-sign-cert:
     description: |
       base64-encoded p12 signing certificate file for the macOS
     required: false
-   mac_sign_cert_pwd:
+   mac-sign-cert-pwd:
     description: |
       password to decrypt the p12 signing certificate for the macOS
     required: false
-   mac_notr_api_key:
+   mac-notr-api-key:
      description: |
        base64-encoded content of an API key file
      required: false
-   mac_notr_api_key_id:
+   mac-notr-api-key-id:
      description: |
        Key ID found on App Store Connect for the API key file
      required: false
-   mac_notr_api_key_issuer_id:
+   mac-notr-api-key-issuer-id:
      description: |
        Issuer ID found on App Store Connect for the API key file
      required: false
-   win_sign_cert:
+   win-sign-cert:
     description: |
       base64-encoded p12 certificate file for the Windows
     required: false
-   win_sign_cert_pwd:
+   win-sign-cert-pwd:
     description: |
       password to decrypt the p12 signing certificate for the Windows
     required: false
@@ -80,29 +70,27 @@ runs:
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       if: startsWith(runner.os, 'macOS')
       env:
-        APPLE_API_KEY: ${{ inputs.mac_notr_api_key }}
-        APPLE_API_KEY_ID: ${{ inputs.mac_notr_api_key_id }}
+        APPLE_API_KEY: ${{ inputs.mac-notr-api-key }}
+        APPLE_API_KEY_ID: ${{ inputs.mac-notr-api-key-id }}
       with:
         dump-stdout: false
         run: |
           mkdir -p ~/private_keys/
           echo "${APPLE_API_KEY}" | base64 -d > ~/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
 
-    - uses: samuelmeuli/action-electron-builder@e4b12cd06ddf023422f1ac4e39632bd76f6e6928
+    - uses: milaboratory/github-ci/actions/electron-builder@test-electron-builder
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
-        APPLE_API_KEY_ID: ${{ inputs.mac_notr_api_key_id }}
-        APPLE_API_ISSUER: ${{ inputs.mac_notr_api_key_issuer_id }}
+        APPLE_API_KEY_ID: ${{ inputs.mac-notr-api-key-id }}
+        APPLE_API_ISSUER: ${{ inputs.mac-notr_api_key-issuer-id }}
       with:
         build_script_name: ${{ inputs.build-script-name }}
-        args: ${{ inputs.electron-build-args }}
+        electron-builder-args: ${{ inputs.electron-builder-args }}
         release: ${{ inputs.is-release }}
-        github_token: ${{ inputs.token }}
-        package_root: ${{ inputs.build-package-root }}
-        skip_build: ${{ inputs.skip-build }}
-        use_vue_cli: ${{ inputs.is-vue-project }}
-        max_attempts: ${{ inputs.build-max-attempts }}
-        mac_certs: ${{ inputs.mac_sign_cert }}
-        mac_certs_password: ${{ inputs.mac_sign_cert_pwd }}
-        windows_certs: ${{ inputs.win_sign_cert }}
-        windows_certs_password: ${{ inputs.win_sign_cert_pwd }}
+        github-token: ${{ inputs.github-token }}
+        working-directory: ${{ inputs.build-working-directory }}
+        skip-build: ${{ inputs.skip-build }}
+        macos-certs: ${{ inputs.mac-sign-cert }}
+        macos-certs_password: ${{ inputs.mac-sign-cert-pwd }}
+        windows-certs: ${{ inputs.win-sign-cert }}
+        windows-certs-password: ${{ inputs.win-sign-cert-pwd }}

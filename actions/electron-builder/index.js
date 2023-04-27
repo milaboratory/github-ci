@@ -102,6 +102,9 @@ async function run() {
        log('Skipping build script because `skip-build` option is set');
     } else {
        log('Running the build script…');
+       // Set GITHUB_TOKEN as NODE_AUTH_TOKEN for npm ci to be able to download npm packages from a private repository
+       // Token must have packages:read permission
+       setEnv('NODE_AUTH_TOKEN', getActionInput('github_token', true));
        executeShellCommand(`npm run ${buildScriptName} --if-present`, workingDirectory);
     }
 
