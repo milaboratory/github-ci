@@ -576,6 +576,9 @@ jobs:
       packages: read
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -599,7 +602,7 @@ jobs:
           skip-build: ${{ inputs.skip-build }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           electron-builder-args : ${{ inputs.electron-builder-args }}
-          is-release: ${{ needs.init.outputs.is-release }}
+          is-release: ${{ steps.context.outputs.is-release }}
           is-electron-application: ${{ inputs.is-electron-application }}
           mac-sign-cert: ${{ secrets.MAC_SIGN_CERT }}
           mac-sign-cert-pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}

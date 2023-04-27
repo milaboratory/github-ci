@@ -124,9 +124,6 @@ runs:
   using: "composite"
 
   steps:
-    - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
-
     - name: Prepare env for Node application build
       uses: milaboratory/github-ci/actions/node/prepare@v4-beta
       with:
@@ -148,7 +145,7 @@ runs:
     - name: Patch package version
       uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
       with:
-        version: ${{ steps.context.outputs.current-version }}
+        version: ${{ inputs.build-version }}
 
     - name: Set gradle.properties
       if: inputs.gradle-properties != ''
