@@ -657,7 +657,7 @@ jobs:
                 ;;
             esac
 
-      - name: Download and unpack platform artifact.
+      - name: Download and unpack platform artifact
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           RUNNER_OS_ARCH: ${{ steps.os_arch.outputs.stdout }}
