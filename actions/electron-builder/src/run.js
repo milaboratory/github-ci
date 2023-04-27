@@ -51,11 +51,11 @@ async function executeShellCommand(command, workingDirectory = null) {
 function getCurrentOS() {
   switch (process.platform) {
     case 'darwin':
-      return 'macOS';
+      return 'macos';
     case 'win32':
-      return 'Windows';
+      return 'windows';
     case 'linux':
-      return 'Linux';
+      return 'linux';
     default:
       return 'Unknown';
   }
