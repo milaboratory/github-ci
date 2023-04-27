@@ -181,6 +181,6 @@ runs:
         release: ${{ inputs.is-release }}
         github-token: ${{ inputs.github-token }}
         macos-certs: ${{ inputs.mac-sign-cert }}
-        macos-certs_password: ${{ inputs.mac-sign-cert-pwd }}
+        macos-certs-password: ${{ inputs.mac-sign-cert-pwd }}
         windows-certs: ${{ inputs.win-sign-cert }}
         windows-certs-password: ${{ inputs.win-sign-cert-pwd }}
