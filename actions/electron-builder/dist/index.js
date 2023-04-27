@@ -4174,10 +4174,10 @@ async function run() {
     // Copy "github_token" input variable to "GH_TOKEN" env variable (required by `electron-builder`)
     setEnv('GH_TOKEN', githubToken);
  
-    if (platform === 'macOS') {
+    if (platform === 'macos') {
 	setEnv('CSC_LINK', macosCertificate);
 	setEnv('CSC_KEY_PASSWORD', macosCertificatePassword);
-    } else if (platform === 'Windows') {
+    } else if (platform === 'windows') {
         setEnv('CSC_LINK', windowsCertificate);
         setEnv('CSC_KEY_PASSWORD', windowsCertificatePassword);
     }

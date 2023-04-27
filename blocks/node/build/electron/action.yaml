@@ -169,7 +169,7 @@ runs:
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
         APPLE_API_KEY_ID: ${{ inputs.mac-notr-api-key-id }}
-        APPLE_API_ISSUER: ${{ inputs.mac-notr_api_key-issuer-id }}
+        APPLE_API_ISSUER: ${{ inputs.mac-notr-api-key-issuer-id }}
       with:
         build-script-name: ${{ inputs.build-script-name }}
         skip-build: ${{ inputs.skip-build }}
