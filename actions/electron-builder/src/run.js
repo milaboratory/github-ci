@@ -111,7 +111,7 @@ async function run() {
 
     // Run electron-builder
     log(`Building${release ? ' and releasing' : ''} the Electron application…`);
-    await executeShellCommand(`electron-builder --${platform} ${release ? '--publish always' : ''} ${electronBuilderArgs}`, workingDirectory);
+    await executeShellCommand(`npx --no-install electron-builder --${platform} ${release ? '--publish always' : ''} ${electronBuilderArgs}`, workingDirectory);
 
     log('Electron application built and signed successfully');
 }
