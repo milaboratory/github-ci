@@ -393,7 +393,7 @@ jobs:
           registry-url: ${{ inputs.registry-url }}
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.

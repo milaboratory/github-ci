@@ -1,0 +1,44 @@
+name: 'Electron Builder Action'
+author: 'MiLaboratories'
+description: 'Github action for building and releasing Electron applications using electron-builder'
+
+inputs:
+  github-token:
+    description: GitHub authentication token
+    required: true
+  macos-certs:
+    description: Base64-encoded code signing certificate for macOS
+    required: false
+  macos-certs-password:
+    description: Password for decrypting `macos-certs`
+    required: false
+  release:
+    description: Whether the app should be released after a successful build
+    required: false
+    default: false
+  windows-certs:
+    description: Base64-encoded code signing certificate for Windows
+    required: false
+  windows-certs-password:
+    description: Password for decrypting `windows-certs`
+    required: false
+  working-directory:
+    description: Directory where NPM/Yarn commands should be run
+    required: false
+    default: "."
+  build-script-name:
+    description: Name of the optional NPM build script which is executed before `electron-builder`
+    required: false
+    default: build
+  skip-build:
+    description: Whether the action should execute the NPM build script before running `electron-builder`
+    required: false
+    default: false
+  electron-builder-args:
+    description: Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
+    required: false
+    default: ""
+
+runs:
+  using: node16
+  main: dist/index.js

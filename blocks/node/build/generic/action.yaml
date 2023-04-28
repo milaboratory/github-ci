@@ -54,7 +54,7 @@ runs:
         cache-version: ${{ inputs.cache-version }}
         is-electron-application: ${{ inputs.is-electron-application }}
 
-    - name: Install node packages with npm
+    - name: Install NodeJS packages with npm
       uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
@@ -64,8 +64,8 @@ runs:
       uses: milaboratory/github-ci/actions/node/patch-version@v4
       with:
         version: ${{ steps.context.outputs.current-version }}
-
-    - name: Build NodeJS application
+        
+    - name: Run build
       uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |

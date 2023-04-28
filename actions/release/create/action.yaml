@@ -118,7 +118,7 @@ runs:
   steps:
     - name: Generate changelog
       id: changelog
-      uses: loopwerk/tag-changelog@6730d9b2742044f6cedff39324e8179f5867c6d4
+      uses: loopwerk/tag-changelog@96adce531513edec860ed73a00d5d4dd11d2efc2
       with:
         token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
@@ -132,7 +132,7 @@ runs:
 
     - name: Create release
       id: create
-      uses: ncipollo/release-action@3ac4132803a6419fa2a7f4e9dbd1d93fceb690b9
+      uses: ncipollo/release-action@eb05307dcee34deaad054e98128088a30d7980dc
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}

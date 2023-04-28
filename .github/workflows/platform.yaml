@@ -468,6 +468,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - id: test-integration-logs
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}-test-int-logs

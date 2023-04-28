@@ -1,7 +1,7 @@
 # This workflow will do a clean prepare of node dependencies,
 # cache/restore them, build the source code and run tests across different OS
 
-name: Build Electron Application
+name: Build Platform GUI
 
 on:
   workflow_call:
@@ -132,9 +132,9 @@ on:
         default: false
       test-unit-names-list:
         description: |
-         Comma-separated list of unit tests names.
-         Each name is separate test.
-         e.g. 'test:e2e', 'test:main' e.t.c
+          Comma-separated list of unit tests names.
+          Each name is separate test.
+          e.g. 'test:e2e', 'test:main' e.t.c
         type: string
         required: false
         default: ''
@@ -146,9 +146,9 @@ on:
         default: false
       test-static-names-list:
         description: |
-         Comma-separated list of static tests names.
-         Each name is separate test.
-         e.g. 'lint', 'typecheck' e.t.c
+          Comma-separated list of static tests names.
+          Each name is separate test.
+          e.g. 'lint', 'typecheck' e.t.c
         type: string
         required: false
         default: ''
@@ -274,7 +274,7 @@ on:
       #
       draft-ttl-threshold:
         description: |
-           Delete drafts older than the set threshold (e.g. '1s', '5d', '1y')
+          Delete drafts older than the set threshold (e.g. '1s', '5d', '1y')
         type: string
         required: false
         default: '7d'
@@ -381,6 +381,33 @@ on:
         type: string
         required: false
         default: 'false'
+
+      #
+      # Platform download
+      #
+      pl-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: ''
+
+      pl-s3-region:
+        description: |
+          Download the platform application artifact files
+          from the given AWS S3 bucket in the given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      pl-s3-bucket:
+        description: |
+          Download the platform application artifact files from
+          the given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milab-euce1-prod-pkgs-s3-static-files'
 
       #
       # NPM registry settings
@@ -512,9 +539,10 @@ on:
         required: false
 
       WIN_SIGN_CERT_PWD:
-         description: |
+        description: |
           password to decrypt the p12 signing certificate for the Windows
-         required: false
+        required: false
+
 
 jobs:
   init:
@@ -533,7 +561,7 @@ jobs:
     runs-on: ubuntu-latest
 
     needs:
-       - init
+      - init
 
     if: ${{ !fromJSON(needs.init.outputs.is-release)  }}
 
@@ -572,13 +600,11 @@ jobs:
     needs:
       - init
     permissions:
+      id-token: write
       contents: read
       packages: read
 
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4
-
       - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
@@ -594,6 +620,58 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.pl-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.pl-s3-region }}
+
+      - name: Get OS arch
+        id: os_arch
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            get_os_arch=$(uname -m)
+            case "${get_os_arch}" in
+              x86_64)
+                echo "amd64"
+                ;;
+              aarch64 | arm64)
+                echo "arm64"
+                ;;
+              *)
+                echo "Arch is not in the list: ${get_os_arch}"
+                exit 1
+                ;;
+            esac
+
+      - name: Download and unpack platform artifact
+        uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          RUNNER_OS_ARCH: ${{ steps.os_arch.outputs.stdout }}
+          PL_DIST: "pl-dist"
+          PL_S3_BUKCET: ${{ inputs.pl-s3-bucket }}
+        with:
+          dump-stdout: false
+          run: |
+            # get archive name from pl-version.json
+            RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+            PL_ARCHIVE_NAME=$(
+              jq -r --arg RUNNER_OS_SANITEZED "${RUNNER_OS_SANITEZED}" --arg RUNNER_OS_ARCH "${RUNNER_OS_ARCH}" '
+              .operating_systems[]
+              | select(.name == $RUNNER_OS_SANITEZED)
+              | .architectures[]
+              | select(.name == $RUNNER_OS_ARCH)
+              | .application_archive' pl-version.json
+            )
+
+            # download archive
+            aws s3 cp "s3://${PL_S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_ARCHIVE_NAME}" ./
+
+            # unpack archive
+            mkdir ./"${PL_DIST}" && \
+            7z x "${PL_ARCHIVE_NAME}" -o"${PL_DIST}"
+
       - uses: milaboratory/github-ci/blocks/node/build/electron@v4
         with:
           build-version: ${{ steps.context.outputs.current-version }}
@@ -601,7 +679,7 @@ jobs:
           build-working-directory: ${{ inputs.build-working-directory }}
           skip-build: ${{ inputs.skip-build }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          electron-builder-args : ${{ inputs.electron-builder-args }}
+          electron-builder-args: ${{ inputs.electron-builder-args }}
           is-release: ${{ steps.context.outputs.is-release }}
           is-electron-application: ${{ inputs.is-electron-application }}
           mac-sign-cert: ${{ secrets.MAC_SIGN_CERT }}
@@ -677,20 +755,20 @@ jobs:
       contents: read
 
     steps:
-     - id: s3
-       name: Upload to S3
-       uses: milaboratory/github-ci/blocks/release/s3@v4
-       with:
-        artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
-        add-version: ${{ inputs.dist-archive-s3-add-version }}
-        add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+      - id: s3
+        name: Upload to S3
+        uses: milaboratory/github-ci/blocks/release/s3@v4
+        with:
+          artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
+          add-version: ${{ inputs.dist-archive-s3-add-version }}
+          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
-        s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-        s3-region: ${{ inputs.dist-archive-s3-region }}
-        s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
-        s3-path: ${{ inputs.dist-archive-s3-path }}
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
 
-        alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
 
     outputs:
       s3-files: ${{ steps.s3.outputs.uploaded }}
@@ -700,55 +778,55 @@ jobs:
 
 
   test-unit:
-      strategy:
-        fail-fast: false
-        matrix:
-          os: ${{ fromJSON( inputs.os ) }}
-          tests: ${{ fromJSON( inputs.test-unit-names-list ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON( inputs.os ) }}
+        tests: ${{ fromJSON( inputs.test-unit-names-list ) }}
 
-      name: :test (unit)
-      runs-on: ${{ matrix.os }}
+    name: :test (unit)
+    runs-on: ${{ matrix.os }}
 
-      if: inputs.test-unit
-      needs:
-        - build
-      permissions:
-        contents: read
-        packages: read
+    if: inputs.test-unit
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: read
 
-      steps:
-        - uses: milaboratory/github-ci/actions/env@v4
-          with:
-            inputs: ${{ inputs.env }}
-            secrets: ${{ secrets.env }}
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
-        - uses: actions/checkout@v3
-          with:
-            submodules: ${{ inputs.checkout-submodules }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v4
-          if: inputs.git-crypt-unlock
-          with:
-            gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-            gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-        - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v4
-          with:
-            test-name: ${{ matrix.tests }}
-            node-version: ${{ inputs.node-version }}
-            cache-version: ${{ inputs.cache-version }}
-            is-electron-application: ${{ inputs.is-electron-application }}
-            registry-url: ${{ inputs.registry-url }}
-            scope: ${{ inputs.scope }}
-            always-auth: ${{ inputs.always-auth }}
-            npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+      - id: test
+        uses: milaboratory/github-ci/blocks/node/test@v4
+        with:
+          test-name: ${{ matrix.tests }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-      outputs:
-        # Even constant outputs become initialized only after job start.
-        # All outputs of skipped jobs are always empty.
-        started: 'true'
-        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+      artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
 
   notify-test-unit:
     name: notify unit test
@@ -774,54 +852,54 @@ jobs:
           product-name: ${{ needs.test-unit.outputs.artifact-app-name }}
 
   test-static:
-      strategy:
-        fail-fast: false
-        matrix:
-          tests: ${{ fromJSON( inputs.test-static-names-list) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tests: ${{ fromJSON( inputs.test-static-names-list) }}
 
-      name: :test (static)
-      runs-on: ubuntu-latest
+    name: :test (static)
+    runs-on: ubuntu-latest
 
-      if: inputs.test-static
-      needs:
-        - build
-      permissions:
-        contents: read
-        packages: read
+    if: inputs.test-static
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: read
 
-      steps:
-        - uses: milaboratory/github-ci/actions/env@v4
-          with:
-            inputs: ${{ inputs.env }}
-            secrets: ${{ secrets.env }}
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
-        - uses: actions/checkout@v3
-          with:
-            submodules: ${{ inputs.checkout-submodules }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v4
-          if: inputs.git-crypt-unlock
-          with:
-            gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-            gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-        - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v4
-          with:
-            test-name: ${{ matrix.tests }}
-            node-version: ${{ inputs.node-version }}
-            cache-version: ${{ inputs.cache-version }}
-            is-electron-application: ${{ inputs.is-electron-application }}
-            registry-url: ${{ inputs.registry-url }}
-            scope: ${{ inputs.scope }}
-            always-auth: ${{ inputs.always-auth }}
-            npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+      - id: test
+        uses: milaboratory/github-ci/blocks/node/test@v4
+        with:
+          test-name: ${{ matrix.tests }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-      outputs:
-        # Even constant outputs become initialized only after job start.
-        # All outputs of skipped jobs are always empty.
-        started: 'true'
-        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+      artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
 
   notify-test-static:
     name: notify static test
@@ -866,57 +944,57 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           build-status: |
-             ${{ needs.build.result }}
-             ${{ needs.upload-s3.result }}
+            ${{ needs.build.result }}
+            ${{ needs.upload-s3.result }}
           product-name: ${{ needs.build.outputs.artifact-app-name }}
           download-links: ${{ needs.upload-s3.outputs.s3-urls-json }}
 
   can-release:
-      name: Can release
-      runs-on: ubuntu-latest
+    name: Can release
+    runs-on: ubuntu-latest
 
-      needs:
-        - init
-        - build
+    needs:
+      - init
+      - build
 
-      if: always()
-        && fromJSON(needs.init.outputs.is-release)
-        && needs.build.result != 'failure'
+    if: always()
+      && fromJSON(needs.init.outputs.is-release)
+      && needs.build.result != 'failure'
 
-      steps:
-        - shell: bash
-          run: 'true'
+    steps:
+      - shell: bash
+        run: 'true'
 
-      outputs:
-        artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
-        artifact-app-name-slug: ${{ needs.build.outputs.artifact-app-name-slug }}
+    outputs:
+      artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
+      artifact-app-name-slug: ${{ needs.build.outputs.artifact-app-name-slug }}
 
   notify-release-review:
-      name: Notify review required
-      runs-on: ubuntu-latest
+    name: Notify review required
+    runs-on: ubuntu-latest
 
-      if:  always()
-        && needs.can-release.result == 'success'
-        && (
-            needs.test-unit.outputs.started        == 'true'
-          || needs.test-static.outputs.started == 'true'
-        )
+    if:  always()
+      && needs.can-release.result == 'success'
+      && (
+      needs.test-unit.outputs.started        == 'true'
+      || needs.test-static.outputs.started == 'true'
+      )
 
-      needs:
-        - can-release
+    needs:
+      - can-release
 
-        # Send 'review required' notification only after all tests finished
-        - notify-test-unit
-        - notify-test-static
+      # Send 'review required' notification only after all tests finished
+      - notify-test-unit
+      - notify-test-static
 
-      steps:
-        - uses: milaboratory/github-ci/blocks/notify/review-required@v4
-          with:
-            telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-            telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-            message: new version of app is ready for release.
-            product-name: ${{ needs.can-release.outputs.artifact-app-name }}
+          message: new version of app is ready for release.
+          product-name: ${{ needs.can-release.outputs.artifact-app-name }}
 
   release:
     name: Confirm release
@@ -946,7 +1024,7 @@ jobs:
 
     runs-on: ubuntu-latest
     needs:
-     - release
+      - release
 
     environment: release
 
@@ -977,37 +1055,37 @@ jobs:
       release-url: ${{ steps.release.outputs.html_url }}
 
   upload-release-s3:
-      name: Upload archive release to s3
-      runs-on: ubuntu-latest
+    name: Upload archive release to s3
+    runs-on: ubuntu-latest
 
-      if: inputs.release-to-s3 && inputs.dist-archive
-      needs:
-        - release
-      permissions:
-        id-token: write
-        contents: read
+    if: inputs.release-to-s3 && inputs.dist-archive
+    needs:
+      - release
+    permissions:
+      id-token: write
+      contents: read
 
-      steps:
-        - id: s3
-          name: Upload to S3
-          uses: milaboratory/github-ci/blocks/release/s3@v4
-          with:
-            artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}
-            add-version: ${{ inputs.release-s3-add-version }}
-            add-sha: ${{ inputs.release-s3-add-sha }}
+    steps:
+      - id: s3
+        name: Upload to S3
+        uses: milaboratory/github-ci/blocks/release/s3@v4
+        with:
+          artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}
+          add-version: ${{ inputs.release-s3-add-version }}
+          add-sha: ${{ inputs.release-s3-add-sha }}
 
-            s3-iam-role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
-            s3-region: ${{ inputs.release-s3-region }}
-            s3-bucket: ${{ inputs.release-s3-bucket }}
-            s3-path: ${{ inputs.release-s3-path }}
+          s3-iam-role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.release-s3-region }}
+          s3-bucket: ${{ inputs.release-s3-bucket }}
+          s3-path: ${{ inputs.release-s3-path }}
 
-            alternative-urls: ${{ inputs.release-s3-alternative-urls }}
+          alternative-urls: ${{ inputs.release-s3-alternative-urls }}
 
-      outputs:
-        s3-files: ${{ steps.s3.outputs.uploaded }}
-        s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
-        s3-urls: ${{ steps.s3.outputs.download }}
-        s3-urls-json: ${{ steps.s3.outputs.download-json }}
+    outputs:
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
 
   notify-release:
     name: notify release

@@ -34,19 +34,48 @@ inputs:
     required: false
     default: 'true'
 
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      npm private registry auth token
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
   steps:
-      - name: Prepare env for Node application build
+      - name: Prepare environment for running a NodeJS application tests
         uses: milaboratory/github-ci/actions/node/prepare@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
 
-      - name: Install node packages with npm
+      - name: Install NodeJS packages with npm
         uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         with:
           run: |
            npm ci
