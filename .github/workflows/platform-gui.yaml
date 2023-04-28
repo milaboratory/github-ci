@@ -95,13 +95,7 @@ on:
         type: string
         required: true
         default: 'build'
-      build-max-attempts:
-        description: |
-          Maximum number of attempts for completing the build and release step
-        type: string
-        required: false
-        default: '1'
-      build-package-root:
+      build-working-directory:
         description: |
           Directory where NPM/Yarn commands should be run
         type: string
@@ -113,18 +107,12 @@ on:
         type: string
         required: false
         default: false
-      electron-build-args:
+      electron-builder-args:
         description: |
           Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
         type: string
         required: false
         default: ''
-      is-vue-project:
-        description: |
-          This is vue-based project. Use 'vue-cli' toolkit
-        type: boolean
-        required: false
-        default: false
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
@@ -688,27 +676,25 @@ jobs:
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
-          build-max-attempts: ${{ inputs.build-max-attempts }}
-          build-package-root: ${{ inputs.build-package-root }}
+          build-working-directory: ${{ inputs.build-working-directory }}
           skip-build: ${{ inputs.skip-build }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          electron-build-args: ${{ inputs.electron-build-args }}
-          is-vue-project: ${{ inputs.is-vue-project }}
-          is-release: ${{ needs.init.outputs.is-release }}
-          mac_sign_cert: ${{ secrets.MAC_SIGN_CERT }}
-          mac_sign_cert_pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
-          mac_notr_api_key: ${{ secrets.MAC_NOTR_API_KEY }}
-          mac_notr_api_key_id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
-          mac_notr_api_key_issuer_id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
-          win_sign_cert: ${{ secrets.WIN_SIGN_CERT }}
-          win_sign_cert_pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          electron-builder-args: ${{ inputs.electron-builder-args }}
+          is-release: ${{ steps.context.outputs.is-release }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          mac-sign-cert: ${{ secrets.MAC_SIGN_CERT }}
+          mac-sign-cert-pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+          mac-notr-api-key: ${{ secrets.MAC_NOTR_API_KEY }}
+          mac-notr-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
+          mac-notr-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
+          win-sign-cert: ${{ secrets.WIN_SIGN_CERT }}
+          win-sign-cert-pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           registry-url: ${{ inputs.registry-url }}
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
-          is-electron-application: ${{ inputs.is-electron-application }}
           gradle-properties: ${{ secrets.GRADLE_PROPERTIES }}
 
       - id: artifact
