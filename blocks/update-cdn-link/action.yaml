@@ -64,7 +64,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -73,7 +73,7 @@ runs:
         aws-region: ${{ inputs.s3-region }}
 
     - name: Update website-redirect-location metadata in the file
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           aws s3api put-object --bucket ${{ inputs.s3-bucket }} \

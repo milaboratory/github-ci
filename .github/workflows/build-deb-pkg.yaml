@@ -89,9 +89,9 @@ jobs:
           ref: ${{ inputs.repo-ref }}
           path: ${{ inputs.src-path }}
 
-      - uses: milaboratory/github-ci/actions/deb/setup-deb-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/deb/setup-deb-s3@v4
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           SRC_PATH: ${{ inputs.src-path }}
           DEB_CFG_PATH: ${{ inputs.deb-conf-path }}
@@ -100,7 +100,7 @@ jobs:
           run: |
             mv -v "${DEB_CFG_PATH}/debian" "${SRC_PATH}/"
 
-      - uses: milaboratory/github-ci/actions/deb/build@v4-beta
+      - uses: milaboratory/github-ci/actions/deb/build@v4
         env: ${{ fromJSON(inputs.buildpackage-env) }}
         with:
           docker-image: ${{ inputs.docker-image }}
@@ -112,7 +112,7 @@ jobs:
           role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           S3_BUCKET_NAME: ${{ inputs.aws-s3-bucket-name }}
           SRC_PATH: ${{ inputs.src-path }}
