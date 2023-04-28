@@ -605,6 +605,9 @@ jobs:
       packages: read
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
