@@ -104,6 +104,19 @@ on:
         type: string
         required: false
         default: '{}'
+      build-cache-paths:
+        description: |
+          List of paths to files or folders to restore/cache before/after each build run.
+        type: string
+        required: false
+        default: ''
+      build-cache-key:
+        description:
+          Key for additional build cache.
+          Must be used in conjunction with <build-cache-paths>
+        type: string
+        required: false
+        default: ''
       #
       # Test control
       #
@@ -119,6 +132,19 @@ on:
         type: string
         required: false
         default: 'go test ./...'
+      test-integration-cache-paths:
+        description: |
+          List of paths to files or folders to restore/cache before/after each integration tests run.
+        type: string
+        required: false
+        default: ''
+      test-integration-cache-key:
+        description: |
+          Key for additional integration tests cache.
+          Must be used in conjunction with <test-integration-cache-paths>
+        type: string
+        required: false
+        default: ''
       test-integration-logs-path:
         description: |
           The path relative to github.workspace
@@ -363,6 +389,8 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
+          build-cache-paths: ${{ inputs.build-cache-paths }}
+          build-cache-key: ${{ inputs.build-cache-key }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
           artifact-name: ${{ inputs.app-name-slug }}
@@ -463,6 +491,8 @@ jobs:
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
+          test-integration-cache-paths: ${{ inputs.test-integration-cache-paths }}
+          test-integration-cache-key: ${{ inputs.test-integration-cache-key }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           test-command: ${{ inputs.test-integration-command }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -503,5 +533,3 @@ jobs:
           tests-type: 'Integration'
 
           product-name: ${{ inputs.app-name }}
-
-
