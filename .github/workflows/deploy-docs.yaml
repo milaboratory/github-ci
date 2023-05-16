@@ -136,14 +136,14 @@ on:
         type: string
         default: 'true'
       notify-deployment:
-          description: |
+        description: |
             Enable notifications about deployment status (deployment ready/failed)
             Possible values are:
              - 'true' - send all notifications about deployment status (both success and failed)
              - 'false' - don't send notifications about deployment results at all.
-          required: false
-          type: string
-          default: 'true'
+        required: false
+        type: string
+        default: 'true'
     secrets:
       env:
         description: |
@@ -246,9 +246,9 @@ jobs:
   notify-build:
     name: Notify build
     runs-on: ubuntu-latest
-    if: always() 
-      && inputs.notify-telegram 
-      && inputs.notify-build != 'false' 
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
       && needs.build.result != 'cancelled'
     needs:
       - build

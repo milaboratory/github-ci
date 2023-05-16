@@ -60,7 +60,7 @@ runs:
       with:
         dump-stdout: false
         run: |
-          aws s3 sync "$CF_ASSESTS" s3://"$CF_S3_BUCKET_NAME" --delete --acl public-read 
+          aws s3 sync "$CF_ASSESTS" s3://"$CF_S3_BUCKET_NAME" --delete
           if [ "$CF_CACHE_INVALD" == 'true' ];then
             aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
           else

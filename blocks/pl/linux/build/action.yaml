@@ -36,6 +36,17 @@ inputs:
 
     required: false
     default: 'v1'
+  build-cache-paths:
+    description: |
+      List of paths to files or folders to restore/cache before/after each integration tests run.
+    required: false
+    default: ''
+  build-cache-key:
+    description: |
+      Key for additional integration tests cache.
+      Must be used in conjunction with <build-cache-paths>
+    required: false
+    default: ''
   #
   # Github authentication control
   #
@@ -70,7 +81,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a golang application
-      uses:  milaboratory/github-ci/actions/golang/prepare@v4
+      uses: milaboratory/github-ci/actions/golang/prepare@v4
       with:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -78,6 +89,13 @@ runs:
     - uses: milaboratory/github-ci/actions/git/auth@v4
       with:
         github-token: ${{ inputs.github-token }}
+
+    - name: Restore custom cache
+      if: inputs.build-cache-paths != '' && inputs.build-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.build-cache-key }}
+        path: ${{ inputs.build-cache-paths }}
 
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4
@@ -131,5 +149,3 @@ runs:
           ${{ inputs.artifact-paths }}
           !**/*.go
         retention-days: ${{ inputs.artifact-retention }}
-
-

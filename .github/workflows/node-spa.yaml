@@ -360,7 +360,7 @@ jobs:
     name: notify test
     runs-on: ubuntu-latest
 
-    if:  always()
+    if: always()
       && needs.test.outputs.started == 'true'
       && inputs.notify-tests != 'false'
 
