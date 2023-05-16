@@ -278,7 +278,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
@@ -290,7 +290,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: setup-matrix-combinations
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           BAKE_FILE: ${{ inputs.docker-bake-file-path }}
           DOCKER_BAKE_BUILD_CONFIG: ${{ inputs.docker-bake-build-config }}
@@ -319,7 +319,7 @@ jobs:
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
     runs-on: ${{ matrix.agent }}
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -328,13 +328,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -342,7 +342,7 @@ jobs:
             ghwa_set_env "PLATFORM" "${platform//\//-}"
 
       - uses: actions/checkout@v3
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -380,9 +380,9 @@ jobs:
     runs-on: ${{ matrix.agent }}
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -391,14 +391,14 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: docker/setup-qemu-action@v2
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -420,7 +420,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - id: transform-version
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -431,7 +431,7 @@ jobs:
             ghwa_set_output image "${REGISTRY}/${REPOSITORY}"
             ghwa_set_output image_tag "${CURRENT_VERSION}"
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -439,7 +439,7 @@ jobs:
             ghwa_set_env "PLATFORM" "${platform//\//-}"
 
       - id: image-metadata
-        uses: docker/metadata-action@v4-beta
+        uses: docker/metadata-action@v4
         with:
           images: |
             ${{ fromJSON( steps.transform-version.outputs.data ).image }}
@@ -465,13 +465,13 @@ jobs:
             *.cache-from=type=gha,scope=${{ env.APP_NAME }}-${{ env.PLATFORM }}
             ${{ inputs.docker-images-build-args }}
 
-      - uses: milaboratory/github-ci/actions/setup-regctl@v4-beta
+      - uses: milaboratory/github-ci/actions/setup-regctl@v4
         with:
           version: ${{ inputs.regctl-version }}
 
       - id: re-tag-images
         if: github.event_name != 'pull_request'
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           BAKE_FILE: ${{ inputs.docker-bake-file-path }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -490,7 +490,7 @@ jobs:
             printf "Re-tagging: %s\n" "${IMAGE}:${TAG}"
 
       - id: pushed-tags
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: ${{ steps.image-metadata.outputs.tags }}
 
@@ -499,7 +499,7 @@ jobs:
           && inputs.notify-telegram
           && inputs.notify-build != 'false'
           && steps.build-push.conclusion != 'cancelled'
-        uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -522,9 +522,9 @@ jobs:
       contents: read
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -537,11 +537,11 @@ jobs:
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - uses: milaboratory/github-ci/actions/setup-regctl@v4-beta
+      - uses: milaboratory/github-ci/actions/setup-regctl@v4
         with:
           version: ${{ inputs.regctl-version }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -613,7 +613,7 @@ jobs:
       - can-release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -650,16 +650,16 @@ jobs:
       - setup-matrix
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
       - uses: actions/checkout@v3
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -668,7 +668,7 @@ jobs:
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           DEPLOYMENT_VERSION: ${{ steps.context.outputs.current-version }}
           MATRIX_BAKE_TARGETS: ${{ needs.setup-matrix.outputs.matrix-bake-targets }}
@@ -689,7 +689,7 @@ jobs:
             ghwa_set_env "IMAGE_TAGS" "${IMAGE_TAGS}"
 
       - id: helm-deployment
-        uses: milaboratory/github-ci/blocks/eks/deployment@v4-beta
+        uses: milaboratory/github-ci/blocks/eks/deployment@v4
         with:
           kubectl-version: ${{ inputs.kubectl-version }}
           helm-version: ${{ inputs.helm-version }}
@@ -715,7 +715,7 @@ jobs:
       - deployment
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/deployment@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
