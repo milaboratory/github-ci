@@ -723,6 +723,42 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+  setup-tests-matrix:
+    name: :setup tests matrix
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Setup tests matrix
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        id: tests-matrix
+        with:
+          dump-stdout: false
+          run: |
+            # Get all test
+            #INT_TESTS_LIST=$(ls ./itests/ | sed 's/\(.*\)\..*/\1/' | grep -v ignored | sort | jq -R -s -c 'split("\n")[:-1]')
+            # Get only with .sh extensions
+            INT_TESTS_LIST=$(ls ./itests/*.sh | sed 's:\.\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output "int-tests-list" "$INT_TESTS_LIST"
+
+    outputs:
+      int-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).int-tests-list }}
+
   test-unit:
     name: :test (unit)
     runs-on: ubuntu-latest
@@ -811,6 +847,10 @@ jobs:
 
   test-integration:
     name: :test (integration)
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-tests-matrix.outputs.int-tests-list) }}
     runs-on: ubuntu-latest
 
     if: inputs.test-integration
@@ -845,7 +885,7 @@ jobs:
           tasks: ${{ inputs.test-integration-tasks }}
 
           hook-before: .mi-ci/hooks/test-integration-before.sh
-          hook-after: .mi-ci/hooks/test-integration-after.sh
+          hook-after: "./itests.sh test ${{ matrix.test }}"
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
@@ -1038,6 +1078,9 @@ jobs:
       && inputs.dist-library-dev-tasks != ''
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -1054,6 +1097,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - name: publish lib to dev
         uses: milaboratory/github-ci/blocks/java/build@v4-beta
@@ -1339,6 +1388,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - name: publish lib
         uses: milaboratory/github-ci/blocks/java/build@v4-beta
