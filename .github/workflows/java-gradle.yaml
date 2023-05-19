@@ -886,7 +886,7 @@ jobs:
           tasks: ${{ inputs.test-integration-tasks }}
 
           hook-before: .mi-ci/hooks/test-integration-before.sh
-          hook-after: "./itests.sh test ${{ matrix.test }}"
+          test-command: ${{ matrix.test }}
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}

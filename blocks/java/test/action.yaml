@@ -65,6 +65,12 @@ inputs:
     required: false
     default: ''
 
+  test-command:
+    description: |
+      Test command (initiate single test for java project)
+    required: false
+    default: ''
+
   #
   # Test data cache control
   #
@@ -314,8 +320,18 @@ runs:
           ${{ steps.test-tasks.outputs.result }}
         cache-key: ${{ inputs.cache-key }}
 
+    - name: Run test command
+      if: inputs.hook-after == '' && inputs.test-command != ''
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        TEST_CMD: ${{ inputs.test-command }}
+      with:
+        dump-stdout: false
+        run: |
+          ./itests.sh test "${TEST_CMD}"
+
     - name: Run 'after-tests' hook
-      if: inputs.hook-after != ''
+      if: inputs.hook-after != '' && inputs.test-command == ''
       uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
       with:
         script-path: ${{ inputs.hook-after }}
