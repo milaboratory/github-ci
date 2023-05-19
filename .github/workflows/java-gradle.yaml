@@ -855,6 +855,7 @@ jobs:
 
     if: inputs.test-integration
     needs:
+      - setup-tests-matrix
       - build
     permissions:
       id-token: write

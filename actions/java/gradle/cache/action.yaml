@@ -129,7 +129,7 @@ runs:
             awk '/Environment/{print $4}' |
             awk -F '[-.]' '{printf "%s-%s", $1, $2}'
 
-    - uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf
+    - uses: burrunan/gradle-cache-action@2fdc863bcc9ce04960963b43d114102f1ef36423
       id: cache
       with:
         job-id: ${{ steps.job-id.outputs.stdout }}
