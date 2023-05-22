@@ -690,6 +690,9 @@ jobs:
 
     needs:
       - init
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -706,6 +709,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - uses: milaboratory/github-ci/blocks/java/build@v4-beta
         with:
@@ -786,6 +795,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4-beta
         with:
@@ -846,7 +861,7 @@ jobs:
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
 
   test-integration:
-    name: :test (integration)
+    name: :test (int)
     strategy:
       fail-fast: false
       matrix:
@@ -876,6 +891,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4-beta
@@ -966,6 +987,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - uses: milaboratory/github-ci/blocks/java/build@v4-beta
         with:
           project: ${{ inputs.build-project }}
@@ -1019,6 +1046,9 @@ jobs:
     if: inputs.dist-docker
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -1035,6 +1065,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - uses: milaboratory/github-ci/blocks/java/build@v4-beta
         with:
@@ -1119,9 +1155,6 @@ jobs:
           properties: |
             mi-ci-stage=publish
             ${{ secrets.GRADLE_PROPERTIES }}
-            miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
-            miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
-            miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
@@ -1376,6 +1409,9 @@ jobs:
       && inputs.dist-library-release-tasks != ''
     needs:
       - release
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -1412,9 +1448,6 @@ jobs:
 
           properties: |
             mi-ci-stage=publish
-            miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
-            miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
-            miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}

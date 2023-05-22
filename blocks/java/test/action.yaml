@@ -231,7 +231,12 @@ runs:
     - name: Set gradle.properties
       uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
       with:
-        properties: ${{ inputs.properties }}
+        properties: |
+          ${{ inputs.properties }}
+          miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
+          miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
+
+          miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
 
     - name: Read actual project properties
       id: gradle-props
