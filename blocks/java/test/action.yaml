@@ -235,7 +235,6 @@ runs:
           ${{ inputs.properties }}
           miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
           miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
-
           miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
 
     - name: Read actual project properties
