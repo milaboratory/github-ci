@@ -293,6 +293,7 @@ runs:
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
           ${{ steps.before-hooks-tasks.outputs.result }}
+          --debug
         cache-key: ${{ inputs.cache-key }}
 
     - name: Run 'before-tests' hook
