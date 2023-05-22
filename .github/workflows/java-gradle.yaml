@@ -1119,6 +1119,9 @@ jobs:
           properties: |
             mi-ci-stage=publish
             ${{ secrets.GRADLE_PROPERTIES }}
+            miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
+            miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
+            miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
@@ -1409,6 +1412,9 @@ jobs:
 
           properties: |
             mi-ci-stage=publish
+            miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
+            miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
+            miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
