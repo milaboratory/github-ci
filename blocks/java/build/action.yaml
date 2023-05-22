@@ -208,7 +208,6 @@ runs:
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
-          --debug
         cache-key: ${{ inputs.gradle-cache-key }}
 
     - name: Read actual project properties
