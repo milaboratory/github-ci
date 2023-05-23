@@ -231,6 +231,7 @@ runs:
           -Pmi-ci=true
           -Pmi-release=${{ steps.context.outputs.is-release }}
           -Pversion=${{ steps.context.outputs.current-version }}
+          --build-cache
           ${{ steps.excludes.outputs.result }}
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}

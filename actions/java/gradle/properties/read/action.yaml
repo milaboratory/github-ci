@@ -16,12 +16,6 @@ inputs:
     required: false
     default: ''
 
-  cache-key:
-    description: |
-      Key to use for gradle build cache
-    required: false
-    default: ''
-
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
 # 'all' properties to action's outputs.
