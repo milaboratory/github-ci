@@ -81,6 +81,35 @@ on:
         default: 'temurin'
 
       #
+      # Gradle cahce control
+      #
+      gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/test-iam-assume-role' }}
+      gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      #
       # Build control
       #
       build-project:
@@ -725,6 +754,11 @@ jobs:
 
           data-cache-key: ${{ inputs.build-data-cache-key }}
           data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
 
           properties: |
             mi-ci-stage=build
