@@ -268,6 +268,11 @@ runs:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
 
+        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+        cache-read-only: ${{ inputs.gradle-cache-read-only }}
+        cache-write-only: ${{ inputs.gradle-cache-write-only }}
+
     - name: Generate upload path
       id: upload-path
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -309,10 +314,6 @@ runs:
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
       with:
         build-root-directory: ${{ inputs.project-dir }}
-        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
-        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
-        cache-read-only: ${{ inputs.gradle-cache-read-only }}
-        cache-write-only: ${{ inputs.gradle-cache-write-only }}
         arguments: |-
           -Pmi-ci=true
           -Pversion=${{ steps.context.outputs.current-version }}
@@ -340,10 +341,6 @@ runs:
       uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
       with:
         build-root-directory: ${{ inputs.project-dir }}
-        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
-        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
-        cache-read-only: ${{ inputs.gradle-cache-read-only }}
-        cache-write-only: ${{ inputs.gradle-cache-write-only }}
         arguments: |-
           -Pmi-ci=true
           -Pversion=${{ steps.context.outputs.current-version }}
