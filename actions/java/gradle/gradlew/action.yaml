@@ -73,6 +73,7 @@ runs:
         cache-write-only: ${{ inputs.cache-write-only }}
         gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
         gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+        arguments: ${{ inputs.arguments }}
         build-root-directory: ${{ inputs.build-root-directory }}
         gradle-executable: ${{ inputs.gradle-executable }}
         generate-job-summary: ${{ inputs.generate-job-summary }}
