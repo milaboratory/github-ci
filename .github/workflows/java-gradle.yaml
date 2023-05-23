@@ -843,6 +843,11 @@ jobs:
           before-hooks-tasks: ${{ inputs.test-unit-before-tasks }}
           tasks: ${{ inputs.test-unit-tasks }}
 
+          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
+
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
 
@@ -940,7 +945,11 @@ jobs:
           before-hooks-tasks: ${{ inputs.test-integration-before-tasks }}
           tasks: ${{ inputs.test-integration-tasks }}
 
-          hook-before: .mi-ci/hooks/test-integration-before.sh
+          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
+
           test-command: ${{ matrix.test }}
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
