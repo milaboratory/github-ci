@@ -1002,6 +1002,7 @@ jobs:
           gradle-cache-read-only: ${{ inputs.test-integration-gradle-cache-read-only }}
           gradle-cache-write-only: ${{ inputs.test-integration-gradle-cache-write-only }}
 
+          hook-before: .mi-ci/hooks/test-integration-before.sh
           test-command: ${{ matrix.test }}
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
