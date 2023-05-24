@@ -2,7 +2,7 @@ name: Prepare environment for building a Golang application
 author: 'MiLaboratories'
 description: |
   Prepare environment: install specific version of Golang, restore cache for modules.
-  
+
 inputs:
   golang-version:
     description: |

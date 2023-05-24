@@ -81,6 +81,87 @@ on:
         default: 'temurin'
 
       #
+      # Gradle cache control
+      #
+      build-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+      build-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      build-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      build-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-unit-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+      test-unit-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-unit-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-unit-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-integration-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: 'true'
+      test-integration-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-integration-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-integration-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      #
       # Build control
       #
       build-project:
@@ -690,6 +771,9 @@ jobs:
 
     needs:
       - init
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -707,6 +791,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - uses: milaboratory/github-ci/blocks/java/build@v4
         with:
           project: ${{ inputs.build-project }}
@@ -717,11 +807,52 @@ jobs:
           data-cache-key: ${{ inputs.build-data-cache-key }}
           data-cache-paths: ${{ inputs.build-data-cache-paths }}
 
+          gradle-home-cache-includes: ${{ inputs.build-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.build-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.build-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.build-gradle-cache-write-only }}
+
           properties: |
             mi-ci-stage=build
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+  setup-tests-matrix:
+    name: :setup tests matrix
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Setup tests matrix
+        uses: milaboratory/github-ci/actions/shell@v4
+        id: tests-matrix
+        with:
+          dump-stdout: false
+          run: |
+            # Get all test
+            #INT_TESTS_LIST=$(ls ./itests/ | sed 's/\(.*\)\..*/\1/' | grep -v ignored | sort | jq -R -s -c 'split("\n")[:-1]')
+            # Get only with .sh extensions
+            INT_TESTS_LIST=$(ls ./itests/*.sh | sed 's:\.\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output "int-tests-list" "$INT_TESTS_LIST"
+
+    outputs:
+      int-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).int-tests-list }}
 
   test-unit:
     name: :test (unit)
@@ -750,6 +881,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4
         with:
@@ -757,6 +894,11 @@ jobs:
           project-dir: ${{ inputs.build-project-dir }}
           before-hooks-tasks: ${{ inputs.test-unit-before-tasks }}
           tasks: ${{ inputs.test-unit-tasks }}
+
+          gradle-home-cache-includes: ${{ inputs.test-unit-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-unit-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-unit-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-unit-gradle-cache-write-only }}
 
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
@@ -810,11 +952,16 @@ jobs:
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
 
   test-integration:
-    name: :test (integration)
+    name: :test (int)
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-tests-matrix.outputs.int-tests-list) }}
     runs-on: ubuntu-latest
 
     if: inputs.test-integration
     needs:
+      - setup-tests-matrix
       - build
     permissions:
       id-token: write
@@ -836,6 +983,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4
         with:
@@ -844,8 +997,12 @@ jobs:
           before-hooks-tasks: ${{ inputs.test-integration-before-tasks }}
           tasks: ${{ inputs.test-integration-tasks }}
 
-          hook-before: .mi-ci/hooks/test-integration-before.sh
-          hook-after: .mi-ci/hooks/test-integration-after.sh
+          gradle-home-cache-includes: ${{ inputs.test-integration-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-integration-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-integration-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-integration-gradle-cache-write-only }}
+
+          test-command: ${{ matrix.test }}
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
@@ -925,6 +1082,12 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
       - uses: milaboratory/github-ci/blocks/java/build@v4
         with:
           project: ${{ inputs.build-project }}
@@ -978,6 +1141,10 @@ jobs:
     if: inputs.dist-docker
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -994,6 +1161,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - uses: milaboratory/github-ci/blocks/java/build@v4
         with:
@@ -1038,6 +1211,9 @@ jobs:
       && inputs.dist-library-dev-tasks != ''
     needs:
       - build
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -1054,6 +1230,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - name: publish lib to dev
         uses: milaboratory/github-ci/blocks/java/build@v4
@@ -1323,6 +1505,9 @@ jobs:
       && inputs.dist-library-release-tasks != ''
     needs:
       - release
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4
@@ -1339,6 +1524,12 @@ jobs:
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - name: publish lib
         uses: milaboratory/github-ci/blocks/java/build@v4

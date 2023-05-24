@@ -16,11 +16,31 @@ inputs:
     required: false
     default: ''
 
-  cache-key:
+  #
+  # Cache gradle control
+  #
+  cache-read-only:
     description: |
-      Key to use for gradle build cache
+      When 'true', existing entries will be read from the cache but no entries will be written.
+      By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
     required: false
-    default: ''
+    default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+  cache-write-only:
+    description: |
+      When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+      Setting this to 'true' implies cache-read-only will be 'false'.
+    required: false
+    default: 'false'
+  gradle-home-cache-includes:
+    description: Paths within Gradle User Home to cache.
+    required: false
+    default: |
+      caches
+      notifications
+  gradle-home-cache-excludes:
+    description: Paths within Gradle User Home to exclude from cache.
+    required: false
+
 
 # Feel free to add more properties here.
 # The underlying script supports all properties by default, but there is no way to pass
@@ -47,10 +67,13 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/java/gradle/cache@v4
+    - uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
       with:
-        job-id: ${{ inputs.cache-key }}
         build-root-directory: ${{ inputs.project-dir }}
+        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+        cache-read-only: ${{ inputs.cache-read-only }}
+        cache-write-only: ${{ inputs.cache-write-only }}
 
     - name: Read and print properties
       id: props

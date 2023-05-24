@@ -1,43 +1,82 @@
 name: Run 'gradlew'
 author: 'MiLaboratories'
 description: |
-  Run 'gradlew' script located in gradle project proot
+  Run 'gradlew' script located in gradle project root
+  See original action gradle/gradle-build-action
 
 inputs:
+  gradle-version:
+    description: Gradle version to use
+    required: false
+    default: 'wrapper'
+  cache-disabled:
+    description: When 'true', all caching is disabled. No entries will be written to or read from the cache.
+    required: false
+    default: 'false'
+  cache-read-only:
+    description: |
+      When 'true', existing entries will be read from the cache but no entries will be written.
+      By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+    required: false
+    default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+  cache-write-only:
+    description: |
+      When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+      Setting this to 'true' implies cache-read-only will be 'false'.
+    required: false
+    default: 'false'
+  gradle-home-cache-includes:
+    description: Paths within Gradle User Home to cache.
+    required: false
+    default: |
+      caches
+      notifications
+  gradle-home-cache-excludes:
+    description: Paths within Gradle User Home to exclude from cache.
+    required: false
   arguments:
-    description: |
-      Newline-separated list of arguments to run.
-    required: true
-
-  properties:
-    description: |
-      Properties to set for each task run
+    description: Gradle command line arguments (supports multi-line input)
     required: false
-    default: ''
-
-  working-directory:
-    description: |
-      Path to directory with ./gradlew file
+  build-root-directory:
+    description: Path to the root directory of the build
     required: false
-    default: ./
-
-  cache-key:
-    description: |
-      Key to use for gradle build cache, shared across builds in single repository.
+  gradle-executable:
+    description: Path to the Gradle executable
     required: false
-    default: ''
+  generate-job-summary:
+    description: When 'false', no Job Summary will be generated for the Job.
+    required: false
+    default: 'true'
+  gradle-home-cache-strict-match:
+    description: When 'true', the action will not attempt to restore the Gradle User Home entries from other Jobs.
+    required: false
+    default: 'false'
+  workflow-job-context:
+    description: Used to uniquely identify the current job invocation. Defaults to the matrix values for this job; this should not be overridden by users (INTERNAL).
+    required: false
+    default: ${{ toJSON(matrix) }}
+  gradle-home-cache-cleanup:
+    description: When 'true', the action will attempt to remove any stale/unused entries from the Gradle User Home prior to saving to the GitHub Actions cache.
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
 
   steps:
-    - name: Run 'gradlew ${{ inputs.target }}'
-      uses: milaboratory/github-ci/actions/java/gradle/cache@v4
+    - name: Run gradlew
+      uses: gradle/gradle-build-action@v2
       with:
-        job-id: ${{ inputs.cache-key }}
-        build-root-directory: ${{ inputs.working-directory }}
-        properties: |-
-          mi-ci=true
-          mi-release=false
-          ${{ inputs.properties }}
+        gradle-version: ${{ inputs.gradle-version }}
+        cache-disabled: ${{ inputs.cache-disabled }}
+        cache-read-only: ${{ inputs.cache-read-only }}
+        cache-write-only: ${{ inputs.cache-write-only }}
+        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
         arguments: ${{ inputs.arguments }}
+        build-root-directory: ${{ inputs.build-root-directory }}
+        gradle-executable: ${{ inputs.gradle-executable }}
+        generate-job-summary: ${{ inputs.generate-job-summary }}
+        gradle-home-cache-strict-match: ${{ inputs.gradle-home-cache-strict-match }}
+        workflow-job-context: ${{ inputs.workflow-job-context }}
+        gradle-home-cache-cleanup: ${{ inputs.gradle-home-cache-cleanup }}
