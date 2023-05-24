@@ -234,7 +234,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -247,7 +247,7 @@ jobs:
       - init
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -256,13 +256,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -290,7 +290,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -323,7 +323,7 @@ jobs:
       - can-release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -367,7 +367,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -376,7 +376,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -387,7 +387,7 @@ jobs:
           name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.dist-archive-path }}
 
-      - uses: milaboratory/github-ci/blocks/node/publish@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/publish@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -414,7 +414,7 @@ jobs:
       - publish-to-npm
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

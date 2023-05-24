@@ -177,14 +177,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
   build:
     name: :build
     runs-on: ubuntu-latest
     needs:
       - init
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -193,7 +193,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -204,19 +204,19 @@ jobs:
           python-version: ${{ inputs.python-version }}
           cache: 'pip'
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
             sudo apt-get install -y graphviz
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
             sudo curl -s -L "https://github.com/plantuml/plantuml/releases/download/v${{ inputs.plantuml-version }}/plantuml-${{ inputs.plantuml-version }}.jar" --output /opt/plantuml.jar
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -224,13 +224,13 @@ jobs:
             echo 'java $PLANTUML_JAVAOPTS -jar /opt/plantuml.jar ${@}' >> /usr/local/bin/plantuml
             chmod +x /usr/local/bin/plantuml
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
             pip install -r requirements.txt
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         with:
           dump-stdout: false
           run: |
@@ -253,7 +253,7 @@ jobs:
     needs:
       - build
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -272,14 +272,14 @@ jobs:
       contents: read
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
       - uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.app-name-slug }}
 
-      - uses: milaboratory/github-ci/actions/aws/cloudfront@v4-beta
+      - uses: milaboratory/github-ci/actions/aws/cloudfront@v4
         with:
           aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}
@@ -299,7 +299,7 @@ jobs:
       - deployment
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/deployment@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
