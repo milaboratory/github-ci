@@ -81,30 +81,82 @@ on:
         default: 'temurin'
 
       #
-      # Gradle cahce control
+      # Gradle cache control
       #
-      gradle-cache-read-only:
+      build-gradle-cache-read-only:
         description: |
           When 'true', existing entries will be read from the cache but no entries will be written.
           By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
         type: string
         required: false
         default: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/test-iam-assume-role' }}
-      gradle-cache-write-only:
+      build-gradle-cache-write-only:
         description: |
           When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
           Setting this to 'true' implies cache-read-only will be 'false'.
         type: string
         required: false
         default: 'false'
-      gradle-home-cache-includes:
+      build-gradle-home-cache-includes:
         description: Paths within Gradle User Home to cache.
         type: string
         required: false
         default: |
           caches
           notifications
-      gradle-home-cache-excludes:
+      build-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-unit-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/test-iam-assume-role' }}
+      test-unit-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-unit-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-unit-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-integration-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: 'true'
+      test-integration-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-integration-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-integration-gradle-home-cache-excludes:
         description: Paths within Gradle User Home to exclude from cache.
         type: string
         required: false
@@ -755,10 +807,10 @@ jobs:
           data-cache-key: ${{ inputs.build-data-cache-key }}
           data-cache-paths: ${{ inputs.build-data-cache-paths }}
 
-          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
-          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
-          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
-          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
+          gradle-home-cache-includes: ${{ inputs.build-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.build-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.build-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.build-gradle-cache-write-only }}
 
           properties: |
             mi-ci-stage=build
@@ -843,10 +895,10 @@ jobs:
           before-hooks-tasks: ${{ inputs.test-unit-before-tasks }}
           tasks: ${{ inputs.test-unit-tasks }}
 
-          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
-          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
-          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
-          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
+          gradle-home-cache-includes: ${{ inputs.test-unit-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-unit-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-unit-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-unit-gradle-cache-write-only }}
 
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
@@ -945,10 +997,10 @@ jobs:
           before-hooks-tasks: ${{ inputs.test-integration-before-tasks }}
           tasks: ${{ inputs.test-integration-tasks }}
 
-          gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
-          gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
-          gradle-cache-read-only: ${{ inputs.gradle-cache-read-only }}
-          gradle-cache-write-only: ${{ inputs.gradle-cache-write-only }}
+          gradle-home-cache-includes: ${{ inputs.test-integration-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-integration-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-integration-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-integration-gradle-cache-write-only }}
 
           test-command: ${{ matrix.test }}
 
