@@ -41,13 +41,13 @@ inputs:
     default: 'false'
   add-os-arch:
     description: |
-      Add agent's operating system architecture to uploaded files 
+      Add agent's operating system architecture to uploaded files
       If a file in the artifact has an extension e.g 'app.zip' and the current ARCH is,
       for instance, 'amd64', the resulting file name would be: 'app-amd64.zip.'
-      
+
       Files without extension ('myfile') will have
-      os architecture appended ('myfile-amd64'). 
-      
+      os architecture appended ('myfile-amd64').
+
       If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
       to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
 
@@ -183,13 +183,13 @@ runs:
       with:
         run: |
           get_os_arch=$(uname -m)
-          case "${get_os_arch}" in          
+          case "${get_os_arch}" in
             x86_64)
               echo "amd64"
-              ;;          
+              ;;
             aarch64 | arm64)
               echo "arm64"
-              ;;         
+              ;;
             *)
               echo "Arch is not in the list: ${get_os_arch}"
               exit 1
