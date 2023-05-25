@@ -839,7 +839,6 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
       - name: notify build
-        runs-on: ubuntu-latest
         if: always()
           && inputs.notify-telegram
           && inputs.notify-build != 'false'
