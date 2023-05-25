@@ -1593,7 +1593,7 @@ jobs:
         with:
           role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.release-s3-region }}
-
+          
       - name: publish lib
         uses: milaboratory/github-ci/blocks/java/build@v4
         with:

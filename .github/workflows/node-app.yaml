@@ -355,7 +355,7 @@ jobs:
     name: publish
     runs-on: ubuntu-latest
 
-    if: always()
+    if: always() 
       && needs.release.result == 'success'
       && startsWith(github.ref, 'refs/tags/v')
 
