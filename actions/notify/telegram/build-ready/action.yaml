@@ -56,9 +56,9 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4
       id: message
       with:
         data: |
@@ -79,9 +79,9 @@ runs:
 
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
-          {{- " " -}} 
+          {{- " " -}}
           \[{{ product["name"] }}] New {{ build["category"] }} build: {{ build["version"] }} on {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
-          
+
           {%- if docker_images | length > 0 %}
           Docker images:
           {%- for i in docker_images %}
@@ -110,7 +110,7 @@ runs:
 
           {{ product["additional_info"] }}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

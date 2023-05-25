@@ -44,10 +44,10 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         DOCKER_IMAGES: ${{ inputs.docker-images }}
       with:
@@ -55,7 +55,7 @@ runs:
         run: |
           ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4
       id: message
       with:
         data: |
@@ -89,7 +89,7 @@ runs:
 
           {{ product["additional_info"] }}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

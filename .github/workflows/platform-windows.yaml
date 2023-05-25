@@ -266,7 +266,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
@@ -279,7 +279,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -302,17 +302,17 @@ jobs:
         run: |
           $ROCKSDB_LIB_PATH = "${{ env.GH_WORKSPACE }}\rocksdb"
           $ROCKSDB_ARCHIVE_NAME = Split-Path ${{ env.ROCKSDB_S3_ARCHIVE_PATH }} -leaf
-          
+
           Write-Output "Downloading pre-build rocksdb libs..."
           aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/${{ env.ROCKSDB_S3_ARCHIVE_PATH }} ./
-          
+
           Write-Output "Unzip pre-build rocksdb libs to '${ROCKSDB_LIB_PATH}'"
           New-Item -ItemType directory -Path "${ROCKSDB_LIB_PATH}"
           7z x -o"${ROCKSDB_LIB_PATH}" "${ROCKSDB_ARCHIVE_NAME}"
-          
-          echo "rocksdb_libs_path=${ROCKSDB_LIB_PATH}" >> ${env:GITHUB_OUTPUT} 
 
-      - uses: milaboratory/github-ci/blocks/pl/windows/build@v4-beta
+          echo "rocksdb_libs_path=${ROCKSDB_LIB_PATH}" >> ${env:GITHUB_OUTPUT}
+
+      - uses: milaboratory/github-ci/blocks/pl/windows/build@v4
         env: ${{ fromJSON(inputs.build-env) }}
         with:
           golang-version: ${{ inputs.golang-version }}
@@ -338,7 +338,7 @@ jobs:
       contents: read
     steps:
       - id: s3
-        uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+        uses: milaboratory/github-ci/blocks/release/s3@v4
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
@@ -376,7 +376,7 @@ jobs:
       - upload-build-results
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
