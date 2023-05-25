@@ -320,19 +320,22 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: ''
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
       test-s3-region:
         description: |
           AWS region with target S3 bucket
         type: string
         required: false
         default: 'eu-central-1'
+
       test-s3-bucket:
         description: |
           S3 bucket to use for tests
         type: string
         required: false
         default: 'milaboratory-artefacts-public-files'
+
       test-s3-path-prefix:
         description: |
           Prefix for all uploaded test files.
@@ -415,7 +418,7 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: ''
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
 
       dist-archive-s3:
         description: |
@@ -459,6 +462,7 @@ on:
         type: string
         default: |
           ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
 
       dist-archive-s3-path:
         description: |
@@ -541,7 +545,6 @@ on:
         default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
         required: false
 
-
       #
       # Library distribution control
       #
@@ -566,6 +569,22 @@ on:
         type: string
         required: false
         default: ''
+
+      dist-library-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      dist-library-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
 
       #
       # Release control
@@ -608,7 +627,7 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: ''
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
 
       release-s3-region:
         description: |
@@ -797,7 +816,8 @@ jobs:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
 
-      - uses: milaboratory/github-ci/blocks/java/build@v4
+      - id: build-gradle
+        uses: milaboratory/github-ci/blocks/java/build@v4
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -818,9 +838,26 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - name: notify build
+        if: always()
+          && inputs.notify-telegram
+          && inputs.notify-build != 'false'
+          && steps.build-gradle.conclusion != 'cancelled'
+
+        uses: milaboratory/github-ci/blocks/notify/build@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ steps.build-gradle.conclusion }}
+          product-name: ${{ inputs.product-name }}
+
   setup-tests-matrix:
     name: :setup tests matrix
     runs-on: ubuntu-latest
+
+    if: inputs.test-integration
     needs:
       - build
     steps:
@@ -884,8 +921,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          aws-region: ${{ inputs.dist-archive-s3-region }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4
@@ -933,6 +970,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
+      && inputs.notify-telegram
       && needs.test-unit.outputs.started == 'true'
       && inputs.notify-tests != 'false'
     needs:
@@ -986,8 +1024,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          aws-region: ${{ inputs.dist-archive-s3-region }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
         uses: milaboratory/github-ci/blocks/java/test@v4
@@ -1037,6 +1075,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
+      && inputs.notify-telegram
       && needs.test-integration.outputs.started == 'true'
       && inputs.notify-tests != 'false'
 
@@ -1135,6 +1174,26 @@ jobs:
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
 
+  notify-build-distArchive:
+    name: notify archive build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.distArchive.result != 'cancelled'
+    needs:
+      - distArchive
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distArchive.result }}
+          product-name: ${{ inputs.product-name }}
+          download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
+
   distDocker:
     name: docker
     runs-on: ubuntu-latest
@@ -1204,6 +1263,26 @@ jobs:
 
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
+  notify-build-distDocker:
+    name: notify docker build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.distDocker.result != 'cancelled'
+    needs:
+      - distDocker
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distDocker.result }}
+          product-name: ${{ inputs.product-name }}
+          docker-images: ${{ needs.distDocker.outputs.docker-tags }}
+
   distLibrary:
     name: library
     runs-on: ubuntu-latest
@@ -1235,8 +1314,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          aws-region: ${{ inputs.dist-archive-s3-region }}
+          role-to-assume: ${{ inputs.dist-library-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-library-s3-region }}
 
       - name: publish lib to dev
         uses: milaboratory/github-ci/blocks/java/build@v4
@@ -1278,8 +1357,28 @@ jobs:
 
       libs-list: ${{ steps.libs-list.outputs.result }}
 
+  notify-build-distLibrary:
+    name: notify library build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.distLibrary.result != 'cancelled'
+    needs:
+      - distLibrary
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distLibrary.result }}
+          product-name: ${{ inputs.product-name }}
+          maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+
   update-cdn-link:
-    name: Update the latest build link on the CDN
+    name: update the latest build link on the CDN
     runs-on: ubuntu-latest
 
     if: inputs.cdn-redirect-s3
@@ -1304,51 +1403,14 @@ jobs:
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v4
         with:
           cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
-          s3-iam-role-to-assume: ${{ inputs.cdn-redirect-s3-iam-role-to-assume }}
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}
           s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
           s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
           s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
 
-
-  notify-build:
-    name: Notify build
-    runs-on: ubuntu-latest
-
-    if:  always()
-      && inputs.notify-telegram
-      && inputs.notify-build != 'false'
-      && needs.build.result != 'cancelled'
-
-    needs:
-      # Get build status from first build job
-      - build
-
-      # Wait for docker image and archive to be built before sending notification
-      - distDocker
-      - distArchive
-      - distLibrary
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v4
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          notification-mode: ${{ inputs.notify-build }}
-          build-status: |
-            ${{ needs.build.result }}
-            ${{ needs.distDocker.result }}
-            ${{ needs.distArchive.result }}
-            ${{ needs.distLibrary.result }}
-
-          product-name: ${{ inputs.product-name }}
-          docker-images: ${{ needs.distDocker.outputs.docker-tags }}
-          maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
-          download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
-
   can-release:
-    name: Can release
+    name: can release
     runs-on: ubuntu-latest
 
     needs:
@@ -1378,7 +1440,7 @@ jobs:
         run: 'true'
 
   notify-release-review:
-    name: Notify review required
+    name: notify review required
     runs-on: ubuntu-latest
 
     if:  always()
@@ -1405,7 +1467,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
 
   release:
-    name: Confirm release
+    name: confirm release
     runs-on: ubuntu-latest
 
     needs:
@@ -1426,7 +1488,7 @@ jobs:
       started: 'true'
 
   create-release:
-    name: GitHub release
+    name: github release
     runs-on: ubuntu-latest
 
     needs:
@@ -1460,7 +1522,7 @@ jobs:
           changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
 
   upload-release-s3:
-    name: S3 archive release
+    name: s3 archive release
     runs-on: ubuntu-latest
 
     if:  always()
@@ -1529,9 +1591,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          aws-region: ${{ inputs.dist-archive-s3-region }}
-
+          role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.release-s3-region }}
+          
       - name: publish lib
         uses: milaboratory/github-ci/blocks/java/build@v4
         with:
