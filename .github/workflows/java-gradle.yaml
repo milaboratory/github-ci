@@ -842,7 +842,8 @@ jobs:
         if: always()
           && inputs.notify-telegram
           && inputs.notify-build != 'false'
-          && steps.build-gradle.conclusion != 'cancelled
+          && steps.build-gradle.conclusion != 'cancelled'
+        
         uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
