@@ -1180,7 +1180,7 @@ jobs:
     if: always()
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && needs.distArchive.result != 'cancelled'
+      && ( needs.distArchive.result != 'cancelled' || needs.distArchive.result != 'skipped' )
     needs:
       - distArchive
     steps:
@@ -1191,7 +1191,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distArchive.result }}
-          product-name: ${{ inputs.product-name }}
+          product-name: format('{0} - Archive', ${{ inputs.product-name }})
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
 
   distDocker:
@@ -1269,7 +1269,7 @@ jobs:
     if: always()
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && needs.distDocker.result != 'cancelled'
+      && ( needs.distDocker.result != 'cancelled' || needs.distDocker.result != 'skipped' )
     needs:
       - distDocker
     steps:
@@ -1280,7 +1280,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distDocker.result }}
-          product-name: ${{ inputs.product-name }}
+          product-name: format('{0} - Docker', ${{ inputs.product-name }})
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
   distLibrary:
@@ -1363,7 +1363,7 @@ jobs:
     if: always()
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && needs.distLibrary.result != 'cancelled'
+      && ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
     needs:
       - distLibrary
     steps:
@@ -1374,7 +1374,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distLibrary.result }}
-          product-name: ${{ inputs.product-name }}
+          product-name: format('{0} - Library', ${{ inputs.product-name }})
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
 
   update-cdn-link:
@@ -1593,7 +1593,7 @@ jobs:
         with:
           role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.release-s3-region }}
-          
+
       - name: publish lib
         uses: milaboratory/github-ci/blocks/java/build@v4
         with:
