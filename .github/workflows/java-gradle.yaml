@@ -1191,7 +1191,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distArchive.result }}
-          product-name: format('{0} - Archive', ${{ inputs.product-name }})
+          product-name: ${{ format('{0} - Archive', inputs.product-name) }}
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
 
   distDocker:
@@ -1280,7 +1280,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distDocker.result }}
-          product-name: format('{0} - Docker', ${{ inputs.product-name }})
+          product-name: ${{ format('{0} - Docker', inputs.product-name) }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
 
   distLibrary:
@@ -1374,7 +1374,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ needs.distLibrary.result }}
-          product-name: format('{0} - Library', ${{ inputs.product-name }})
+          product-name: ${{ format('{0} - Library', inputs.product-name) }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
 
   update-cdn-link:
