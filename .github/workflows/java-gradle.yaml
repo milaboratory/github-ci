@@ -1178,6 +1178,7 @@ jobs:
     name: notify archive build
     runs-on: ubuntu-latest
     if: always()
+      && inputs.dist-archive
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distArchive.result != 'cancelled' || needs.distArchive.result != 'skipped' )
@@ -1267,6 +1268,7 @@ jobs:
     name: notify docker build
     runs-on: ubuntu-latest
     if: always()
+      && inputs.dist-docker
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distDocker.result != 'cancelled' || needs.distDocker.result != 'skipped' )
@@ -1361,6 +1363,7 @@ jobs:
     name: notify library build
     runs-on: ubuntu-latest
     if: always()
+      && inputs.dist-library
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
