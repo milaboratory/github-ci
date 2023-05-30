@@ -1273,11 +1273,22 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           CHANGED_FILES: ${{ steps.verify-changed-files.outputs.changed_files }}
+          WORKAROUND_DIR: 'workaround/files'
         with:
           dump-stdout: false
           run: |
             _CHANGED_FILES=$(echo "${CHANGED_FILES}" | sed 's:,:\n:g')
             ghwa_set_output "changed-files" "${_CHANGED_FILES}" "EndOfValue"
+
+            # workaround for upload artifact action to have a file
+            # which doesn't have the same base path as all the other files
+            # this way the action doesn't find any least common ancestor
+            if [ ! -d "${WORKAROUND_DIR}" ];then
+               mkdir -p "${WORKAROUND_DIR}"
+            fi
+            UUID=$(uuidgen)
+            echo "${UUID}" >> "${WORKAROUND_DIR}"/random-uuid
+            ghwa_set_output "workaround-dir" "${WORKAROUND_DIR}"
 
             RAN_SEC=$((RANDOM % 20))
             echo "Wait random number of second before saving the artifact."
@@ -1287,7 +1298,9 @@ jobs:
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         with:
           name: test-regression
-          path: ${{ fromJSON(steps.prepare-files-list.outputs.data).changed-files }}
+          path: |
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).workaround-dir }}
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).changed-files }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
