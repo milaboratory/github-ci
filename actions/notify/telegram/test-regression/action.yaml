@@ -60,6 +60,7 @@ runs:
                       "url": ${{ toJSON(inputs.pull-request-url) }} },
 
             "github": ${{ steps.safe-ctx.outputs.github }}
+          }
 
         template: |
           🅰️ \[{{ product["name"] }}] regression tests changes have been detected {{ build["version"] }}.
