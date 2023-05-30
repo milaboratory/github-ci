@@ -1030,6 +1030,7 @@ jobs:
 
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
+          test-type: 'unit'
 
           test-data-cache-enabled: ${{ inputs.test-unit-cache }}
           test-data-cache-paths: ${{ inputs.test-unit-cache-paths }}
@@ -1133,6 +1134,7 @@ jobs:
 
           hook-before: .mi-ci/hooks/test-integration-before.sh
           test-command: ${{ matrix.test }}
+          test-type: 'integration'
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
@@ -1241,6 +1243,7 @@ jobs:
           hook-before: .mi-ci/hooks/test-regression-before.sh
           test-directory: ${{ inputs.test-regression-directory }}
           test-command: ${{ matrix.test }}
+          test-type: 'regression'
 
           test-data-cache-enabled: ${{ inputs.test-regression-cache }}
           test-data-cache-paths: ${{ inputs.test-regression-cache-paths }}
