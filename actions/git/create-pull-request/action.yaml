@@ -1,9 +1,9 @@
 name: Create pull request
 author: 'MiLaboratories'
 description: |
-  Creates a pull request for changes 
+  Creates a pull request for changes
   to your repository in the actions workspace
-  
+
   See original action peter-evans/create-pull-request/
 
 inputs:
@@ -78,11 +78,26 @@ inputs:
     description: 'Create a draft pull request. It is not possible to change draft status after creation except through the web interface'
     default: 'false'
 
+outputs:
+  pull-request-number:
+    description: 'The pull request number'
+    value: ${{ steps.create.outputs.pull-request-number }}
+  pull-request-url:
+    description: 'The URL of the pull request.'
+    value: ${{ steps.create.outputs.pull-request-url }}
+  pull-request-operation:
+    description: 'The pull request operation performed by the action, `created`, `updated` or `closed`.'
+    value: ${{ steps.create.outputs.pull-request-operation }}
+  pull-request-head-sha:
+    description: 'The commit SHA of the pull request branch.'
+    value: ${{ steps.create.outputs.pull-request-head-sha }}
+
 runs:
   using: "composite"
 
   steps:
     - name: Create Pull Request
+      id: create
       uses: peter-evans/create-pull-request@284f54f989303d2699d373481a0cfa13ad5a6666
       with:
         token: ${{ inputs.token }}
