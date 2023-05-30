@@ -64,6 +64,15 @@ inputs:
     required: false
     default: ''
 
+  test-directory:
+    description: |
+      Change directory into the input directory before running test command.
+      
+      Note here, we run test-command through wrapper script itests.sh 
+      thus this script must also be present in the directory where you are changing into.
+    required: false
+    default: ''
+
   test-command:
     description: |
       Test command (initiate single test for java project)
@@ -354,9 +363,14 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         TEST_CMD: ${{ inputs.test-command }}
+        TEST_DIR: ${{ inputs.test-directory }}
       with:
         dump-stdout: false
         run: |
+          if [ ! -z "${TEST_DIR}" ];then
+            cd "${TEST_DIR}"
+          fi
+          
           ./itests.sh test "${TEST_CMD}"
 
     - name: Run 'after-tests' hook

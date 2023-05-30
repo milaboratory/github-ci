@@ -1,0 +1,29 @@
+name: Verify Changed files
+author: 'MiLaboratories'
+description: |
+  Find files that were modified during workflow execution.
+  See original action tj-actions/verify-changed-files
+
+inputs:
+  files:
+    description: 'File/Directory names to check for uncommited changes.'
+    required: false
+  files-separator:
+    description: 'Separator used to split the `files` input'
+    default: "\n"
+    required: false
+  separator:
+    description: 'Output string separator.'
+    required: false
+    default: " "
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Changed Files
+      uses: tj-actions/verify-changed-files@7517b838f3a0d51de4b334a61ef1330672118927
+      with:
+        files: ${{ inputs.files }}
+        files-separator: ${{ inputs.files-separator }}
+        separator: ${{ inputs.separator }}
