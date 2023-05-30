@@ -4,7 +4,7 @@ description: |
   Creates a pull request for changes
   to your repository in the actions workspace
 
-  See original action peter-evans/create-pull-request/
+  See original action peter-evans/create-pull-request
 
 inputs:
   token:
