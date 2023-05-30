@@ -49,7 +49,7 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/tests@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

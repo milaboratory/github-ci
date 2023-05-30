@@ -1350,7 +1350,7 @@ jobs:
         with:
           add-paths: ${{ steps.verify-changed-files.outputs.changed_files }}
           commit-message: 'regression tests automated change'
-          title: format('Regression tests changes in the {0}', ${{ github.ref_name }})
+          title: ${{ format('Regression tests changes in the {0}', github.ref_name) }}
           body: 'Automated changes generated after CI workflow run.'
           branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
 
@@ -1372,7 +1372,7 @@ jobs:
       - test-regression-create-pr
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/tests-regression@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/test-regression@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
