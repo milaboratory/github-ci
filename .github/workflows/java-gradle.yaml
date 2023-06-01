@@ -256,31 +256,6 @@ on:
       #   default: ''
 
       #
-      # Pull request control
-      #
-      pr-create:
-        description: |
-          Boolean that indicates whether or not to create
-          an automated pull request during workflow run.
-        type: boolean
-        required: false
-        default: false
-
-      pr-force-repo-default-branch:
-        description: |
-          Boolean that indicates whether or not to force
-          repo default branch as base_ref for an automated pull request.
-
-          If you choose not to force the repo default branch then the following
-          procedure will take place. Because the base_ref property is only available
-          when the event that triggers a workflow run is either pull_request or pull_request_target,
-          and due to nature of the git's history that is based on a DAG of commits
-          we are going to try to find the nearest commit that resides
-          on a branch other than the current branch, and find out which branch is that.
-        type: boolean
-        required: false
-        default: false
-      #
       # Tests control
       #
       test-unit:
@@ -1006,65 +981,6 @@ jobs:
       int-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).int-tests-list }}
       reg-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-list }}
       reg-tests-branch-name: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-branch-name }}
-
-  pull-request:
-    name: create auto pull request
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: write
-
-    if: inputs.pr-create
-    needs:
-      - build
-    steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
-        with:
-          inputs: ${{ inputs.env }}
-          secrets: ${{ secrets.env }}
-
-      - uses: actions/checkout@v3
-        with:
-          submodules: ${{ inputs.checkout-submodules }}
-          fetch-depth: 0
-
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
-        if: inputs.git-crypt-unlock
-        with:
-          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
-
-      - id: branch-name
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          FORCE_REPO_DEFAULT_BRANCH: ${{ inputs.pr-force-repo-default-branch }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        with:
-          dump-stdout: false
-          run: |
-            if [ "${FORCE_REPO_DEFAULT_BRANCH}" == "true" ];then
-              echo "Enforcing default branch for the repository as base_ref."
-              ghwa_set_output "base-ref" "${DEFAULT_BRANCH}"
-            else
-              echo "Trying to calculate base_ref based on the commits history."
-              BRANCH_NAME=$(git show-branch | grep '*' \
-                  | grep -v "$(git rev-parse --abbrev-ref HEAD)" \
-                  | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
-              ghwa_set_output "base-ref" "${BRANCH_NAME}"
-            fi
-
-      - id: create-pull-request
-        uses: milaboratory/github-ci/actions/git/create-pull-request@v4-beta
-        with:
-          title: ${{ format('pr for the branch {0}', github.ref_name) }}
-          body: 'Automated pull request created during CI workflow run.'
-          branch: ${{ github.ref_name }}
-          base: ${{ fromJSON(steps.branch-name.outputs.data).base-ref }}
-
-    outputs:
-      started: 'true'
-      pr-number: ${{ steps.create-pull-request.outputs.pull-request-number }}
-      pr-url: ${{ steps.create-pull-request.outputs.pull-request-url }}
 
   test-unit:
     name: :test (unit)
