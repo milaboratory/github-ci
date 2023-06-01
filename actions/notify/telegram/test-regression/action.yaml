@@ -65,7 +65,7 @@ runs:
         template: |
           🅰️ \[{{ product["name"] }}] regression tests changes have been detected {{ build["version"] }}.
           Pull request:
-            - {{ pull_request["url"] }}     
+            - {{ pull_request["url"] }}
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](

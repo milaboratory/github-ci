@@ -1010,6 +1010,9 @@ jobs:
   pull-request:
     name: create auto pull request
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: writeg
 
     if: inputs.pr-create
     needs:
@@ -1479,7 +1482,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if: needs.test-regression-create-pr.outputs.started == 'true'
-      && needs.test-regression-create-pr.outputs.pr-operation != 'closed'
+      && needs.test-regression-create-pr.outputs.pr-number != ''
 
     needs:
       - test-regression-create-pr
