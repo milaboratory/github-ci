@@ -1012,7 +1012,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-      contents: writeg
+      contents: write
 
     if: inputs.pr-create
     needs:
