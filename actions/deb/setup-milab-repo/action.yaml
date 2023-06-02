@@ -30,7 +30,7 @@ runs:
         role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/shell@v4
       env:
         APT_REPO_S3_BUCKET_NAME: ${{ inputs.aws-s3-apt-repository-bucket-name }}
       with:

@@ -47,9 +47,9 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
