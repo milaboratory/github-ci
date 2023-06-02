@@ -1404,11 +1404,15 @@ jobs:
       - test-regression-create-pr
     steps:
       - uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PR_URL: ${{ needs.test-regression-create-pr.outputs.pr-url }}
         with:
           dump-stdout: false
           run: |
             echo "Regression tests changes have been detected."
             echo "Fail workflow on purpose, so a developer doesn't forget to commit them."
+            echo "Please, review changes in: ${PR_URL}"
+
             exit 1
 
   notify-test-regression:
