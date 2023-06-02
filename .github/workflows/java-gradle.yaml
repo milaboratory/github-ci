@@ -161,6 +161,32 @@ on:
         type: string
         required: false
 
+      test-regression-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: 'true'
+      test-regression-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-regression-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-regression-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
       #
       # Build control
       #
@@ -311,6 +337,61 @@ on:
         type: string
         required: false
         default: ''
+
+      test-regression:
+        description: |
+          Run regression tests
+        type: boolean
+        required: false
+        default: false
+      test-regression-before-tasks:
+        description: |
+          Run these gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-regression-tasks:
+        description: |
+          Run these gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
+      test-regression-cache:
+        description: |
+          Cache test data for integration tests
+        type: boolean
+        required: false
+        default: false
+      test-regression-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each integration tests run
+        type: string
+        required: false
+        default: ''
+      test-regression-cache-key:
+        description: |
+          Key for integration tests cached data
+        type: string
+        required: false
+        default: ''
+      test-regression-directory:
+        description: |
+          Change directory into the input directory before running test command.
+        type: string
+        required: false
+        default: 'regression'
+      test-regression-changed-files-list:
+        description: |
+          The list of folders and/or files to track changes
+          after regression tests execution.
+        type: string
+        required: false
+        default: |
+          regression/cli-help
+          regression/presets
+          regression/reports
+          regression/schemas
+
       #
       # Test reports control
       #
@@ -857,7 +938,7 @@ jobs:
     name: :setup tests matrix
     runs-on: ubuntu-latest
 
-    if: inputs.test-integration
+    if: inputs.test-integration || inputs.test-regression
     needs:
       - build
     steps:
@@ -882,14 +963,24 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            # Get all test
+            # Get all integration tests
             #INT_TESTS_LIST=$(ls ./itests/ | sed 's/\(.*\)\..*/\1/' | grep -v ignored | sort | jq -R -s -c 'split("\n")[:-1]')
-            # Get only with .sh extensions
+            # Get integration tests with only .sh extensions
             INT_TESTS_LIST=$(ls ./itests/*.sh | sed 's:\.\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
             ghwa_set_output "int-tests-list" "$INT_TESTS_LIST"
 
+            # Get regression tests with only .sh extensions
+            REG_TESTS_LIST=$(ls ./regression/itests/*.sh | sed 's:\.\/regression\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output "reg-tests-list" "$REG_TESTS_LIST"
+
+            # Generate branch name for regression tests
+            REG_TESTS_BRANCH_NAME="mixcr-regression-tests/${GITHUB_REF_NAME}"
+            ghwa_set_output "reg-tests-branch-name" "$REG_TESTS_BRANCH_NAME"
+
     outputs:
       int-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).int-tests-list }}
+      reg-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-list }}
+      reg-tests-branch-name: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-branch-name }}
 
   test-unit:
     name: :test (unit)
@@ -939,6 +1030,7 @@ jobs:
 
           hook-before: .mi-ci/hooks/test-unit-before.sh
           hook-after: .mi-ci/hooks/test-unit-after.sh
+          test-type: 'unit'
 
           test-data-cache-enabled: ${{ inputs.test-unit-cache }}
           test-data-cache-paths: ${{ inputs.test-unit-cache-paths }}
@@ -1042,6 +1134,7 @@ jobs:
 
           hook-before: .mi-ci/hooks/test-integration-before.sh
           test-command: ${{ matrix.test }}
+          test-type: 'integration'
 
           test-data-cache-enabled: ${{ inputs.test-integration-cache }}
           test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
@@ -1094,6 +1187,254 @@ jobs:
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
+
+  test-regression:
+    name: :test (reg)
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-tests-matrix.outputs.reg-tests-list) }}
+    runs-on: ubuntu-latest
+
+    if: inputs.test-regression
+    needs:
+      - setup-tests-matrix
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: 0
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.test-s3-region }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v4
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          before-hooks-tasks: ${{ inputs.test-regression-before-tasks }}
+          tasks: ${{ inputs.test-integration-tasks }}
+
+          gradle-home-cache-includes: ${{ inputs.test-regression-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-regression-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-regression-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-regression-gradle-cache-write-only }}
+
+          hook-before: .mi-ci/hooks/test-regression-before.sh
+          test-directory: ${{ inputs.test-regression-directory }}
+          test-command: ${{ matrix.test }}
+          test-type: 'regression'
+
+          test-data-cache-enabled: ${{ inputs.test-regression-cache }}
+          test-data-cache-paths: ${{ inputs.test-regression-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-regressionn-cache-key }}
+
+          properties: |
+            mi-ci-stage=test
+            mi-ci-test-type=regression
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.test-s3-region }}
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+
+      - id: verify-changed-files
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
+        with:
+          files: ${{ inputs.test-regression-changed-files-list }}
+          separator: ','
+
+      - id: prepare-files-list
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          CHANGED_FILES: ${{ steps.verify-changed-files.outputs.changed_files }}
+          WORKAROUND_DIR: 'workaround/files'
+        with:
+          dump-stdout: false
+          run: |
+            _CHANGED_FILES=$(echo "${CHANGED_FILES}" | sed 's:,:\n:g')
+            ghwa_set_output "changed-files" "${_CHANGED_FILES}" "EndOfValue"
+
+            # workaround for upload artifact action to have a file
+            # which doesn't have the same base path as all the other files
+            # this way the action doesn't find any least common ancestor
+            if [ ! -d "${WORKAROUND_DIR}" ];then
+               mkdir -p "${WORKAROUND_DIR}"
+            fi
+            UUID=$(uuidgen)
+            echo "${UUID}" >> "${WORKAROUND_DIR}"/random-uuid
+            ghwa_set_output "workaround-dir" "${WORKAROUND_DIR}"
+
+            RAN_SEC=$((RANDOM % 20))
+            echo "Wait random number of second before saving the artifact."
+            sleep "${RAN_SEC}"
+
+      - uses: actions/upload-artifact@v3
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        with:
+          name: test-regression
+          path: |
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).workaround-dir }}
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).changed-files }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+
+  test-regression-create-pr:
+    name: :test (reg) create pr
+    runs-on: ubuntu-latest
+
+    needs:
+      - test-regression
+      - setup-tests-matrix
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - id: artifact
+        uses: milaboratory/github-ci/actions/artifact/exists@v4
+        with:
+          name: test-regression
+
+      - uses: actions/checkout@v3
+        if: steps.artifact.outputs.exists == 'true'
+        with:
+          fetch-depth: 0
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock && steps.artifact.outputs.exists == 'true'
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: actions/download-artifact@v3
+        if: steps.artifact.outputs.exists == 'true'
+        with:
+          name: test-regression
+
+      - id: verify-changed-files
+        if: steps.artifact.outputs.exists == 'true'
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
+        with:
+          files: ${{ inputs.test-regression-changed-files-list }}
+          separator: ','
+
+      - id: create-pull-request
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: milaboratory/github-ci/actions/git/create-pull-request@v4
+        with:
+          add-paths: ${{ steps.verify-changed-files.outputs.changed_files }}
+          commit-message: 'regression tests automated change'
+          title: ${{ format('Regression tests changes in the {0}', github.ref_name) }}
+          body: 'Automated changes generated after CI workflow run.'
+          branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
+
+    outputs:
+      started: 'true'
+      pr-number: ${{ steps.create-pull-request.outputs.pull-request-number }}
+      pr-url: ${{ steps.create-pull-request.outputs.pull-request-url }}
+      pr-operation: ${{ steps.create-pull-request.outputs.pull-request-operation }}
+
+  notify-test-regression-changes:
+    name: notify regression tests changes
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram
+      && needs.test-regression-create-pr.outputs.started == 'true'
+      && needs.test-regression-create-pr.outputs.pr-number != ''
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-regression-create-pr
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/test-regression@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          pull-request-url: ${{ needs.test-regression-create-pr.outputs.pr-url }}
+          pull-request-number: ${{ needs.test-regression-create-pr.outputs.pr-number }}
+
+  fail-workflow-on-test-regression-changes:
+    name: fail workflow on regression tests changes
+    runs-on: ubuntu-latest
+
+    if: needs.test-regression-create-pr.outputs.started == 'true'
+      && needs.test-regression-create-pr.outputs.pr-number != ''
+
+    needs:
+      - test-regression-create-pr
+    steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            echo "Regression tests changes have been detected."
+            echo "Fail workflow on purpose, so a developer doesn't forget to commit them."
+            exit 1
+
+  notify-test-regression:
+    name: notify regression test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && needs.test-regression.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-regression
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-regression.result }}
+          tests-type: 'Regression'
+
+          product-name: ${{ inputs.product-name }}
+          report-url: ${{ fromJSON(needs.test-regression.outputs.report-uploaded) && needs.test-regression.outputs.report-url || '' }}
 
   distArchive:
     name: archive
@@ -1182,8 +1523,11 @@ jobs:
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distArchive.result != 'cancelled' || needs.distArchive.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
     needs:
       - distArchive
+      - build
+
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
@@ -1272,8 +1616,11 @@ jobs:
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distDocker.result != 'cancelled' || needs.distDocker.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
     needs:
       - distDocker
+      - build
+
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
@@ -1367,8 +1714,11 @@ jobs:
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
       && ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
     needs:
       - distLibrary
+      - build
+
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
@@ -1432,6 +1782,7 @@ jobs:
       && needs.distArchive.result != 'failure'
       && needs.distLibrary.result != 'failure'
 
+
       && (
            needs.distDocker.result  != 'skipped'
         || needs.distArchive.result != 'skipped'
@@ -1451,6 +1802,7 @@ jobs:
       && (
            needs.test-unit.outputs.started        == 'true'
         || needs.test-integration.outputs.started == 'true'
+        || needs.test-regression.outputs.started == 'true'
       )
 
     needs:
@@ -1459,6 +1811,7 @@ jobs:
       # Send 'review required' notification only after all tests finished
       - notify-test-unit
       - notify-test-integration
+      - notify-test-regression
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/review-required@v4

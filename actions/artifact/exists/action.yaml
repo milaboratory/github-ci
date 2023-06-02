@@ -1,0 +1,24 @@
+name: Check artifact existence
+author: 'MiLaboratories'
+description: |
+  Check existence of an artifact uploaded in the workflow by the upload-artifact action
+  See original action xSAVIKx/artifact-exists-action
+
+inputs:
+  name:
+    description: 'Artifact name'
+    required: true
+outputs:
+  exists:
+    description: 'Boolean indicating that artifact exist'
+    value: ${{ steps.check.outputs.exists }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Check artifact existence
+      id: check
+      uses: xSAVIKx/artifact-exists-action@a9dc5938acb0f91260b31a952a914001defb642c
+      with:
+        name: ${{ inputs.name }}
