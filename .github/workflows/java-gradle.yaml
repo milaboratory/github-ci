@@ -1333,7 +1333,6 @@ jobs:
           name: test-regression
 
       - uses: actions/checkout@v3
-        if: steps.artifact.outputs.exists == 'true'
         with:
           fetch-depth: 0
 
@@ -1349,14 +1348,12 @@ jobs:
           name: test-regression
 
       - id: verify-changed-files
-        if: steps.artifact.outputs.exists == 'true'
         uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
         with:
           files: ${{ inputs.test-regression-changed-files-list }}
           separator: ','
 
       - id: create-pull-request
-        if: steps.verify-changed-files.outputs.files_changed == 'true'
         uses: milaboratory/github-ci/actions/git/create-pull-request@v4
         with:
           add-paths: ${{ steps.verify-changed-files.outputs.changed_files }}
@@ -1378,6 +1375,7 @@ jobs:
     if: inputs.notify-telegram
       && needs.test-regression-create-pr.outputs.started == 'true'
       && needs.test-regression-create-pr.outputs.pr-number != ''
+      && needs.test-regression-create-pr.outputs.pr-operation != 'closed'
       && inputs.notify-tests != 'false'
 
     needs:
@@ -1399,6 +1397,7 @@ jobs:
 
     if: needs.test-regression-create-pr.outputs.started == 'true'
       && needs.test-regression-create-pr.outputs.pr-number != ''
+      && needs.test-regression-create-pr.outputs.pr-operation != 'closed'
 
     needs:
       - test-regression-create-pr
@@ -1531,7 +1530,6 @@ jobs:
     needs:
       - distArchive
       - build
-
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
@@ -1624,7 +1622,6 @@ jobs:
     needs:
       - distDocker
       - build
-
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
@@ -1722,7 +1719,6 @@ jobs:
     needs:
       - distLibrary
       - build
-
     steps:
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
