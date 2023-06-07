@@ -126,13 +126,6 @@ on:
         type: string
         required: true
         default: 'build-next'
-      build-demo-script-env:
-        description: |
-          JSON-encoded environment variables to set for 'npm run <build-script-name>':
-          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
-        type: string
-        required: false
-        default: '{}'
       build-demo-artifact-path:
         description:
           The name of a distribution folder for demo suite.
@@ -396,8 +389,21 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - name: Set upload path for the next.js static build
+        id: upload-path
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          VERSION: ${{ steps.context.outputs.current-version }}
+          S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
+        wi
+        th:
+          run: |
+            _PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
+            echo "${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
+
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
-        env: ${{ fromJSON(inputs.build-demo-script-env) }}
+        env:
+          PATH_PREFIX: ${{ steps.upload-path.outputs.stdout }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-demo-script-name }}
