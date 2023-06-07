@@ -447,7 +447,6 @@ jobs:
             echo "${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
 
       - name: Upload demo suite
-        if: 1 > 2
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           ARCHIVE_PATH: ${{ inputs.build-demo-artifact-path }}
