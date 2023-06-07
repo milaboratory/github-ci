@@ -413,7 +413,7 @@ jobs:
           retention-days: ${{ inputs.build-demo-artifact-retention }}
 
   upload-demo-suite:
-    name: :build-demo-suite
+    name: :upload-demo-suite
     runs-on: ubuntu-latest
 
     needs:
@@ -443,11 +443,11 @@ jobs:
         env:
           VERSION: ${{ steps.context.outputs.current-version }}
         with:
-          dump-stdout: false
           run: |
             echo "${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
 
       - name: Upload demo suite
+        if: 1 > 2
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           ARCHIVE_PATH: ${{ inputs.build-demo-artifact-path }}
@@ -457,9 +457,9 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            aws s3 cp --recursive \
-            "${ARCHIVE_PATH}" \
-            "s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${UPLOAD_PATH}"
+            echo "aws s3 cp --recursive"
+            echo "${ARCHIVE_PATH}"
+            echo "s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${UPLOAD_PATH}"
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -490,7 +490,7 @@ jobs:
           build-status: |
             ${{ needs.build-demo-suite.result }}
           product-name: ${{ format('{0} - demo suite', inputs.app-name) }}
-          download-links: ${{ needs.upload-demo-suite.outputs.suite-url }}
+          download-links: ${{ fromJSON(needs.upload-demo-suite.outputs.suite-url) }}
 
   test-unit:
     name: :test (unit)
@@ -530,6 +530,11 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
 
   notify-test-unit:
     name: notify unit test
@@ -593,12 +598,17 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
   notify-test-static:
     name: notify static test
     runs-on: ubuntu-latest
 
     if: always()
-      && needs.test-unit.outputs.started == 'true'
+      && needs.test-static.outputs.started == 'true'
       && inputs.notify-tests != 'false'
 
     needs:
