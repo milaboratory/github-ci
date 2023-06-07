@@ -436,7 +436,7 @@ jobs:
           role-to-assume: ${{ inputs.build-demo-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.build-demo-s3-region }}
 
-      - names: Set upload path for the demo suite
+      - name: Set upload path for the demo suite
         id: upload-path
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
