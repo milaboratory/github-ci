@@ -390,6 +390,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Set upload path for the next.js static build
+        if: 1 > 2
         id: upload-path
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
