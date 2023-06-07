@@ -463,7 +463,7 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-      suite-url: https://cdn.mixcr.com/internal/ci/${{ steps.upload-path.outputs.stdout }}/index.html
+      suite-url: https://cdn.mixcr.com/internal/ci/tests/${{ steps.upload-path.outputs.stdout }}/index.html
 
   notify-build-demo-suite:
     name: Notify build demo suite
