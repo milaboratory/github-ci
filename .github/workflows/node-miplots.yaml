@@ -454,11 +454,10 @@ jobs:
           S3_BUCKET: ${{ inputs.build-demo-s3-bucket }}
           S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
         with:
-          dump-stdout: false
           run: |
-            echo "aws s3 cp --recursive"
-            echo "${ARCHIVE_PATH}"
-            echo "s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${UPLOAD_PATH}"
+            aws s3 cp --recursive \
+            "${ARCHIVE_PATH}" \
+            "s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${UPLOAD_PATH}"
 
     outputs:
       # Even constant outputs become initialized only after job start.
