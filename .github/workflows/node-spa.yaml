@@ -204,6 +204,16 @@ on:
         type: string
         default: 'true'
 
+      notify-deployment:
+        description: |
+          Enable notifications about deployment status (deployment ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about deployment status (both success and failed)
+           - 'false' - don't send notifications about deployment results at all.
+        required: false
+        type: string
+        default: 'true'
+
     secrets:
       env:
         description: |
@@ -256,6 +266,9 @@ jobs:
       - init
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -286,6 +299,28 @@ jobs:
           name: ${{ inputs.app-name-slug }}
           path: ${{ inputs.dist-archive-path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build.result != 'cancelled'
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
 
   test:
     name: :test
@@ -324,38 +359,6 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  deployDist:
-    name: deploy
-    runs-on: ubuntu-latest
-
-    needs:
-      - init
-      - build
-      - test
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.app-name-slug }}
-
-      - uses: milaboratory/github-ci/actions/aws/cloudfront@v4-beta
-        with:
-          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
-          aws-region: ${{ inputs.aws-region }}
-          aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
-          aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
-          aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
-          dist-assets: ${{ inputs.app-name-slug }}/
-
-
   notify-test:
     name: notify test
     runs-on: ubuntu-latest
@@ -379,24 +382,52 @@ jobs:
 
           product-name: ${{ inputs.app-name }}
 
-  notify-build:
-    name: Notify build
+  deployment:
+    name: :deployment
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+      - test
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.app-name-slug }}
+
+      - uses: milaboratory/github-ci/actions/aws/cloudfront@v4-beta
+        with:
+          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+          aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
+          aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
+          aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
+          dist-assets: ${{ inputs.app-name-slug }}/
+
+  notify-deployment:
+    name: notify deployment
     runs-on: ubuntu-latest
 
     if: always()
       && inputs.notify-telegram
-      && inputs.notify-build != 'false'
-      && needs.build.result != 'cancelled'
-
+      && inputs.notify-deployment != 'false'
     needs:
-      - build
+      - deployment
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          build-status: |
-            ${{ needs.build.result }}
+          job-status: |
+            ${{ needs.deployment.result }}
           product-name: ${{ inputs.app-name }}

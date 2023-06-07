@@ -1,6 +1,4 @@
-# This workflow will build and upload application on the github's npm registry.
-
-name: Build and Upload Application
+name: Build MiPlots4
 
 on:
   workflow_call:
@@ -71,7 +69,6 @@ on:
           Node version to use
         type: string
         required: true
-
       #
       # Cache control
       #
@@ -86,9 +83,9 @@ on:
         required: false
         default: 'v1'
 
-     #
-     # Build control
-     #
+      #
+      # Build control
+      #
       build-version:
         description: |
           Set version number in 'package.json' file to given value.
@@ -100,30 +97,117 @@ on:
         type: string
         required: true
         default: 'build'
+      build-script-env:
+        description: |
+          JSON-encoded environment variables to set for 'npm run <build-script-name>':
+          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
+        type: string
+        required: false
+        default: '{}'
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
           if 'false', enables cache for a generic NodeJS application.
         type: string
         required: false
-        default: 'true'
+        default: 'false'
 
       #
-      # Archive distribution control
+      # Build demo control
       #
-      dist-archive-path:
-        description:
-          The name of a distribution folder for nodejs application.
+      build-demo-version:
+        description: |
+          Set version number in 'package.json' file to given value.
         type: string
         required: false
-        default: 'dist'
-
-      dist-artifact-retention:
+      build-demo-script-name:
+        description: |
+          The name of a build script
+        type: string
+        required: true
+        default: 'build-next'
+      build-demo-script-env:
+        description: |
+          JSON-encoded environment variables to set for 'npm run <build-script-name>':
+          Example: '{ "SOME_VAR_NAME": "variable custom value" }'
+        type: string
+        required: false
+        default: '{}'
+      build-demo-artifact-path:
+        description:
+          The name of a distribution folder for demo suite.
+        type: string
+        required: false
+        default: 'out'
+      build-demo-artifact-retention:
         description: |
           Time in days to keep build artifacts before removing them
         type: number
         required: false
         default: 7
+      #
+      # AWS control for build demo
+      #
+      build-demo-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::511903394050:role/milab-euce1-prod-github-oidc-role-miplots4'
+      build-demo-s3-region:
+        description: |
+          Upload build demo artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+      build-demo-s3-bucket:
+        description: |
+          Upload build demo artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milab-euce1-prod-pkgs-s3-public-artifacts'
+      build-demo-s3-path-prefix:
+        description: |
+          Prefix for all uploaded demo suite files.
+
+          Demo suite will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<app-version>/<hash>/'
+
+        required: false
+        default: 'cdn/internal/ci/tests'
+
+      #
+      # Test control
+      #
+      test-unit:
+        description: |
+          Run unit tests
+        type: boolean
+        required: false
+        default: false
+      test-unit-script-name:
+        description: |
+          The name of a unit test script
+          e.g. 'test:e2e', 'test:main' e.t.c
+        type: string
+        required: false
+        default: ''
+      test-static:
+        description: |
+          Run static tests
+        type: boolean
+        required: false
+        default: false
+      test-static-script-name:
+        description: |
+          The name of a static test script
+          e.g. 'lint', 'typecheck' e.t.c
+        type: string
+        required: false
+        default: ''
 
       #
       # NPM registry settings
@@ -135,45 +219,18 @@ on:
         type: string
         required: false
         default: 'https://npm.pkg.github.com'
-
       scope:
         description: |
           Scope for authenticating against npm registries.
         type: string
         required: false
         default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
       always-auth:
         description: |
           Set always-auth in npmrc.
         type: string
         required: false
         default: 'false'
-
-      #
-      # Release control
-      #
-      changelog-exclude-types:
-        description: |
-          Comma-separated list of change types to skip during
-          changelog generation for release.
-
-          See 'Conventional Commits' spec for more info:
-          https://www.conventionalcommits.org/en/v1.0.0/
-
-          Default: 'doc,chore'
-        type: string
-        required: false
-        default: doc,chore
-
-      release-github-draft:
-        description: |
-          Create GitHub Release draft instead of final release.
-          This makes developer to manually confirm release publication, but
-          also allows to update release description and changelog before publication.
-        type: boolean
-        required: false
-        default: false
 
       #
       # Notifications
@@ -225,6 +282,7 @@ on:
         description: |
           ID of Telegram Channel or User to notify on build results.
         required: false
+
       TELEGRAM_API_TOKEN:
         description: |
           Telegram Bot API authorization token
@@ -280,19 +338,13 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+        env: ${{ fromJSON(inputs.build-script-env) }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
-
-      - id: artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.dist-archive-path }}
-          retention-days: ${{ inputs.dist-artifact-retention }}
 
   notify-build:
     name: Notify build
@@ -316,72 +368,139 @@ jobs:
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
 
-  can-release:
-    name: Can release
+  build-demo-suite:
+    name: :build-demo-suite
     runs-on: ubuntu-latest
 
     needs:
       - init
       - build
 
-    if: always() && fromJSON(needs.init.outputs.is-release) && needs.build.result != 'failure'
-
     steps:
-      - shell: bash
-        run: 'true'
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
-  notify-release-review:
-    name: Notify review required
-    runs-on: ubuntu-latest
-
-    if: always() && needs.can-release.result == 'success'
-
-    needs:
-      - can-release
-
-    steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
-          message: new version of nodejs app is ready for release.
-          product-name: ${{ inputs.app-name }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
 
-  release:
-    name: Confirm release
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+        env: ${{ fromJSON(inputs.build-demo-script-env) }}
+        with:
+          build-version: ${{ steps.context.outputs.current-version }}
+          build-script-name: ${{ inputs.build-demo-script-name }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+
+      - id: artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ format('{0}-demo-suite', inputs.app-name-slug) }}
+          path: ${{ inputs.build-demo-artifact-path }}
+          retention-days: ${{ inputs.build-demo-artifact-retention }}
+
+  upload-demo-suite:
+    name: :build-demo-suite
     runs-on: ubuntu-latest
 
     needs:
-      - can-release
-
-    if: always() && needs.can-release.result == 'success'
-
-    environment: release
+      - build-demo-suite
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
-      - shell: bash
-        run: 'true'
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ format('{0}-demo-suite', inputs.app-name-slug) }}
+          path: ${{ inputs.build-demo-artifact-path }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.build-demo-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.build-demo-s3-region }}
+
+      - names: Set upload path for the demo suite
+        id: upload-path
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          VERSION: ${{ steps.context.outputs.current-version }}
+        with:
+          dump-stdout: false
+          run: |
+            echo "${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
+
+      - name: Upload demo suite
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          ARCHIVE_PATH: ${{ inputs.build-demo-artifact-path }}
+          UPLOAD_PATH: ${{ steps.upload-path.outputs.stdout }}
+          S3_BUCKET: ${{ inputs.build-demo-s3-bucket }}
+          S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
+        with:
+          dump-stdout: false
+          run: |
+            aws s3 cp --recursive \
+            "${ARCHIVE_PATH}" \
+            "s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${UPLOAD_PATH}"
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
+      suite-url: https://cdn.mixcr.com/internal/ci/${{ steps.upload-path.outputs.stdout }}/index.html
 
-  publish-to-npm:
-    name: publish
+  notify-build-demo-suite:
+    name: Notify build demo suite
     runs-on: ubuntu-latest
 
     if: always()
-      && needs.release.result == 'success'
-      && startsWith(github.ref, 'refs/tags/v')
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build-demo-suite.result != 'cancelled'
+      && needs.upload-demo-suite.result != 'cancelled'
 
     needs:
-      - release
+      - build-demo-suite
+      - upload-demo-suite
 
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ needs.build-demo-suite.result }}
+          product-name: ${{ format('{0} - demo suite', inputs.app-name) }}
+          download-links: ${{ needs.upload-demo-suite.outputs.suite-url }}
+
+  test-unit:
+    name: :test (unit)
+    runs-on: ubuntu-latest
+
+    if: inputs.test-unit
+    needs:
+      - build
     permissions:
-      packages: write
       contents: read
+      packages: read
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
@@ -399,13 +518,10 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: actions/download-artifact@v3
+      - id: test
+        uses: milaboratory/github-ci/blocks/node/test@v4-beta
         with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.dist-archive-path }}
-
-      - uses: milaboratory/github-ci/blocks/node/publish@v4-beta
-        with:
+          test-name: ${{ inputs.test-unit-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
@@ -414,30 +530,87 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-    outputs:
-      # Even constant outputs become initialized only after job start.
-      # All outputs of skipped jobs are always empty.
-      started: 'true'
-
-  notify-release:
-    name: notify release
+  notify-test-unit:
+    name: notify unit test
     runs-on: ubuntu-latest
 
     if: always()
-      && needs.release.result == 'success'
-      && startsWith(github.ref, 'refs/tags/v')
+      && needs.test-unit.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
     needs:
-      - release
-      - publish-to-npm
+      - test-unit
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          job-status: |
-            ${{ needs.create-release.result }}
-            ${{ needs.publish-to-npm.result }}
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-unit.result }}
+          tests-type: 'Unit'
+
+          product-name: ${{ inputs.app-name }}
+
+  test-static:
+    name: :test (static)
+    runs-on: ubuntu-latest
+
+    if: inputs.test-static
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/node/test@v4-beta
+        with:
+          test-name: ${{ inputs.test-static-script-name }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-test-static:
+    name: notify static test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.test-unit.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-static
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-static.result }}
+          tests-type: 'Static'
 
           product-name: ${{ inputs.app-name }}
