@@ -177,6 +177,7 @@ on:
             's3://<bucket>/<path-prefix>/<repository>/<app-version>/<hash>/'
 
         required: false
+        type: string
         default: 'cdn/internal/ci/tests'
 
       #
