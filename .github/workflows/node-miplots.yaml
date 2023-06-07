@@ -488,7 +488,7 @@ jobs:
           build-status: |
             ${{ needs.build-demo-suite.result }}
           product-name: ${{ format('{0} - demo suite', inputs.app-name) }}
-          download-links: ${{ fromJSON(needs.upload-demo-suite.outputs.suite-url) }}
+          additional-info: ${{ needs.upload-demo-suite.outputs.suite-url }}
 
   test-unit:
     name: :test (unit)
