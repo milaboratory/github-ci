@@ -816,6 +816,18 @@ on:
         type: string
         default: 'true'
 
+      notify-tests-regression:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'failure-only'
+
     secrets:
       env:
         description: |
@@ -1432,7 +1444,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          notification-mode: ${{ inputs.notify-tests }}
+          notification-mode: ${{ inputs.notify-tests-regression }}
           tests-status: ${{ needs.test-regression.result }}
           tests-type: 'Regression'
 
