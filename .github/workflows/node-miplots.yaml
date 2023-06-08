@@ -84,6 +84,16 @@ on:
         default: 'v1'
 
       #
+      # CDN control
+      #
+      cdn-url:
+        description: |
+          Main part of the CDN URL.
+        type: string
+        required: false
+        default: 'https://cdn.mixcr.com'
+
+      #
       # Build control
       #
       build-version:
@@ -395,10 +405,11 @@ jobs:
         env:
           VERSION: ${{ steps.context.outputs.current-version }}
           S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
+          CDN_URL: ${{ inputs.cdn-url }}
         with:
           run: |
             _PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
-            echo "${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}/"
+            echo "${CDN_URL}/${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}/"
 
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         env:
