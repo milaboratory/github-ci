@@ -395,11 +395,10 @@ jobs:
         env:
           VERSION: ${{ steps.context.outputs.current-version }}
           S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
-          CDN_URL: 'https://cdn.mixcr.com'
         with:
           run: |
             _PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
-            echo "${CDN_URL}/${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
+            echo "${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}/"
 
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         env:
