@@ -57,17 +57,18 @@ runs:
 
         template: |
           💩 \[{{ product["name"] }}] Build failed: {{ build["version"] }}
-            Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
-          \[ [Source code](
-            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-          ) | [CI logs](
-            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-          ) ]
+          Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
 
           {%- if github["event_name"] == "push" %}
           Author: {{ github["event"]["head_commit"]["committer"]["username"] }}
           Commit message: {{ github["event"]["head_commit"]["message"] }}
           {%- endif %}
+
+          \[ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          ) ]
 
           {%- if product["additional_info"] | length > 0 %}
           Additional info:

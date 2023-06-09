@@ -117,7 +117,7 @@ runs:
           Additional info:
             {{ product["additional_info"] }}
           {%- endif %}
-          Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
