@@ -132,7 +132,7 @@ runs:
           ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
           ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
-          ghwa_set_output "search-tags" "${SEARCH_TAGS}:-[]"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
 
     - name: Report build is ready
       if:  steps.build-status.outputs.status == 'success'
