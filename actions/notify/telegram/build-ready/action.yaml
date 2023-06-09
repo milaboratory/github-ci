@@ -45,6 +45,12 @@ inputs:
     required: false
     default: '[]'
 
+  search-tags:
+    description: |
+      Search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -75,7 +81,8 @@ runs:
 
             "docker_images": ${{ inputs.docker-images }},
             "maven_packages": ${{ inputs.maven-packages }},
-            "download_links": ${{ inputs.download-links }} }
+            "download_links": ${{ inputs.download-links }},
+            "search_tags": ${{ inputs.search-tags }} }
 
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
@@ -114,6 +121,7 @@ runs:
           ) ]
 
           {{ product["additional_info"] }}
+          \Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:
