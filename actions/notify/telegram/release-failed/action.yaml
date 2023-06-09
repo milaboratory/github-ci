@@ -26,6 +26,12 @@ inputs:
       Release tag
     required: true
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -49,7 +55,10 @@ runs:
             "release": { "version": ${{ toJSON(inputs.version) }},
                          "tag": ${{ toJSON(inputs.tag) }} },
 
-            "github": ${{ steps.safe-ctx.outputs.github }} }
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "search_tags": ${{ inputs.search-tags }}
+          }
 
         template: |
           ☠️ \[{{ product["name"] }}] Release failed! :(
@@ -61,8 +70,11 @@ runs:
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
-          {{ product["additional_info"] }}
-
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
+          Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

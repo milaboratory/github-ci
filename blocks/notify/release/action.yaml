@@ -55,6 +55,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Additional text to append to message
@@ -74,6 +80,21 @@ runs:
       with:
         statuses: ${{ inputs.job-status }}
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - name: Report 'release failed' to Telegram
       if: steps.job-status.outputs.status != 'success'
       uses: milaboratory/github-ci/actions/notify/telegram/release-failed@v4-beta
@@ -84,6 +105,7 @@ runs:
         product-name: ${{ inputs.product-name }}
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
 
         additional-info: ${{ inputs.additional-info }}
 
@@ -98,7 +120,8 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
 
-        docker-images: ${{ inputs.docker-images }}
-        maven-packages: ${{ inputs.maven-packages }}
-        download-links: ${{ inputs.download-links }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
+        download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}

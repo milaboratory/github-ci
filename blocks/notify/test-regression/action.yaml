@@ -36,6 +36,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Additional text to append to message
@@ -49,6 +55,15 @@ runs:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4-beta
       with:
         telegram-target: ${{ inputs.telegram-target }}
@@ -58,5 +73,6 @@ runs:
         build-version: ${{ steps.context.outputs.current-version }}
         pull-request-url: ${{ inputs.pull-request-url }}
         pull-request-number: ${{ inputs.pull-request-number }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
 
         additional-info: ${{ inputs.additional-info }}

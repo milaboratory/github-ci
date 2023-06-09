@@ -31,18 +31,24 @@ inputs:
       List of docker images related to build in JSON format
       Empty string is treated as empty JSON list ('[]') for convenience.
     required: false
-    default: ''
+    default: '[]'
 
   maven-packages:
     description: |
       List of maven packages related to build in JSON format
       Empty string is treated as empty JSON list ('[]') for convenience.
     required: false
-    default: ''
+    default: '[]'
 
   download-links:
     description: |
       URLs to add to notification message. E.g. binary download URL.
+    required: false
+    default: '[]'
+
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
     required: false
     default: '[]'
 
@@ -59,19 +65,6 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
-        DOCKER_IMAGES: ${{ inputs.docker-images }}
-        DOWNLOAD_LINKS: ${{ inputs.download-links }}
-      with:
-        dump-stdout: false
-        run: |
-          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
-          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
-          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
-
     - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
       id: message
       with:
@@ -84,9 +77,10 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }},
-            "maven_packages": ${{ fromJSON(steps.json.outputs.data).maven-packages }},
-            "download_links": ${{ fromJSON(steps.json.outputs.data).download-links }} }
+            "docker_images": ${{ inputs.docker-images }},
+            "maven_packages": ${{ inputs.maven-packages }},
+            "download_links": ${{ inputs.download-links }},
+            "search_tags": ${{ inputs.search-tags }} }
 
         template: |
           🚀 \[{{ product["name"] }}] New release: [{{ release["version"] }}](
@@ -119,7 +113,12 @@ runs:
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
-          {{ product["additional_info"] }}
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
+          Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
+
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:
