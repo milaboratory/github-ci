@@ -121,7 +121,7 @@ runs:
           ) ]
 
           {{ product["additional_info"] }}
-          \Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
+          Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

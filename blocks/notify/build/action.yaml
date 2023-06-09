@@ -65,6 +65,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+     List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Any additional text to append to notification.
@@ -119,12 +125,14 @@ runs:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
         DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
       with:
         dump-stdout: false
         run: |
           ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
           ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS}:-[]"
 
     - name: Report build is ready
       if:  steps.build-status.outputs.status == 'success'
@@ -142,4 +150,5 @@ runs:
         docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
         maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
         download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}
