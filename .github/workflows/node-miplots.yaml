@@ -496,6 +496,13 @@ jobs:
       - upload-demo-suite
 
     steps:
+      - id: search-tags
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            demosuite
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -503,9 +510,7 @@ jobs:
 
           build-status: |
             ${{ needs.build-demo-suite.result }}
-          search-tags: |
-            build
-            demosuite
+          search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ format('{0} - demo suite', inputs.app-name) }}
           additional-info: ${{ needs.upload-demo-suite.outputs.suite-url }}
 
