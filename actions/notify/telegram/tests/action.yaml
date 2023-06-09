@@ -41,6 +41,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -71,7 +77,9 @@ runs:
 
             "status_icons": { "success": "✅",
                               "failure": "❌",
-                              "cancelled": "⏹️" }
+                              "cancelled": "⏹️" },
+
+            "search_tags": ${{ inputs.search-tags }}
           }
 
         template: |
@@ -89,7 +97,12 @@ runs:
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
-          {{ product["additional_info"] }}
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif }
+          Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
+
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

@@ -102,24 +102,7 @@ runs:
       with:
         statuses: ${{ inputs.build-status }}
 
-    - name: Report build failure to Telegram
-      if:  steps.build-status.outputs.status != 'success'
-        && inputs.notification-mode != 'success-only'
-
-      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v4-beta
-      with:
-        telegram-target: ${{ inputs.telegram-target }}
-        telegram-token: ${{ inputs.telegram-token }}
-
-        product-name: ${{ inputs.product-name }}
-        build-version: ${{ steps.context.outputs.current-version }}
-
-        additional-info: ${{ inputs.additional-info }}
-
     - id: json
-      if:  steps.build-status.outputs.status == 'success'
-        && inputs.notification-mode != 'failure-only'
-
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
@@ -133,6 +116,21 @@ runs:
           ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
           ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
           ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Report build failure to Telegram
+      if:  steps.build-status.outputs.status != 'success'
+        && inputs.notification-mode != 'success-only'
+
+      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v4-beta
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.context.outputs.current-version }}
+
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
 
     - name: Report build is ready
       if:  steps.build-status.outputs.status == 'success'

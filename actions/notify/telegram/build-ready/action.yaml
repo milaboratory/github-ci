@@ -47,7 +47,7 @@ inputs:
 
   search-tags:
     description: |
-      Search tags for the telegram notification channel
+      List of search tags for the telegram notification channel
     required: false
     default: '[]'
 
@@ -120,7 +120,10 @@ runs:
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
 
-          {{ product["additional_info"] }}
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif }
           Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta

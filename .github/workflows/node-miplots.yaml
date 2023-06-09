@@ -363,6 +363,12 @@ jobs:
       - build
 
     steps:
+      - id: search-tags
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -370,6 +376,7 @@ jobs:
 
           build-status: |
             ${{ needs.build.result }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.app-name }}
 
   build-demo-suite:
@@ -570,6 +577,13 @@ jobs:
       - test-unit
 
     steps:
+      - id: search-tags
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            unit
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -578,6 +592,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.app-name }}
 
@@ -637,6 +652,13 @@ jobs:
       - test-static
 
     steps:
+      - id: search-tags
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            static
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -645,5 +667,6 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-static.result }}
           tests-type: 'Static'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.app-name }}
