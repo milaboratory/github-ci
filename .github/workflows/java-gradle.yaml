@@ -931,6 +931,13 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
       - name: notify build
         if: always()
           && inputs.notify-telegram
@@ -944,6 +951,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ steps.build-gradle.conclusion }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.product-name }}
 
   setup-tests-matrix:
@@ -1081,6 +1089,14 @@ jobs:
       - test-unit
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            unit
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1089,6 +1105,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
@@ -1188,6 +1205,14 @@ jobs:
       - test-integration
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            integration
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1196,6 +1221,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-integration.result }}
           tests-type: 'Integration'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
@@ -1394,6 +1420,14 @@ jobs:
       - test-regression-create-pr
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            regression
+
       - uses: milaboratory/github-ci/blocks/notify/test-regression@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1402,6 +1436,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
           pull-request-url: ${{ needs.test-regression-create-pr.outputs.pr-url }}
           pull-request-number: ${{ needs.test-regression-create-pr.outputs.pr-number }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   fail-workflow-on-test-regression-changes:
     name: fail workflow on regression tests changes
@@ -1439,6 +1474,14 @@ jobs:
       - test-regression
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            regression
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1447,6 +1490,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests-regression }}
           tests-status: ${{ needs.test-regression.result }}
           tests-type: 'Regression'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-regression.outputs.report-uploaded) && needs.test-regression.outputs.report-url || '' }}
@@ -1543,6 +1587,14 @@ jobs:
       - distArchive
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            archive
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1552,6 +1604,7 @@ jobs:
             ${{ needs.distArchive.result }}
           product-name: ${{ format('{0} - Archive', inputs.product-name) }}
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   distDocker:
     name: docker
@@ -1635,6 +1688,14 @@ jobs:
       - distDocker
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            docker
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1644,6 +1705,7 @@ jobs:
             ${{ needs.distDocker.result }}
           product-name: ${{ format('{0} - Docker', inputs.product-name) }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   distLibrary:
     name: library
@@ -1732,6 +1794,14 @@ jobs:
       - distLibrary
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            library
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1741,6 +1811,7 @@ jobs:
             ${{ needs.distLibrary.result }}
           product-name: ${{ format('{0} - Library', inputs.product-name) }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
     name: update the latest build link on the CDN
@@ -2016,6 +2087,13 @@ jobs:
       - publish-release-lib
 
     steps:
+      g- id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            release
+
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -2030,3 +2108,4 @@ jobs:
 
           maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
           download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
