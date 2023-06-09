@@ -1595,7 +1595,7 @@ jobs:
             build
             archive
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -1696,7 +1696,7 @@ jobs:
             build
             docker
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -1802,7 +1802,7 @@ jobs:
             build
             library
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
