@@ -100,7 +100,7 @@ runs:
           {%- if product["additional_info"] | length > 0 %}
           Additional info:
             {{ product["additional_info"] }}
-          {%- endif }
+          {%- endif %}
           Tags: #{{- github["event"]["repository"]["name"] -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
 
