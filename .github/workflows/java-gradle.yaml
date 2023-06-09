@@ -2087,7 +2087,7 @@ jobs:
       - publish-release-lib
 
     steps:
-      g- id: search-tags
+      - id: search-tags
         if: always()
         uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
         with:
