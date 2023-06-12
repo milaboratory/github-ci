@@ -82,10 +82,8 @@ inputs:
   s3-path-prefix:
     description: |
       Prefix for all uploaded obfuscation mapping files.
-
-      obfuscation mapping file will be uploaded to:
-        's3://<bucket>/<path-prefix>/<repository>/<hash_commit_short>/<run-number>-<random-str>/obfuscation'
-        's3://<bucket>/<path-prefix>/<repository>/<hash_commit_full>/<run-number>-<random-str>/obfuscation'
+      Obfuscation mapping file will be uploaded to:
+        's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/obfuscation'
 
     required: false
     default: 'cdn/internal/ci'
@@ -317,7 +315,7 @@ runs:
           fi
 
           _S3_PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
-          OBFUS_MAPPING_LOCAL_PATH="${BUILD_DIR}/${MAPPING_FILE}"
+          OBFUS_MAPPING_LOCAL_PATH="${BUILD_DIR}/${OBFUS_MAPPING_FILE}"
           OBFUS_MAPPING_LINK="${CDN_URL}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${OBFUS_MAPPING_FILE}"
 
           if ! [ -e "${OBFUS_MAPPING_LOCAL_PATH}" ]; then

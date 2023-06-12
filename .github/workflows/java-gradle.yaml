@@ -582,6 +582,16 @@ on:
         required: false
         default: 'cdn/software/${{ github.event.repository.name }}'
 
+      dist-archive-s3-path-prefix:
+        description: |
+          Prefix for all uploaded obfuscation mapping files.
+          Obfuscation mapping file will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/obfuscation'
+
+        type: string
+        required: false
+        default: 'cdn/internal/ci'
+
       dist-archive-s3-add-version:
         description: |
           Add version number to all files uploaded to S3 bucket.
