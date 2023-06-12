@@ -159,19 +159,6 @@ inputs:
       Set it to 'false' if you want to skip report upload steps
     required: false
     default: 'true'
-
-  s3-iam-role-to-assume:
-    description: |
-      The ARN of a IAM role to assume and configure the Actions environment with
-      assumed role credentials.
-    required: false
-    default: ''
-
-  s3-region:
-    description: |
-      AWS region with target S3 bucket
-    required: false
-    default: 'eu-central-1'
   s3-bucket:
     description: |
       S3 bucket to use for tests
@@ -247,13 +234,6 @@ runs:
   steps:
     - id: context
       uses: milaboratory/github-ci/actions/context@v4-beta
-
-    - name: Configure AWS credentials
-      if: inputs.s3-iam-role-to-assume != '' && inputs.upload-report == 'true'
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
-        aws-region: ${{ inputs.s3-region }}
 
     - name: Prepare env for Java application build
       uses: actions/setup-java@v3

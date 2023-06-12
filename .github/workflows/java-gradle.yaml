@@ -242,6 +242,13 @@ on:
         type: string
         default: ''
 
+      build-upload-obfuscation-mapping:
+        description: |
+          Whether or not to upload obfuscation mapping to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
+
       # artifact-paths:
       #   description: |
       #     List of paths to artifacts to save after build run.
@@ -294,6 +301,12 @@ on:
         type: string
         required: false
         default: ''
+      test-unit-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
 
       test-integration:
         description: |
@@ -337,6 +350,12 @@ on:
         type: string
         required: false
         default: ''
+      test-integration-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
 
       test-regression:
         description: |
@@ -391,6 +410,12 @@ on:
           regression/presets
           regression/reports
           regression/schemas
+      test-regression-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
 
       #
       # Test reports control
@@ -587,6 +612,16 @@ on:
         type: string
         required: false
         default: 'false'
+
+      #
+      # CDN control
+      #
+      cdn-url:
+        description: |
+          Main part of the CDN URL.
+        type: string
+        required: false
+        default: 'https://cdn.milaboratory.com'
 
       #
       # CDN redirect link control
@@ -931,6 +966,10 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path-prefix: ${{ inputs.dist-archive-s3-path-prefix }}
+          upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
+
       - id: search-tags
         if: always()
         uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
@@ -953,6 +992,7 @@ jobs:
             ${{ steps.build-gradle.conclusion }}
           search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.product-name }}
+          additional-info: ${{ env.OBFUS_MAPPING_LINK }}
 
   setup-tests-matrix:
     name: :setup tests matrix
@@ -1032,7 +1072,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1063,11 +1103,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-unit-upload-report }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1145,7 +1183,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1178,11 +1216,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-integration-upload-report }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1190,7 +1226,7 @@ jobs:
       started: 'true'
 
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
-      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   notify-test-integration:
     name: notify integration test
@@ -1262,7 +1298,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1285,7 +1321,7 @@ jobs:
 
           test-data-cache-enabled: ${{ inputs.test-regression-cache }}
           test-data-cache-paths: ${{ inputs.test-regression-cache-paths }}
-          test-data-cache-key: ${{ inputs.test-regressionn-cache-key }}
+          test-data-cache-key: ${{ inputs.test-regression-cache-key }}
 
           properties: |
             mi-ci-stage=test
@@ -1294,11 +1330,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-regression-upload-report }}
 
       - id: verify-changed-files
         uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
@@ -1346,7 +1380,7 @@ jobs:
       started: 'true'
 
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
-      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   test-regression-create-pr:
     name: :test (reg) create pr

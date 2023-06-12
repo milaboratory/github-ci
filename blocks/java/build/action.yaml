@@ -62,6 +62,35 @@ inputs:
     default: ''
 
   #
+  # Obfuscation report upload control
+  #
+  cdn-url:
+    description: |
+      Main part of the CDN URL.
+    required: false
+    default: 'https://cdn.milaboratory.com'
+  upload-obfuscation-mapping:
+    description: |
+      Set it to 'false' if you want to skip obfuscation mapping upload steps
+    required: false
+    default: 'false'
+  s3-bucket:
+    description: |
+      S3 bucket to use for obfuscation mapping
+    required: false
+    default: 'milaboratory-artefacts-public-files'
+  s3-path-prefix:
+    description: |
+      Prefix for all uploaded obfuscation mapping files.
+
+      obfuscation mapping file will be uploaded to:
+        's3://<bucket>/<path-prefix>/<repository>/<hash_commit_short>/<run-number>-<random-str>/obfuscation'
+        's3://<bucket>/<path-prefix>/<repository>/<hash_commit_full>/<run-number>-<random-str>/obfuscation'
+
+    required: false
+    default: 'cdn/internal/ci'
+
+  #
   # Environment control
   #
   java-version:
@@ -257,3 +286,56 @@ runs:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifact-paths.outputs.result }}
         retention-days: ${{ inputs.artifact-retention }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.upload-obfuscation-mapping
+      with:
+        dump-stdout: false
+        run: |
+          rand="$(
+            shasum - <<<"${RANDOM}${RANDOM}${RANDOM}" |
+              awk '{print $1}'
+          )"
+          OBFUS_MAPPING_S3_PATH="${GITHUB_REPOSITORY}/${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${rand:0:15}/obfuscation"
+
+          ghwa_add_mask "${OBFUS_MAPPING_S3_PATH}"
+          ghwa_set_env "OBFUS_MAPPING_S3_PATH" "${OBFUS_MAPPING_S3_PATH}"
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.upload-obfuscation-mapping
+      env:
+        UPLOAD_ENABLED: ${{ inputs.upload-obfuscation-mapping }}
+        BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
+        OBFUS_MAPPING_FILE: 'proguard-mapping.txt'
+        S3_PATH_PREFIX: ${{ inputs.s3-path-prefix }}
+        CDN_URL: ${{ inputs.cdn-url }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${UPLOAD_ENABLED}" != 'true' ]; then
+            exit 0
+          fi
+
+          _S3_PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
+          OBFUS_MAPPING_LOCAL_PATH="${BUILD_DIR}/${MAPPING_FILE}"
+          OBFUS_MAPPING_LINK="${CDN_URL}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${OBFUS_MAPPING_FILE}"
+
+          if ! [ -e "${OBFUS_MAPPING_LOCAL_PATH}" ]; then
+            echo "Obfuscation mapping file '<build dir>/mapping-file' does not exist, nothing to upload."
+            exit 0
+          fi
+
+          ghwa_add_mask "${OBFUS_MAPPING_LINK}"
+          ghwa_set_env "OBFUS_MAPPING_LINK" "${OBFUS_MAPPING_LINK}"
+
+          ghwa_set_env "OBFUS_MAPPING_LOCAL_PATH" "${OBFUS_MAPPING_LOCAL_PATH}"
+          ghwa_set_env "UPLOAD_MAPPING" "true"
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: always() && env.UPLOAD_MAPPING == 'true'
+      with:
+        dump-stdout: false
+        run: |
+            aws s3 cp --quiet \
+            ${{ env.OBFUS_MAPPING_LOCAL_PATH }} \
+            s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ env.OBFUS_MAPPING_S3_PATH }}
