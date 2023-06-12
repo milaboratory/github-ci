@@ -1617,7 +1617,7 @@ jobs:
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
-      obfus-mapping-url: ${{ steps.with-mapping.output.obfus-mapping-url }}
+      obfus-mapping-url: ${{ steps.with-mapping.outputs.obfus-mapping-url }}
 
   notify-build-distArchive:
     name: notify archive build

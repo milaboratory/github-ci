@@ -341,7 +341,7 @@ runs:
 
           aws s3 cp --quiet \
           ${OBFUS_MAPPING_LOCAL_PATH} \
-          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${OBFUS_MAPPING_S3_PATH}
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${OBFUS_MAPPING_S3_PATH}/
 
           ghwa_add_mask "${OBFUS_MAPPING_LINK}"
           ghwa_set_output "obfus-mapping-link" "${OBFUS_MAPPING_LINK}"
