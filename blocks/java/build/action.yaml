@@ -320,7 +320,6 @@ runs:
           fi
 
           OBFUS_MAPPING_LOCAL_PATH="${BUILD_DIR}/${OBFUS_MAPPING_FILE}"
-          OBFUS_MAPPING_LINK="${CDN_URL}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${OBFUS_MAPPING_FILE}"
 
           if ! [ -e "${OBFUS_MAPPING_LOCAL_PATH}" ]; then
             echo "Obfuscation mapping file '<build dir>/mapping-file' does not exist, nothing to upload."
