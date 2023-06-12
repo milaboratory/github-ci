@@ -197,6 +197,12 @@ inputs:
     required: false
     default: '7'
 
+outputs:
+  obfus-mapping-url:
+    description: |
+      CDN link to uploaded obfuscation mapping file
+    value: ${{ steps.upload-mapping.outputs.obfus-mapping-link }}
+
 runs:
   using: "composite"
 
@@ -300,13 +306,12 @@ runs:
           ghwa_set_env "OBFUS_MAPPING_S3_PATH" "${OBFUS_MAPPING_S3_PATH}"
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: should-upload
       if: inputs.upload-obfuscation-mapping
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-obfuscation-mapping }}
         BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
         OBFUS_MAPPING_FILE: 'proguard-mapping.txt'
-        S3_PATH_PREFIX: ${{ inputs.s3-path-prefix }}
-        CDN_URL: ${{ inputs.cdn-url }}
       with:
         dump-stdout: false
         run: |
@@ -314,7 +319,6 @@ runs:
             exit 0
           fi
 
-          _S3_PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
           OBFUS_MAPPING_LOCAL_PATH="${BUILD_DIR}/${OBFUS_MAPPING_FILE}"
           OBFUS_MAPPING_LINK="${CDN_URL}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${OBFUS_MAPPING_FILE}"
 
@@ -323,17 +327,22 @@ runs:
             exit 0
           fi
 
-          ghwa_add_mask "${OBFUS_MAPPING_LINK}"
-          ghwa_set_env "OBFUS_MAPPING_LINK" "${OBFUS_MAPPING_LINK}"
-
           ghwa_set_env "OBFUS_MAPPING_LOCAL_PATH" "${OBFUS_MAPPING_LOCAL_PATH}"
           ghwa_set_env "UPLOAD_MAPPING" "true"
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: upload-mapping
       if: always() && env.UPLOAD_MAPPING == 'true'
       with:
         dump-stdout: false
         run: |
-            aws s3 cp --quiet \
-            ${{ env.OBFUS_MAPPING_LOCAL_PATH }} \
-            s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ env.OBFUS_MAPPING_S3_PATH }}
+          _S3_PATH_PREFIX=$(echo "${{ inputs.s3-path-prefix }}" | cut -d '/' -f 2-)
+          _OBFUS_MAPPING_FILE=$(basename "${OBFUS_MAPPING_LOCAL_PATH}")
+          OBFUS_MAPPING_LINK="${{ inputs.cdn-url }}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${_OBFUS_MAPPING_FILE}"
+
+          aws s3 cp --quiet \
+          ${OBFUS_MAPPING_LOCAL_PATH} \
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${OBFUS_MAPPING_S3_PATH}
+
+          ghwa_add_mask "${OBFUS_MAPPING_LINK}"
+          ghwa_set_output "obfus-mapping-link" "${OBFUS_MAPPING_LINK}"

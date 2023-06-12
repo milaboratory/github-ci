@@ -976,10 +976,6 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
-          s3-path-prefix: ${{ inputs.dist-archive-s3-path-prefix }}
-          upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
-
       - id: search-tags
         if: always()
         uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
@@ -1002,7 +998,6 @@ jobs:
             ${{ steps.build-gradle.conclusion }}
           search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.product-name }}
-          additional-info: ${{ env.OBFUS_MAPPING_LINK }}
 
   setup-tests-matrix:
     name: :setup tests matrix
@@ -1573,6 +1568,7 @@ jobs:
           aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        id: with-mapping
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -1591,6 +1587,10 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path-prefix: ${{ inputs.dist-archive-s3-path-prefix }}
+          upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
 
       - name: Upload to S3
         id: s3
@@ -1617,6 +1617,7 @@ jobs:
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
+      obfus-mapping-url: ${{ steps.with-mapping.output.obfus-mapping-url }}
 
   notify-build-distArchive:
     name: notify archive build
@@ -1648,6 +1649,7 @@ jobs:
             ${{ needs.distArchive.result }}
           product-name: ${{ format('{0} - Archive', inputs.product-name) }}
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
+          additional-info: ${{ needs.distArchive.outputs.obfus-mapping-url }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   distDocker:
