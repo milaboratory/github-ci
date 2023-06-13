@@ -307,6 +307,13 @@ jobs:
       - build
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -315,6 +322,7 @@ jobs:
           build-status: |
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   can-release:
     name: Can release
@@ -431,6 +439,13 @@ jobs:
       - publish-to-npm
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            release
+
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -441,3 +456,4 @@ jobs:
             ${{ needs.publish-to-npm.result }}
 
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

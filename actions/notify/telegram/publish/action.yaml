@@ -88,33 +88,29 @@ runs:
             {{ text[0]|upper}}{{text[1:] }}
           {%- endmacro %}
           {%- if job["status"] == "failure" -%}
-
-          ❌ \[{{ product["name"] }}] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
-
+           ❌ \[{{ product["name"] }}] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
           {%- else -%}
-
           🍾 \[{{ product["name"] }}] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
-
           {%- endif %}
-            Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}](
-              {{- github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] -}}
-            ))
-            Packages:
-            {%- for i in packages %}
-              - ```{{ i }}```
-            {%- endfor %}
-            \[ [Source code](
-              {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
-            ) | [CI logs](
-              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
-            ) ]
+          Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}](
+            {{- github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] -}}
+          ))
+          Packages:
+          {%- for i in packages %}
+            - ```{{ i }}```
+          {%- endfor %}
 
           {%- if product["additional_info"] | length > 0 %}
           Additional info:
             {{ product["additional_info"] }}
           {%- endif %}
-          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
 
+          \[ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          ) ]
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

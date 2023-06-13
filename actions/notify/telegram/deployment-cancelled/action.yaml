@@ -31,7 +31,13 @@ inputs:
       List of docker images related to build in JSON format
       Empty string is treated as empty JSON list ('[]') for convenience.
     required: false
-    default: ''
+    default: '[]'
+
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
 
   additional-info:
     description: |
@@ -46,15 +52,6 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        DOCKER_IMAGES: ${{ inputs.docker-images }}
-      with:
-        dump-stdout: false
-        run: |
-          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
-
     - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
       id: message
       with:
@@ -67,7 +64,9 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "docker_images": ${{ fromJSON(steps.json.outputs.data).docker-images }} }
+            "docker_images": ${{ inputs.download-links }},
+            "search_tags": ${{ inputs.search-tags }}
+          }
 
         template: |
           ☑️ \[{{ product["name"] }}] Deployment has been cancelled: [{{ release["version"] }}](
@@ -81,13 +80,18 @@ runs:
           {%- endfor %}
           {%- endif %}
 
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
+
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
-          {{ product["additional_info"] }}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

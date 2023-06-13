@@ -11,9 +11,6 @@ description: |
     Thus this action will come in handy just creating
     a zero-byte object that redirects the user to actual build results.
 
-    Requirements:
-      - initialized context (actions/context/init)
-
 inputs:
   cdn-redirect-link:
     description: |
@@ -63,9 +60,6 @@ runs:
   using: "composite"
 
   steps:
-    - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
-
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:

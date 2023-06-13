@@ -72,7 +72,10 @@ runs:
             ).
             {%- endif %}
 
-          {{ product["additional_info"] }}
+            {%- if product["additional_info"] | length > 0 %}
+            Additional info:
+              {{ product["additional_info"] }}
+            {%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

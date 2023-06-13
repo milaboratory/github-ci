@@ -64,17 +64,17 @@ runs:
           Commit message: {{ github["event"]["head_commit"]["message"] }}
           {%- endif %}
 
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
+
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
-
-          {%- if product["additional_info"] | length > 0 %}
-          Additional info:
-            {{ product["additional_info"] }}
-          {%- endif %}
-          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i }} {% endfor %}{%- endif %}
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-beta
       with:

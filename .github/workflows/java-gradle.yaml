@@ -649,7 +649,7 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: ''
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
 
       cdn-redirect-s3:
         description: |
@@ -659,6 +659,21 @@ on:
         type: boolean
         required: false
         default: false
+
+      cdn-redirect-s3-bucket:
+        description: |
+          Public S3 bucket for cdn redirect zero length objects
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-redirects'
+
+      cdn-redirect-s3-region:
+        description: |
+          Upload cdn redirect zero length objects to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
 
       cdn-redirect-s3-bucket-path:
         description: |
@@ -1871,10 +1886,9 @@ jobs:
     runs-on: ubuntu-latest
 
     if: inputs.cdn-redirect-s3
-      &&  needs.build.result != 'cancelled'
+      &&  ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
 
     needs:
-      - build
       - distArchive
     permissions:
       id-token: write
@@ -1892,9 +1906,9 @@ jobs:
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v4-beta
         with:
           cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
-          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.dist-archive-s3-region }}
-          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-iam-role-to-assume: ${{ inputs.cdn-redirect-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.cdn-redirect-s3-region }}
+          s3-bucket: ${{ inputs.cdn-redirect-s3-bucket }}
           s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
           s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
 

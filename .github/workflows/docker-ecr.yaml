@@ -494,6 +494,14 @@ jobs:
         with:
           input: ${{ steps.image-metadata.outputs.tags }}
 
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            ${{ matrix.platform }}
+
       - id: notify-build
         if: always()
           && inputs.notify-telegram
@@ -507,6 +515,7 @@ jobs:
             ${{ steps.build-push.conclusion }}
           product-name: ${{ inputs.app-name }}
           docker-images: ${{ steps.pushed-tags.outputs.result }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   push-manifest:
     if: github.event_name != 'pull_request'
@@ -715,6 +724,13 @@ jobs:
       - deployment
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            deployment
+
       - uses: milaboratory/github-ci/blocks/notify/deployment@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -723,3 +739,4 @@ jobs:
           job-status: |
             ${{ needs.deployment.result }}
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

@@ -349,6 +349,14 @@ jobs:
       - upload-build-results
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            macos
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -357,3 +365,4 @@ jobs:
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
           download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

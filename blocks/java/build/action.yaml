@@ -326,5 +326,3 @@ runs:
           "${OBFUS_MAPPING_S3_PATH}"
 
           echo "${OBFUS_MAPPING_S3_PATH}"
-          
-          

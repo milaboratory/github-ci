@@ -41,6 +41,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Additional text to append to message
@@ -60,6 +66,17 @@ runs:
       with:
         statuses: ${{ inputs.job-status }}
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - name: Report 'deployment failed' to Telegram
       if: steps.job-status.outputs.status == 'failure'
       uses: milaboratory/github-ci/actions/notify/telegram/deployment-failed@v4-beta
@@ -71,7 +88,8 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
 
-        docker-images: ${{ inputs.docker-images }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}
 
     - name: Report 'deployment success' to Telegram
@@ -85,7 +103,8 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
 
-        docker-images: ${{ inputs.docker-images }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}
 
     - name: Report 'deployment canceled' to Telegram
@@ -99,5 +118,6 @@ runs:
         version: ${{ steps.context.outputs.current-version }}
         tag: ${{ steps.context.outputs.current-version-tag }}
 
-        docker-images: ${{ inputs.docker-images }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}

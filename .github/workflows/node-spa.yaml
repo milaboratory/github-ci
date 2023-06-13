@@ -313,6 +313,13 @@ jobs:
       - build
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -321,6 +328,7 @@ jobs:
           build-status: |
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   test:
     name: :test
@@ -371,6 +379,14 @@ jobs:
       - test
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            unit
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -381,6 +397,7 @@ jobs:
           tests-type: 'Unit'
 
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   deployment:
     name: :deployment
@@ -423,6 +440,13 @@ jobs:
       - deployment
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            deployment
+
       - uses: milaboratory/github-ci/blocks/notify/deployment@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -431,3 +455,4 @@ jobs:
           job-status: |
             ${{ needs.deployment.result }}
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
