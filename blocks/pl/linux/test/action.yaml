@@ -52,12 +52,12 @@ runs:
 
   steps:
     - name: Prepare environment for building a golang application
-      uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/golang/prepare@v4
       with:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
 
-    - uses: milaboratory/github-ci/actions/git/auth@v4-beta
+    - uses: milaboratory/github-ci/actions/git/auth@v4
       with:
         github-token: ${{ inputs.github-token }}
 
@@ -69,7 +69,7 @@ runs:
         path: ${{ inputs.test-integration-cache-paths }}
 
     - name: Run boostrap ci script
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
       with:
@@ -82,7 +82,7 @@ runs:
           fi
 
     - name: Run test command for the platform
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         TEST_CMD: ${{ inputs.test-command }}
         TMPDIR: "/dev/shm"

@@ -63,7 +63,7 @@ runs:
 
   steps:
       - name: Prepare environment for running a NodeJS application tests
-        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -73,7 +73,7 @@ runs:
           always-auth: ${{ inputs.always-auth }}
 
       - name: Install NodeJS packages with npm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         with:
@@ -81,7 +81,7 @@ runs:
            npm ci
 
       - name: Run test - ${{ inputs.test-name }}
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
            npm run ${{ inputs.test-name }} --if-present

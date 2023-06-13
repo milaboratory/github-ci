@@ -12,7 +12,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/shell@v4
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       with:
