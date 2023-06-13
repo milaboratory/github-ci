@@ -582,15 +582,22 @@ on:
         required: false
         default: 'cdn/software/${{ github.event.repository.name }}'
 
-      dist-archive-s3-path-prefix:
+      dist-archive-obfuscation-s3-bucket:
+        description: |
+          S3 bucket to use for obfuscation mapping
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-private-files'
+
+      dist-archive-obfuscation-s3-path-prefix:
         description: |
           Prefix for all uploaded obfuscation mapping files.
           Obfuscation mapping file will be uploaded to:
-            's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/obfuscation'
+            's3://<bucket>/<path-prefix>/<repository>/<hash>/obfuscation'
 
         type: string
         required: false
-        default: 'cdn/internal/ci'
+        default: 'obfuscation'
 
       dist-archive-s3-add-version:
         description: |
@@ -1588,8 +1595,8 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
-          s3-path-prefix: ${{ inputs.dist-archive-s3-path-prefix }}
+          obfuscation-s3-bucket: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
+          obfuscation-s3-path-prefix: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
           upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
 
       - name: Upload to S3
@@ -1617,7 +1624,7 @@ jobs:
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
-      obfus-mapping-url: ${{ steps.with-mapping.outputs.obfus-mapping-url }}
+      obfus-mapping-s3-path: ${{ steps.with-mapping.outputs.obfuscation-mapping-s3-path }}
 
   notify-build-distArchive:
     name: notify archive build
@@ -1649,7 +1656,7 @@ jobs:
             ${{ needs.distArchive.result }}
           product-name: ${{ format('{0} - Archive', inputs.product-name) }}
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
-          additional-info: ${{ needs.distArchive.outputs.obfus-mapping-url }}
+          additional-info: ${{ needs.distArchive.outputs.obfus-mapping-s3-path }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   distDocker:

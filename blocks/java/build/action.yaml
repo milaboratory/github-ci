@@ -64,29 +64,24 @@ inputs:
   #
   # Obfuscation report upload control
   #
-  cdn-url:
-    description: |
-      Main part of the CDN URL.
-    required: false
-    default: 'https://cdn.milaboratory.com'
   upload-obfuscation-mapping:
     description: |
       Set it to 'false' if you want to skip obfuscation mapping upload steps
     required: false
     default: 'false'
-  s3-bucket:
+  obfuscation-s3-bucket:
     description: |
       S3 bucket to use for obfuscation mapping
     required: false
-    default: 'milaboratory-artefacts-public-files'
-  s3-path-prefix:
+    default: 'milaboratory-artefacts-private-files'
+  obfuscation-s3-path-prefix:
     description: |
       Prefix for all uploaded obfuscation mapping files.
       Obfuscation mapping file will be uploaded to:
-        's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/obfuscation'
+        's3://<bucket>/<path-prefix>/<repository>/<hash>/obfuscation'
 
     required: false
-    default: 'cdn/internal/ci'
+    default: 'obfuscation'
 
   #
   # Environment control
@@ -198,10 +193,10 @@ inputs:
     default: '7'
 
 outputs:
-  obfus-mapping-url:
+  obfuscation-mapping-s3-path:
     description: |
-      CDN link to uploaded obfuscation mapping file
-    value: ${{ steps.upload-mapping.outputs.obfus-mapping-link }}
+      S3 path for uploaded obfuscation mapping file
+    value: ${{ steps.upload-mapping.outputs.obfus-mapping-s3-path }}
 
 runs:
   using: "composite"
@@ -293,21 +288,6 @@ runs:
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       if: inputs.upload-obfuscation-mapping
-      with:
-        dump-stdout: false
-        run: |
-          rand="$(
-            shasum - <<<"${RANDOM}${RANDOM}${RANDOM}" |
-              awk '{print $1}'
-          )"
-          OBFUS_MAPPING_S3_PATH="${GITHUB_REPOSITORY}/${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${rand:0:15}/obfuscation"
-
-          ghwa_add_mask "${OBFUS_MAPPING_S3_PATH}"
-          ghwa_set_env "OBFUS_MAPPING_S3_PATH" "${OBFUS_MAPPING_S3_PATH}"
-
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      id: should-upload
-      if: inputs.upload-obfuscation-mapping
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-obfuscation-mapping }}
         BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
@@ -330,18 +310,20 @@ runs:
           ghwa_set_env "UPLOAD_MAPPING" "true"
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
-      id: upload-mapping
       if: always() && env.UPLOAD_MAPPING == 'true'
+      id: upload-mapping
+      env:
+        S3_BUCKET: ${{ inputs.obfuscation-s3-bucket }}
+        S3_PATH_PREFIX:  ${{ inputs.obfuscation-s3-path-prefix }}
       with:
         dump-stdout: false
         run: |
-          _S3_PATH_PREFIX=$(echo "${{ inputs.s3-path-prefix }}" | cut -d '/' -f 2-)
           _OBFUS_MAPPING_FILE=$(basename "${OBFUS_MAPPING_LOCAL_PATH}")
-          OBFUS_MAPPING_LINK="${{ inputs.cdn-url }}/${_S3_PATH_PREFIX}/${OBFUS_MAPPING_S3_PATH}/${_OBFUS_MAPPING_FILE}"
+          _GH_REPO="${GITHUB_REPOSITORY##GITHUB_REPOSITORY_OWNER/}"
+          OBFUS_MAPPING_S3_PATH="s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${_GH_REPO}/${GITHUB_SHA}/${_OBFUS_MAPPING_FILE}"
 
           aws s3 cp --quiet \
-          ${OBFUS_MAPPING_LOCAL_PATH} \
-          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${OBFUS_MAPPING_S3_PATH}/
+          "${OBFUS_MAPPING_LOCAL_PATH}" \
+          "${OBFUS_MAPPING_S3_PATH}"
 
-          ghwa_add_mask "${OBFUS_MAPPING_LINK}"
-          ghwa_set_output "obfus-mapping-link" "${OBFUS_MAPPING_LINK}"
+          ghwa_set_output "obfus-mapping-s3-path" "${OBFUS_MAPPING_S3_PATH}"
