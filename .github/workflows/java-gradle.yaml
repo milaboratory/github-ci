@@ -1596,7 +1596,7 @@ jobs:
           java-distribution: ${{ inputs.java-distribution }}
 
           obfuscation-s3-bucket: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
-          obfuscation-s3-path-prefix: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
+          obfuscation-s3-path-prefix: ${{ inputs.dist-archive-obfuscation-s3-path-prefix }}
           upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
 
       - name: Upload to S3

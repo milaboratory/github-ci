@@ -319,7 +319,7 @@ runs:
         dump-stdout: false
         run: |
           _OBFUS_MAPPING_FILE=$(basename "${OBFUS_MAPPING_LOCAL_PATH}")
-          _GH_REPO="${GITHUB_REPOSITORY##GITHUB_REPOSITORY_OWNER/}"
+          _GH_REPO="$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f 2-)"
           OBFUS_MAPPING_S3_PATH="s3://${S3_BUCKET}/${S3_PATH_PREFIX}/${_GH_REPO}/${GITHUB_SHA}/${_OBFUS_MAPPING_FILE}"
 
           aws s3 cp --quiet \
@@ -327,3 +327,14 @@ runs:
           "${OBFUS_MAPPING_S3_PATH}"
 
           ghwa_set_output "obfus-mapping-s3-path" "${OBFUS_MAPPING_S3_PATH}"
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OB_MP_1: ${{ steps.upload-mapping.outputs.obfus-mapping-s3-path }}
+        OB_MP_2: ${{ fromJSON(steps.upload-mapping.outputs.data).obfus-mapping-s3-path }}
+      with:
+        dump-stdout: false
+        run: |
+          echo "${OB_MP_1}"
+          echo "${OB_MP_2}"
+
