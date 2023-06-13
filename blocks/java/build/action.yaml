@@ -196,7 +196,7 @@ outputs:
   obfuscation-mapping-s3-path:
     description: |
       S3 path for uploaded obfuscation mapping file
-    value: ${{ steps.upload-mapping.outputs.obfus-mapping-s3-path }}
+    value: ${{ fromJSON(steps.upload-mapping.outputs.data).obfus-mapping-s3-path }}
 
 runs:
   using: "composite"
@@ -327,15 +327,3 @@ runs:
           "${OBFUS_MAPPING_S3_PATH}"
 
           ghwa_set_output "obfus-mapping-s3-path" "${OBFUS_MAPPING_S3_PATH}"
-
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always() && env.UPLOAD_MAPPING == 'true'
-      env:
-        OB_MP_1: ${{ steps.upload-mapping.outputs.obfus-mapping-s3-path }}
-        OB_MP_2: ${{ fromJSON(steps.upload-mapping.outputs.data).obfus-mapping-s3-path }}
-      with:
-        dump-stdout: false
-        run: |
-          echo "${OB_MP_1}"
-          echo "${OB_MP_2}"
-
