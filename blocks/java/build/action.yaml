@@ -196,7 +196,7 @@ outputs:
   obfuscation-mapping-s3-path:
     description: |
       S3 path for uploaded obfuscation mapping file
-    value: ${{ fromJSON(steps.upload-mapping.outputs.data).obfus-mapping-s3-path }}
+    value: ${{ steps.upload-mapping.outputs.stdout }}
 
 runs:
   using: "composite"
@@ -326,4 +326,4 @@ runs:
           "${OBFUS_MAPPING_LOCAL_PATH}" \
           "${OBFUS_MAPPING_S3_PATH}"
 
-          ghwa_set_output "obfus-mapping-s3-path" "${OBFUS_MAPPING_S3_PATH}"
+          echo "${OBFUS_MAPPING_S3_PATH}"
