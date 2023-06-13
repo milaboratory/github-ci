@@ -72,6 +72,20 @@ on:
         type: string
         required: true
 
+      #
+      # Cache control
+      #
+      cache-version:
+        description: |
+          Simple hack, that allows to 'reset' cache for particular job.
+
+          Just change the value of this parameter and the next run will
+          not find build cache and will have to start from scratch.
+
+        type: string
+        required: false
+        default: 'v1'
+
      #
      # Build control
      #
@@ -247,6 +261,9 @@ jobs:
       - init
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4
+
       - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
@@ -290,6 +307,13 @@ jobs:
       - build
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -298,6 +322,7 @@ jobs:
           build-status: |
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   can-release:
     name: Can release
@@ -355,7 +380,7 @@ jobs:
     name: publish
     runs-on: ubuntu-latest
 
-    if: always() 
+    if: always()
       && needs.release.result == 'success'
       && startsWith(github.ref, 'refs/tags/v')
 
@@ -414,6 +439,13 @@ jobs:
       - publish-to-npm
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            release
+
       - uses: milaboratory/github-ci/blocks/notify/release@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -424,3 +456,4 @@ jobs:
             ${{ needs.publish-to-npm.result }}
 
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

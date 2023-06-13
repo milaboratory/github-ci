@@ -242,6 +242,13 @@ on:
         type: string
         default: ''
 
+      build-upload-obfuscation-mapping:
+        description: |
+          Whether or not to upload obfuscation mapping to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
+
       # artifact-paths:
       #   description: |
       #     List of paths to artifacts to save after build run.
@@ -294,6 +301,12 @@ on:
         type: string
         required: false
         default: ''
+      test-unit-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
 
       test-integration:
         description: |
@@ -337,6 +350,12 @@ on:
         type: string
         required: false
         default: ''
+      test-integration-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
 
       test-regression:
         description: |
@@ -391,6 +410,12 @@ on:
           regression/presets
           regression/reports
           regression/schemas
+      test-regression-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
 
       #
       # Test reports control
@@ -557,6 +582,23 @@ on:
         required: false
         default: 'cdn/software/${{ github.event.repository.name }}'
 
+      dist-archive-obfuscation-s3-bucket:
+        description: |
+          S3 bucket to use for obfuscation mapping
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-private-files'
+
+      dist-archive-obfuscation-s3-path-prefix:
+        description: |
+          Prefix for all uploaded obfuscation mapping files.
+          Obfuscation mapping file will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>/obfuscation'
+
+        type: string
+        required: false
+        default: 'obfuscation'
+
       dist-archive-s3-add-version:
         description: |
           Add version number to all files uploaded to S3 bucket.
@@ -589,6 +631,16 @@ on:
         default: 'false'
 
       #
+      # CDN control
+      #
+      cdn-url:
+        description: |
+          Main part of the CDN URL.
+        type: string
+        required: false
+        default: 'https://cdn.milaboratory.com'
+
+      #
       # CDN redirect link control
       #
       cdn-redirect-s3-iam-role-to-assume:
@@ -597,7 +649,7 @@ on:
           assumed role credentials.
         type: string
         required: false
-        default: ''
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
 
       cdn-redirect-s3:
         description: |
@@ -607,6 +659,21 @@ on:
         type: boolean
         required: false
         default: false
+
+      cdn-redirect-s3-bucket:
+        description: |
+          Public S3 bucket for cdn redirect zero length objects
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-redirects'
+
+      cdn-redirect-s3-region:
+        description: |
+          Upload cdn redirect zero length objects to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
 
       cdn-redirect-s3-bucket-path:
         description: |
@@ -931,6 +998,13 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+
       - name: notify build
         if: always()
           && inputs.notify-telegram
@@ -944,6 +1018,7 @@ jobs:
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
             ${{ steps.build-gradle.conclusion }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.product-name }}
 
   setup-tests-matrix:
@@ -1024,7 +1099,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1055,11 +1130,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-unit-upload-report }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1081,6 +1154,14 @@ jobs:
       - test-unit
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            unit
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1089,6 +1170,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-unit.result }}
           tests-type: 'Unit'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
@@ -1128,7 +1210,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1161,11 +1243,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-integration-upload-report }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -1173,7 +1253,7 @@ jobs:
       started: 'true'
 
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
-      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   notify-test-integration:
     name: notify integration test
@@ -1188,6 +1268,14 @@ jobs:
       - test-integration
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            integration
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1196,6 +1284,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.test-integration.result }}
           tests-type: 'Integration'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
@@ -1236,7 +1325,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
 
       - id: test
@@ -1259,7 +1348,7 @@ jobs:
 
           test-data-cache-enabled: ${{ inputs.test-regression-cache }}
           test-data-cache-paths: ${{ inputs.test-regression-cache-paths }}
-          test-data-cache-key: ${{ inputs.test-regressionn-cache-key }}
+          test-data-cache-key: ${{ inputs.test-regression-cache-key }}
 
           properties: |
             mi-ci-stage=test
@@ -1268,11 +1357,9 @@ jobs:
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
 
-          s3-iam-role-to-assume: ${{ inputs.test-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.test-s3-region }}
           s3-bucket: ${{ inputs.test-s3-bucket }}
           s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
-          upload-report: ${{ inputs.test-s3-iam-role-to-assume != '' }}
+          upload-report: ${{ inputs.test-regression-upload-report }}
 
       - id: verify-changed-files
         uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
@@ -1320,7 +1407,7 @@ jobs:
       started: 'true'
 
       report-uploaded: ${{ steps.test.outputs.report-uploaded }}
-      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   test-regression-create-pr:
     name: :test (reg) create pr
@@ -1394,6 +1481,14 @@ jobs:
       - test-regression-create-pr
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            regression
+
       - uses: milaboratory/github-ci/blocks/notify/test-regression@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1402,6 +1497,7 @@ jobs:
           product-name: ${{ inputs.product-name }}
           pull-request-url: ${{ needs.test-regression-create-pr.outputs.pr-url }}
           pull-request-number: ${{ needs.test-regression-create-pr.outputs.pr-number }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   fail-workflow-on-test-regression-changes:
     name: fail workflow on regression tests changes
@@ -1439,6 +1535,14 @@ jobs:
       - test-regression
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            regression
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1447,6 +1551,7 @@ jobs:
           notification-mode: ${{ inputs.notify-tests-regression }}
           tests-status: ${{ needs.test-regression.result }}
           tests-type: 'Regression'
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
           product-name: ${{ inputs.product-name }}
           report-url: ${{ fromJSON(needs.test-regression.outputs.report-uploaded) && needs.test-regression.outputs.report-url || '' }}
@@ -1485,6 +1590,7 @@ jobs:
           aws-region: ${{ inputs.dist-archive-s3-region }}
 
       - uses: milaboratory/github-ci/blocks/java/build@v4
+        id: with-mapping
         with:
           project: ${{ inputs.build-project }}
           project-dir: ${{ inputs.build-project-dir }}
@@ -1503,6 +1609,10 @@ jobs:
             ${{ secrets.GRADLE_PROPERTIES }}
           java-version: ${{ inputs.java-version }}
           java-distribution: ${{ inputs.java-distribution }}
+
+          obfuscation-s3-bucket: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
+          obfuscation-s3-path-prefix: ${{ inputs.dist-archive-obfuscation-s3-path-prefix }}
+          upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
 
       - name: Upload to S3
         id: s3
@@ -1529,6 +1639,7 @@ jobs:
       s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
       s3-urls: ${{ steps.s3.outputs.download }}
       s3-urls-json: ${{ steps.s3.outputs.download-json }}
+      obfus-mapping-s3-path: ${{ steps.with-mapping.outputs.obfuscation-mapping-s3-path }}
 
   notify-build-distArchive:
     name: notify archive build
@@ -1543,6 +1654,14 @@ jobs:
       - distArchive
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+            archive
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1552,6 +1671,8 @@ jobs:
             ${{ needs.distArchive.result }}
           product-name: ${{ format('{0} - Archive', inputs.product-name) }}
           download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
+          additional-info: ${{ needs.distArchive.outputs.obfus-mapping-s3-path }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   distDocker:
     name: docker
@@ -1635,6 +1756,14 @@ jobs:
       - distDocker
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+            docker
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1644,6 +1773,7 @@ jobs:
             ${{ needs.distDocker.result }}
           product-name: ${{ format('{0} - Docker', inputs.product-name) }}
           docker-images: ${{ needs.distDocker.outputs.docker-tags }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   distLibrary:
     name: library
@@ -1732,6 +1862,14 @@ jobs:
       - distLibrary
       - build
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+            library
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1741,16 +1879,16 @@ jobs:
             ${{ needs.distLibrary.result }}
           product-name: ${{ format('{0} - Library', inputs.product-name) }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
     name: update the latest build link on the CDN
     runs-on: ubuntu-latest
 
     if: inputs.cdn-redirect-s3
-      &&  needs.build.result != 'cancelled'
+      &&  ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
 
     needs:
-      - build
       - distArchive
     permissions:
       id-token: write
@@ -1768,9 +1906,9 @@ jobs:
       - uses: milaboratory/github-ci/blocks/update-cdn-link@v4
         with:
           cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
-          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
-          s3-region: ${{ inputs.dist-archive-s3-region }}
-          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-iam-role-to-assume: ${{ inputs.cdn-redirect-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.cdn-redirect-s3-region }}
+          s3-bucket: ${{ inputs.cdn-redirect-s3-bucket }}
           s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
           s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
 
@@ -2016,6 +2154,13 @@ jobs:
       - publish-release-lib
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            release
+
       - uses: milaboratory/github-ci/blocks/notify/release@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -2030,3 +2175,4 @@ jobs:
 
           maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
           download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

@@ -45,6 +45,12 @@ inputs:
     required: false
     default: '[]'
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -75,7 +81,8 @@ runs:
 
             "docker_images": ${{ inputs.docker-images }},
             "maven_packages": ${{ inputs.maven-packages }},
-            "download_links": ${{ inputs.download-links }} }
+            "download_links": ${{ inputs.download-links }},
+            "search_tags": ${{ inputs.search-tags }} }
 
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
@@ -107,13 +114,17 @@ runs:
             - {{ i }}
           {%- endfor %}
           {%- endif %}
+
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
-
-          {{ product["additional_info"] }}
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:

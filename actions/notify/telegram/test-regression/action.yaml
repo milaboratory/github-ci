@@ -34,6 +34,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -59,20 +65,26 @@ runs:
             "pull_request": {  "number": ${{ toJSON(inputs.pull-request-number) }},
                       "url": ${{ toJSON(inputs.pull-request-url) }} },
 
-            "github": ${{ steps.safe-ctx.outputs.github }}
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "search_tags": ${{ inputs.search-tags }}
           }
 
         template: |
-          🅰️ \[{{ product["name"] }}] regression tests changes have been detected {{ build["version"] }}.
+          🅰️ \[{{ product["name"] }}] Regression tests changes have been detected {{ build["version"] }}.
           Pull request:
             - {{ pull_request["url"] }}
+
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
-
-          {{ product["additional_info"] }}
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:

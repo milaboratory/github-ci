@@ -55,6 +55,12 @@ inputs:
     required: false
     default: ${{ github.repository }}
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Any additional text to append to notification.
@@ -74,6 +80,15 @@ runs:
       with:
         statuses: ${{ inputs.tests-status }}
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - name: Report tests result to Telegram
       if:  inputs.telegram-target != ''
         && !( steps.tests-status.outputs.status != 'failure'
@@ -91,5 +106,6 @@ runs:
         tests-status: ${{ steps.tests-status.outputs.status }}
         tests-type: ${{ inputs.tests-type }}
         report-url: ${{ inputs.report-url }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
 
         additional-info: ${{ inputs.additional-info }}

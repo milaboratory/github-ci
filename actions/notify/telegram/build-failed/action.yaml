@@ -22,6 +22,12 @@ inputs:
       Build version to display in message
     required: true
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -32,11 +38,42 @@ runs:
   using: "composite"
 
   steps:
-    - id: short-sha
-      uses: milaboratory/github-ci/actions/shell@v4
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
+
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4
+      id: message
       with:
-        run: |
-          echo "${GITHUB_SHA:0:8}"
+        data: |
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "build": { "category": ${{ toJSON(inputs.build-category) }},
+                       "version": ${{ toJSON(inputs.build-version) }} },
+
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "search_tags": ${{ inputs.search-tags }} }
+
+        template: |
+          💩 \[{{ product["name"] }}] Build failed: {{ build["version"] }}
+          Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
+
+          {%- if github["event_name"] == "push" %}
+          Author: {{ github["event"]["head_commit"]["committer"]["username"] }}
+          Commit message: {{ github["event"]["head_commit"]["message"] }}
+          {%- endif %}
+
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
+          {%- endif %}
+          \[ [Source code](
+            {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+          ) | [CI logs](
+            {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+          ) ]
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:
@@ -44,9 +81,4 @@ runs:
         token: ${{ inputs.telegram-token }}
         format: markdown
         disable_web_page_preview: true
-        message: |
-          💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
-            Branch: ${{ github.ref_name }} ([${{ steps.short-sha.outputs.stdout }}](${{github.server_url}}/${{github.repository}}/commit/${{github.sha}}))
-          \[ [Source code](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}}) | [CI logs](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) ]
-
-          ${{ inputs.additional-info }}
+        message: ${{ steps.message.outputs.data }}

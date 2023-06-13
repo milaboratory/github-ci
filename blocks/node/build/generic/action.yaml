@@ -44,9 +44,6 @@ runs:
   using: "composite"
 
   steps:
-    - id: context
-      uses: milaboratory/github-ci/actions/context@v4
-
     - name: Prepare environment for building a NodeJS application
       uses: milaboratory/github-ci/actions/node/prepare@v4
       with:
@@ -63,7 +60,7 @@ runs:
     - name: Patch package version
       uses: milaboratory/github-ci/actions/node/patch-version@v4
       with:
-        version: ${{ steps.context.outputs.current-version }}
+        version: ${{ inputs.build-version }}
 
     - name: Run build
       uses: milaboratory/github-ci/actions/shell@v4

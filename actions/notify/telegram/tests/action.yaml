@@ -41,6 +41,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: '[]'
+
   additional-info:
     description: |
       Additional text to append to message
@@ -71,15 +77,23 @@ runs:
 
             "status_icons": { "success": "✅",
                               "failure": "❌",
-                              "cancelled": "⏹️" }
+                              "cancelled": "⏹️" },
+
+            "search_tags": ${{ inputs.search-tags }}
           }
 
         template: |
           {{- status_icons[ tests["status"] ] | default ('')
           }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+
           {%- if github["event_name"] == "push" %}
           Author: {{ github["event"]["head_commit"]["committer"]["username"] }}
           Commit message: {{ github["event"]["head_commit"]["message"] }}
+          {%- endif %}
+
+          {%- if product["additional_info"] | length > 0 %}
+          Additional info:
+            {{ product["additional_info"] }}
           {%- endif %}
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
@@ -88,8 +102,7 @@ runs:
           ) | [CI logs](
             {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
           ) ]
-
-          {{ product["additional_info"] }}
+          Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
     - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:

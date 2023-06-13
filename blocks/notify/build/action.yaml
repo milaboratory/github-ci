@@ -65,6 +65,12 @@ inputs:
     required: false
     default: ''
 
+  search-tags:
+    description: |
+     List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
   additional-info:
     description: |
       Any additional text to append to notification.
@@ -96,6 +102,21 @@ runs:
       with:
         statuses: ${{ inputs.build-status }}
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - name: Report build failure to Telegram
       if:  steps.build-status.outputs.status != 'success'
         && inputs.notification-mode != 'success-only'
@@ -108,23 +129,8 @@ runs:
         product-name: ${{ inputs.product-name }}
         build-version: ${{ steps.context.outputs.current-version }}
 
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}
-
-    - id: json
-      if:  steps.build-status.outputs.status == 'success'
-        && inputs.notification-mode != 'failure-only'
-
-      uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
-        DOCKER_IMAGES: ${{ inputs.docker-images }}
-        DOWNLOAD_LINKS: ${{ inputs.download-links }}
-      with:
-        dump-stdout: false
-        run: |
-          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
-          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
-          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
 
     - name: Report build is ready
       if:  steps.build-status.outputs.status == 'success'
@@ -142,4 +148,5 @@ runs:
         docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
         maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
         download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}

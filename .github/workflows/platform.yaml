@@ -446,6 +446,14 @@ jobs:
       - upload-build-results
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+            linux
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -454,6 +462,7 @@ jobs:
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
           download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   test-integration:
     name: :test (integration)
@@ -523,6 +532,15 @@ jobs:
       - test-integration
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            integration
+            linux
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -533,3 +551,4 @@ jobs:
           tests-type: 'Integration'
 
           product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

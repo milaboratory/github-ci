@@ -762,6 +762,14 @@ jobs:
       - test-unit
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            unit
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -772,6 +780,7 @@ jobs:
           tests-type: 'Unit'
 
           product-name: ${{ needs.test-unit.outputs.artifact-app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   test-static:
       strategy:
@@ -835,6 +844,14 @@ jobs:
       - test-static
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            static
+
       - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -845,6 +862,7 @@ jobs:
           tests-type: 'Static'
 
           product-name: ${{ needs.test-static.outputs.artifact-app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   notify-build:
     name: Notify build
@@ -860,6 +878,13 @@ jobs:
       - upload-s3
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+
       - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -870,6 +895,7 @@ jobs:
              ${{ needs.upload-s3.result }}
           product-name: ${{ needs.build.outputs.artifact-app-name }}
           download-links: ${{ needs.upload-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   can-release:
       name: Can release
@@ -1021,6 +1047,13 @@ jobs:
       - upload-release-s3
 
     steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            release
+
       - uses: milaboratory/github-ci/blocks/notify/release@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -1032,3 +1065,4 @@ jobs:
 
           product-name: ${{ needs.release.outputs.artifact-app-name  }}
           download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

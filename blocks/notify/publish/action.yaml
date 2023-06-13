@@ -54,6 +54,11 @@ inputs:
       List of published packages in JSON format
     required: false
     default: '[]'
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
 
   additional-info:
     description: |
@@ -80,6 +85,15 @@ runs:
             echo "dev"
           fi
 
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
     - id: job-status
       name: Merge publish job statuses
       uses: milaboratory/github-ci/actions/helpers/merge-status@v4
@@ -102,4 +116,5 @@ runs:
         repository-category: ${{ inputs.repository-category }}
         repository-type: ${{ inputs.repository-type }}
         packages: ${{ inputs.packages }}
+        search-tags: ${{ inputs.search-tags }}
         additional-info: ${{ inputs.additional-info }}
