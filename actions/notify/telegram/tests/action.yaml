@@ -85,6 +85,7 @@ runs:
         template: |
           {{- status_icons[ tests["status"] ] | default ('')
           }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+
           {%- if github["event_name"] == "push" %}
           Author: {{ github["event"]["head_commit"]["committer"]["username"] }}
           Commit message: {{ github["event"]["head_commit"]["message"] }}
@@ -94,7 +95,6 @@ runs:
           Additional info:
             {{ product["additional_info"] }}
           {%- endif %}
-
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [Report URL](

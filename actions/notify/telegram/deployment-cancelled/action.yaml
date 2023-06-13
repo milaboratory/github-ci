@@ -84,7 +84,6 @@ runs:
           Additional info:
             {{ product["additional_info"] }}
           {%- endif %}
-
           \[ [Source code](
             {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
           ) | [CI logs](
