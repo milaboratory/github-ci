@@ -316,7 +316,6 @@ runs:
         S3_BUCKET: ${{ inputs.obfuscation-s3-bucket }}
         S3_PATH_PREFIX:  ${{ inputs.obfuscation-s3-path-prefix }}
       with:
-        dump-stdout: false
         run: |
           _OBFUS_MAPPING_FILE=$(basename "${OBFUS_MAPPING_LOCAL_PATH}")
           _GH_REPO="$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f 2-)"
@@ -327,3 +326,5 @@ runs:
           "${OBFUS_MAPPING_S3_PATH}"
 
           echo "${OBFUS_MAPPING_S3_PATH}"
+          
+          
