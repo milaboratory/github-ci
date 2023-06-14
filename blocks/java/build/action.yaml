@@ -263,15 +263,6 @@ runs:
           ${{ inputs.custom-arguments }}
           ${{ steps.tasks.outputs.result }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always()
-      env:
-        BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
-      with:
-        run: |
-          ls -la "${BUILD_DIR}/docker"
-          ls -la "${BUILD_DIR}/libs"
-
     - name: Read actual project properties
       id: gradle-props
       uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta

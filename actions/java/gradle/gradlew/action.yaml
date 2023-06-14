@@ -80,3 +80,10 @@ runs:
         gradle-home-cache-strict-match: ${{ inputs.gradle-home-cache-strict-match }}
         workflow-job-context: ${{ inputs.workflow-job-context }}
         gradle-home-cache-cleanup: ${{ inputs.gradle-home-cache-cleanup }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: always()
+      with:
+        run: |
+          ls -la "./build/docker"
+          ls -la "./build/libs"
