@@ -1462,7 +1462,6 @@ jobs:
           branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
           base: ${{ github.ref_name }}
 
-          
 
     outputs:
       started: 'true'
