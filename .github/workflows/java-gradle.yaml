@@ -1460,6 +1460,9 @@ jobs:
           title: ${{ format('Regression tests changes in the {0}', github.ref_name) }}
           body: 'Automated changes generated after CI workflow run.'
           branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
+          base: ${{ github.ref_name }}
+
+          
 
     outputs:
       started: 'true'
