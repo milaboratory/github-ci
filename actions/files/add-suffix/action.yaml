@@ -40,8 +40,7 @@ runs:
         # add-suffix: rename files in given paths
 
         set -o nounset
-        set -o errexit
-        set -x
+        set -o errexitg
 
         mapfile -t input_paths <<<"${PATHS}"
 
