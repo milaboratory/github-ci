@@ -461,7 +461,7 @@ jobs:
           build-status: |
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
-          additional-info: ${{ needs.upload-build-results.outputs.s3-urls-json }}
+          download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   test-integration:
