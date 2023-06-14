@@ -85,12 +85,12 @@ runs:
       if: always()
       with:
         run: |
-          if ! [ -e "./build/docker" ];
+          if ! [ -e "./build/docker" ];then
             echo "Do nothing"
           else
             ls -la "./build/docker"
           fi
-          if ! [ -e "./build/libs" ];
+          if ! [ -e "./build/libs" ];then
             echo "Do nothing"
           else
             ls -la "./build/libs"
