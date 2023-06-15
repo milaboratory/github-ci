@@ -87,7 +87,7 @@ runs:
         template: |
           {{- category_icons[ build["category"] ] | default ('💚') -}}
           {{- " " -}}
-          \[{{ product["name"] }}] New {{ build["category"] }} build: \`{{ build["version"] }}\` on {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
+          \[{{ product["name"] }}] New {{ build["category"] }} build: `\`{{ build["version"] }}\`` on {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
 
           {%- if github["event_name"] == "push" %}
           Author: {{ github["event"]["head_commit"]["committer"]["username"] }}
