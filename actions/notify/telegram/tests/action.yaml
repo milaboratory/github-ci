@@ -84,7 +84,7 @@ runs:
 
         template: |
           {{- status_icons[ tests["status"] ] | default ('')
-          }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ build["version"] }}: [{{ tests["status"] }}]({{ tests["url"] }}).
+          }} \[{{ product["name"] }}] {{ tests["type"] }} tests for build {{ '`' + build["version"] + '`' | string }}: [{{ tests["status"] }}]({{ tests["url"] }}).
 
           {%- if github["event_name"] == "push" %}
           Author: {{ github["event"]["head_commit"]["committer"]["username"] }}

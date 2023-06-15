@@ -71,7 +71,7 @@ runs:
           }
 
         template: |
-          🅰️ \[{{ product["name"] }}] Regression tests changes have been detected {{ build["version"] }}.
+          🅰️ \[{{ product["name"] }}] Regression tests changes have been detected {{ '`' + build["version"] + '`' | string }}.
           Pull request:
             - {{ pull_request["url"] }}
 

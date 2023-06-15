@@ -56,7 +56,7 @@ runs:
             "search_tags": ${{ inputs.search-tags }} }
 
         template: |
-          💩 \[{{ product["name"] }}] Build failed: {{ build["version"] }}
+          💩 \[{{ product["name"] }}] Build failed: {{ '`' + build["version"] + '`' | string }}
           Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}]({{ github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] }}))
 
           {%- if github["event_name"] == "push" %}
