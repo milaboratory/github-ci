@@ -64,7 +64,7 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "docker_images": ${{ inputs.download-links }},
+            "docker_images": ${{ inputs.docker-images }},
             "search_tags": ${{ inputs.search-tags }}
           }
 
