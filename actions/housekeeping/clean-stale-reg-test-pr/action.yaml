@@ -1,0 +1,86 @@
+name: Clean stale pull requests form the regression tests.
+author: 'MiLaboratories'
+description: |
+  This script will search for all open pull requests, then for each PR,
+  it checks if the name of the base branch (base_ref) is part of the branch name (head_ref) for this PR.
+  If it isn't, it will close the PR and leave a comment.
+
+inputs:
+  branch-prefix:
+    description: |
+      Branch search prefix.
+    required: false
+    default: ' mixcr-regression-tests'
+  github-token:
+    description: |
+      Github token
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/github-script@v3
+      with:
+        github-token: ${{ inputs.github-token }}
+        branch-prefix: ${{ inputs.branch-prefix }}
+        script: |
+          // load github context
+          const github = require('@actions/github');
+          const core = require('@actions/core');
+
+          // create octokit instance
+          const prefix = core.getInput('branch-prefix');
+          const gh_token = core.getInput('github-token');
+          const octokit = github.getOctokit(gh_token);
+
+          async function run() {
+            try {
+              const {data: prs} = await octokit.pulls.list({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                state: 'open'
+              });
+
+              for (const pr of prs) {
+                if (!pr.head.ref.startsWith(prefix)) continue; 
+
+                const baseBranchName = pr.base.ref;
+                const headBranchName = pr.head.ref;
+                const branchAfterSlash = headBranchName.split('/')[1];
+      
+                try {
+                    await octokit.repos.getBranch({
+                      owner: github.context.repo.owner,
+                      repo: github.context.repo.repo,
+                      branch: branchAfterSlash
+                    });
+                    // If the branch exists, skip to the next PR
+                    continue;
+                } catch (error) {
+                    // If the branch doesn't exist, this error will be thrown
+                    // We can ignore this error and proceed to close the PR
+                }
+
+                if (!headBranchName.includes(baseBranchName)) {
+                  await octokit.pulls.update({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    pull_number: pr.number,
+                    state: 'closed'
+                  });
+
+                  await octokit.issues.createComment({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    issue_number: pr.number,
+                    body: 'It has been automatically closed by the housekeeping workflow.'
+                  });
+                }
+              }
+            } catch (error) {
+              core.setFailed(error.message);
+            }
+          }
+
+          run();
