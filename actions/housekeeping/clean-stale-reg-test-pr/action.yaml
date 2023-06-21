@@ -25,7 +25,7 @@ runs:
         github-token: ${{ inputs.github-token }}
         script: |
           async function run() {
-            const branch_prefix = core.getInput(process.env.BRANCH_PREFIX);
+            const branch_prefix = process.env.BRANCH_PREFIX;
 
             try {
               const {data: prs} = await github.rest.pulls.list({
@@ -40,6 +40,10 @@ runs:
                 const baseBranchName = pr.base.ref;
                 const headBranchName = pr.head.ref;
                 const branchAfterSlash = headBranchName.split('/')[1];
+
+                console.log(`Head Branch: ${headBranchName}`);
+                console.log(`Base Branch: ${baseBranchName}`);
+                console.log(`Prefix: ${branch_prefix}`);
 
                 try {
                     await github.rest.repos.getBranch({
