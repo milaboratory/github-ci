@@ -694,7 +694,7 @@ jobs:
             mkdir -v ./"${EXT_PROGRAMS_DIR}"
             # download and unpack mixcr
             curl -LO "${MIXCR_URL}/${MIXCR_VERSION}.zip"
-            7z x ."${MIXCR_VERSION}.zip" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
+            7z x "${MIXCR_VERSION}.zip" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
 
             # download and unpack java
             mkdir -pv ./"${EXT_PROGRAMS_DIR}/amazon-corretto"
