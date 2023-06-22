@@ -680,24 +680,24 @@ jobs:
             # get dependencies versions from plui-dependencies.json
             RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
             PL_VERSION=$(jq -r ".dependencies.architecture.$RUNNER_OS_ARCH.$RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
-            MIXCR_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"mixcr\") | .version" )
-            JAVA_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"java\") | .version" )
+            MIXCR_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"mixcr\") | .version" plui-dependencies.json)
+            JAVA_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"java\") | .version" plui-dependencies.json)
 
             # download pl
             aws s3 cp "s3://${PL_S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_VERSION}-${RUNNER_OS_ARCH}.zip" ./
 
             # unpack pl
-            mkdir ./"${PL_DIST_DIR}" && \
+            mkdir -v ./"${PL_DIST_DIR}" && \
             7z x "${PL_VERSION}-${RUNNER_OS_ARCH}.zip" -o"${PL_DIST_DIR}"
 
             # create external programs directory
-            mkdir ./"${EXT_PROGRAMS_DIR}"
+            mkdir -v ./"${EXT_PROGRAMS_DIR}"
             # download and unpack mixcr
             curl -LO "${MIXCR_URL}/${MIXCR_VERSION}.zip"
             7z x ."${MIXCR_VERSION}.zip" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
 
             # download and unpack java
-            mkdir -p ./"${EXT_PROGRAMS_DIR}/amazon-corretto"
+            mkdir -pv ./"${EXT_PROGRAMS_DIR}/amazon-corretto"
             if [ "${RUNNER_OS_SANITEZED}" == "windows" ];then
               curl -LO "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip
               7z x "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip -o"${EXT_PROGRAMS_DIR}/amazon-corretto"
