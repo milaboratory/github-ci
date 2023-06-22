@@ -728,8 +728,6 @@ jobs:
           mac-notr-api-key: ${{ secrets.MAC_NOTR_API_KEY }}
           mac-notr-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
           mac-notr-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
-          win-sign-cert: ${{ secrets.WIN_SIGN_CERT }}
-          win-sign-cert-pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           registry-url: ${{ inputs.registry-url }}
