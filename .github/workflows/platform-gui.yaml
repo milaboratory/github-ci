@@ -693,22 +693,22 @@ jobs:
             # create external programs directory
             mkdir -v ./"${EXT_PROGRAMS_DIR}"
             # download and unpack mixcr
-            wget -q --show-progress "${MIXCR_URL}/${MIXCR_VERSION}.zip"
+            wget -nv "${MIXCR_URL}/${MIXCR_VERSION}.zip"
             7z x "${MIXCR_VERSION}.zip" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
 
             # download and unpack java
-            mkdir -pv ./"${EXT_PROGRAMS_DIR}/amazon-corretto"
+            mkdir -pv ./"${EXT_PROGRAMS_DIR}/amazon-corretto" && mkdir -pv /tmp/amazon-corretto
             if [ "${RUNNER_OS_SANITEZED}" == "windows" ];then
-              wget -q --show-progress "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip
-              7z x "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip -o"${EXT_PROGRAMS_DIR}/amazon-corretto"
-              mv "${EXT_PROGRAMS_DIR}/amazon-corretto/*/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+              wget -nv "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip
+              7z x "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip -o"/tmp/amazon-corretto"
+              mv "/tmp/amazon-corretto/*/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
             else
-              wget -q --show-progress "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz"
-              tar xvf "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz" --directory "${EXT_PROGRAMS_DIR}/amazon-corretto"
+              wget -nv "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz"
+              tar xvf "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz" --strip-components=1 --directory "/tmp/amazon-corretto"
               if [ "${RUNNER_OS_SANITEZED}" == "macos" ];then
-                  mv "${EXT_PROGRAMS_DIR}/*/Contents/Home/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+                  mv "/tmp/amazon-corretto/Contents/Home/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
               else
-                  mv "${EXT_PROGRAMS_DIR}/amazon-corretto/*/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+                  mv "/tmp/amazon-corretto/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
               fi
             fi
 
