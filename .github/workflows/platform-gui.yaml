@@ -688,7 +688,7 @@ jobs:
 
             # unpack pl
             mkdir ./"${PL_DIST_DIR}" && \
-            7z x "${PL_ARCHIVE_NAME}" -o"${PL_DIST}"
+            7z x "${PL_VERSION}-${RUNNER_OS_ARCH}.zip" -o"${PL_DIST}"
 
             # create external programs directory
             mkdir ./"${EXT_PROGRAMS_DIR}"
