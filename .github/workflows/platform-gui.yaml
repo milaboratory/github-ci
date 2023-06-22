@@ -383,8 +383,22 @@ on:
         default: 'false'
 
       #
-      # Platform download
+      # Dependencies download control
       #
+      java-url:
+        description: |
+          JAVA download url.
+        type: string
+        required: false
+        default: 'https://corretto.aws/downloads/latest'
+
+      mixcr-url:
+        description: |
+          CDN url for MiXCR.
+        type: string
+        required: false
+        default: 'https://cdn.milaboratory.com/software/mixcr'
+
       pl-s3-iam-role-to-assume:
         description: |
           The ARN of a IAM role to assume and configure the Actions environment with
@@ -637,10 +651,12 @@ jobs:
             get_os_arch=$(uname -m)
             case "${get_os_arch}" in
               x86_64)
-                echo "amd64"
+                ghwa_set_output "runner_os_arch" "amd64"
+                ghwa_set_output "java_arch" "x64"
                 ;;
               aarch64 | arm64)
-                echo "arm64"
+                ghwa_set_output "runner_os_arch" "arm64"
+                ghwa_set_output "java_arch" "aarch64"
                 ;;
               *)
                 echo "Arch is not in the list: ${get_os_arch}"
@@ -648,32 +664,54 @@ jobs:
                 ;;
             esac
 
-      - name: Download and unpack platform artifact
+      - name: Download and unpack platform gui dependencies
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          RUNNER_OS_ARCH: ${{ steps.os_arch.outputs.stdout }}
-          PL_DIST: "pl-dist"
+          RUNNER_OS_ARCH: ${{ fromJSON( steps.os_arch.outputs.data ).runner_os_arch }}
+          JAVA_ARCH: ${{ fromJSON( steps.os_arch.outputs.data ).java_arch }}
+          PL_DIST_DIR: "pl-dist"
+          EXT_PROGRAMS_DIR: "external_programs"
           PL_S3_BUKCET: ${{ inputs.pl-s3-bucket }}
+          JAVA_URL: ${{ inputs.java-url }}
+          MIXCR_URL: ${{ inputs.mixcr-url }}
         with:
           dump-stdout: false
           run: |
-            # get archive name from pl-version.json
+            # get dependencies versions from plui-dependencies.json
             RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
-            PL_ARCHIVE_NAME=$(
-              jq -r --arg RUNNER_OS_SANITEZED "${RUNNER_OS_SANITEZED}" --arg RUNNER_OS_ARCH "${RUNNER_OS_ARCH}" '
-              .operating_systems[]
-              | select(.name == $RUNNER_OS_SANITEZED)
-              | .architectures[]
-              | select(.name == $RUNNER_OS_ARCH)
-              | .application_archive' pl-version.json
-            )
+            PL_VERSION=$(jq -r ".dependencies.architecture.$RUNNER_OS_ARCH.$RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
+            MIXCR_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"mixcr\") | .version" )
+            JAVA_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"java\") | .version" )
 
-            # download archive
-            aws s3 cp "s3://${PL_S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_ARCHIVE_NAME}" ./
+            # download pl
+            aws s3 cp "s3://${PL_S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_VERSION}-${RUNNER_OS_ARCH}.zip" ./
 
-            # unpack archive
-            mkdir ./"${PL_DIST}" && \
+            # unpack pl
+            mkdir ./"${PL_DIST_DIR}" && \
             7z x "${PL_ARCHIVE_NAME}" -o"${PL_DIST}"
+
+            # create external programs directory
+            mkdir ./"${EXT_PROGRAMS_DIR}"
+            # download and unpack mixcr
+            curl -LO "${MIXCR_URL}/${MIXCR_VERSION}.zip"
+            7z x ."${MIXCR_VERSION}.zip" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
+
+            # download and unpack java
+            mkdir -p ./"${EXT_PROGRAMS_DIR}/amazon-corretto"
+            if [ "${RUNNER_OS_SANITEZED}" == "windows" ];then
+              curl -LO "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip
+              7z x "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}.zip -o"${EXT_PROGRAMS_DIR}/amazon-corretto"
+              mv "${EXT_PROGRAMS_DIR}/amazon-corretto/*/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+            else
+              curl -LO "${JAVA_URL}/${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz"
+              tar xvf "${JAVA_VERSION}-${JAVA_ARCH}-${RUNNER_OS_SANITEZED}-jdk.tar.gz" --directory "${EXT_PROGRAMS_DIR}/amazon-corretto"
+              if [ "${RUNNER_OS_SANITEZED}" == "macos" ];then
+                  mv "${EXT_PROGRAMS_DIR}/Contents/Home/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+              else
+                  mv "${EXT_PROGRAMS_DIR}/amazon-corretto/*/*" "${EXT_PROGRAMS_DIR}/amazon-corretto/"
+              fi
+            fi
+
 
       - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
         with:

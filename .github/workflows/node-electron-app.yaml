@@ -408,6 +408,89 @@ on:
         default: 'false'
 
       #
+      # jsign control
+      #
+      java-version:
+        description: |
+          Version of JAVA to to launch ebourg/jsign.
+        type: string
+        required: true
+
+      java-distribution:
+        description: |
+          Java distribution to use.
+          Example: 'temurin', 'zulu', ...
+          See 'https://github.com/actions/setup-java#supported-distributions'
+          for complete list of supported distributions.
+        type: string
+        required: false
+        default: 'temurin'
+
+      jsign-version:
+        description: |
+          Version of jsign
+        type: string
+        required: false
+        default: '5.0'
+
+      timestamping-mode:
+        description: |
+          Timestamping mode
+        type: string
+        required: false
+        default: 'RFC3161'
+
+      timestamping-url:
+        description: |
+          Timestamping url, must be from the organization that issued code sign certificate
+        type: string
+        required: false
+        default: ' http://timestamp.globalsign.com/tsa/r6advanced1'
+
+      electron-app-path:
+        description: |
+          File to sign with jsign
+        type: string
+        required: true
+
+      win-code-sign-chain:
+        description: |
+          base64-encoded code sign chain pem file for the Windows
+        type: string
+        required: false
+
+      #
+      # GCP Control
+      #
+      gcloud-workload-identity-provider:
+        description: |
+          Tha name of the GCP workload identity federation provider
+        type: string
+        required: false
+        default: ''
+
+      gcloud-service-account:
+        description: |
+          The name of the GCP service account
+        type: string
+        required: false
+        default: ''
+
+      gcloud-kms-keyring:
+        description: |
+          KMS keyring name in GCP
+        type: string
+        required: false
+        default: 'projects/mioutpost/locations/europe-west3/keyRings/milab-euwe3-prod-kms-ev-codesign-keyring'
+
+      gcloud-kms-keyname:
+        description: |
+          KMS key name in GCP
+        type: string
+        required: false
+        default: ''
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -505,16 +588,12 @@ on:
           Issuer ID found on App Store Connect for the API key file
         required: false
 
-      WIN_SIGN_CERT:
+      WIN_CODE_SIGN_CHAIN:
         description: |
-          base64-encoded p12 certificate file for the Windows
+          base64-encoded code sign chain pem file for the Windows
           (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
         required: false
 
-      WIN_SIGN_CERT_PWD:
-         description: |
-          password to decrypt the p12 signing certificate for the Windows
-         required: false
 
 jobs:
   init:
@@ -609,8 +688,6 @@ jobs:
           mac-notr-api-key: ${{ secrets.MAC_NOTR_API_KEY }}
           mac-notr-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
           mac-notr-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
-          win-sign-cert: ${{ secrets.WIN_SIGN_CERT }}
-          win-sign-cert-pwd: ${{ secrets.WIN_SIGN_CERT_PWD }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           registry-url: ${{ inputs.registry-url }}
@@ -651,6 +728,21 @@ jobs:
                 ghwa_set_output "app_name" ""
                 ;;
             esac
+
+      - uses: milaboratory/github-ci/blocks/node/electron-win-sign@v4-beta
+        if: startsWith(runner.os, 'Windows')
+        with:
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+          jsign-version: ${{ inputs.jsign-version }}
+          timestamping-mode: ${{ inputs.timestamping-mode }}
+          timestamping-url: ${{ inputs.timestamping-url }}
+          win-code-sign-chain: ${{ inputs.win-code-sign-chain }}
+          gcloud-workload-identity-provider: ${{ inputs.gcloud-workload-identity-provider }}
+          gcloud-service-account: ${{ inputs.gcloud-service-account }}
+          gcloud-kms-keyring: ${{ inputs.gcloud-kms-keyring }}
+          gcloud-kms-keyname: ${{ inputs.gcloud-kms-keyname }}
+          electron-app-path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
 
       - name: Save build artifacts
         uses: actions/upload-artifact@v3

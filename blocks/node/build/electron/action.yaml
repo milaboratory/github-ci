@@ -65,15 +65,6 @@ inputs:
       Issuer ID found on App Store Connect for the API key file
     required: false
 
-  win-sign-cert:
-    description: |
-      base64-encoded p12 certificate file for the Windows
-    required: false
-  win-sign-cert-pwd:
-    description: |
-      password to decrypt the p12 signing certificate for the Windows
-    required: false
-
   node-version:
     description: |
       Node version to use.
@@ -179,5 +170,3 @@ runs:
         github-token: ${{ inputs.github-token }}
         macos-certs: ${{ inputs.mac-sign-cert }}
         macos-certs-password: ${{ inputs.mac-sign-cert-pwd }}
-        windows-certs: ${{ inputs.win-sign-cert }}
-        windows-certs-password: ${{ inputs.win-sign-cert-pwd }}
