@@ -1060,8 +1060,8 @@ jobs:
       - can-release
 
       # Send 'review required' notification only after all tests finished
-      - notify-test-unit
-      - notify-test-static
+      - test-unit
+      - test-static
 
     steps:
       - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
