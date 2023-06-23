@@ -859,7 +859,7 @@ jobs:
             ${{ steps.build.conclusion }}
             ${{ steps.upload-s3.conclusion }}
           product-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
-          download-links: ${{ steps.upload-s3.outputs.s3-urls-json }}
+          download-links: ${{ steps.upload-s3.outputs.download-json }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
     outputs:
