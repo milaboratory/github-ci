@@ -667,7 +667,7 @@ jobs:
                 exit 1
                 ;;
             esac
-
+            
             _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
 
             _PL_VERSION=$(jq -r ".dependencies.architecture.$_RUNNER_OS_ARCH.$_RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
