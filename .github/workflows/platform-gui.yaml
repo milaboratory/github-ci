@@ -792,7 +792,7 @@ jobs:
             case "${RUNNER_OS}" in
               Linux)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-linux"
-                ghwa_set_output "path" "dist/*.appImage"
+                ghwa_set_output "path" "dist/*.AppImage"
                 ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
                 ;;
               macOS)
