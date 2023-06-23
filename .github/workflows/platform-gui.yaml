@@ -737,7 +737,7 @@ jobs:
             echo "Download java archive..."
             curl -LO --no-progress-meter "${JAVA_DL_LINK}"
             if [ -f "${JAVA_ARCHIVE}" ];then
-              if [ "${RUNNER_OS}" == "Windows ];then
+              if [ "${RUNNER_OS}" == "Windows" ];then
                 echo "Extracting java archive..."
                 7z x "${JAVA_ARCHIVE} -o"${TMP_DIR}/amazon-corretto"
               else
