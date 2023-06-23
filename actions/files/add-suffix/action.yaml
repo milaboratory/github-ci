@@ -63,7 +63,7 @@ runs:
             if [ "${file_name}" = "${extension}" ]; then
               extension=""
             fi
-            
+
             SANITIZED_SUFFIX=$(echo ${SUFFIX} | sed 's:/:-:g')
             if [ -n "${extension}" ]; then
               mv -- "${file_path}" "${file_path%.*}${SANITIZED_SUFFIX}.${extension}"

@@ -4,6 +4,7 @@ description: |
   This script will search for all open pull requests, then for each PR,
   it checks if the name of the base branch (base_ref) is part of the branch name (head_ref) for this PR.
   If it isn't, it will close the PR and leave a comment.
+
 inputs:
   branch-prefix:
     description: |
@@ -15,8 +16,10 @@ inputs:
       Github token
     required: true
     default: ${{ github.token }}
+
 runs:
   using: "composite"
+
   steps:
     - uses: actions/github-script@v6
       env:
@@ -26,7 +29,7 @@ runs:
         script: |
           async function run() {
             const branch_prefix = process.env.BRANCH_PREFIX;
-
+          
             try {
               const {data: prs} = await github.rest.pulls.list({
                 owner: context.repo.owner,
@@ -35,16 +38,16 @@ runs:
               });
 
               for (const pr of prs) {
-                if (!pr.head.ref.startsWith(branch_prefix)) continue;
+                if (!pr.head.ref.startsWith(branch_prefix)) continue; 
 
                 const baseBranchName = pr.base.ref;
                 const headBranchName = pr.head.ref;
                 const branchAfterSlash = headBranchName.split('/')[1];
-
+          
                 console.log(`Head Branch: ${headBranchName}`);
                 console.log(`Base Branch: ${baseBranchName}`);
                 console.log(`Prefix: ${branch_prefix}`);
-
+      
                 try {
                     await github.rest.repos.getBranch({
                       owner: context.repo.owner,
@@ -65,7 +68,7 @@ runs:
                     pull_number: pr.number,
                     state: 'closed'
                   });
-
+  
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
