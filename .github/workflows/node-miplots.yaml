@@ -310,7 +310,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -324,9 +324,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -335,13 +335,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         env: ${{ fromJSON(inputs.build-script-env) }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
@@ -364,12 +364,12 @@ jobs:
 
     steps:
       - id: search-tags
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -389,9 +389,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -400,7 +400,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
@@ -408,7 +408,7 @@ jobs:
 
       - name: Set upload path for the next.js static build
         id: upload-path
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           VERSION: ${{ steps.context.outputs.current-version }}
           S3_PATH_PREFIX: ${{ inputs.build-demo-s3-path-prefix }}
@@ -418,7 +418,7 @@ jobs:
             _PATH_PREFIX=$(echo "${S3_PATH_PREFIX}" | cut -d '/' -f 2-)
             echo "${CDN_URL}/${_PATH_PREFIX}/${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}/"
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         env:
           PATH_PREFIX: ${{ steps.upload-path.outputs.stdout }}
         with:
@@ -447,7 +447,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
       - uses: actions/download-artifact@v3
         with:
@@ -462,7 +462,7 @@ jobs:
 
       - name: Set upload path for the demo suite
         id: upload-path
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           VERSION: ${{ steps.context.outputs.current-version }}
         with:
@@ -470,7 +470,7 @@ jobs:
             echo "${GITHUB_REPOSITORY}/${VERSION}/${GITHUB_SHA}"
 
       - name: Upload demo suite
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           ARCHIVE_PATH: ${{ inputs.build-demo-artifact-path }}
           UPLOAD_PATH: ${{ steps.upload-path.outputs.stdout }}
@@ -504,13 +504,13 @@ jobs:
 
     steps:
       - id: search-tags
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
             demosuite
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -533,7 +533,7 @@ jobs:
       packages: read
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -542,14 +542,14 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v4-beta
+        uses: milaboratory/github-ci/blocks/node/test@v4
         with:
           test-name: ${{ inputs.test-unit-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -578,13 +578,13 @@ jobs:
 
     steps:
       - id: search-tags
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             unit
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -608,7 +608,7 @@ jobs:
       packages: read
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -617,14 +617,14 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v4-beta
+        uses: milaboratory/github-ci/blocks/node/test@v4
         with:
           test-name: ${{ inputs.test-static-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -653,13 +653,13 @@ jobs:
 
     steps:
       - id: search-tags
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             static
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

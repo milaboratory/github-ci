@@ -602,7 +602,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -618,16 +618,16 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/release/delete-draft/@v4-beta
+      - uses: milaboratory/github-ci/actions/release/delete-draft/@v4
         with:
           draft-ttl-threshold: ${{ inputs.draft-ttl-threshold }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Draft release
         id: draft-release
-        uses: milaboratory/github-ci/actions/release/create@v4-beta
+        uses: milaboratory/github-ci/actions/release/create@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -656,9 +656,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -667,13 +667,13 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/electron@v4
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -698,7 +698,7 @@ jobs:
 
       - id: artifact
         if: always()
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           APP_NAME: ${{ inputs.app-name }}
           APP_NAME_SLUG: ${{ inputs.app-name-slug }}
@@ -729,7 +729,7 @@ jobs:
                 ;;
             esac
 
-      - uses: milaboratory/github-ci/blocks/node/electron-win-sign@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/electron-win-sign@v4
         if: startsWith(runner.os, 'Windows')
         with:
           java-version: ${{ inputs.java-version }}
@@ -771,7 +771,7 @@ jobs:
     steps:
      - id: s3
        name: Upload to S3
-       uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+       uses: milaboratory/github-ci/blocks/release/s3@v4
        with:
         artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
         add-version: ${{ inputs.dist-archive-s3-add-version }}
@@ -809,7 +809,7 @@ jobs:
         packages: read
 
       steps:
-        - uses: milaboratory/github-ci/actions/env@v4-beta
+        - uses: milaboratory/github-ci/actions/env@v4
           with:
             inputs: ${{ inputs.env }}
             secrets: ${{ secrets.env }}
@@ -818,14 +818,14 @@ jobs:
           with:
             submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        - uses: milaboratory/github-ci/actions/git/crypt@v4
           if: inputs.git-crypt-unlock
           with:
             gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
             gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
         - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v4-beta
+          uses: milaboratory/github-ci/blocks/node/test@v4
           with:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
@@ -856,13 +856,13 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             unit
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -891,7 +891,7 @@ jobs:
         packages: read
 
       steps:
-        - uses: milaboratory/github-ci/actions/env@v4-beta
+        - uses: milaboratory/github-ci/actions/env@v4
           with:
             inputs: ${{ inputs.env }}
             secrets: ${{ secrets.env }}
@@ -900,14 +900,14 @@ jobs:
           with:
             submodules: ${{ inputs.checkout-submodules }}
 
-        - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        - uses: milaboratory/github-ci/actions/git/crypt@v4
           if: inputs.git-crypt-unlock
           with:
             gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
             gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
         - id: test
-          uses: milaboratory/github-ci/blocks/node/test@v4-beta
+          uses: milaboratory/github-ci/blocks/node/test@v4
           with:
             test-name: ${{ matrix.tests }}
             node-version: ${{ inputs.node-version }}
@@ -938,13 +938,13 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             static
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -972,12 +972,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -1028,7 +1028,7 @@ jobs:
         - notify-test-static
 
       steps:
-        - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+        - uses: milaboratory/github-ci/blocks/notify/review-required@v4
           with:
             telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
             telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -1070,7 +1070,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
       - uses: actions/download-artifact@v3
         with:
@@ -1079,7 +1079,7 @@ jobs:
 
       - name: Create release
         id: release
-        uses: milaboratory/github-ci/actions/release/create@v4-beta
+        uses: milaboratory/github-ci/actions/release/create@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -1108,7 +1108,7 @@ jobs:
       steps:
         - id: s3
           name: Upload to S3
-          uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+          uses: milaboratory/github-ci/blocks/release/s3@v4
           with:
             artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}
             add-version: ${{ inputs.release-s3-add-version }}
@@ -1141,12 +1141,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

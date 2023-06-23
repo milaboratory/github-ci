@@ -346,7 +346,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
 
@@ -359,7 +359,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -368,19 +368,19 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
+      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4
         with:
           aws-iam-role-to-assume: ${{ inputs.aws-s3-apt-repository-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-s3-apt-repository-region }}
           aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
 
-      - uses: milaboratory/github-ci/blocks/pl/linux/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/pl/linux/build@v4
         env: ${{ fromJSON(inputs.build-env) }}
         with:
           golang-version: ${{ inputs.golang-version }}
@@ -408,7 +408,7 @@ jobs:
       contents: read
     steps:
       - id: s3
-        uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+        uses: milaboratory/github-ci/blocks/release/s3@v4
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
@@ -448,13 +448,13 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
             linux
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -475,7 +475,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -484,19 +484,19 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
         if: inputs.git-crypt-unlock
         with:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
+      - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4
         with:
           aws-iam-role-to-assume: ${{ inputs.aws-s3-apt-repository-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-s3-apt-repository-region }}
           aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
 
-      - uses: milaboratory/github-ci/blocks/pl/linux/test@v4-beta
+      - uses: milaboratory/github-ci/blocks/pl/linux/test@v4
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -534,14 +534,14 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             integration
             linux
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

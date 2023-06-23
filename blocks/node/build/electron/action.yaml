@@ -116,7 +116,7 @@ runs:
 
   steps:
     - name: Prepare env for Node application build
-      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -126,7 +126,7 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Install node packages with npm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
@@ -134,17 +134,17 @@ runs:
          npm ci
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
       with:
         version: ${{ inputs.build-version }}
 
     - name: Set gradle.properties
       if: inputs.gradle-properties != ''
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4
       with:
         properties: ${{ inputs.gradle-properties }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/shell@v4
       if: startsWith(runner.os, 'macOS')
       env:
         APPLE_API_KEY: ${{ inputs.mac-notr-api-key }}
@@ -155,7 +155,7 @@ runs:
           echo "${APPLE_API_KEY}" | base64 -d > "${GITHUB_WORKSPACE}/AuthKey_${APPLE_API_KEY_ID}.p8"
 
     - name: Build Electron application
-      uses: milaboratory/github-ci/actions/node/electron-builder@v4-beta
+      uses: milaboratory/github-ci/actions/node/electron-builder@v4
       env:
         VITE_APP_VERSION: ${{ inputs.build-version }}
         APPLE_API_KEY_ID: ${{ inputs.mac-notr-api-key-id }}
