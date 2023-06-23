@@ -284,6 +284,8 @@ jobs:
 
     permissions:
       packages: read
+      contents: read
+
     needs:
       - init
 
