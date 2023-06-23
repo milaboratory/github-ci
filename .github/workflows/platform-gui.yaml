@@ -724,7 +724,7 @@ jobs:
 
             mkdir -pv ./"${EXT_PROGRAMS_DIR}"
             echo "Downloading mixcr archive..."
-            curl -LO --no-progress-meter "${MIXCR_DL_LINK}
+            curl -LO --no-progress-meter "${MIXCR_DL_LINK}"
             if [ -f "${MIXCR_ARCHIVE}" ];then
               echo "Extracting mixcr archive..."
               7z x "${MIXCR_ARCHIVE}" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
