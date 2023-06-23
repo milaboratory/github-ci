@@ -739,7 +739,7 @@ jobs:
             if [ -f "${JAVA_ARCHIVE}" ];then
               if [ "${RUNNER_OS}" == "Windows" ];then
                 echo "Extracting java archive..."
-                7z x "${JAVA_ARCHIVE} -o"${TMP_DIR}/amazon-corretto"
+                7z x "${JAVA_ARCHIVE}" -o"${TMP_DIR}/amazon-corretto"
               else
                 echo "Extracting java archive..."
                 tar xf "${JAVA_ARCHIVE}" --strip-components=1 --directory "${TMP_DIR}/amazon-corretto"
