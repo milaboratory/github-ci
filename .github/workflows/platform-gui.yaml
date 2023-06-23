@@ -923,7 +923,8 @@ jobs:
         if: always()
           && inputs.notify-telegram
           && inputs.notify-tests != 'false'
-          steps.test.conclusion != 'cancelled'
+          && steps.test.conclusion != 'cancelled'
+
         uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
@@ -940,7 +941,7 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-      
+
 
   test-static:
     strategy:
