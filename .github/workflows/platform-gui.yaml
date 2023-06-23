@@ -674,7 +674,7 @@ jobs:
             _MIXCR_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"mixcr\") | .version" plui-dependencies.json)
             _JAVA_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"java\") | .version" plui-dependencies.json)
 
-            _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_SANITEZED}.zip"
+            _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.zip"
             _PL_DL_LINK="s3://${S3_BUKCET}/pl/${_RUNNER_OS_SANITEZED}/${_PL_ARCHIVE}"
 
             _MIXCR_ARCHIVE="${_MIXCR_VERSION}.zip"
