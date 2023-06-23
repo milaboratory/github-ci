@@ -757,7 +757,8 @@ jobs:
                 mv "${TMP_DIR}/amazon-corretto"/* "./${EXT_PROGRAMS_DIR}/amazon-corretto"
             fi
 
-      - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
+      - id: build
+        uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -821,28 +822,11 @@ jobs:
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
-    outputs:
-      artifact-app-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
-      artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
-
-
-  upload-s3:
-    name: Upload archive to s3
-    runs-on: ubuntu-latest
-
-    if: ${{ inputs.dist-archive-s3 }}
-    needs:
-      - build
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - id: s3
+      - id: upload-s3
         name: Upload to S3
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
-          artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
+          artifact-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
@@ -853,12 +837,34 @@ jobs:
 
           alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
 
-    outputs:
-      s3-files: ${{ steps.s3.outputs.uploaded }}
-      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
-      s3-urls: ${{ steps.s3.outputs.download }}
-      s3-urls-json: ${{ steps.s3.outputs.download-json }}
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
 
+      - name: notify build
+        if: always()
+          && inputs.notify-telegram
+          && inputs.notify-build != 'false'
+          && steps.build.conclusion != 'cancelled'
+
+        uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: |
+            ${{ steps.build.conclusion }}
+            ${{ steps.upload-s3.conclusion }}
+          product-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
+          download-links: ${{ steps.upload-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+    outputs:
+      artifact-app-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
+      artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
 
   test-unit:
     strategy:
@@ -905,24 +911,6 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-    outputs:
-      # Even constant outputs become initialized only after job start.
-      # All outputs of skipped jobs are always empty.
-      started: 'true'
-      artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
-
-  notify-test-unit:
-    name: notify unit test
-    runs-on: ubuntu-latest
-
-    if:  always()
-      && needs.test-unit.outputs.started == 'true'
-      && inputs.notify-tests != 'false'
-
-    needs:
-      - test-unit
-
-    steps:
       - id: search-tags
         if: always()
         uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
@@ -931,17 +919,28 @@ jobs:
             test
             unit
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - name: notify unit test
+        if: always()
+          && inputs.notify-telegram
+          && inputs.notify-tests != 'false'
+          steps.test.conclusion != 'cancelled'
+        uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           notification-mode: ${{ inputs.notify-tests }}
-          tests-status: ${{ needs.test-unit.result }}
+          tests-status: ${{ steps.test.conclusion }}
           tests-type: 'Unit'
 
-          product-name: ${{ needs.test-unit.outputs.artifact-app-name }}
+          product-name: ${{ needs.build.outputs.artifact-app-name }}
           search-tags: ${{ steps.search-tags.outputs.result }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+      
 
   test-static:
     strategy:
@@ -991,7 +990,7 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-      artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
+      artifact-app-name: ${{ inputs.app-name }}
 
   notify-test-static:
     name: notify static test
@@ -1023,39 +1022,6 @@ jobs:
           tests-type: 'Static'
 
           product-name: ${{ needs.test-static.outputs.artifact-app-name }}
-          search-tags: ${{ steps.search-tags.outputs.result }}
-
-  notify-build:
-    name: Notify build
-    runs-on: ubuntu-latest
-
-    if:  always()
-      && inputs.notify-telegram
-      && inputs.notify-build != 'false'
-      && needs.build.result != 'cancelled'
-
-    needs:
-      - build
-      - upload-s3
-
-    steps:
-      - id: search-tags
-        if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
-        with:
-          input: |
-            build
-
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
-          build-status: |
-            ${{ needs.build.result }}
-            ${{ needs.upload-s3.result }}
-          product-name: ${{ needs.build.outputs.artifact-app-name }}
-          download-links: ${{ needs.upload-s3.outputs.s3-urls-json }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   can-release:
