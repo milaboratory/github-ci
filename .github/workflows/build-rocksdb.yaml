@@ -54,7 +54,6 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            ls -la
             bash -c "./bootstrap-ci.sh"
 
       - id: rocksdb_os_details
@@ -76,7 +75,7 @@ jobs:
                ;;
             esac
 
-            _ROCKSDB_VERSION =$(cat ./vcpkg/ports/rocksdb/vcpkg.json | jq -r '.version')
+            _ROCKSDB_VERSION=$(cat ./vcpkg/ports/rocksdb/vcpkg.json | jq -r '.version')
             _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
 
             ghwa_set_output "runner-os" "${_RUNNER_OS_SANITEZED}"
