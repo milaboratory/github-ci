@@ -7,6 +7,7 @@ on:
           The vcpkg triplet name
         type: string
         required: false
+        default: 'x64-linux'
       #
       # AWS
       #
