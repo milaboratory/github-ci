@@ -89,7 +89,7 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            vcpkg install "rocksdb[core,zlib,zstd,bzip2,lz4,snappy]:${VCPKG_TRIPLET}"
+            "${VCPKG_ROOT}"/vcpkg install "rocksdb[core,zlib,zstd,bzip2,lz4,snappy]:${VCPKG_TRIPLET}"
 
       - uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -107,11 +107,11 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            _ROCKSDB_LIB_PATH="vcpkg/installed/${VCPKG_TRIPLET}"
-            _ROCKSDB_ARCHIVE_NAME="rocksdb-lib_${ROCKSDB_VERSION}_${GH_AGENT_OS}_${GH_AGENT_OS_ARCH}.7z"
-            _ROCKSDB_ARCHIVE_PATH="${GH_WORKSPACE}/${_ROCKSDB_ARCHIVE_NAME}"
+            ROCKSDB_LIB_PATH="vcpkg/installed/${VCPKG_TRIPLET}"
+            ROCKSDB_ARCHIVE_NAME="rocksdb-lib_${ROCKSDB_VERSION}_${GH_AGENT_OS}_${GH_AGENT_OS_ARCH}.7z"
+            ROCKSDB_ARCHIVE_PATH="${GH_WORKSPACE}/${ROCKSDB_ARCHIVE_NAME}"
 
-            #7z a "${_ROCKSDB_ARCHIVE_PATH}" "${_ROCKSDB_LIB_PATH}/lib" "${_ROCKSDB_LIB_PATH}/include"
-            7z a "${_ROCKSDB_ARCHIVE_PATH}" "./vcpkg"
-            aws s3 cp "${_ROCKSDB_ARCHIVE_PATH}" s3://${S3_BUCKET_NAME}/rocksdb/${_ROCKSDB_VERSION}/
+            #7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}/lib" "${ROCKSDB_LIB_PATH}/include"
+            7z a "${ROCKSDB_ARCHIVE_PATH}" "./vcpkg"
+            aws s3 cp "${ROCKSDB_ARCHIVE_PATH}" s3://${S3_BUCKET_NAME}/rocksdb/${ROCKSDB_VERSION}/
 
