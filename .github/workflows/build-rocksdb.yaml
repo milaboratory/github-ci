@@ -8,6 +8,13 @@ on:
         type: string
         required: false
         default: 'x64-linux'
+      runner-os:
+        description:
+          Define runner github runner os.
+          e.g. ubuntu-latest or macos-latest
+        type: string
+        required: false
+        default: 'ubuntu-latest'
       #
       # AWS
       #
@@ -36,7 +43,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: linux-latest
+    runs-on: ${{ inputs.runner-os }}
     steps:
       - name: checkout milaboratory/deb repo
         uses: actions/checkout@v3
