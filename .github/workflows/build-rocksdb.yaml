@@ -54,7 +54,8 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            bash -c "bootstrap-ci.sh"
+            ls -la
+            bash -c "./bootstrap-ci.sh"
 
       - id: rocksdb_os_details
         name: get rocksdb version from vcpkg ports
