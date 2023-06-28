@@ -102,16 +102,13 @@ jobs:
           ROCKSDB_VERSION: ${{ fromJSON( steps.rocksdb_os_details.outputs.data ).rocksdb-version }}
           GH_AGENT_OS: ${{ fromJSON( steps.rocksdb_os_details.outputs.data ).runner-os }}
           GH_AGENT_OS_ARCH: ${{ fromJSON( steps.rocksdb_os_details.outputs.data ).runner-os-arch }}
-          GH_WORKSPACE: ${{ github.workspace }}
           VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            ROCKSDB_LIB_PATH="vcpkg/installed/${VCPKG_TRIPLET}"
+            ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/vcpkg/installed/${VCPKG_TRIPLET}"
             ROCKSDB_ARCHIVE_NAME="rocksdb-lib_${ROCKSDB_VERSION}_${GH_AGENT_OS}_${GH_AGENT_OS_ARCH}.7z"
-            ROCKSDB_ARCHIVE_PATH="${GH_WORKSPACE}/${ROCKSDB_ARCHIVE_NAME}"
+            ROCKSDB_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${ROCKSDB_ARCHIVE_NAME}"
 
-            #7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}/lib" "${ROCKSDB_LIB_PATH}/include"
-            7z a "${ROCKSDB_ARCHIVE_PATH}" "./vcpkg"
+            7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}/lib" "${ROCKSDB_LIB_PATH}/include"
             aws s3 cp "${ROCKSDB_ARCHIVE_PATH}" s3://${S3_BUCKET_NAME}/rocksdb/${ROCKSDB_VERSION}/
-
