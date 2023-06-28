@@ -109,7 +109,7 @@ jobs:
           run: |
             _ROCKSDB_LIB_PATH="vcpkg/installed/${VCPKG_TRIPLET}"
             _ROCKSDB_ARCHIVE_NAME="rocksdb-lib_${ROCKSDB_VERSION}_${GH_AGENT_OS}_${GH_AGENT_OS_ARCH}.7z"
-            _ROCKSDB_ARCHIVE_PATH="${GH_WORKSPACE}/${ROCKSDB_ARCHIVE_NAME}"
+            _ROCKSDB_ARCHIVE_PATH="${GH_WORKSPACE}/${_ROCKSDB_ARCHIVE_NAME}"
 
             7z a "${_ROCKSDB_ARCHIVE_PATH}" "${_ROCKSDB_LIB_PATH}/lib" "${_ROCKSDB_LIB_PATH}/include"
             aws s3 cp "${_ROCKSDB_ARCHIVE_PATH}" s3://${S3_BUCKET_NAME}/rocksdb/${_ROCKSDB_VERSION}/
