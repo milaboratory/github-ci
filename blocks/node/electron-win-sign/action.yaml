@@ -107,7 +107,7 @@ runs:
       id: pre-sign
       env:
         CODE_SIGN_CHAIN: ${{ inputs.win-code-sign-chain }}
-        ELECTRON_APP_PATH: ${{ inputs.electron-app-path }}
+        ELECTRON_APP_PATH: ${{ inputs.win-electron-app-path }}
       shell: pwsh
       run: |
         $CODE_SIGN_CHAIN_PEM="codesign-chain.pem"
