@@ -93,15 +93,15 @@ runs:
        id: gcp_auth
        uses: google-github-actions/auth@v1
        with:
-         workload_identity_provider: ${{ gcloud-workload-identity-provider }}
-         service_account: ${{ gcloud-service-account }}
+         workload_identity_provider: ${{ inputs.gcloud-workload-identity-provider }}
+         service_account: ${{ inputs.gcloud-service-account }}
 
     - name: Install ebourg/jsign
       env:
         JSIGN_VERSION: ${{ inputs.jsign-version }}
       shell: pwsh
       run: |
-        choco install jsign --version "${{ JSIGN_VERSION }}"
+        choco install jsign --version "${{ env.JSIGN_VERSION }}"
 
     - name: Prepare for siging
       id: pre-sign
