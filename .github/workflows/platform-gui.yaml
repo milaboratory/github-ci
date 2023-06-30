@@ -784,7 +784,8 @@ jobs:
                 ;;
               Windows)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-windows"
-                ghwa_set_output "path" "dist/*.nsis"
+                ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-windows"
+                ghwa_set_output "path" "dist/*.exe"
                 ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
                 ;;
               *)
