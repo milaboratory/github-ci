@@ -65,7 +65,7 @@ inputs:
     description: |
       The name of the GCP service account
     required: false
-    default: 'milab-prod-kms-codesign-sa@mioutpost.iam.gserviceaccount.com'
+    default: 'milab-dev-kms-ev-codesign@mioutpost.iam.gserviceaccount.com'
 
   gcloud-kms-keyring:
     description: |
@@ -125,7 +125,6 @@ runs:
     - name: Sign electron app with jsign
       env:
         CODE_SIGN_CHAIN: ${{ inputs.win-code-sign-chain }}
-        ELECTRON_APP_PATH: ${{ inputs.electron-app-path }}
       shell: pwsh
       run: |
         jsign --storetype GOOGLECLOUD `
