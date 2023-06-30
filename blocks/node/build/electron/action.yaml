@@ -65,6 +65,15 @@ inputs:
       Issuer ID found on App Store Connect for the API key file
     required: false
 
+  win-electron-app-path:
+    description: |
+      File to sign with jsign
+    required: false
+  win-code-sign-chain:
+    description: |
+      base64-encoded code sign chain pem file for the Windows
+    required: false
+
   node-version:
     description: |
       Node version to use.
@@ -169,3 +178,10 @@ runs:
         github-token: ${{ inputs.github-token }}
         macos-certs: ${{ inputs.mac-sign-cert }}
         macos-certs-password: ${{ inputs.mac-sign-cert-pwd }}
+
+    - name: Sign Electron application on Windows
+      if: startsWith(runner.os, 'Windows')
+      uses: milaboratory/github-ci/blocks/node/electron-win-sign@v4-beta
+      with:
+        win-code-sign-chain: ${{ inputs.win-code-sign-chain }}
+        win-electron-app-path: ${{ inputs.win-electron-app-path }}

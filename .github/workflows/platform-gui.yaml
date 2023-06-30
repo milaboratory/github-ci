@@ -762,29 +762,6 @@ jobs:
                 mv "${TMP_DIR}/amazon-corretto"/* "./${EXT_PROGRAMS_DIR}/amazon-corretto"
             fi
 
-      - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
-        with:
-          build-version: ${{ steps.context.outputs.current-version }}
-          build-script-name: ${{ inputs.build-script-name }}
-          build-working-directory: ${{ inputs.build-working-directory }}
-          skip-build: ${{ inputs.skip-build }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          electron-builder-args: ${{ inputs.electron-builder-args }}
-          is-release: ${{ steps.context.outputs.is-release }}
-          is-electron-application: ${{ inputs.is-electron-application }}
-          mac-sign-cert: ${{ secrets.MAC_SIGN_CERT }}
-          mac-sign-cert-pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
-          mac-notr-api-key: ${{ secrets.MAC_NOTR_API_KEY }}
-          mac-notr-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
-          mac-notr-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
-          gradle-properties: ${{ secrets.GRADLE_PROPERTIES }}
-
       - id: artifact
         if: always()
         uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -817,6 +794,31 @@ jobs:
                 ghwa_set_output "app_name" ""
                 ;;
             esac
+
+      - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
+        with:
+          build-version: ${{ steps.context.outputs.current-version }}
+          build-script-name: ${{ inputs.build-script-name }}
+          build-working-directory: ${{ inputs.build-working-directory }}
+          skip-build: ${{ inputs.skip-build }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          electron-builder-args: ${{ inputs.electron-builder-args }}
+          is-release: ${{ steps.context.outputs.is-release }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          mac-sign-cert: ${{ secrets.MAC_SIGN_CERT }}
+          mac-sign-cert-pwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+          mac-notr-api-key: ${{ secrets.MAC_NOTR_API_KEY }}
+          mac-notr-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
+          mac-notr-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
+          win-electron-app-path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
+          win-code-sign-chain: ${( secrets.WIN_CODE_SIGN_CHAIN }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          gradle-properties: ${{ secrets.GRADLE_PROPERTIES }}
 
       - name: Save build artifacts
         uses: actions/upload-artifact@v3

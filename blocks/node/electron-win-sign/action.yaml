@@ -1,4 +1,4 @@
-name: Build Electron application
+name: Sign Electron application on Windows
 author: 'MiLaboratories'
 description: |
   Prepare agent for building a Electron project.
@@ -12,7 +12,8 @@ inputs:
   java-version:
     description: |
       Version of JAVA to to launch ebourg/jsign.
-    required: true
+    required: false
+    default: '11'
 
   java-distribution:
     description: |
@@ -41,10 +42,10 @@ inputs:
     required: false
     default: ' http://timestamp.globalsign.com/tsa/r6advanced1'
 
-  electron-app-path:
+  win-electron-app-path:
     description: |
       File to sign with jsign
-    required: true
+    required: false
 
   win-code-sign-chain:
     description: |
@@ -58,13 +59,13 @@ inputs:
     description: |
       Tha name of the GCP workload identity federation provider
     required: false
-    default: ''
+    default: 'projects/327672633300/locations/global/workloadIdentityPools/milab-prod-github-oidc-pool/providers/milab-prod-github-oidc-provider'
 
   gcloud-service-account:
     description: |
       The name of the GCP service account
     required: false
-    default: ''
+    default: 'milab-prod-kms-codesign-sa@mioutpost.iam.gserviceaccount.com'
 
   gcloud-kms-keyring:
     description: |
@@ -76,7 +77,7 @@ inputs:
     description: |
       KMS key name in GCP
     required: false
-    default: ''
+    default: 'milab-euwe3-prod-kms-ev-codesign'
 
 runs:
   using: "composite"
@@ -112,10 +113,10 @@ runs:
         $CODE_SIGN_CHAIN_PEM="codesign-chain.pem"
         $DECODED_CODE_SIGN_CHAIN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ env.CODE_SIGN_CHAIN }}"))
         $DECODED_CODE_SIGN_CHAIN | Out-File -FilePath "$CODE_SIGN_CHAIN_PEM"
-        
+
         $FILE_PARENT_PATH = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}"
         $FILE_RESOLVED_NAME = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}" -Leaf -Resolve
-        
+
         echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
         echo "file-parent-path=$FILE_PARENT_PATH" >> $env:GITHUB_OUTPUT
         echo "file-resolved-path=$FILE_RESOLVED_NAME" >> $env:GITHUB_OUTPUT
@@ -125,7 +126,7 @@ runs:
         CODE_SIGN_CHAIN: ${{ inputs.win-code-sign-chain }}
         ELECTRON_APP_PATH: ${{ inputs.electron-app-path }}
       shell: pwsh
-      run: |       
+      run: |
         jsign && \
           --storetype GOOGLECLOUD && \
           --storepass "${{ steps.gcp_auth.outputs.access_token }}" && \
