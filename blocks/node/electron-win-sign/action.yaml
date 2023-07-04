@@ -65,7 +65,7 @@ inputs:
     description: |
       The name of the GCP service account
     required: false
-    default: 'milab-dev-kms-ev-codesign@mioutpost.iam.gserviceaccount.com'
+    default: 'milab-prod-kms-codesign-sa@mioutpost.iam.gserviceaccount.com'
 
   gcloud-kms-keyring:
     description: |
@@ -117,10 +117,18 @@ runs:
 
         $FILE_PARENT_PATH = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}"
         $FILE_RESOLVED_NAME = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}" -Leaf -Resolve
+        $FILE_RESOLVED_NAME_SANITIZED = $FILE_NAME –replace “ “,”-”
+
+        if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
+          Rename-Item -Path $FILE_RESOLVED_NAME -NewName $FILE_RESOLVED_NAME_SANITIZED
+          $FILE_NAME = $FILE_RESOLVED_NAME_SANITIZED
+        } else {
+          $FILE_NAME = $FILE_RESOLVED_NAME
+        }
 
         echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
         echo "file-parent-path=$FILE_PARENT_PATH" >> $env:GITHUB_OUTPUT
-        echo "file-resolved-path=$FILE_RESOLVED_NAME" >> $env:GITHUB_OUTPUT
+        echo "file-name=$FILE_NAME" >> $env:GITHUB_OUTPUT
 
     - name: Sign electron app with jsign
       env:
@@ -134,6 +142,6 @@ runs:
           --certfile "${{ steps.pre-sign.outputs.code-sign-chain-pem }}" `
           --tsmode "${{ inputs.timestamping-mode }}" `
           --tsaurl "${{ inputs.timestamping-url }}" `
-          "${{ steps.pre-sign.outputs.file-parent-path }}/${{ steps.pre-sign.outputs.file-resolved-path }}"
+          "${{ steps.pre-sign.outputs.file-parent-path }}/${{ steps.pre-sign.outputs.file-name }}"
 
 
