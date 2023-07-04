@@ -109,6 +109,7 @@ runs:
       env:
         CODE_SIGN_CHAIN: ${{ inputs.win-code-sign-chain }}
         ELECTRON_APP_PATH: ${{ inputs.win-electron-app-path }}
+        GH_WORKSPACE: ${{ github.workspace }}
       shell: pwsh
       run: |
         $CODE_SIGN_CHAIN_PEM="codesign-chain.pem"
@@ -119,8 +120,12 @@ runs:
         $FILE_RESOLVED_NAME = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}" -Leaf -Resolve
         $FILE_RESOLVED_NAME_SANITIZED = $FILE_RESOLVED_NAME –replace “ “,”-”
 
+        Write-Output $FILE_PARENT_PATH
+        Write-Output $FILE_RESOLVED_NAME
+        Write-Output $FILE_RESOLVED_NAME_SANITIZED
+
         if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
-          Rename-Item -Path "$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
+          Rename-Item -Path "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
           $FILE_NAME = $FILE_RESOLVED_NAME_SANITIZED
         } else {
           $FILE_NAME = $FILE_RESOLVED_NAME
