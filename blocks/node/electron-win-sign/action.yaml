@@ -120,10 +120,6 @@ runs:
         $FILE_RESOLVED_NAME = Split-Path -Path "${{ env.ELECTRON_APP_PATH }}" -Leaf -Resolve
         $FILE_RESOLVED_NAME_SANITIZED = $FILE_RESOLVED_NAME –replace “ “,”-”
 
-        Write-Output $FILE_PARENT_PATH
-        Write-Output $FILE_RESOLVED_NAME
-        Write-Output $FILE_RESOLVED_NAME_SANITIZED
-
         if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
           Rename-Item -Path "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
           $FILE_NAME = $FILE_RESOLVED_NAME_SANITIZED
