@@ -135,7 +135,7 @@ runs:
           else
             echo "Build static flag set to false"
             cd "${BUILD_PATH}"
-            bash -c "${BUILD_CMD}"
+            ${{ inputs.build-command }}
           fi
 
     - name: Copy shared libs
