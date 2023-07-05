@@ -130,6 +130,8 @@ runs:
         run: |
           if [ "${BUILD_STATIC}" == "true" ];then
             export PKG_CONFIG_PATH="${{ inputs.pkg-config-path }}/lib/pkgconfig"
+            echo "${PKG_CONFIG_PATH}"
+            ls -la "${PKG_CONFIG_PATH}"
             cd "${BUILD_PATH}" && ${{ inputs.build-command }}
           else
             cd "${BUILD_PATH}"
