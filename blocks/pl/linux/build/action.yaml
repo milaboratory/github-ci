@@ -109,8 +109,7 @@ runs:
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        CI_SCRIPT: ${
-        { inputs.bootstrap-ci-script-name }}
+        CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
       with:
         run: |
           if [ -x "${CI_SCRIPT}" ];then
