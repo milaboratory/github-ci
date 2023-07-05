@@ -117,6 +117,17 @@ on:
         type: string
         required: false
         default: ''
+      build-static:
+        description: |
+          Activate additional steps in workflow to build pl statically
+        type: boolean
+        required: false
+        default: false
+      rocksdb-s3-archive-path:
+        description: |
+          The path to the rocksdb pre-build libs archive on the s3 static files bucket
+        type: string
+        required: false
       #
       # Test control
       #
@@ -375,10 +386,38 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/actions/deb/setup-milab-repo@v4-beta
+        if: inputs.build-static == 'false'
         with:
           aws-iam-role-to-assume: ${{ inputs.aws-s3-apt-repository-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-s3-apt-repository-region }}
           aws-s3-apt-repository-bucket-name: ${{ inputs.aws-s3-apt-repository-bucket-name }}
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        if: inputs.build-static == 'true'
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
+      - id: rocksdb_download_libs
+        if: inputs.build-static == 'true'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          S3_BUCKET_NAME: ${{ inputs.dist-archive-s3-bucket }}
+          ROCKSDB_S3_ARCHIVE_PATH: ${{ inputs.rocksdb-s3-archive-path }}
+        with:
+          run: |
+            ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}\rocksdb"
+            ROCKSDB_ARCHIVE_NAME=$(basename "${ROCKSDB_S3_ARCHIVE_PATH}")
+
+            echo "Downloading pre-build rocksdb libs..."
+            aws s3 cp --no-progress s3://${S3_BUCKET_NAME}/${ROCKSDB_S3_ARCHIVE_PATH} ./
+
+            echo "Unzip pre-build rocksdb libs to ${ROCKSDB_LIB_PATH}"
+            mkdir -p "${ROCKSDB_LIB_PATH}"
+            7z x -o"${ROCKSDB_LIB_PATH}" "${ROCKSDB_ARCHIVE_NAME}"
+
+            #ghwa_set_output rocksdb_libs_path "${ROCKSDB_LIB_PATH}"
+            ghwa_set_env ROCKSDB_LIB_PATH "${ROCKSDB_LIB_PATH}"
 
       - uses: milaboratory/github-ci/blocks/pl/linux/build@v4-beta
         env: ${{ fromJSON(inputs.build-env) }}
@@ -386,6 +425,8 @@ jobs:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
 
+          #pkg-config-path: ${{ fromJSON( steps.rocksdb_download_libs.outputs.data ).rocksdb_libs_path }}
+          pkg-config-path: ${{ env.ROCKSDB_LIB_PATH }}
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}

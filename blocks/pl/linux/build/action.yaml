@@ -22,6 +22,10 @@ inputs:
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
     required: true
     default: 'bootstrap-ci.sh'
+  pkg-config-path:
+    description: |
+      Path to pre-build libs for the rocksdb
+    required: false
   golang-version:
     description: |
       Golang version to use.
@@ -47,6 +51,11 @@ inputs:
       Must be used in conjunction with <build-cache-paths>
     required: false
     default: ''
+  build-static:
+    description: |
+      Activate additional steps in workflow to build pl statically
+    required: false
+    default: 'false'
   #
   # Github authentication control
   #
@@ -115,14 +124,20 @@ runs:
       env:
         BUILD_CMD: ${{ inputs.build-command }}
         BUILD_PATH: ${{ inputs.build-path }}
+        BUILD_STATIC: ${{ inputs.build-static }}
+        CUSTOM_PKG_CONFIG_PATH: ${{ inputs.pkg-config-path }}
       with:
         dump-stdout: false
         run: |
+          if [ "${BUILD_STATIC}" == "true" ];then
+            export PKG_CONFIG_PATH="${CUSTOM_PKG_CONFIG_PATH}\lib\pkgconfig"
+          fi
           cd "${BUILD_PATH}"
           bash -c "${BUILD_CMD}"
 
     - name: Copy shared libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.build-static == 'false'
       env:
         BUILD_PATH: ${{ inputs.build-path }}
       with:
