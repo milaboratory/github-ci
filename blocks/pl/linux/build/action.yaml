@@ -130,10 +130,11 @@ runs:
         dump-stdout: false
         run: |
           if [ "${BUILD_STATIC}" == "true" ];then
-            export PKG_CONFIG_PATH="${CUSTOM_PKG_CONFIG_PATH}\lib\pkgconfig"
+            export PKG_CONFIG_PATH="${CUSTOM_PKG_CONFIG_PATH}/lib/pkgconfig"
+            ls -la "${CUSTOM_PKG_CONFIG_PATH}"
           fi
           cd "${BUILD_PATH}"
-          bash -c "${BUILD_CMD}"
+          bash -c "echo "${PKG_CONFIG_PATH}" && ${BUILD_CMD}"
 
     - name: Copy shared libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
