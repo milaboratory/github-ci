@@ -430,6 +430,7 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
+          build-static: ${{ inputs.build-static }}
           build-cache-paths: ${{ inputs.build-cache-paths }}
           build-cache-key: ${{ inputs.build-cache-key }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -109,7 +109,8 @@ runs:
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
+        CI_SCRIPT: ${
+        { inputs.bootstrap-ci-script-name }}
       with:
         run: |
           if [ -x "${CI_SCRIPT}" ];then
@@ -129,11 +130,11 @@ runs:
         dump-stdout: false
         run: |
           if [ "${BUILD_STATIC}" == "true" ];then
+            echo "Build static flag set to true"
             export PKG_CONFIG_PATH="${{ inputs.pkg-config-path }}/lib/pkgconfig"
-            echo "${PKG_CONFIG_PATH}"
-            ls -la "${PKG_CONFIG_PATH}"
             cd "${BUILD_PATH}" && ${{ inputs.build-command }}
           else
+            echo "Build static flag set to false"
             cd "${BUILD_PATH}"
             bash -c "${BUILD_CMD}"
           fi
