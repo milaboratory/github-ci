@@ -125,16 +125,16 @@ runs:
         BUILD_CMD: ${{ inputs.build-command }}
         BUILD_PATH: ${{ inputs.build-path }}
         BUILD_STATIC: ${{ inputs.build-static }}
-        CUSTOM_PKG_CONFIG_PATH: ${{ inputs.pkg-config-path }}
       with:
         dump-stdout: false
         run: |
           if [ "${BUILD_STATIC}" == "true" ];then
-            export PKG_CONFIG_PATH="${CUSTOM_PKG_CONFIG_PATH}/lib/pkgconfig"
-            ls -la "${CUSTOM_PKG_CONFIG_PATH}"
+            export PKG_CONFIG_PATH="${{ inputs.pkg-config-path }}/lib/pkgconfig"
+            cd "${BUILD_PATH}" && ${{ inputs.build-command }}
+          else
+            cd "${BUILD_PATH}"
+            bash -c "${BUILD_CMD}"
           fi
-          cd "${BUILD_PATH}"
-          bash -c "echo "${PKG_CONFIG_PATH}" && ${BUILD_CMD}"
 
     - name: Copy shared libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
