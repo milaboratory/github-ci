@@ -120,9 +120,9 @@ on:
       build-static:
         description: |
           Activate additional steps in workflow to build pl statically
-        type: boolean
+        type: string
         required: false
-        default: false
+        default: 'false'
       rocksdb-s3-archive-path:
         description: |
           The path to the rocksdb pre-build libs archive on the s3 static files bucket
