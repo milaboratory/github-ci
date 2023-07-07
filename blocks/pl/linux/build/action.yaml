@@ -140,7 +140,7 @@ runs:
 
     - name: Copy shared libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: inputs.build-static == 'false'
+      
       env:
         BUILD_PATH: ${{ inputs.build-path }}
       with:
