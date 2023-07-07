@@ -140,7 +140,6 @@ runs:
 
     - name: Copy shared libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      
       env:
         BUILD_PATH: ${{ inputs.build-path }}
       with:

@@ -107,7 +107,7 @@ jobs:
         with:
           run: |
             ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/vcpkg/installed/${VCPKG_TRIPLET}"
-            ROCKSDB_ARCHIVE_NAME="rocksdb-lib_${ROCKSDB_VERSION}_${GH_AGENT_OS}_${GH_AGENT_OS_ARCH}.7z"
+            ROCKSDB_ARCHIVE_NAME="rocksdb-lib-${ROCKSDB_VERSION}-${GH_AGENT_OS}-${GH_AGENT_OS_ARCH}.7z"
             ROCKSDB_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${ROCKSDB_ARCHIVE_NAME}"
 
             7z a "${ROCKSDB_ARCHIVE_PATH}" "${ROCKSDB_LIB_PATH}/lib" "${ROCKSDB_LIB_PATH}/include"
