@@ -52,6 +52,10 @@ inputs:
       CDN url for Static and Shared RockDB Libs.
     required: false
     default: 'https://cdn.mixcr.com/internal/pkgs'
+  rocksdb-version:
+    description:
+      RocksDB version.
+    required: true
 
   #
   # Github authentication control
@@ -143,8 +147,8 @@ runs:
     - name: Download and unpack static and shared rocksdb libs
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.data ).runner_os }}
-        GH_RUNNER_ARCH: ${{ fromJSON( steps.get_runner_metadata.data ).runner_arch }}
+        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_os }}
+        GH_RUNNER_ARCH: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_arch }}
         CDN_URL: ${{ inputs.cdn-url }}
         ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
         BUILD_PATH: ${{ inputs.build-path }}
