@@ -176,7 +176,7 @@ runs:
             7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
           elif [ "${GH_RUNNER_OS}" == "macos" ]; then
             echo "Unzip shared rocksdb libs: ${GH_RUNNER_OS}"
-            7z e "${ROCKSDB_SHARED_LIB_ARCHIVE}" -o"/usr/local/lib" "lib/*.dylib"
+            7z e "${ROCKSDB_SHARED_LIB_ARCHIVE}" -y -o"/usr/local/lib" "lib/*.dylib"
           else
             echo "Runner OS is: ${GH_RUNNER_OS}"
             exit 0
