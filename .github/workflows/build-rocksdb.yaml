@@ -85,7 +85,7 @@ jobs:
       - name: run build rocksdb
         env:
           VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
-          VCPKG_DISABLE_METRICS: 1
+          VCPKG_DISABLE_METRICS: "true"
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |

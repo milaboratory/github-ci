@@ -1,0 +1,225 @@
+name: Build the Platform on Unix/Linux
+author: 'MiLaboratories'
+description: |
+  Build the Platform
+
+  Prepare agent for building the Platform on Unix/Linux.
+  Install Golang specific version, cache dependencies, re-use build results
+
+inputs:
+  build-command:
+    description: |
+      Build command (initiate build for the platform)
+    required: false
+    default: 'go build .'
+  build-path:
+    description: |
+      The path where the build command will run
+    required: false
+    default: 'platform/cmd/pl'
+  bootstrap-ci-script-name:
+    description: |
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+    required: true
+    default: 'bootstrap-ci.sh'
+  golang-version:
+    description: |
+      Golang version to use.
+      Examples: '1.19', '1.20'
+    required: true
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+  build-cache-paths:
+    description: |
+      List of paths to files or folders to restore/cache before/after each integration tests run.
+    required: false
+    default: ''
+  build-cache-key:
+    description: |
+      Key for additional integration tests cache.
+      Must be used in conjunction with <build-cache-paths>
+    required: false
+    default: ''
+  cdn-url:
+    description: |
+      CDN url for Static and Shared RockDB Libs.
+    required: false
+    default: 'https://cdn.mixcr.com/internal/pkgs'
+
+  #
+  # Github authentication control
+  #
+  github-token:
+    description: |
+      Github token to authorize git operation in the same repository as the workflow.
+    required: true
+  #
+  # Artifact control
+  #
+  artifact-name:
+    description: |
+      Name of build artifact to create when <artifact-paths> input is not empty
+
+    required: false
+    default: 'build-artifacts'
+  artifact-paths:
+    description: |
+      List of paths to artifacts to save after build run.
+      Paths are relative to github workspace (repository root).
+      Patterns ('*', '**', etc.) are supported.
+    required: false
+    default: ''
+  artifact-retention:
+    description: |
+      Time in days to keep build artifacts before removing them
+    required: false
+    default: '7'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a golang application
+      uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+      with:
+        golang-version: ${{ inputs.golang-version }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - uses: milaboratory/github-ci/actions/git/auth@v4-beta
+      with:
+        github-token: ${{ inputs.github-token }}
+
+    - name: Restore custom cache
+      if: inputs.build-cache-paths != '' && inputs.build-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.build-cache-key }}
+        path: ${{ inputs.build-cache-paths }}
+
+    - name: Get runner metadata
+      id: get_runner_metadata
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          get_os_arch=$(uname -m)
+          case "${get_os_arch}" in
+            x86_64)
+              _RUNNER_OS_ARCH="amd64"
+              ;;
+            aarch64 | arm64)
+              _RUNNER_OS_ARCH="arm64"
+              ;;
+            *)
+              echo "Arch is not in the list: ${get_os_arch}"
+              exit 1
+              ;;
+          esac
+          
+          _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+          
+          ghwa_set_output runner_os "${_RUNNER_OS_SANITEZED}"
+          ghwa_set_output runner_arch "${_RUNNER_OS_ARCH}"
+
+    - name: Run boostrap ci script
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
+      with:
+        run: |
+          if [ -x "${CI_SCRIPT}" ];then
+            "./${CI_SCRIPT}"
+          else
+            printf "File: %s doesn't exist or it's not executable." "${CI_SCRIPT}"
+            exit 1
+          fi
+
+    - name: Download and unpack static and shared rocksdb libs
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.data ).runner_os }}
+        GH_RUNNER_ARCH: ${{ fromJSON( steps.get_runner_metadata.data ).runner_arch }}
+        CDN_URL: ${{ inputs.cdn-url }}
+        ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
+        BUILD_PATH: ${{ inputs.build-path }}
+      with:
+        dump-stdout: false
+        run: |
+          ROCKSDB_STATIC_LIB_ARCHIVE="rocksdb-static-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
+          ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
+          
+          ROCKSDB_STATIC_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-static"
+          ROCKSDB_SHARED_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-shared"
+          
+          echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
+          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
+          
+          echo "Unzip static rocksdb libs to ${ROCKSDB_LIB_PATH}"
+          mkdir -p "${ROCKSDB_STATIC_LIB_PATH}"
+          7z x -o"${ROCKSDB_STATIC_LIB_PATH}" "${ROCKSDB_STATIC_LIB_ARCHIVE}"
+          
+          echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
+          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
+          
+          echo "Unzip shared rocksdb libs"
+          if [ "${GH_RUNNER_OS}" == "linux" ];then
+            7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
+          elif [ "${GH_RUNNER_OS}" == "macos" ]; then
+            7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${ROCKSDB_SHARED_LIB_PATH}"
+            ghwa_set_env DYLD_LIBRARY_PATH "${ROCKSDB_SHARED_LIB_PATH}" 
+          else
+            echo "Runner OS is: ${GH_RUNNER_OS}"
+            exit 0
+          fi     
+          
+          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_STATIC_LIB_PATH}/lib/pkgconfig"
+
+    - name: Run build command for the platform
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_PATH: ${{ inputs.build-path }}
+      with:
+        dump-stdout: false
+        run: |
+            cd "${BUILD_PATH}" && ${{ inputs.build-command }}
+
+    - name: Run bundle dylibs on macOS
+      if: startsWith(runner.os, 'macOS')
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_PATH: ${{ inputs.build-path }}
+      with:
+        dump-stdout: false
+        run : |
+          cd ${BUILD_PATH}
+          dylibbundler \
+            --bundle-deps \
+            --create-dir \
+            --dest-dir ./libs \
+            --install-path '@executable_path/libs/' \
+            --fix-file pl      
+
+    - name: Add build results to the archive
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_PATH: ${{ inputs.build-path }}
+      with:
+        dump-stdout: false
+        run: |
+          cd "${BUILD_PATH}"
+          7z a pl.zip . '-xr!*.go' '-xr!*.zip' '-xr!*.sum' '-xr!*.mod'
+
+    - name: Save build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.artifact-paths }}
+          !**/*.go
+        retention-days: ${{ inputs.artifact-retention }}
