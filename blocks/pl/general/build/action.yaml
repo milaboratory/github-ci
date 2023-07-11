@@ -171,12 +171,12 @@ runs:
           echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
           
-          echo "Unzip shared rocksdb libs"
           if [ "${GH_RUNNER_OS}" == "linux" ];then
+            echo "Unzip shared rocksdb libs: ${GH_RUNNER_OS}"
             7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
           elif [ "${GH_RUNNER_OS}" == "macos" ]; then
-            7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${ROCKSDB_SHARED_LIB_PATH}"
-            ghwa_set_env DYLD_LIBRARY_PATH "${ROCKSDB_SHARED_LIB_PATH}" 
+            echo "Unzip shared rocksdb libs: ${GH_RUNNER_OS}"
+            7z e "${ROCKSDB_SHARED_LIB_ARCHIVE}" -o"/usr/local/lib" "lib/*.dylib"
           else
             echo "Runner OS is: ${GH_RUNNER_OS}"
             exit 0
