@@ -177,6 +177,10 @@ runs:
           if [ "${GH_RUNNER_OS}" == "linux" ];then
             # Put shared rocksdb libs near the pl executable on linux
             7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
+          elif [ "${GH_RUNNER_OS}" == "macos" ];then
+            ghwa_set_env DYLD_LIBRARY_PATH "${ROCKSDB_LIB_PATH}/lib"
+          else
+            exit 0
           fi
 
     - name: Run build command for the platform
