@@ -125,9 +125,9 @@ runs:
               exit 1
               ;;
           esac
-          
+
           _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
-          
+
           ghwa_set_output runner_os "${_RUNNER_OS_SANITEZED}"
           ghwa_set_output runner_arch "${_RUNNER_OS_ARCH}"
 
@@ -157,32 +157,26 @@ runs:
         run: |
           ROCKSDB_STATIC_LIB_ARCHIVE="rocksdb-static-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
           ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
-          
+
           ROCKSDB_STATIC_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-static"
           ROCKSDB_SHARED_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-shared"
-          
+
           echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
-          
-          echo "Unzip static rocksdb libs"
-          mkdir -p "${ROCKSDB_STATIC_LIB_PATH}"
-          7z x -o"${ROCKSDB_STATIC_LIB_PATH}" "${ROCKSDB_STATIC_LIB_ARCHIVE}"
-          
+
           echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
-          
+
+          echo "Unzip shared rocksdb libs for platform build"
+          mkdir -p "${ROCKSDB_SHARED_LIB_PATH}"
+          7z x -o"${ROCKSDB_SHARED_LIB_PATH}" "${ROCKSDB_SHARED_LIB_ARCHIVE}"
+          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_SHARED_LIB_PATH}/lib/pkgconfig"
+
+          # additional steps for each os
           if [ "${GH_RUNNER_OS}" == "linux" ];then
-            echo "Unzip shared rocksdb libs: ${GH_RUNNER_OS}"
+            # Put shared rocksdb libs near the pl executable on linux
             7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
-          elif [ "${GH_RUNNER_OS}" == "macos" ]; then
-            echo "Unzip shared rocksdb libs: ${GH_RUNNER_OS}"
-            7z e "${ROCKSDB_SHARED_LIB_ARCHIVE}" -y -o"/usr/local/lib" "lib/*.dylib"
-          else
-            echo "Runner OS is: ${GH_RUNNER_OS}"
-            exit 0
-          fi     
-          
-          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_STATIC_LIB_PATH}/lib/pkgconfig"
+          fi
 
     - name: Run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -207,7 +201,7 @@ runs:
             --create-dir \
             --dest-dir ./libs \
             --install-path '@executable_path/libs/' \
-            --fix-file pl      
+            --fix-file pl
 
     - name: Add build results to the archive
       uses: milaboratory/github-ci/actions/shell@v4-beta
