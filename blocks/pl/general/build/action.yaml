@@ -206,7 +206,7 @@ runs:
             --create-dir \
             --dest-dir ./libs \
             --install-path '@executable_path/libs/' \
-            --search-path "${DYLIBBUNDLER_SEARCH_LIB_PATH}"
+            --search-path "${DYLIBBUNDLER_SEARCH_LIB_PATH}" \
             --fix-file pl
 
     - name: Add build results to the archive
