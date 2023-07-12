@@ -158,8 +158,7 @@ runs:
           ROCKSDB_STATIC_LIB_ARCHIVE="rocksdb-static-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
           ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.7z"
 
-          ROCKSDB_STATIC_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-static"
-          ROCKSDB_SHARED_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb-shared"
+          ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb"
 
           echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
@@ -167,10 +166,12 @@ runs:
           echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
 
-          echo "Unzip shared rocksdb libs for platform build"
-          mkdir -p "${ROCKSDB_SHARED_LIB_PATH}"
-          7z x -o"${ROCKSDB_SHARED_LIB_PATH}" "${ROCKSDB_SHARED_LIB_ARCHIVE}"
-          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_SHARED_LIB_PATH}/lib/pkgconfig"
+          echo "Unzip static and shared rocksdb libs with pkgconfig"
+          mkdir -p "${ROCKSDB_LIB_PATH}"
+          7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}"
+          7z e "${ROCKSDB_STATIC_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}" "lib/*.a"
+
+          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
 
           # additional steps for each os
           if [ "${GH_RUNNER_OS}" == "linux" ];then
