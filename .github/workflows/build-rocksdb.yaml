@@ -15,6 +15,12 @@ on:
         type: string
         required: false
         default: 'ubuntu-latest'
+      checkout-ref:
+        description:
+          The branch, tag or SHA to checkout.
+        type: string
+        required: false
+        default: 'master'
       #
       # AWS
       #

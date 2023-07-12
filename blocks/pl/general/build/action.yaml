@@ -169,7 +169,9 @@ runs:
           echo "Unzip static and shared rocksdb libs with pkgconfig"
           mkdir -p "${ROCKSDB_LIB_PATH}"
           7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}"
+          ls -la "${ROCKSDB_LIB_PATH}/lib"
           7z e "${ROCKSDB_STATIC_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}/lib" "lib/*.a"
+          ls -la "${ROCKSDB_LIB_PATH}/lib"
 
           ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
 
