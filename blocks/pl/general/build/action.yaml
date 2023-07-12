@@ -178,6 +178,7 @@ runs:
             # Put shared rocksdb libs near the pl executable on linux
             7z x "${ROCKSDB_SHARED_LIB_ARCHIVE}" '-i!lib' -o"${BUILD_PATH}"
           elif [ "${GH_RUNNER_OS}" == "macos" ];then
+            ls -la "${ROCKSDB_LIB_PATH}/lib"
             ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${ROCKSDB_LIB_PATH}/lib"
           else
             exit 0
@@ -191,6 +192,7 @@ runs:
         dump-stdout: false
         run: |
             cd "${BUILD_PATH}" && ${{ inputs.build-command }}
+            otool -L ./pl
 
     - name: Run bundle dylibs on macOS
       if: startsWith(runner.os, 'macOS')
