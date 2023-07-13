@@ -170,7 +170,12 @@ runs:
           echo "Unzip shared libs"
           tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" -C "${ROCKSDB_LIB_PATH}"
           echo "Unzip static libs"
-          tar -zxf "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
+          if [ "${GH_RUNNER_OS}" == "macos" ];then
+            TAR_BIN=$(which gtar)
+          else
+            TAR_BIN=$(which tar)
+          fi
+          "${TAR_BIN}" -zxf "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
             --strip-components=2 --wildcards --no-anchored -C "${ROCKSDB_LIB_PATH}/lib" '*.a'
 
           ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
