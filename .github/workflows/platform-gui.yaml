@@ -720,8 +720,12 @@ jobs:
             echo "Downloading platform archive..."
             aws s3 cp --no-progress "${PL_DL_LINK}" ./
             if [ -f "${PL_ARCHIVE}" ];then
-                echo "Extracting platform archive..."
+              echo "Extracting platform archive..."
+              if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
+                tar -zxvf "${PL_ARCHIVE}" -C "${PL_DIST_DIR}"
+              else
                 7z x "${PL_ARCHIVE}" -o"${PL_DIST_DIR}"
+              fi
             else
                 echo "Platform archive not found"
                 exit 1
