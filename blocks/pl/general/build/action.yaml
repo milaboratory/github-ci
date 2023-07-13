@@ -159,7 +159,6 @@ runs:
           ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.tar.gz"
 
           ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb"
-          TMP_LIB_PATH=$(mktemp -d)
 
           echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
           curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
@@ -169,10 +168,10 @@ runs:
 
           mkdir -p "${ROCKSDB_LIB_PATH}"
           echo "Unzip shared libs"
-          tar -zxvf "${ROCKSDB_SHARED_LIB_ARCHIVE}" -C "${ROCKSDB_LIB_PATH}"
+          tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" -C "${ROCKSDB_LIB_PATH}"
           echo "Unzip static libs"
-          tar -zxvf "${ROCKSDB_STATIC_LIB_ARCHIVE}" -C "${TMP_LIB_PATH}"
-          cp -P "${TMP_LIB_PATH}"/lib/*.a "${ROCKSDB_LIB_PATH}/lib"
+          tar -zxf "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
+            --strip-components=2 --wildcards --no-anchored -C "${ROCKSDB_LIB_PATH}/lib" '*.a'
 
           ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
 
@@ -180,7 +179,8 @@ runs:
           if [ "${GH_RUNNER_OS}" == "linux" ];then
             # Put shared rocksdb libs near the pl executable on linux
             mkdir -p "${BUILD_PATH}/libs"
-            shopt -s extglob && cp -P "${ROCKSDB_LIB_PATH}"/lib/!(*.a) "${BUILD_PATH}/libs"
+            tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" \
+              --strip-components=2 --wildcards --no-anchored -C "${BUILD_PATH}/libs" '*.so*'
           elif [ "${GH_RUNNER_OS}" == "macos" ];then
             ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${ROCKSDB_LIB_PATH}/lib"
           else
