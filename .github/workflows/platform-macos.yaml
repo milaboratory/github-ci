@@ -123,7 +123,7 @@ on:
           Files to save as build artifact, release asset and to upload to S3
         type: string
         required: false
-        default: 'platform/cmd/pl/*.zip'
+        default: 'platform/cmd/pl/*.tar.gz'
       dist-artifact-retention:
         description: |
           Time in days to keep build artifacts before removing them

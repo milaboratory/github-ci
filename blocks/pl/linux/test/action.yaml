@@ -42,6 +42,19 @@ inputs:
       Must be used in conjunction with <test-integration-cache-paths>
     required: false
     default: ''
+  cdn-url:
+    description: |
+      CDN url for Static and Shared RockDB Libs.
+    required: false
+    default: 'https://cdn.mixcr.com/internal/pkgs'
+  rocksdb-version:
+    description:
+      RocksDB version.
+    required: true
+
+  #
+  # Github authentication control
+  #
   github-token:
     description: |
       Github token to authorize git operation in the same repository as the workflow.
@@ -68,6 +81,30 @@ runs:
         key: ${{ inputs.test-integration-cache-key }}
         path: ${{ inputs.test-integration-cache-paths }}
 
+    - name: Get runner metadata
+      id: get_runner_metadata
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          get_os_arch=$(uname -m)
+          case "${get_os_arch}" in
+            x86_64)
+              _RUNNER_OS_ARCH="amd64"
+              ;;
+            aarch64 | arm64)
+              _RUNNER_OS_ARCH="arm64"
+              ;;
+            *)
+              echo "Arch is not in the list: ${get_os_arch}"
+              exit 1
+              ;;
+          esac
+
+          _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+
+          ghwa_set_output runner_os "${_RUNNER_OS_SANITEZED}"
+          ghwa_set_output runner_arch "${_RUNNER_OS_ARCH}"
+
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
@@ -81,12 +118,42 @@ runs:
             exit 1
           fi
 
+    - name: Download and unpack static and shared rocksdb libs
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_os }}
+        GH_RUNNER_ARCH: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_arch }}
+        CDN_URL: ${{ inputs.cdn-url }}
+        ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
+      with:
+        dump-stdout: false
+        run: |
+          ROCKSDB_STATIC_LIB_ARCHIVE="rocksdb-static-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.tar.gz"
+          ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.tar.gz"
+
+          ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb"
+
+          echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
+          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
+
+          echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
+          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
+
+          mkdir -p "${ROCKSDB_LIB_PATH}"
+          echo "Unzip shared libs"
+          tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" -C "${ROCKSDB_LIB_PATH}"
+          echo "Unzip static libs"
+          tar -zxf "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
+            --strip-components=2 --wildcards --no-anchored -C "${ROCKSDB_LIB_PATH}/lib" '*.a'
+
+          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
+          ghwa_set_env LD_LIBRARY_PATH "${ROCKSDB_LIB_PATH}/lib"
+
     - name: Run test command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        TEST_CMD: ${{ inputs.test-command }}
         TMPDIR: "/dev/shm"
       with:
         dump-stdout: false
         run: |
-          bash -c "${TEST_CMD}"
+          ${{ inputs.test-command }}
