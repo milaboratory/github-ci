@@ -43,6 +43,15 @@ inputs:
 
     required: false
     default: 'v1'
+  cdn-url:
+    description: |
+      CDN url for Static and Shared RockDB Libs.
+    required: false
+    default: 'https://cdn.mixcr.com/internal/pkgs'
+  rocksdb-version:
+    description:
+      RocksDB version.
+    required: true
   #
   # Github authentication control
   #
@@ -106,11 +115,29 @@ runs:
         login: ${{ inputs.netrc-login }}
         password: ${{ inputs.netrc-password }}
 
+    - name: Download and unpack static rocksdb libs
+      shell: pwsh
+      env:
+        GH_WORKSPACE: ${{ github.workspace }}
+        CDN_URL: ${{ inputs.cdn-url }}
+        ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
+      run: |
+          $ROCKSDB_STATIC_LIB_ARCHIVE = "rocksdb-static-lib-${{ env.ROCKSDB_VERSION }}-windows-amd64.zip"
+          $ROCKSDB_LIB_PATH = "${{ env.GH_WORKSPACE }}\rocksdb"
+
+          Write-Output "Downloading static libs windows-amd64"
+          (New-Object System.Net.WebClient).DownloadFile(
+            "${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/${ROCKSDB_STATIC_LIB_ARCHIVE}", "${{ env.GH_WORKSPACE }}"
+          )
+          Write-Output "Unzip static libs"
+          7z x "${{ env.GH_WORKSPACE }}\${ROCKSDB_STATIC_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}"
+
+          echo "PKG_CONFIG_PATH=${ROCKSDB_LIB_PATH}\lib\pkgconfig" >> $env:GITHUB_ENV
+
     - name: Run build command for the platform
       shell: pwsh
       working-directory: ${{ inputs.build-path }}
       run: |
-        $env:PKG_CONFIG_PATH = "${{ inputs.pkg-config-path }}\lib\pkgconfig"
         ${{ inputs.build-command }}
 
     - name: Add build results to the archive
