@@ -127,12 +127,12 @@ runs:
 
           Write-Output "Downloading static libs windows-amd64"
           (New-Object System.Net.WebClient).DownloadFile(
-            "${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/${ROCKSDB_STATIC_LIB_ARCHIVE}", "${{ env.GH_WORKSPACE }}"
+            "${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/${{ env.ROCKSDB_STATIC_LIB_ARCHIVE }}", "${{ env.GH_WORKSPACE }}"
           )
           Write-Output "Unzip static libs"
-          7z x "${{ env.GH_WORKSPACE }}\${ROCKSDB_STATIC_LIB_ARCHIVE}" -o"${ROCKSDB_LIB_PATH}"
+          7z x "${{ env.GH_WORKSPACE }}\${{ env.ROCKSDB_STATIC_LIB_ARCHIVE }}" -o"${{ env.ROCKSDB_LIB_PATH }}"
 
-          echo "PKG_CONFIG_PATH=${ROCKSDB_LIB_PATH}\lib\pkgconfig" >> $env:GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ env.ROCKSDB_LIB_PATH }}\lib\pkgconfig" >> $env:GITHUB_ENV
 
     - name: Run build command for the platform
       shell: pwsh
