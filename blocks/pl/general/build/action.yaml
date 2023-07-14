@@ -235,7 +235,7 @@ runs:
         dump-stdout: false
         run: |
           cd "${BUILD_PATH}"
-          tar --exclude={'*.go','*.sum','*.mod','*.tar.gz'} -zcvf ./pl.tar.gz *
+          tar --exclude={'*.go','*.sum','*.mod','*.tar.gz'} -zcvf ./pl.tgz *
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
