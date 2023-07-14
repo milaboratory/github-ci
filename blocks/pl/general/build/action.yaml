@@ -186,6 +186,7 @@ runs:
             mkdir -p "${BUILD_PATH}/libs"
             tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" \
               --strip-components=2 --wildcards --no-anchored -C "${BUILD_PATH}/libs" '*.so*'
+            ghwa_set_env LD_LIBRARY_PATH "${ROCKSDB_LIB_PATH}/lib"
           elif [ "${GH_RUNNER_OS}" == "macos" ];then
             ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${ROCKSDB_LIB_PATH}/lib"
           else
