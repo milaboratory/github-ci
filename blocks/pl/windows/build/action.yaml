@@ -124,9 +124,10 @@ runs:
       run: |
           $ROCKSDB_STATIC_LIB_ARCHIVE = "rocksdb-static-lib-${{ env.ROCKSDB_VERSION }}-windows-amd64.zip"
           $ROCKSDB_LIB_PATH = "${{ env.GH_WORKSPACE }}\rocksdb"
+          $DOWNLOAD_URL = "${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/$ROCKSDB_STATIC_LIB_ARCHIVE"
 
           Write-Output "Downloading static libs windows-amd64"
-          (New-Object System.Net.WebClient).DownloadFile("${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/$ROCKSDB_STATIC_LIB_ARCHIVE", "${{ env.GH_WORKSPACE }}")
+          Invoke-WebRequest -URI $DOWNLOAD_URL -OutFile "${{ env.GH_WORKSPACE }}\$ROCKSDB_STATIC_LIB_ARCHIVE"
           Write-Output "Unzip static libs"
           7z x "${{ env.GH_WORKSPACE }}\$ROCKSDB_STATIC_LIB_ARCHIVE" -o"$ROCKSDB_LIB_PATH"
 
