@@ -680,7 +680,7 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
-      gi  uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v1
 
       - uses: milaboratory/github-ci/actions/shell@v4
         env:
