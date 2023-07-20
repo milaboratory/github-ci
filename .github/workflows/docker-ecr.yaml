@@ -674,11 +674,11 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ${{ inputs.aws-region }}
+
       - id: login-ecr
-        env:
-          AWS_WEB_IDENTITY_TOKEN_FILE: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-          AWS_ROLE_ARN: arn:aws:iam::511903394050:role/milab-euce1-prod-github-deployment-service-account
-          AWS_REGION: ${{ inputs.aws-region }}
         uses: aws-actions/amazon-ecr-login@v1
 
       - uses: milaboratory/github-ci/actions/shell@v4
