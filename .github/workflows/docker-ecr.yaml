@@ -654,9 +654,6 @@ jobs:
     if: inputs.helm-deployment && needs.release.result == 'success'
     name: :deployment
     runs-on: [ self-hosted, "${{ inputs.gha-runner-label }}" ]
-    permissions:
-      id-token: write
-      contents: read
     needs:
       - release
       - setup-matrix
