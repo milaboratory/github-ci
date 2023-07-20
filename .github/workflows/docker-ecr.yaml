@@ -676,6 +676,8 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v2
         with:
+          role-to-assume: arn:aws:iam::511903394050:role/milab-euce1-prod-github-deployment-service-account
+          web-identity-token-file: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
