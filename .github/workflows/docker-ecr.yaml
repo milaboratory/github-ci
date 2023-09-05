@@ -439,7 +439,7 @@ jobs:
             ghwa_set_env "PLATFORM" "${platform//\//-}"
 
       - id: image-metadata
-        uses: docker/metadata-action@v4-beta
+        uses: docker/metadata-action@v4
         with:
           images: |
             ${{ fromJSON( steps.transform-version.outputs.data ).image }}
