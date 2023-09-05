@@ -659,6 +659,8 @@ jobs:
       - setup-matrix
     steps:
       - id: context
+        env:
+          NODE_OPTIONS: "--dns-result-order=verbatim"
         uses: milaboratory/github-ci/actions/context@v4
 
       - uses: milaboratory/github-ci/actions/env@v4
