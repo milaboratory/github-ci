@@ -379,13 +379,13 @@ jobs:
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-build) }}
     runs-on: ${{ matrix.agent }}
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
-
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
       - uses: actions/checkout@v3
         with:
@@ -418,6 +418,8 @@ jobs:
       - id: login-ecr
         if: github.event_name != 'pull_request'
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
 
       - id: transform-version
         uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -530,13 +532,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
-
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
       - uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -545,6 +547,8 @@ jobs:
 
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
 
       - uses: milaboratory/github-ci/actions/setup-regctl@v4-beta
         with:
@@ -674,8 +678,15 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+
       - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1.6.0
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
