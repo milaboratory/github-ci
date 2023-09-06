@@ -661,6 +661,9 @@ jobs:
     needs:
       - release
       - setup-matrix
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
