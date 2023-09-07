@@ -679,7 +679,12 @@ jobs:
               _PL_VERSION="${_PL_COMMON_VERSION}"
             fi
 
-            _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.zip"
+            if [ "${_RUNNER_OS_SANITEZED}" == "windows" ];then
+              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.zip"
+            else
+              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.tar.gz"
+            fi
+
             _PL_DL_LINK="s3://${S3_BUKCET}/pl/${_RUNNER_OS_SANITEZED}/${_PL_ARCHIVE}"
 
             _MIXCR_ARCHIVE="${_MIXCR_VERSION}.zip"
