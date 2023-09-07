@@ -682,7 +682,7 @@ jobs:
             if [ "${_RUNNER_OS_SANITEZED}" == "windows" ];then
               _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.zip"
             else
-              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.tar.gz"
+              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.tgz"
             fi
 
             _PL_DL_LINK="s3://${S3_BUKCET}/pl/${_RUNNER_OS_SANITEZED}/${_PL_ARCHIVE}"
