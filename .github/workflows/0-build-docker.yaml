@@ -21,7 +21,7 @@ jobs:
       IMAGE_NAME: 'hook'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
@@ -45,7 +45,7 @@ jobs:
       IMAGE_NAME: 'git-crypt'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
@@ -69,7 +69,7 @@ jobs:
       IMAGE_NAME: 'nginx-spa'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2

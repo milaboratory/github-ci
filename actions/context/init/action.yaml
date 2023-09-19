@@ -32,7 +32,7 @@ runs:
   steps:
     - uses: milaboratory/github-ci/actions/context/create@v4-beta
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - id: versions
       uses: milaboratory/github-ci/actions/detect-version@v4-beta
       with:

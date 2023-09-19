@@ -39,7 +39,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: checkout milaboratory/deb repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: run boostrap ci script for windows
         env:

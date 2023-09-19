@@ -80,10 +80,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout milaboratory/deb repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: checkout ${{ inputs.repo }} repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.repo-ref }}

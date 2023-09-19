@@ -288,7 +288,7 @@ jobs:
     needs:
       - init
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: setup-matrix-combinations
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
@@ -324,7 +324,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -341,7 +341,7 @@ jobs:
             platform=${{ matrix.platform }}
             ghwa_set_env "PLATFORM" "${platform//\//-}"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           dump-stdout: false
@@ -387,7 +387,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -673,7 +673,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
         if: inputs.git-crypt-unlock
