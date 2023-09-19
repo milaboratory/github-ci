@@ -68,7 +68,7 @@ inputs:
     description: |
       Version of kubectl
     required: false
-    default: 'v1.24.0'
+    default: 'v1.25.13'
   helm-version:
     description: |
       Version of helm
@@ -79,11 +79,11 @@ runs:
   using: "composite"
 
   steps:
-    - uses: azure/setup-kubectl@v3
+    - uses: mike-ainsel/setup-kubectl@v3
       with:
         version: ${{ inputs.kubectl-version }}
 
-    - uses: azure/setup-helm@v3
+    - uses: mike-ainsel/setup-helm@v3
       with:
         version: ${{ inputs.helm-version }}
 
