@@ -353,7 +353,7 @@ jobs:
           version: latest
           endpoint: builders
 
-      - uses: docker/bake-action@v2
+      - uses: docker/bake-action@v4
         env:
           APP_NAME: ${{ inputs.app-name-slug }}
         with:
@@ -453,7 +453,7 @@ jobs:
             type=raw,value=${{ fromJSON( steps.transform-version.outputs.data ).image_tag }}
 
       - id: build-push
-        uses: docker/bake-action@v2
+        uses: docker/bake-action@v4
         env:
           APP_NAME: ${{ inputs.app-name-slug }}
         with:
