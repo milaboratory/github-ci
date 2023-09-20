@@ -1441,6 +1441,16 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
+      - id: get-tag-branch
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            _RAW=$(git branch -r --contains ${{ github.ref }})
+            _BRANCH_NAME=${_RAW##*/}
+
+            ghwa_set_output "branch-name" "$_BRANCH_NAME"
+
       - uses: actions/download-artifact@v3
         if: steps.artifact.outputs.exists == 'true'
         with:
@@ -1460,7 +1470,7 @@ jobs:
           title: ${{ format('Regression tests changes in the {0}', github.ref_name) }}
           body: 'Automated changes generated after CI workflow run.'
           branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
-          base: ${{ github.ref_name }}
+          base: ${{ github.ref_type == 'tag' && fromJSON(steps.get-tag-branch.outputs.data).branch-name || github.ref_name }}
 
     outputs:
       started: 'true'
