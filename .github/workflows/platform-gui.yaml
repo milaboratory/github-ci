@@ -662,7 +662,7 @@ jobs:
                 RUNNER_OS_ARCH="arm64"
                 ;;
               *)
-                echo "Arch is not in the list: ${_GET_OS_ARCH}"
+                echo "Arch is not in the list: ${GET_OS_ARCH}"
                 exit 1
                 ;;
             esac
@@ -672,7 +672,7 @@ jobs:
             PL_COMMON_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"pl\") | .version" plui-dependencies.json)
 
             if [ -z "${_PL_VERSION}" ];then
-              _PL_VERSION="${_PL_COMMON_VERSION}"
+              PL_VERSION="${PL_COMMON_VERSION}"
             fi
 
             PL_ARCHIVE="pl-${PL_VERSION}-${RUNNER_OS_ARCH}.tgz"
