@@ -671,7 +671,7 @@ jobs:
             PL_VERSION=$(jq -r ".dependencies.architecture.$RUNNER_OS_ARCH.$RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
             PL_COMMON_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"pl\") | .version" plui-dependencies.json)
 
-            if [ -z "${_PL_VERSION}" ];then
+            if [ -z "${PL_VERSION}" ];then
               PL_VERSION="${PL_COMMON_VERSION}"
             fi
 
