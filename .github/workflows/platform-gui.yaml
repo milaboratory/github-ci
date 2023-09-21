@@ -697,7 +697,7 @@ jobs:
             if [ -f "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
               cd ${EXT_PROGRAMS_PATH} && bash -c "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Clean-up ..."
-              rm -fv "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
             else
               echo "Dependencies script not found"
               exit 1
