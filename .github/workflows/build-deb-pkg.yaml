@@ -107,7 +107,7 @@ jobs:
           source-dir: ${{ inputs.src-path }}
           buildpackage-opts: ${{ inputs.buildpackage-opts }}
 
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}

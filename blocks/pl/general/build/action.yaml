@@ -9,17 +9,27 @@ description: |
 inputs:
   build-command:
     description: |
-      Build command (initiate build for the platform)
+      Build command (initiate build for the platform).
     required: false
     default: 'go build .'
   build-path:
     description: |
-      The path where the build command will run
+      The path where the build command will run.
     required: false
     default: 'platform/cmd/pl'
+  ext-programs-path:
+    description: |
+      The external_programs bootstrap script path.
+    required: false
+    default: 'external_programs'
+  ext-programs-script-name:
+    description: |
+      The name of the bootstrap script.
+    required: false
+    default: 'download.sh'
   bootstrap-ci-script-name:
     description: |
-      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc).
     required: true
     default: 'bootstrap-ci.sh'
   golang-version:
@@ -69,7 +79,7 @@ inputs:
   #
   artifact-name:
     description: |
-      Name of build artifact to create when <artifact-paths> input is not empty
+      Name of build artifact to create when <artifact-paths> input is not empty.
 
     required: false
     default: 'build-artifacts'
@@ -82,7 +92,7 @@ inputs:
     default: ''
   artifact-retention:
     description: |
-      Time in days to keep build artifacts before removing them
+      Time in days to keep build artifacts before removing them.
     required: false
     default: '7'
 
@@ -226,6 +236,23 @@ runs:
             --install-path '@executable_path/libs/' \
             --search-path "${DYLIBBUNDLER_SEARCH_LIB_PATH}" \
             --fix-file pl
+
+    - name: Add external programs download script
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_PATH: ${{ inputs.build-path }}
+        EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
+        EXT_PROGRAMS_SCRIPT_NAME: ${{ input.ext-programs-script-name }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ -f "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
+            cp -v "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "${BUILD_PATH}"
+          else
+            # softfail
+            echo "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME} script not found"
+            exit 0
+          fi
 
     - name: Add build results to the archive
       uses: milaboratory/github-ci/actions/shell@v4-beta

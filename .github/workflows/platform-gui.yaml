@@ -638,7 +638,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.pl-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.pl-s3-region }}
@@ -647,128 +647,60 @@ jobs:
         id: get_deps
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
+          PL_DIST_DIR: "pl-dist"
+          EXT_PROGRAMS_PATH: "external_programs"
+          EXT_PROGRAMS_SCRIPT_NAME: "download.sh"
           S3_BUKCET: ${{ inputs.pl-s3-bucket }}
-          JAVA_URL: ${{ inputs.java-url }}
-          MIXCR_URL: ${{ inputs.mixcr-url }}
         with:
           run: |
-            get_os_arch=$(uname -m)
-            case "${get_os_arch}" in
+            _GET_OS_ARCH=$(uname -m)
+            case "${_GET_OS_ARCH}" in
               x86_64)
                 _RUNNER_OS_ARCH="amd64"
-                _JAVA_ARCH="x64"
                 ;;
               aarch64 | arm64)
                 _RUNNER_OS_ARCH="arm64"
-                _JAVA_ARCH="aarch64"
                 ;;
               *)
-                echo "Arch is not in the list: ${get_os_arch}"
+                echo "Arch is not in the list: ${_GET_OS_ARCH}"
                 exit 1
                 ;;
             esac
 
             _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
-
             _PL_VERSION=$(jq -r ".dependencies.architecture.$_RUNNER_OS_ARCH.$_RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
             _PL_COMMON_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"pl\") | .version" plui-dependencies.json)
-            _MIXCR_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"mixcr\") | .version" plui-dependencies.json)
-            _JAVA_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"java\") | .version" plui-dependencies.json)
 
             if [ -z "${_PL_VERSION}" ];then
               _PL_VERSION="${_PL_COMMON_VERSION}"
             fi
 
-            if [ "${_RUNNER_OS_SANITEZED}" == "windows" ];then
-              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.zip"
-            else
-              _PL_ARCHIVE="${_PL_VERSION}-${_RUNNER_OS_ARCH}.tgz"
-            fi
-
+            _PL_ARCHIVE="pl-${_PL_VERSION}-${_RUNNER_OS_ARCH}.tgz"
             _PL_DL_LINK="s3://${S3_BUKCET}/pl/${_RUNNER_OS_SANITEZED}/${_PL_ARCHIVE}"
 
-            _MIXCR_ARCHIVE="${_MIXCR_VERSION}.zip"
-            _MIXCR_DL_LINK="${MIXCR_URL}/${_MIXCR_ARCHIVE}"
-
-            if [ "${_RUNNER_OS_SANITEZED}" == "windows" ];then
-              _JAVA_ARCHIVE="${_JAVA_VERSION}-${_JAVA_ARCH}-${_RUNNER_OS_SANITEZED}-jdk.zip"
-            else
-              _JAVA_ARCHIVE="${_JAVA_VERSION}-${_JAVA_ARCH}-${_RUNNER_OS_SANITEZED}-jdk.tar.gz"
-            fi
-            _JAVA_DL_LINK="${JAVA_URL}/${_JAVA_ARCHIVE}"
-
-            ghwa_set_output "pl-archive" "${_PL_ARCHIVE}"
-            ghwa_set_output "pl-dl-link" "${_PL_DL_LINK}"
-
-            ghwa_set_output "mixcr-archive" "${_MIXCR_ARCHIVE}"
-            ghwa_set_output "mixcr-dl-link" "${_MIXCR_DL_LINK}"
-
-            ghwa_set_output "java-archive" "${_JAVA_ARCHIVE}"
-            ghwa_set_output "java-dl-link" "${_JAVA_DL_LINK}"
-
-      - name: Prepare dependencies for platform gui
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          PL_DIST_DIR: "pl-dist"
-          EXT_PROGRAMS_DIR: "external_programs"
-          TMP_DIR: "/tmp"
-          PL_ARCHIVE: ${{ fromJSON( steps.get_deps.outputs.data ).pl-archive }}
-          PL_DL_LINK: ${{ fromJSON( steps.get_deps.outputs.data ).pl-dl-link }}
-          MIXCR_ARCHIVE: ${{ fromJSON( steps.get_deps.outputs.data ).mixcr-archive }}
-          MIXCR_DL_LINK: ${{ fromJSON( steps.get_deps.outputs.data ).mixcr-dl-link }}
-          JAVA_ARCHIVE: ${{ fromJSON( steps.get_deps.outputs.data ).java-archive }}
-          JAVA_DL_LINK: ${{ fromJSON( steps.get_deps.outputs.data ).java-dl-link }}
-        with:
-          dump-stdout: false
-          run: |
             mkdir -v ./"${PL_DIST_DIR}"
+            mkdir -pv ./"${EXT_PROGRAMS_PATH}"
+
             echo "Downloading platform archive..."
             aws s3 cp --no-progress "${PL_DL_LINK}" ./
             if [ -f "${PL_ARCHIVE}" ];then
-              echo "Extracting platform archive..."
-              if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
-                tar -zxvf "${PL_ARCHIVE}" -C "${PL_DIST_DIR}"
-              else
-                7z x "${PL_ARCHIVE}" -o"${PL_DIST_DIR}"
-              fi
+             echo "Extracting platform archive..."
+             if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
+               tar -zxvf "${PL_ARCHIVE}" -C "${PL_DIST_DIR}"
+             fi
             else
-                echo "Platform archive not found"
-                exit 1
-            fi
-
-            mkdir -pv ./"${EXT_PROGRAMS_DIR}"
-            echo "Downloading mixcr archive..."
-            curl -LO --no-progress-meter "${MIXCR_DL_LINK}"
-            if [ -f "${MIXCR_ARCHIVE}" ];then
-              echo "Extracting mixcr archive..."
-              7z x "${MIXCR_ARCHIVE}" mixcr.jar -o"${EXT_PROGRAMS_DIR}"
-            else
-              echo "MiXCR archive not found"
+              echo "Platform archive not found"
               exit 1
             fi
 
-            mkdir -pv ./"${EXT_PROGRAMS_DIR}/amazon-corretto" && mkdir -pv "${TMP_DIR}/amazon-corretto"
-            echo "Download java archive..."
-            curl -LO --no-progress-meter "${JAVA_DL_LINK}"
-            if [ -f "${JAVA_ARCHIVE}" ];then
-              if [ "${RUNNER_OS}" == "Windows" ];then
-                echo "Extracting java archive..."
-                7z x "${JAVA_ARCHIVE}" -o"${TMP_DIR}/amazon-corretto"
-              else
-                echo "Extracting java archive..."
-                tar xf "${JAVA_ARCHIVE}" --strip-components=1 --directory "${TMP_DIR}/amazon-corretto"
-              fi
+            echo "Downloading platform dependencies"
+            if [ -f "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
+              cd ${EXT_PROGRAMS_PATH} && bash -c "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              echo "Clean-up ..."
+              rm -fv "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
             else
-              echo "Java archive not found"
+              echo "Dependencies script not found"
               exit 1
-            fi
-
-            if [ "${RUNNER_OS}" == "Windows" ];then
-                mv "${TMP_DIR}/amazon-corretto"/*/* "./${EXT_PROGRAMS_DIR}/amazon-corretto"
-            elif [ "${RUNNER_OS}" == "macOS" ];then
-                mv "${TMP_DIR}/amazon-corretto/Contents/Home"/* "./${EXT_PROGRAMS_DIR}/amazon-corretto"
-            else
-                mv "${TMP_DIR}/amazon-corretto"/* "./${EXT_PROGRAMS_DIR}/amazon-corretto"
             fi
 
       - id: artifact

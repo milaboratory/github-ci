@@ -971,7 +971,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1097,7 +1097,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1208,7 +1208,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1323,7 +1323,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1595,7 +1595,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1714,7 +1714,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1815,7 +1815,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-library-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-library-s3-region }}
@@ -2106,7 +2106,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.release-s3-region }}

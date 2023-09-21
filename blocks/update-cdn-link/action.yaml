@@ -61,7 +61,7 @@ runs:
 
   steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
         aws-region: ${{ inputs.s3-region }}

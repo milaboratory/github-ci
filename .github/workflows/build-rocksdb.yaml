@@ -97,7 +97,7 @@ jobs:
           run: |
             "${VCPKG_ROOT}"/vcpkg install "rocksdb[core,zlib,zstd,bzip2,lz4,snappy]:${VCPKG_TRIPLET}"
 
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
           aws-region: ${{ inputs.aws-region }}
