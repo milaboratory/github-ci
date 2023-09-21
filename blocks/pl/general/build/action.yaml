@@ -242,7 +242,7 @@ runs:
       env:
         BUILD_PATH: ${{ inputs.build-path }}
         EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
-        EXT_PROGRAMS_SCRIPT_NAME: ${{ input.ext-programs-script-name }}
+        EXT_PROGRAMS_SCRIPT_NAME: ${{ inputs.ext-programs-script-name }}
       with:
         dump-stdout: false
         run: |

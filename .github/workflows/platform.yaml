@@ -473,7 +473,7 @@ jobs:
       contents: read
     steps:
       - id: s3
-        uses: milaboratory/github-ci/blocks/release/update-s3-latest@v4-beta
+        uses: milaboratory/github-ci/blocks/update-s3-latest@v4-beta
         with:
           artifact-name: ${{ inputs.app-name-slug }}
           branch-name: ${{ github.ref_name }}
