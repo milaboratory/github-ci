@@ -653,30 +653,30 @@ jobs:
           S3_BUKCET: ${{ inputs.pl-s3-bucket }}
         with:
           run: |
-            _GET_OS_ARCH=$(uname -m)
-            case "${_GET_OS_ARCH}" in
+            GET_OS_ARCH=$(uname -m)
+            case "${GET_OS_ARCH}" in
               x86_64)
-                _RUNNER_OS_ARCH="amd64"
+                RUNNER_OS_ARCH="amd64"
                 ;;
               aarch64 | arm64)
-                _RUNNER_OS_ARCH="arm64"
+                RUNNER_OS_ARCH="arm64"
                 ;;
               *)
-                echo "Arch is not in the list: ${_GET_OS_ARCH}"
+                echo "Arch is not in the list: ${GET_OS_ARCH}"
                 exit 1
                 ;;
             esac
 
-            _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
-            _PL_VERSION=$(jq -r ".dependencies.architecture.$_RUNNER_OS_ARCH.$_RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
-            _PL_COMMON_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"pl\") | .version" plui-dependencies.json)
+            RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+            PL_VERSION=$(jq -r ".dependencies.architecture.$RUNNER_OS_ARCH.$RUNNER_OS_SANITEZED[] | select(.name == \"pl\") | .version" plui-dependencies.json)
+            PL_COMMON_VERSION=$(jq -r ".dependencies.common[] | select(.name == \"pl\") | .version" plui-dependencies.json)
 
-            if [ -z "${_PL_VERSION}" ];then
-              _PL_VERSION="${_PL_COMMON_VERSION}"
+            if [ -z "${PL_VERSION}" ];then
+              PL_VERSION="${PL_COMMON_VERSION}"
             fi
 
-            _PL_ARCHIVE="pl-${_PL_VERSION}-${_RUNNER_OS_ARCH}.tgz"
-            _PL_DL_LINK="s3://${S3_BUKCET}/pl/${_RUNNER_OS_SANITEZED}/${_PL_ARCHIVE}"
+            PL_ARCHIVE="pl-${PL_VERSION}-${RUNNER_OS_ARCH}.tgz"
+            PL_DL_LINK="s3://${S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_ARCHIVE}"
 
             mkdir -v ./"${PL_DIST_DIR}"
             mkdir -pv ./"${EXT_PROGRAMS_PATH}"
@@ -695,9 +695,9 @@ jobs:
 
             echo "Downloading platform dependencies"
             if [ -f "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-              cd ${EXT_PROGRAMS_PATH} && bash -c "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              cd ${EXT_PROGRAMS_PATH} && bash -c "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Clean-up ..."
-              rm -fv "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
             else
               echo "Dependencies script not found"
               exit 1
