@@ -686,7 +686,7 @@ jobs:
             if [ -f "${PL_ARCHIVE}" ];then
              echo "Extracting platform archive..."
              if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
-               tar -zxvf "${PL_ARCHIVE}" -C "${PL_DIST_DIR}"
+               tar -zxvf "./${PL_ARCHIVE}" -C "./${PL_DIST_DIR}"
              fi
             else
               echo "Platform archive not found"
@@ -694,10 +694,11 @@ jobs:
             fi
 
             echo "Downloading platform dependencies"
-            if [ -f "${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-              cd ${EXT_PROGRAMS_PATH} && bash -c "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+            if [ -f "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
+              cd "./${EXT_PROGRAMS_PATH}" && bash -c "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Clean-up ..."
               rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              find ./ -name _CodeSignature -type d -exec rm -rfv {} +
             else
               echo "Dependencies script not found"
               exit 1
