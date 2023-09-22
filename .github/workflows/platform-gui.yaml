@@ -695,25 +695,16 @@ jobs:
 
             echo "Downloading platform dependencies"
             if [ -f "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-              cd "./${EXT_PROGRAMS_PATH}" && "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
-              rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              mv "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" "./${EXT_PROGRAMS_PATH}"
+              cd "./${EXT_PROGRAMS_PATH}" && "./${EXT_PROGRAMS_SCRIPT_NAME}"
+              echo "Clean-up" && ls -la
+              rm -vf "./${EXT_PROGRAMS_SCRIPT_NAME}"
+              find . -name "MacOS" -type d -exec rm -rfv {} +
+              find . -name "_CodeSignature" -type d -exec rm -rfv {} +
             else
               echo "Dependencies script not found"
               exit 1
             fi
-
-      - name: Clean-up and check content step
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          EXT_PROGRAMS_PATH: "external_programs"
-          PL_DIST_DIR: "pl-dist"
-        with:
-          run: |
-            ls -la "./${PL_DIST_DIR}/"
-            cd "./${EXT_PROGRAMS_PATH}"
-            ls -la
-            rm -rfv "./amazon-corretto/Contents/MacOS" && \
-            rm -rfv "./amazon-corretto/Contents/_CodeSignature"
 
       - id: artifact
         if: always()
