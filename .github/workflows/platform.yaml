@@ -419,7 +419,7 @@ jobs:
           build-cache-key: ${{ inputs.build-cache-key }}
           ext-programs-path: ${{ inputs.ext-programs-path }}
           ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
-          rocksdb-version: ${{ inputs.rocksdb-version }}
+          build-archive-path: ${{ inputs.dist-archive-paths }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
           cdn-url: ${{ inputs.cdn-url }}

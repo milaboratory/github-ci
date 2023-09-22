@@ -16,7 +16,7 @@ inputs:
     description: |
       The path where the build command will run.
     required: false
-    default: ${{ github.workspace }}
+    default: ''
   ext-programs-path:
     description: |
       The external_programs bootstrap script path.
@@ -57,15 +57,16 @@ inputs:
       Must be used in conjunction with <build-cache-paths>
     required: false
     default: ''
+  build-archive-path:
+    description: |
+      Files to save as build artifact, release asset and to upload to S3.
+    required: false
+    default: ''
   cdn-url:
     description: |
       CDN url for Static and Shared RockDB Libs.
     required: false
     default: 'https://cdn.mixcr.com/internal/pkgs'
-  rocksdb-version:
-    description:
-      RocksDB version.
-    required: true
 
   #
   # Github authentication control
@@ -120,15 +121,19 @@ runs:
     - name: Get runner metadata
       id: get_runner_metadata
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_BUILD_PATH: ${{ inputs.build-path == '' || github.workspace }}
+        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path == '' || github.workspace }}
+        PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
       with:
         run: |
           get_os_arch=$(uname -m)
           case "${get_os_arch}" in
             x86_64)
-              _RUNNER_OS_ARCH="amd64"
+              RUNNER_OS_ARCH="amd64"
               ;;
             aarch64 | arm64)
-              _RUNNER_OS_ARCH="arm64"
+              RUNNER_OS_ARCH="arm64"
               ;;
             *)
               echo "Arch is not in the list: ${get_os_arch}"
@@ -136,10 +141,31 @@ runs:
               ;;
           esac
 
-          _RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+          RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
+          PL_EXT_PROGRAMS_PATH_SANITEZED="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}"
+          PL_ROCKSDB_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb"
 
-          ghwa_set_output runner_os "${_RUNNER_OS_SANITEZED}"
-          ghwa_set_output runner_arch "${_RUNNER_OS_ARCH}"
+          if [ "${PL_BUILD_ARCHIVE_PATH}" == "${GITHUB_WORKSPACE}" ];then
+            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}"
+          else
+            PL_BUILD_ARCHIVE_PATH_SANITEZED=$(dirname $PL_BUILD_ARCHIVE_PATH)
+            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
+          fi
+
+          if [ "${PL_BUILD_PATH}" == "${GITHUB_WORKSPACE}" ];then
+            PL_BUILD_PATH="${GITHUB_WORKSPACE}"
+          else
+            PL_BUILD_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_PATH}"
+          fi
+
+          # set output
+          ghwa_set_output runner_os "${RUNNER_OS_SANITEZED}"
+          ghwa_set_output runner_arch "${RUNNER_OS_ARCH}"
+          ghwa_set_output pl_build_path "${PL_BUILD_PATH}"
+          ghwa_set_output pl_build_archive_path "${PL_BUILD_ARCHIVE_PATH}"
+          ghwa_set_output pl_ext_programs_path "${PL_EXT_PROGRAMS_PATH_SANITEZED}"
+          # set envs
+          ghwa_set_env PKG_CONFIG_PATH "${PL_ROCKSDB_PATH}/lib/pkgconfig"
 
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -154,85 +180,30 @@ runs:
             exit 1
           fi
 
-    - name: Download and unpack static and shared rocksdb libs
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_os }}
-        GH_RUNNER_ARCH: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_arch }}
-        CDN_URL: ${{ inputs.cdn-url }}
-        ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
-        BUILD_PATH: ${{ inputs.build-path }}
-      with:
-        dump-stdout: false
-        run: |
-          ROCKSDB_STATIC_LIB_ARCHIVE="rocksdb-static-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.tar.gz"
-          ROCKSDB_SHARED_LIB_ARCHIVE="rocksdb-shared-lib-${ROCKSDB_VERSION}-${GH_RUNNER_OS}-${GH_RUNNER_ARCH}.tar.gz"
-
-          ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb"
-
-          download_url="${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
-          echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
-          echo "  ( ${download_url} )"
-          curl -LO --no-progress-meter "${download_url}"
-
-          download_url="${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
-          echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
-          echo "  ( ${download_url} )"
-          curl -LO --no-progress-meter "${download_url}"
-
-          mkdir -p "${ROCKSDB_LIB_PATH}"
-          echo "Unzip shared libs"
-          tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" -C "${ROCKSDB_LIB_PATH}"
-          echo "Unzip static libs"
-          if [ "${GH_RUNNER_OS}" == "macos" ];then
-            TAR_BIN=$(which gtar)
-          else
-            TAR_BIN=$(which tar)
-          fi
-          "${TAR_BIN}" -zxf "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
-            --strip-components=2 --wildcards --no-anchored -C "${ROCKSDB_LIB_PATH}/lib" '*.a'
-
-          ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
-
-          # additional steps for each os
-          if [ "${GH_RUNNER_OS}" == "linux" ];then
-            # Put shared rocksdb libs near the pl executable on linux
-            mkdir -p "${BUILD_PATH}/libs"
-            tar -zxf "${ROCKSDB_SHARED_LIB_ARCHIVE}" \
-              --strip-components=2 --wildcards --no-anchored -C "${BUILD_PATH}/libs" '*.so*'
-            ghwa_set_env LD_LIBRARY_PATH "${ROCKSDB_LIB_PATH}/lib"
-          elif [ "${GH_RUNNER_OS}" == "macos" ];then
-            ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${ROCKSDB_LIB_PATH}/lib"
-          else
-            exit 0
-          fi
-
     - name: Run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        GH_RUNNER_OS: ${{ fromJSON( steps.get_runner_metadata.outputs.data ).runner_os }}
-        BUILD_PATH: ${{ inputs.build-path }}
+        BUILD_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_path }}
+        BUILD_COMMAND: ${{ inputs.build-command }}
       with:
         dump-stdout: false
         run: |
-            cd "${BUILD_PATH}" && ${{ inputs.build-command }}
-            if [ "${GH_RUNNER_OS}" == "linux" ];then
-              ldd ./pl
-            elif [ "${GH_RUNNER_OS}" == "macos" ];then
-              otool -L ./pl
+            cd "${BUILD_PATH}"
+            if [ -x "${BUILD_COMMAND}" ];then
+              "./${BUILD_COMMAND}"
             else
-              exit 0
+              ${{ inputs.build-command }}
             fi
 
     - name: Run bundle dylibs on macOS
       if: startsWith(runner.os, 'macOS')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BUILD_PATH: ${{ inputs.build-path }}
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
       with:
         dump-stdout: false
         run : |
-          cd ${BUILD_PATH}
+          cd "${BUILD_ARCHIVE_PATH}"
           dylibbundler \
             --bundle-deps \
             --create-dir \
@@ -244,8 +215,8 @@ runs:
     - name: Add external programs download script
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BUILD_PATH: ${{ inputs.build-path }}
-        EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
+        BUILD_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_path }}
+        EXT_PROGRAMS_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_ext_programs_path }}
         EXT_PROGRAMS_SCRIPT_NAME: ${{ inputs.ext-programs-script-name }}
       with:
         dump-stdout: false
@@ -261,11 +232,11 @@ runs:
     - name: Add build results to the archive
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BUILD_PATH: ${{ inputs.build-path }}
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
       with:
         dump-stdout: false
         run: |
-          cd "${BUILD_PATH}"
+          cd "${BUILD_ARCHIVE_PATH}"
           tar --exclude={'*.go','*.sum','*.mod','*.tgz','*.tar.gz'} -zcvf ./pl.tgz *
 
     - name: Save build artifacts
