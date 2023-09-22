@@ -123,7 +123,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
-        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path || github.workspace }}
+        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path }}
         PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
       with:
         run: |
@@ -144,13 +144,8 @@ runs:
           RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
           PL_EXT_PROGRAMS_PATH_SANITEZED="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}"
           PL_ROCKSDB_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb"
-
-          if [ "${PL_BUILD_ARCHIVE_PATH}" == "${GITHUB_WORKSPACE}" ];then
-            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}"
-          else
-            PL_BUILD_ARCHIVE_PATH_SANITEZED=$(dirname $PL_BUILD_ARCHIVE_PATH)
-            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
-          fi
+          PL_BUILD_ARCHIVE_PATH_SANITEZED=$(dirname $PL_BUILD_ARCHIVE_PATH)
+          PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
 
           if [ "${PL_BUILD_PATH}" == "${GITHUB_WORKSPACE}" ];then
             PL_BUILD_PATH="${GITHUB_WORKSPACE}"
