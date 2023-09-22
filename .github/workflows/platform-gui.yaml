@@ -695,10 +695,13 @@ jobs:
 
             echo "Downloading platform dependencies"
             if [ -f "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-              cd "./${EXT_PROGRAMS_PATH}" && bash -c "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
+              cd "./${EXT_PROGRAMS_PATH}" && "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Clean-up ..."
               rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
-              find ./ -name _CodeSignature -type d -exec rm -rfv {} +
+              echo "Delete codesign files"
+              pwd
+              find . -name "MacOS" -type f -exec rm -rfv {} + && \
+              find . -name "_CodeSignature" -type d -exec rm -rfv {} +
             else
               echo "Dependencies script not found"
               exit 1
