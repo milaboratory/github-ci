@@ -96,7 +96,7 @@ on:
           The path where the build command will run
         type: string
         required: false
-        default: 'platform\cmd\pl'
+        default: ${{ github.workspace }}
       build-env:
         description: |
           JSON-encoded environment variables to set for 'go build .':
