@@ -122,8 +122,8 @@ runs:
       id: get_runner_metadata
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PL_BUILD_PATH: ${{ inputs.build-path == '' || github.workspace }}
-        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-path == '' || github.workspace }}
+        PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
+        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-path || github.workspace }}
         PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
       with:
         run: |
