@@ -706,8 +706,10 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           EXT_PROGRAMS_PATH: "external_programs"
+          PL_DIST_DIR: "pl-dist"
         with:
           run: |
+            ls -la "./${PL_DIST_DIR}/"
             cd "./${EXT_PROGRAMS_PATH}"
             ls -la
             rm -rfv "./amazon-corretto/Contents/MacOS" && \
