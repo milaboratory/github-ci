@@ -27,9 +27,10 @@ fi
 "${TAR_BIN}" -zx \
   --file "${ROCKSDB_STATIC_LIB_ARCHIVE}" \
   --wildcards \
+  --wildcards-match-slash \
   --no-anchored \
-  --cd "${ROCKSDB_LIB_PATH}/lib" \
-  '*.a'
+  --cd "${ROCKSDB_LIB_PATH}/" \
+  './lib/*.a'
 #  --strip-components=2 \
 
 ghwa_set_env PKG_CONFIG_PATH "${ROCKSDB_LIB_PATH}/lib/pkgconfig"
