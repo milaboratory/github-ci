@@ -217,7 +217,7 @@ runs:
         dump-stdout: false
         run: |
           if [ -f "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-            cp -v "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "${BUILD_ARCHIVE_PATH}"
+            cp -v "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "${BUILD_ARCHIVE_PATH}/"
           else
             # softfail
             echo "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME} script not found"
