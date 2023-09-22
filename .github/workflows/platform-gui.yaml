@@ -699,9 +699,10 @@ jobs:
               echo "Clean-up ..."
               rm -vf "../${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Delete codesign files"
+              ls -la
               pwd
-              find . -name "MacOS" -type f -exec rm -rfv {} + && \
-              find . -name "_CodeSignature" -type d -exec rm -rfv {} +
+              rm -rfv "./amazon-corretto/Contents/MacOS" && \
+              rm -rfv "./amazon-corretto/Contents/_CodeSignature"
             else
               echo "Dependencies script not found"
               exit 1
