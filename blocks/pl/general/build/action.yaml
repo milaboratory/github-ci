@@ -170,11 +170,15 @@ runs:
 
           ROCKSDB_LIB_PATH="${GITHUB_WORKSPACE}/rocksdb"
 
+          download_url="${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
           echo "Downloading static libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
-          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_STATIC_LIB_ARCHIVE}"
+          echo "  ( ${download_url} )"
+          curl -LO --no-progress-meter "${download_url}"
 
+          download_url="${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
           echo "Downloading shared libs ${GH_RUNNER_OS}-${GH_RUNNER_ARCH}"
-          curl -LO --no-progress-meter "${CDN_URL}/rocksdb/${ROCKSDB_VERSION}/${ROCKSDB_SHARED_LIB_ARCHIVE}"
+          echo "  ( ${download_url} )"
+          curl -LO --no-progress-meter "${download_url}"
 
           mkdir -p "${ROCKSDB_LIB_PATH}"
           echo "Unzip shared libs"
