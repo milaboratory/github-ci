@@ -4,7 +4,7 @@ import * as os from 'os'
 import path from 'path'
 import JSZip from 'jszip'
 import {createGzip} from 'zlib'
-import {createWriteStream, createReadStream} from 'fs'
+import {createWriteStream} from 'fs'
 import tar from 'tar-stream'
 
 // Helpers
@@ -67,7 +67,6 @@ async function createTarGzArchive(files: string[], archiveName: string) {
   const gzip = createGzip()
 
   for (const file of files) {
-    const fileStream = createReadStream(file)
     pack.entry({name: path.basename(file)}, await fs.readFile(file))
   }
 
