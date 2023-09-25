@@ -20064,6 +20064,7 @@ const zlib_1 = __nccwpck_require__(9796);
 const fs_1 = __nccwpck_require__(7147);
 const tar_stream_1 = __importDefault(__nccwpck_require__(2283));
 // Helpers
+// Checks if a given filename matches any pattern in a list of patterns.
 function matchFilename(filename, patterns) {
     for (const pattern of patterns) {
         const escapeRegex = (string) => string.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -20074,12 +20075,17 @@ function matchFilename(filename, patterns) {
     }
     return false;
 }
+// Recursively retrieves all files from a directory.
 function getAllFilesFromDir(dir) {
     return __awaiter(this, void 0, void 0, function* () {
         const entries = yield fs.readdir(dir, { withFileTypes: true });
         let files = entries
             .filter(file => !file.isDirectory())
-            .map(file => path_1.default.join(dir, file.name));
+            .map(file => {
+            const filePath = path_1.default.join(dir, file.name);
+            console.log(`Processing file: ${filePath}`);
+            return filePath;
+        });
         const directories = entries.filter(directory => directory.isDirectory());
         for (const directory of directories) {
             files = files.concat(yield getAllFilesFromDir(path_1.default.join(dir, directory.name)));
@@ -20087,6 +20093,7 @@ function getAllFilesFromDir(dir) {
         return files;
     });
 }
+// Verifies that required GitHub Action inputs are provided.
 function checkRequiredInputs(requiredInputs) {
     for (const input of requiredInputs) {
         const value = core.getInput(input);
@@ -20097,7 +20104,7 @@ function checkRequiredInputs(requiredInputs) {
         }
     }
 }
-// ZIP logic
+// Create zip archive of the provided files.
 function createZipArchive(files, archiveName) {
     return __awaiter(this, void 0, void 0, function* () {
         const zip = new jszip_1.default();
@@ -20109,7 +20116,7 @@ function createZipArchive(files, archiveName) {
         yield fs.writeFile(archiveName, content);
     });
 }
-// TAR.GZ logic
+// Creates a tar.gz archive of the provided files.
 function createTarGzArchive(files, archiveName) {
     return __awaiter(this, void 0, void 0, function* () {
         const pack = tar_stream_1.default.pack();
@@ -20155,8 +20162,8 @@ function main() {
                 }
             }
         }
-        const filteredFiles = allFiles.filter(file => matchFilename(file, includePatterns) &&
-            !matchFilename(file, excludePatterns));
+        const filteredFiles = allFiles.filter(file => matchFilename(path_1.default.basename(file), includePatterns) &&
+            !matchFilename(path_1.default.basename(file), excludePatterns));
         const archiveName = core.getInput('archive-name') || 'archive.tgz';
         // OS-based archiving
         const platform = os.platform();

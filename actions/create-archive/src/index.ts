@@ -8,6 +8,7 @@ import {createWriteStream} from 'fs'
 import tar from 'tar-stream'
 
 // Helpers
+// Checks if a given filename matches any pattern in a list of patterns.
 function matchFilename(filename: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
     const escapeRegex = (string: string) =>
@@ -21,12 +22,16 @@ function matchFilename(filename: string, patterns: string[]): boolean {
   }
   return false
 }
-
+// Recursively retrieves all files from a directory.
 async function getAllFilesFromDir(dir: string): Promise<string[]> {
   const entries = await fs.readdir(dir, {withFileTypes: true})
   let files = entries
     .filter(file => !file.isDirectory())
-    .map(file => path.join(dir, file.name))
+    .map(file => {
+      const filePath = path.join(dir, file.name)
+      console.log(`Processing file: ${filePath}`)
+      return filePath
+    })
   const directories = entries.filter(directory => directory.isDirectory())
   for (const directory of directories) {
     files = files.concat(
@@ -35,7 +40,7 @@ async function getAllFilesFromDir(dir: string): Promise<string[]> {
   }
   return files
 }
-
+// Verifies that required GitHub Action inputs are provided.
 function checkRequiredInputs(requiredInputs: string[]): void {
   for (const input of requiredInputs) {
     const value = core.getInput(input)
@@ -47,7 +52,7 @@ function checkRequiredInputs(requiredInputs: string[]): void {
   }
 }
 
-// ZIP logic
+// Create zip archive of the provided files.
 async function createZipArchive(files: string[], archiveName: string) {
   const zip = new JSZip()
 
@@ -60,7 +65,7 @@ async function createZipArchive(files: string[], archiveName: string) {
   await fs.writeFile(archiveName, content)
 }
 
-// TAR.GZ logic
+// Creates a tar.gz archive of the provided files.
 async function createTarGzArchive(files: string[], archiveName: string) {
   const pack = tar.pack()
   const output = createWriteStream(archiveName)
@@ -111,8 +116,8 @@ async function main(): Promise<void> {
 
   const filteredFiles = allFiles.filter(
     file =>
-      matchFilename(file, includePatterns) &&
-      !matchFilename(file, excludePatterns)
+      matchFilename(path.basename(file), includePatterns) &&
+      !matchFilename(path.basename(file), excludePatterns)
   )
 
   const archiveName = core.getInput('archive-name') || 'archive.tgz'
