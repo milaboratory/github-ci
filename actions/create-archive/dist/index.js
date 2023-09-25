@@ -20109,8 +20109,15 @@ function createZipArchive(files, archiveName) {
     return __awaiter(this, void 0, void 0, function* () {
         const zip = new jszip_1.default();
         for (const file of files) {
-            const data = yield fs.readFile(file);
-            zip.file(path_1.default.basename(file), data);
+            const relativePath = path_1.default.relative(process.cwd(), file);
+            if ((yield fs.stat(file)).isDirectory()) {
+                // For directories, you might need to ensure they are added as well.
+                zip.folder(relativePath);
+            }
+            else {
+                const data = yield fs.readFile(file);
+                zip.file(relativePath, data);
+            }
         }
         const content = yield zip.generateAsync({ type: 'nodebuffer' });
         yield fs.writeFile(archiveName, content);
@@ -20120,12 +20127,18 @@ function createZipArchive(files, archiveName) {
 function createTarGzArchive(files, archiveName) {
     return __awaiter(this, void 0, void 0, function* () {
         const pack = tar_stream_1.default.pack();
-        const output = (0, fs_1.createWriteStream)(archiveName);
-        const gzip = (0, zlib_1.createGzip)();
         for (const file of files) {
-            pack.entry({ name: path_1.default.basename(file) }, yield fs.readFile(file));
+            const relativePath = path_1.default.relative(process.cwd(), file);
+            if ((yield fs.stat(file)).isDirectory()) {
+                pack.entry({ name: relativePath, type: 'directory' });
+            }
+            else {
+                pack.entry({ name: relativePath }, yield fs.readFile(file));
+            }
         }
         pack.finalize();
+        const output = (0, fs_1.createWriteStream)(archiveName);
+        const gzip = (0, zlib_1.createGzip)();
         pack.pipe(gzip).pipe(output);
     });
 }

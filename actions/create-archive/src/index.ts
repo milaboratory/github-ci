@@ -57,25 +57,35 @@ async function createZipArchive(files: string[], archiveName: string) {
   const zip = new JSZip()
 
   for (const file of files) {
-    const data = await fs.readFile(file)
-    zip.file(path.basename(file), data)
+    const relativePath = path.relative(process.cwd(), file)
+    if ((await fs.stat(file)).isDirectory()) {
+      // For directories, you might need to ensure they are added as well.
+      zip.folder(relativePath)
+    } else {
+      const data = await fs.readFile(file)
+      zip.file(relativePath, data)
+    }
   }
 
   const content = await zip.generateAsync({type: 'nodebuffer'})
   await fs.writeFile(archiveName, content)
 }
-
 // Creates a tar.gz archive of the provided files.
 async function createTarGzArchive(files: string[], archiveName: string) {
   const pack = tar.pack()
-  const output = createWriteStream(archiveName)
-  const gzip = createGzip()
 
   for (const file of files) {
-    pack.entry({name: path.basename(file)}, await fs.readFile(file))
+    const relativePath = path.relative(process.cwd(), file)
+    if ((await fs.stat(file)).isDirectory()) {
+      pack.entry({name: relativePath, type: 'directory'})
+    } else {
+      pack.entry({name: relativePath}, await fs.readFile(file))
+    }
   }
 
   pack.finalize()
+  const output = createWriteStream(archiveName)
+  const gzip = createGzip()
   pack.pipe(gzip).pipe(output)
 }
 
