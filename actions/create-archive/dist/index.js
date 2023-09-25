@@ -20111,10 +20111,11 @@ function createZipArchive(files, archiveName) {
         for (const file of files) {
             const relativePath = path_1.default.relative(process.cwd(), file);
             if ((yield fs.stat(file)).isDirectory()) {
-                // For directories, you might need to ensure they are added as well.
+                console.log(`Adding directory to zip archive: ${relativePath}`);
                 zip.folder(relativePath);
             }
             else {
+                console.log(`Adding file to zip archive: ${relativePath}`);
                 const data = yield fs.readFile(file);
                 zip.file(relativePath, data);
             }
@@ -20130,9 +20131,11 @@ function createTarGzArchive(files, archiveName) {
         for (const file of files) {
             const relativePath = path_1.default.relative(process.cwd(), file);
             if ((yield fs.stat(file)).isDirectory()) {
+                console.log(`Adding directory to tar.gz archive: ${relativePath}`);
                 pack.entry({ name: relativePath, type: 'directory' });
             }
             else {
+                console.log(`Adding file to tar.gz archive: ${relativePath}`);
                 pack.entry({ name: relativePath }, yield fs.readFile(file));
             }
         }
