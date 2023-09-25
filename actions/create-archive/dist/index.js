@@ -20124,7 +20124,7 @@ function createTarGzArchive(files, archiveName) {
 }
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        checkRequiredInputs(['source_files']); // Adjust required fields as needed.
+        checkRequiredInputs(['source-files']); // Adjust required fields as needed.
         const rawSourceFiles = core
             .getInput('source-files')
             .split('\n')

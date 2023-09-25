@@ -75,7 +75,7 @@ async function createTarGzArchive(files: string[], archiveName: string) {
 }
 
 async function main(): Promise<void> {
-  checkRequiredInputs(['source_files']) // Adjust required fields as needed.
+  checkRequiredInputs(['source-files']) // Adjust required fields as needed.
 
   const rawSourceFiles = core
     .getInput('source-files')
