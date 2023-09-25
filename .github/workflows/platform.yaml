@@ -301,6 +301,23 @@ on:
         type: boolean
         required: false
         default: true
+      dist-archive-latest-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
       dist-archive-latest-s3-add-os-arch:
         description: |
           Add ARCH to all files uploaded to S3 bucket.
@@ -478,6 +495,7 @@ jobs:
           artifact-name: ${{ inputs.app-name-slug }}
           branch-name: ${{ github.ref_name }}
           add-branch-name: ${{ inputs.dist-archive-latest-s3-add-branch-name }}
+          add-sha: ${{ inputs.dist-archive-latest-s3-add-sha }}
           add-os-arch: ${{ inputs.dist-archive-latest-s3-add-os-arch }}
 
           s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
