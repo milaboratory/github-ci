@@ -144,8 +144,15 @@ runs:
           RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
           PL_EXT_PROGRAMS_PATH_SANITEZED="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}"
           PL_ROCKSDB_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb"
+          PL_ROCKSDB_SHARED_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb_shared"
           PL_BUILD_ARCHIVE_PATH_SANITEZED=$(dirname $PL_BUILD_ARCHIVE_PATH)
-          PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
+
+          if [ -z "${PL_BUILD_ARCHIVE_PATH_SANITEZED}" ];then
+            echo "Please set non-empty archive files path."
+            exit 1
+          else
+            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
+          fi
 
           if [ "${PL_BUILD_PATH}" == "${GITHUB_WORKSPACE}" ];then
             PL_BUILD_PATH="${GITHUB_WORKSPACE}"
@@ -161,6 +168,14 @@ runs:
           ghwa_set_output pl_ext_programs_path "${PL_EXT_PROGRAMS_PATH_SANITEZED}"
           # set envs
           ghwa_set_env PKG_CONFIG_PATH "${PL_ROCKSDB_PATH}/lib/pkgconfig"
+
+          if [ "${RUNNER_OS_SANITEZED}" == "macos" ];then
+            ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${PL_ROCKSDB_SHARED_PATH}/lib"
+          elif [ "${RUNNER_OS_SANITEZED}" == "linux" ];then
+            ghwa_set_env LD_LIBRARY_PATH "${PL_ROCKSDB_SHARED_PATH}/lib"
+          else
+            echo "Neither: macOS, nor Linux. Runner OS is: ${RUNNER_OS_SANITEZED}."
+          fi
 
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
