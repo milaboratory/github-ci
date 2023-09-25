@@ -11,7 +11,7 @@ import tar from 'tar-stream'
 
 // Path Normalization
 function sanitizePath(inputPath: string): string {
-  return path.normalize(inputPath).replace(/^(\.\.[/\\])+/, '')
+  return path.normalize(inputPath).replace(/^(\.\.\\])+/, '')
 }
 // Pattern Sanitization
 function sanitizePattern(pattern: string): string {
