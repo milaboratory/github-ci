@@ -8,6 +8,16 @@ import {createWriteStream} from 'fs'
 import tar from 'tar-stream'
 
 // Helpers
+
+// Path Normalization
+function sanitizePath(inputPath: string): string {
+  return path.normalize(inputPath).replace(/^(\.\.[/\\])+/, '')
+}
+// Pattern Sanitization
+function sanitizePattern(pattern: string): string {
+  return pattern.replace(/[^a-zA-Z0-9*_.-]/g, '')
+}
+
 // Checks if a given filename matches any pattern in a list of patterns.
 function matchFilename(filename: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
@@ -98,15 +108,15 @@ async function main(): Promise<void> {
   const rawSourceFiles = core
     .getInput('source-files')
     .split('\n')
-    .map(item => item.trim())
+    .map(item => sanitizePath(item.trim()))
   const includePatterns = core
     .getInput('include-patterns')
     .split('\n')
-    .map(item => item.trim())
+    .map(item => sanitizePattern(item.trim()))
   const excludePatterns = core
     .getInput('exclude-patterns')
     .split('\n')
-    .map(item => item.trim())
+    .map(item => sanitizePattern(item.trim()))
 
   let allFiles: string[] = []
   for (const entry of rawSourceFiles) {

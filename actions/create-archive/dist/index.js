@@ -20064,6 +20064,14 @@ const zlib_1 = __nccwpck_require__(9796);
 const fs_1 = __nccwpck_require__(7147);
 const tar_stream_1 = __importDefault(__nccwpck_require__(2283));
 // Helpers
+// Path Normalization
+function sanitizePath(inputPath) {
+    return path_1.default.normalize(inputPath).replace(/^(\.\.[/\\])+/, '');
+}
+// Pattern Sanitization
+function sanitizePattern(pattern) {
+    return pattern.replace(/[^a-zA-Z0-9*_.-]/g, '');
+}
 // Checks if a given filename matches any pattern in a list of patterns.
 function matchFilename(filename, patterns) {
     for (const pattern of patterns) {
@@ -20151,15 +20159,15 @@ function main() {
         const rawSourceFiles = core
             .getInput('source-files')
             .split('\n')
-            .map(item => item.trim());
+            .map(item => sanitizePath(item.trim()));
         const includePatterns = core
             .getInput('include-patterns')
             .split('\n')
-            .map(item => item.trim());
+            .map(item => sanitizePattern(item.trim()));
         const excludePatterns = core
             .getInput('exclude-patterns')
             .split('\n')
-            .map(item => item.trim());
+            .map(item => sanitizePattern(item.trim()));
         let allFiles = [];
         for (const entry of rawSourceFiles) {
             try {
