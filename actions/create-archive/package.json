@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "description": "GitHub Action to create archives based on input files with support for wildcards and filtering.",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/index.js"
+    "release": "ncc build src/main.ts && git add -f dist/",
+    "check-all": "concurrently \"npm:format-check\" \"npm:lint\" \"npm:build\"",
+    "format": "prettier --write **/*.ts",
+    "format-check": "prettier --check **/*.ts",
+    "lint": "eslint **/*.ts --fix"
   },
   "author": "Vladimir Antropov",
   "license": "MIT",
@@ -18,6 +21,13 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/tar-stream": "^3.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.40.1",
+    "@vercel/ncc": "^0.33.4",
+    "concurrently": "^5.2.0",
+    "eslint": "^8.0.1",
+    "eslint-plugin-github": "^4.10.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.2.2"
   }
 }
