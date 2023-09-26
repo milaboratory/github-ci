@@ -696,7 +696,7 @@ jobs:
             echo "Downloading platform dependencies"
             if [ -f "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
               mv "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" "./${EXT_PROGRAMS_PATH}"
-              cd "./${EXT_PROGRAMS_PATH}" && "./${EXT_PROGRAMS_SCRIPT_NAME}"
+              cd "./${EXT_PROGRAMS_PATH}" && chmod u+x "./${EXT_PROGRAMS_SCRIPT_NAME}" && "./${EXT_PROGRAMS_SCRIPT_NAME}"
               echo "Clean-up" && ls -la
               rm -vf "./${EXT_PROGRAMS_SCRIPT_NAME}"
               find . -name "MacOS" -type d -exec rm -rfv {} +
