@@ -67,3 +67,18 @@ set -o errexit
 if [ "${MISH_DEBUG}" = "true" ]; then
   set -v
 fi
+
+# Sanitize path by
+# Removing any '..' patterns
+# Removing any command injection patterns
+# Only allow alphanumeric, dash, underscore, and directory separators
+mish_sanitized() {
+   local _path="${1}"
+
+   local _sanitized_path=$(echo "${_path}" | sed 's|\.\./||g')
+   _sanitized_path=$(echo "${_sanitized_path}" | sed 's|[;&|]||g')
+   _sanitized_path=$(echo "${_sanitized_path}" | sed 's|[^a-zA-Z0-9/_\\-]||g')
+
+   echo "${_sanitized_path}"
+}
+

@@ -14,9 +14,37 @@ inputs:
     default: 'go build .'
   build-path:
     description: |
-      The path where the build command will run.
+      The path where the build command will be run.
     required: false
     default: ${{ github.workspace }}
+  build-archive-path:
+    description: |
+      The path to files to save as build artifact. The script will upload the resulting archive to s3.
+      If this is empty, then the build-path will be used instead.
+    required: false
+    default: ''
+  build-archive-name:
+    description: |
+      The name of the archive with build results.
+      For Windows use .zip extension for MacOS/Linux tar.gz or .tgz extension.
+    required: false
+    default: 'pl.tgz'
+  build-archive-additional-source-files:
+    description: |
+      Additional folders/paths to add to the resulting build archive.
+      The script will add these paths in addition to build-archive-path.
+    required: false
+  build-archive-include-patterns:
+    description: |
+        The list of patterns to include in the resulting build archive.
+    required: false
+  build-archive-exclude-patterns:
+    description: |
+      The list of patterns to exclude from the resulting build archive.
+    required: false
+    default: |
+      *.go
+      *.sum
   ext-programs-path:
     description: |
       The external_programs bootstrap script path.
@@ -57,11 +85,6 @@ inputs:
       Must be used in conjunction with <build-cache-paths>
     required: false
     default: ''
-  build-archive-path:
-    description: |
-      Files to save as build artifact, release asset and to upload to S3.
-    required: false
-    default: ''
   cdn-url:
     description: |
       CDN url for Static and Shared RockDB Libs.
@@ -78,20 +101,13 @@ inputs:
   #
   # Artifact control
   #
-  artifact-name:
+  github-artifact-name:
     description: |
       Name of build artifact to create when <artifact-paths> input is not empty.
 
     required: false
     default: 'build-artifacts'
-  artifact-paths:
-    description: |
-      List of paths to artifacts to save after build run.
-      Paths are relative to github workspace (repository root).
-      Patterns ('*', '**', etc.) are supported.
-    required: false
-    default: ''
-  artifact-retention:
+  github-artifact-retention:
     description: |
       Time in days to keep build artifacts before removing them.
     required: false
@@ -127,54 +143,46 @@ runs:
         PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
       with:
         run: |
-          get_os_arch=$(uname -m)
-          case "${get_os_arch}" in
-            x86_64)
-              RUNNER_OS_ARCH="amd64"
-              ;;
-            aarch64 | arm64)
-              RUNNER_OS_ARCH="arm64"
-              ;;
-            *)
-              echo "Arch is not in the list: ${get_os_arch}"
-              exit 1
-              ;;
-          esac
+          PL_BUILD_PATH_SANITIZED=$(mish_sanitized "${PL_BUILD_PATH}")
+          PL_BUILD_ARCHIVE_PATH_SANITIZED=$(mish_sanitized "${PL_BUILD_ARCHIVE_PATH}")
+          PL_EXT_PROGRAMS_PATH_SANITIZED=$(mish_sanitized "$PL_EXT_PROGRAMS_PATH")
 
-          RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
-          PL_EXT_PROGRAMS_PATH_SANITEZED="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}"
-          PL_ROCKSDB_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb"
-          PL_ROCKSDB_SHARED_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH}/rocksdb_shared"
-          PL_BUILD_ARCHIVE_PATH_SANITEZED=$(dirname $PL_BUILD_ARCHIVE_PATH)
-
-          if [ -z "${PL_BUILD_ARCHIVE_PATH_SANITEZED}" ];then
-            echo "Please set non-empty archive files path."
-            exit 1
-          else
-            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITEZED}"
-          fi
-
-          if [ "${PL_BUILD_PATH}" == "${GITHUB_WORKSPACE}" ];then
+          if [ "${PL_BUILD_PATH_SANITIZED}" == "${GITHUB_WORKSPACE}" ];then
             PL_BUILD_PATH="${GITHUB_WORKSPACE}"
           else
-            PL_BUILD_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_PATH}"
+            PL_BUILD_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_PATH_SANITIZED}"
           fi
 
-          # set output
-          ghwa_set_output runner_os "${RUNNER_OS_SANITEZED}"
-          ghwa_set_output runner_arch "${RUNNER_OS_ARCH}"
+          if [ -z "${PL_BUILD_ARCHIVE_PATH_SANITIZED}" ];then
+            PL_BUILD_ARCHIVE_PATH="${PL_BUILD_PATH}"
+          else
+            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITIZED}"
+          fi
+
+          if [ -z "${PL_EXT_PROGRAMS_PATH_SANITIZED}" ];then
+            echo "ext-programs-path cannot be empty."
+            exit 1
+          else
+            PL_EXT_PROGRAMS_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH_SANITIZED}"
+          fi
+
+          PL_ROCKSDB_LIBS_PATH="${PL_EXT_PROGRAMS_PATH}/rocksdb-ci-libs"
+
+          # set outputs
           ghwa_set_output pl_build_path "${PL_BUILD_PATH}"
           ghwa_set_output pl_build_archive_path "${PL_BUILD_ARCHIVE_PATH}"
-          ghwa_set_output pl_ext_programs_path "${PL_EXT_PROGRAMS_PATH_SANITEZED}"
-          # set envs
-          ghwa_set_env PKG_CONFIG_PATH "${PL_ROCKSDB_PATH}/lib/pkgconfig"
+          ghwa_set_output pl_ext_programs_path "${PL_EXT_PROGRAMS_PATH}"
 
-          if [ "${RUNNER_OS_SANITEZED}" == "macos" ];then
-            ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${PL_ROCKSDB_SHARED_PATH}/lib"
-          elif [ "${RUNNER_OS_SANITEZED}" == "linux" ];then
-            ghwa_set_env LD_LIBRARY_PATH "${PL_ROCKSDB_SHARED_PATH}/lib"
+          # set envs
+          ghwa_set_env PKG_CONFIG_PATH "${PL_ROCKSDB_LIBS_PATH}/lib/pkgconfig"
+
+          if [ "${RUNNER_OS}" == "macOS" ];then
+            ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${PL_ROCKSDB_LIBS_PATH}/lib"
+          elif [ "${RUNNER_OS}" == "Linux" ];then
+            ghwa_set_env LD_LIBRARY_PATH "${PL_ROCKSDB_LIBS_PATH}/lib"
           else
-            echo "Neither: macOS, nor Linux. Runner OS is: ${RUNNER_OS_SANITEZED}."
+            echo "Neither: MacOS, nor Linux. Runner OS is: ${RUNNER_OS}."
+            exit 1
           fi
 
     - name: Run boostrap ci script
@@ -240,20 +248,24 @@ runs:
           fi
 
     - name: Add build results to the archive
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/create-archive@v4-beta
       env:
         BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
       with:
-        dump-stdout: false
-        run: |
-          cd "${BUILD_ARCHIVE_PATH}"
-          tar --exclude={'*.go','*.sum','*.mod','*.tgz','*.tar.gz'} -zcvf ./pl.tgz *
+        source-files: |
+          ${{ env.BUILD_ARCHIVE_PATH }}
+          ${{ inputs.build-archive-additional-source-files }}
+        include-patterns: |
+          ${{ inputs.build-archive-include-patterns }}
+        exclude-patterns: |
+          ${{ inputs.build-archive-exclude-patterns }}
+        archive-name: ${{ inputs.build-archive-name }}
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.github-artifact-name }}
         path: |
-          ${{ inputs.artifact-paths }}
+          ${{ inputs.build-archive-name }}
           !**/*.go
-        retention-days: ${{ inputs.artifact-retention }}
+        retention-days: ${{ inputs.github-artifact-retention }}

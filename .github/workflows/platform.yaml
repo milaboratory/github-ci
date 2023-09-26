@@ -97,6 +97,39 @@ on:
         type: string
         required: false
         default: ${{ github.workspace }}
+      build-archive-path:
+        description: |
+          The path to files to save as build artifact. The script will upload the resulting archive to s3.
+          If this is empty, then the build-path will be used instead.
+        type: string
+        required: false
+        default: ''
+      build-archive-name:
+        description: |
+          The name of the archive with build results.
+          For Windows use .zip extension for MacOS/Linux tar.gz or .tgz extension.
+        type: string
+        required: false
+        default: 'pl.tgz'
+      build-archive-additional-source-files:
+        description: |
+          Additional folders/paths to add to the resulting build archive.
+          The script will add these paths in addition to build-archive-path.
+        type: string
+        required: false
+      build-archive-include-patterns:
+        description: |
+          The list of patterns to include in the resulting build archive.
+        type: string
+        required: false
+      build-archive-exclude-patterns:
+        description: |
+          The list of patterns to exclude from the resulting build archive.
+        type: string
+        required: false
+        default: |
+          *.go
+          *.sum
       ext-programs-path:
         description: |
           The external_programs bootstrap script path.
@@ -129,12 +162,6 @@ on:
         type: string
         required: false
         default: ''
-      build-static:
-        description: |
-          Activate additional steps in workflow to build pl statically.
-        type: string
-        required: false
-        default: 'false'
       cdn-url:
         description: |
           CDN url for Static and Shared RockDB Libs.
@@ -432,17 +459,19 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
+          build-archive-path: ${{ inputs.build-archive-path }}
+          build-archive-name: ${{ inputs.build-archive-name }}
+          build-archive-additional-source-files: ${{ inputs.build-archive-additional-source-files }}
+          build-archive-include-patterns: ${{ inputs.build-archive-include-patterns }}
+          build-archive-exclude-patterns: ${{ inputs.build-archive-exclude-patterns }}
           build-cache-paths: ${{ inputs.build-cache-paths }}
           build-cache-key: ${{ inputs.build-cache-key }}
           ext-programs-path: ${{ inputs.ext-programs-path }}
           ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
-          build-archive-path: ${{ inputs.dist-archive-paths }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
           cdn-url: ${{ inputs.cdn-url }}
-          artifact-name: ${{ inputs.app-name-slug }}
-          artifact-paths: ${{ inputs.dist-archive-paths }}
-          artifact-retention: ${{ inputs.dist-artifact-retention }}
+          github-artifact-name: ${{ inputs.app-name-slug }}
+          github-artifact-retention: ${{ inputs.dist-artifact-retention }}
 
   upload-build-results:
     if: github.event_name != 'pull_request'
