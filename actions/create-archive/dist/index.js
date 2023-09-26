@@ -20066,7 +20066,7 @@ const tar_stream_1 = __importDefault(__nccwpck_require__(2283));
 // Helpers
 // Path Normalization
 function sanitizePath(inputPath) {
-    return path_1.default.normalize(inputPath).replace(/^(\.\.[/\\])+/, '');
+    return path_1.default.normalize(inputPath).replace(/^(\.\.\\])+/, '');
 }
 // Pattern Sanitization
 function sanitizePattern(pattern) {
@@ -20138,13 +20138,15 @@ function createTarGzArchive(files, archiveName) {
         const pack = tar_stream_1.default.pack();
         for (const file of files) {
             const relativePath = path_1.default.relative(process.cwd(), file);
+            const fileStat = yield fs.stat(file);
+            const permissions = fileStat.mode & 0o777;
             if ((yield fs.stat(file)).isDirectory()) {
                 console.log(`Adding directory to tar.gz archive: ${relativePath}`);
-                pack.entry({ name: relativePath, type: 'directory' });
+                pack.entry({ name: relativePath, type: 'directory', mode: permissions });
             }
             else {
                 console.log(`Adding file to tar.gz archive: ${relativePath}`);
-                pack.entry({ name: relativePath }, yield fs.readFile(file));
+                pack.entry({ name: relativePath, mode: permissions }, yield fs.readFile(file));
             }
         }
         pack.finalize();

@@ -87,12 +87,17 @@ async function createTarGzArchive(files: string[], archiveName: string) {
 
   for (const file of files) {
     const relativePath = path.relative(process.cwd(), file)
+    const fileStat = await fs.stat(file)
+    const permissions = fileStat.mode & 0o777
     if ((await fs.stat(file)).isDirectory()) {
       console.log(`Adding directory to tar.gz archive: ${relativePath}`)
-      pack.entry({name: relativePath, type: 'directory'})
+      pack.entry({name: relativePath, type: 'directory', mode: permissions})
     } else {
       console.log(`Adding file to tar.gz archive: ${relativePath}`)
-      pack.entry({name: relativePath}, await fs.readFile(file))
+      pack.entry(
+        {name: relativePath, mode: permissions},
+        await fs.readFile(file)
+      )
     }
   }
 
