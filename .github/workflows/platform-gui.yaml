@@ -686,7 +686,7 @@ jobs:
             if [ -f "${PL_ARCHIVE}" ];then
              echo "Extracting platform archive..."
              if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
-               tar -zxvf "./${PL_ARCHIVE}" -C "./${PL_DIST_DIR}"
+               tar -zxvf "./${PL_ARCHIVE}" --strip-components=2 --no-anchored -C "./${PL_DIST_DIR}"
              fi
             else
               echo "Platform archive not found"
