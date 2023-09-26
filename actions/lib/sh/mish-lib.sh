@@ -60,14 +60,6 @@ mish_trim() {
   xargs <<<"${_text}"
 }
 
-set -o nounset
-set -o errexit
-
-: "${MISH_DEBUG:=false}"
-if [ "${MISH_DEBUG}" = "true" ]; then
-  set -v
-fi
-
 # Sanitize path by
 # Removing any '..' patterns
 # Removing any command injection patterns
@@ -82,3 +74,10 @@ mish_sanitized() {
    echo "${_sanitized_path}"
 }
 
+set -o nounset
+set -o errexit
+
+: "${MISH_DEBUG:=false}"
+if [ "${MISH_DEBUG}" = "true" ]; then
+  set -v
+fi
