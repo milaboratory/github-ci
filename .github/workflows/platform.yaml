@@ -463,7 +463,6 @@ jobs:
           ext-programs-path: ${{ inputs.ext-programs-path }}
           ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cdn-url: ${{ inputs.cdn-url }}
           github-artifact-name: ${{ inputs.app-name-slug }}
           github-artifact-retention: ${{ inputs.dist-artifact-retention }}
 
@@ -600,13 +599,12 @@ jobs:
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
+
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           test-integration-cache-paths: ${{ inputs.test-integration-cache-paths }}
           test-integration-cache-key: ${{ inputs.test-integration-cache-key }}
-          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           test-command: ${{ inputs.test-integration-command }}
-          rocksdb-version: ${{ inputs.rocksdb-version }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          cdn-url: ${{ inputs.cdn-url }}
+          ext-programs-path: ${{ inputs.ext-programs-path }}xs
 
       - id: test-integration-logs
         if: always()

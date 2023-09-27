@@ -45,6 +45,7 @@ inputs:
     default: |
       *.go
       *.sum
+      *.mod
   ext-programs-path:
     description: |
       The external_programs bootstrap script path.
@@ -85,11 +86,6 @@ inputs:
       Must be used in conjunction with <build-cache-paths>
     required: false
     default: ''
-  cdn-url:
-    description: |
-      CDN url for Static and Shared RockDB Libs.
-    required: false
-    default: 'https://cdn.mixcr.com/internal/pkgs'
 
   #
   # Github authentication control
@@ -213,7 +209,7 @@ runs:
               ${{ inputs.build-command }}
             fi
 
-    - name: Run bundle dylibs on macOS
+    - name: Bundle dylibs on macOS
       if: startsWith(runner.os, 'macOS')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
@@ -229,6 +225,18 @@ runs:
             --install-path '@executable_path/libs/' \
             --search-path "${DYLIBBUNDLER_SEARCH_LIB_PATH}" \
             --fix-file pl
+
+    - name: Bundle libs on Linux
+      if: startsWith(runner.os, 'Linux')
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
+      with:
+        dump-stdout: false
+        run : |
+          cd "${BUILD_ARCHIVE_PATH}"
+          mkdir -p "./libs"
+          find "${LD_LIBRARY_PATH}" -name '*.so*' -exec cp -av '{}' ./libs/ \;
 
     - name: Add external programs download script
       uses: milaboratory/github-ci/actions/shell@v4-beta
