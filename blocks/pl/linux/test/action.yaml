@@ -116,7 +116,12 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         TMPDIR: "/dev/shm"
+        TEST_COMMAND: ${{ inputs.test-command }}
       with:
         dump-stdout: false
         run: |
-          ${{ inputs.test-command }}
+          if [ -x "${TEST_COMMAND}" ];then
+              "./${TEST_COMMAND}"
+          else
+              ${{ inputs.test-command }}
+          fi

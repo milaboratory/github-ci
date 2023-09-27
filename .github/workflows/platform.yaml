@@ -604,7 +604,7 @@ jobs:
           test-integration-cache-paths: ${{ inputs.test-integration-cache-paths }}
           test-integration-cache-key: ${{ inputs.test-integration-cache-key }}
           test-command: ${{ inputs.test-integration-command }}
-          ext-programs-path: ${{ inputs.ext-programs-path }}xs
+          ext-programs-path: ${{ inputs.ext-programs-path }}
 
       - id: test-integration-logs
         if: always()
