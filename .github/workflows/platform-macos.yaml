@@ -397,7 +397,6 @@ jobs:
           ext-programs-path: ${{ inputs.ext-programs-path }}
           ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cdn-url: ${{ inputs.cdn-url }}
           github-artifact-name: ${{ inputs.app-name-slug }}
           github-artifact-retention: ${{ inputs.dist-artifact-retention }}
 

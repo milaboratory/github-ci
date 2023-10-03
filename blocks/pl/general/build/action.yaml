@@ -247,11 +247,13 @@ runs:
       with:
         dump-stdout: false
         run: |
-          if [ -f "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-            cp -v "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "${BUILD_ARCHIVE_PATH}/"
+          RES_PATH="EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME"
+
+          if [ -f "${RES_PATH}" ];then
+            cp -v "${RES_PATH}" "${BUILD_ARCHIVE_PATH}/"
           else
             # softfail
-            echo "${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME} script not found"
+            echo "${RES_PATH} script not found"
             exit 0
           fi
 

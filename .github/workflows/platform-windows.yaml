@@ -97,6 +97,51 @@ on:
         type: string
         required: false
         default: ${{ github.workspace }}
+      build-archive-path:
+        description: |
+          The path to files to save as build artifact. The script will upload the resulting archive to s3.
+          If this is empty, then the build-path will be used instead.
+        type: string
+        required: false
+        default: ''
+      build-archive-name:
+        description: |
+          The name of the archive with build results.
+          For Windows use .zip extension for MacOS/Linux tar.gz or .tgz extension.
+        type: string
+        required: false
+        default: 'pl.zip'
+      build-archive-additional-source-files:
+        description: |
+          Additional folders/paths to add to the resulting build archive.
+          The script will add these paths in addition to build-archive-path.
+        type: string
+        required: false
+      build-archive-include-patterns:
+        description: |
+          The list of patterns to include in the resulting build archive.
+        type: string
+        required: false
+      build-archive-exclude-patterns:
+        description: |
+          The list of patterns to exclude from the resulting build archive.
+        type: string
+        required: false
+        default: |
+          *.go
+          *.sum
+      ext-programs-path:
+        description: |
+          The external_programs bootstrap script path.
+        type: string
+        required: false
+        default: 'external_programs'
+      ext-programs-script-name:
+        description: |
+          The name of the bootstrap script.
+        type: string
+        required: false
+        default: 'download-windows.ps1'
       build-env:
         description: |
           JSON-encoded environment variables to set for 'go build .':
@@ -215,6 +260,48 @@ on:
         type: boolean
         required: false
         default: false
+      # Update latest distribution archive on s3
+      dist-archive-latest-s3-add-branch-name:
+        description: |
+          Add branch name to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get branch name before extension:
+              'myfile.zip' becomes 'myfile-<branch-name>.zip'.
+            - files without extension get branch name appended to the name:
+              'myfile' becomes 'myfile-<branch-name>'.
+
+        type: boolean
+        required: false
+        default: true
+      dist-archive-latest-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
+      dist-archive-latest-s3-add-os-arch:
+        description: |
+          Add ARCH to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<ARCH>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<ARCH>'.
+
+        type: boolean
+        required: false
+        default: true
       #
       # Notifications control
       #
@@ -304,13 +391,16 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
-          rocksdb-version: ${{ inputs.rocksdb-version }}
+          build-archive-path: ${{ inputs.build-archive-path }}
+          build-archive-name: ${{ inputs.build-archive-name }}
+          build-archive-additional-source-files: ${{ inputs.build-archive-additional-source-files }}
+          build-archive-include-patterns: ${{ inputs.build-archive-include-patterns }}
+          build-archive-exclude-patterns: ${{ inputs.build-archive-exclude-patterns }}
+          ext-programs-path: ${{ inputs.ext-programs-path }}
+          ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
           netrc-password: ${{ secrets.GITHUB_TOKEN }}
-
-          cdn-url: ${{ inputs.cdn-url }}
-          artifact-name: ${{ inputs.app-name-slug }}
-          artifact-paths: ${{ inputs.dist-archive-paths }}
-          artifact-retention: ${{ inputs.dist-artifact-retention }}
+          github-artifact-name: ${{ inputs.app-name-slug }}
+          github-artifact-retention: ${{ inputs.dist-artifact-retention }}
 
   upload-build-results:
     name: archive-upload
@@ -328,6 +418,42 @@ jobs:
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
           add-os-arch: ${{ inputs.dist-archive-s3-add-os-arch }}
+
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
+
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
+
+  upload-build-results-latest:
+    if: github.event_name != 'pull_request'
+    name: archive-upload-latest
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - id: s3
+        uses: milaboratory/github-ci/blocks/update-s3-latest@v4-beta
+        with:
+          artifact-name: ${{ inputs.app-name-slug }}
+          branch-name: ${{ github.ref_name }}
+          add-branch-name: ${{ inputs.dist-archive-latest-s3-add-branch-name }}
+          add-sha: ${{ inputs.dist-archive-latest-s3-add-sha }}
+          add-os-arch: ${{ inputs.dist-archive-latest-s3-add-os-arch }}
 
           s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           s3-region: ${{ inputs.dist-archive-s3-region }}

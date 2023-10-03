@@ -20,6 +20,45 @@ inputs:
       The path where the build command will run
     required: false
     default: ${{ github.workspace }}
+  build-archive-path:
+    description: |
+      The path to files to save as build artifact. The script will upload the resulting archive to s3.
+      If this is empty, then the build-path will be used instead.
+    required: false
+    default: ''
+  build-archive-name:
+    description: |
+      The name of the archive with build results.
+      For Windows use .zip extension for MacOS/Linux tar.gz or .tgz extension.
+    required: false
+    default: 'pl.zip'
+  build-archive-additional-source-files:
+    description: |
+      Additional folders/paths to add to the resulting build archive.
+      The script will add these paths in addition to build-archive-path.
+    required: false
+  build-archive-include-patterns:
+    description: |
+      The list of patterns to include in the resulting build archive.
+    required: false
+  build-archive-exclude-patterns:
+    description: |
+      The list of patterns to exclude from the resulting build archive.
+    required: false
+    default: |
+      *.go
+      *.sum
+      *.mod
+  ext-programs-path:
+    description: |
+      The external_programs bootstrap script path.
+    required: false
+    default: 'external_programs'
+  ext-programs-script-name:
+    description: |
+      The name of the bootstrap script.
+    required: false
+    default: 'download-windows.ps1'
   bootstrap-ci-script-name:
     description: |
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
@@ -43,15 +82,6 @@ inputs:
 
     required: false
     default: 'v1'
-  cdn-url:
-    description: |
-      CDN url for Static and Shared RockDB Libs.
-    required: false
-    default: 'https://cdn.mixcr.com/internal/pkgs'
-  rocksdb-version:
-    description:
-      RocksDB version.
-    required: true
   #
   # Github authentication control
   #
@@ -73,22 +103,15 @@ inputs:
   #
   # Artifact control
   #
-  artifact-name:
+  github-artifact-name:
     description: |
-      Name of build artifact to create when <artifact-paths> input is not empty
+      Name of build artifact to create when <artifact-paths> input is not empty.
 
     required: false
     default: 'build-artifacts'
-  artifact-paths:
+  github-artifact-retention:
     description: |
-      List of paths to artifacts to save after build run.
-      Paths are relative to github workspace (repository root).
-      Patterns ('*', '**', etc.) are supported.
-    required: false
-    default: ''
-  artifact-retention:
-    description: |
-      Time in days to keep build artifacts before removing them
+      Time in days to keep build artifacts before removing them.
     required: false
     default: '7'
 
@@ -101,6 +124,59 @@ runs:
       with:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
+
+    - name: Get runner metadata
+      id: get_runner_metadata
+      shell: pwsh
+      env:
+        PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
+        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path }}
+        PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
+      run: |
+        function Mish-Sanitized {
+          param (
+          [string]$path
+          )
+
+          $sanitizedPath = $path -replace '\.\./', ''
+          $sanitizedPath = $sanitizedPath -replace '[;&|]', ''
+          $sanitizedPath = $sanitizedPath -replace '[^a-zA-Z0-9/_\\-]', ''
+
+          return $sanitizedPath
+        }
+
+        PL_BUILD_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_PATH }}"
+        PL_BUILD_ARCHIVE_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_ARCHIVE_PATH }}"
+        PL_EXT_PROGRAMS_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_EXT_PROGRAMS_PATH }}"
+
+        if ("${{ env.PL_BUILD_PATH_SANITIZED }}" -eq "${{ env.GITHUB_WORKSPACE }}") {
+          $PL_BUILD_PATH = "${{ env.GITHUB_WORKSPACE }}"
+        } else {
+          $PL_BUILD_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_BUILD_PATH_SANITIZED }}"
+        }
+
+        if ([string]::IsNullOrWhiteSpace("${{ env.PL_BUILD_ARCHIVE_PATH_SANITIZED }}")) {
+          $PL_BUILD_ARCHIVE_PATH = "${{ env.PL_BUILD_PATH }}"
+        } else {
+          $PL_BUILD_ARCHIVE_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_BUILD_ARCHIVE_PATH_SANITIZED }}"
+        }
+
+        if ([string]::IsNullOrWhiteSpace("${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}") {
+          Write-Host "ext-programs-path cannot be empty."
+          exit 1
+        } else {
+          $PL_EXT_PROGRAMS_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}"
+        }
+
+        $PL_ROCKSDB_LIBS_PATH = Join-path -Path ${{ env.PL_EXT_PROGRAMS_PATH }} -ChildPath "rocksdb"
+        # set output
+
+        echo "pl_build_path=$PL_BUILD_PATH" >> $env:GITHUB_OUTPUT
+        echo "pl_build_archive_path=$PL_BUILD_ARCHIVE_PATH" >> $env:GITHUB_OUTPUT
+        echo "pl_ext_programs_path=$PL_EXT_PROGRAMS_PATH" >> $env:GITHUB_OUTPUT
+
+        # set env
+        echo "PKG_CONFIG_PATH=$PL_ROCKSDB_LIBS_PATH\lib\pkgconfig" >> $env:GITHUB_ENV
 
     - name: Run boostrap ci script for windows
       shell: pwsh
@@ -115,43 +191,54 @@ runs:
         login: ${{ inputs.netrc-login }}
         password: ${{ inputs.netrc-password }}
 
-    - name: Download and unpack static rocksdb libs
-      shell: pwsh
-      env:
-        GH_WORKSPACE: ${{ github.workspace }}
-        CDN_URL: ${{ inputs.cdn-url }}
-        ROCKSDB_VERSION: ${{ inputs.rocksdb-version }}
-      run: |
-          $ROCKSDB_STATIC_LIB_ARCHIVE = "rocksdb-static-lib-${{ env.ROCKSDB_VERSION }}-windows-amd64.zip"
-          $ROCKSDB_LIB_PATH = "${{ env.GH_WORKSPACE }}\rocksdb"
-          $DOWNLOAD_URL = "${{ env.CDN_URL }}/rocksdb/${{ env.ROCKSDB_VERSION }}/$ROCKSDB_STATIC_LIB_ARCHIVE"
-
-          Write-Output "Downloading static libs windows-amd64"
-          Invoke-WebRequest -URI $DOWNLOAD_URL -OutFile "${{ env.GH_WORKSPACE }}\$ROCKSDB_STATIC_LIB_ARCHIVE"
-          Write-Output "Unzip static libs"
-          7z x "${{ env.GH_WORKSPACE }}\$ROCKSDB_STATIC_LIB_ARCHIVE" -o"$ROCKSDB_LIB_PATH"
-
-          echo "PKG_CONFIG_PATH=$ROCKSDB_LIB_PATH\lib\pkgconfig" >> $env:GITHUB_ENV
-
     - name: Run build command for the platform
       shell: pwsh
-      working-directory: ${{ inputs.build-path }}
+      working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
+      env:
+        BUILD_COMMAND: ${{ inputs.build-command }}
       run: |
-        ${{ inputs.build-command }}
+        if(Test-Path "${{ env.BUILD_COMMAND }}" -PathType Leaf) {
+          ".\${{ env.BUILD_COMMAND }}"
+        } else {
+          ${{ inputs.build-command }}
+        }
+
+    - name: Add external programs download script
+      shell: pwsh
+      env:
+        BUILD_ARCHIVE_PATH: ${{ steps.get_runner_metadata.outputs.pl_build_archive_path }}
+        EXT_PROGRAMS_PATH: ${{ steps.get_runner_metadata.outputs.pl_ext_programs_path }}
+        EXT_PROGRAMS_SCRIPT_NAME: ${{ inputs.ext-programs-script-name }}
+      run: |
+        $RES_PATH = Join-path -Path ${{ env.EXT_PROGRAMS_PATH }} -ChildPath ${{ env.EXT_PROGRAMS_SCRIPT_NAME }}
+
+        if (Test-Path "${{ env.RES_PATH }}" -PathType Leaf) {
+          Copy-Item -Path "${{ env.RES_PATH }}" -Destination "${{ env.BUILD_ARCHIVE_PATH }}" -Verbose
+        } else {
+          # softfail
+          Write-Host "${{ env.RES_PATH }} script not found"
+          exit 0
+        }
 
     - name: Add build results to the archive
+      uses: milaboratory/github-ci/actions/create-archive@v4-beta
       env:
-        BUILD_PATH: ${{ inputs.build-path }}
-      shell: pwsh
-      run: |
-       cd ${{ env.BUILD_PATH }}
-       7z a pl.zip . "-xr!*.go" "-xr!*.zip" "-xr!*.sum" "-xr!*.mod"
+        BUILD_ARCHIVE_PATH: ${{ steps.get_runner_metadata.outputs.pl_build_archive_path }}
+      with:
+        source-files: |
+          ${{ env.BUILD_ARCHIVE_PATH }}
+          ${{ inputs.build-archive-additional-source-files }}
+        include-patterns: |
+          ${{ inputs.build-archive-include-patterns }}
+        exclude-patterns: |
+          ${{ inputs.build-archive-exclude-patterns }}
+        archive-name: ${{ inputs.build-archive-name }}
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.github-artifact-name  }}
         path: |
-          ${{ inputs.artifact-paths }}
+          ${{ inputs.build-archive-name }}
           !**\*.go
-        retention-days: ${{ inputs.artifact-retention }}
+        retention-days: ${{ inputs.github-artifact-retention }}
