@@ -247,7 +247,7 @@ runs:
       with:
         dump-stdout: false
         run: |
-          RES_PATH="EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME"
+          RES_PATH="${EXT_PROGRAMS_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}"
 
           if [ -f "${RES_PATH}" ];then
             cp -v "${RES_PATH}" "${BUILD_ARCHIVE_PATH}/"
