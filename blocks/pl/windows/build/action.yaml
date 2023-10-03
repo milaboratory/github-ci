@@ -201,6 +201,14 @@ runs:
       shell: pwsh
       working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
       run: |
+        ls -la "$env:GITHUB_WORKSPACE\external_programs\"
+        ${{ inputs.build-command }}
+
+    - name: Run build command for the platform
+      if: 1 > 2
+      shell: pwsh
+      working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
+      run: |
         $BUILD_COMMAND = ${{ inputs.build-command }}
 
         $regex = '"[^"]*"|\S+'
@@ -209,7 +217,6 @@ runs:
         $argumentsArray = $commandParts[1..($commandParts.Length - 1)]
 
         if (Get-Command $baseCommand -ErrorAction SilentlyContinue) {
-          $env:PKG_CONFIG_PATH = "${{ env.PKG_CONFIG_PATH }}"
           Start-Process -NoNewWindow -FilePath $baseCommand -ArgumentList $argumentsArray -Wait
         } elseif (Test-Path -Path "./$BUILD_COMMAND" -PathType Leaf) {
           & "./$BUILD_COMMAND"
