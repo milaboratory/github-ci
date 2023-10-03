@@ -200,13 +200,20 @@ runs:
     - name: Run build command for the platform
       shell: pwsh
       working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
-      env:
-        BUILD_COMMAND: ${{ inputs.build-command }}
       run: |
-        if(Test-Path "${{ env.BUILD_COMMAND }}" -PathType Leaf) {
-          & "./${{ env.BUILD_COMMAND }}"
+        $BUILD_COMMAND = ${{ inputs.build-command }}
+
+        $regex = '"[^"]*"|\S+'
+        $commandParts = [System.Text.RegularExpressions.Regex]::Matches($BUILD_COMMAND, $regex) | ForEach-Object { $_.Value }
+        $baseCommand = $commandParts[0]
+        $argumentsArray = $commandParts[1..($commandParts.Length - 1)]
+
+        if (Get-Command $baseCommand -ErrorAction SilentlyContinue) {
+          Start-Process -NoNewWindow -FilePath $baseCommand -ArgumentList $argumentsArray -Wait
+        } elseif (Test-Path -Path "./$BUILD_COMMAND" -PathType Leaf) {
+          & "./$BUILD_COMMAND"
         } else {
-          ${{ inputs.build-command }}
+          Write-Error "The command or script '$BUILD_COMMAND' is not recognized."
         }
 
     - name: Add external programs download script
