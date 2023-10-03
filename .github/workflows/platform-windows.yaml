@@ -159,7 +159,7 @@ on:
         description:
           RocksDB version.
         type: string
-        required: true
+        required: false
       #
       # Distribution control
       #

@@ -182,7 +182,13 @@ runs:
       shell: pwsh
       env:
         GH_WORKSPACE: ${{ github.workspace }}
+        BOOTSTRAP_CI_SCRIPT_NAME: ${{ inputs.bootstrap-ci-script-name }}
       run: |
+        if (Test-Path -Path "${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}" -PathType Leaf) {
+            & "./${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}"
+        } else {
+            Write-Error "Script '${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}' not found."
+        }
         .\${{ inputs.bootstrap-ci-script-name }}
 
     - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
@@ -198,7 +204,7 @@ runs:
         BUILD_COMMAND: ${{ inputs.build-command }}
       run: |
         if(Test-Path "${{ env.BUILD_COMMAND }}" -PathType Leaf) {
-          ".\${{ env.BUILD_COMMAND }}"
+          & "./${{ env.BUILD_COMMAND }}"
         } else {
           ${{ inputs.build-command }}
         }
