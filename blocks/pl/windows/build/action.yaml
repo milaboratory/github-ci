@@ -145,30 +145,30 @@ runs:
           return $sanitizedPath
         }
 
-        PL_BUILD_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_PATH }}"
-        PL_BUILD_ARCHIVE_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_ARCHIVE_PATH }}"
-        PL_EXT_PROGRAMS_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_EXT_PROGRAMS_PATH }}"
+        $PL_BUILD_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_PATH }}"
+        $PL_BUILD_ARCHIVE_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_ARCHIVE_PATH }}"
+        $PL_EXT_PROGRAMS_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_EXT_PROGRAMS_PATH }}"
 
-        if ("${{ env.PL_BUILD_PATH_SANITIZED }}" -eq "${{ env.GITHUB_WORKSPACE }}") {
+        if ("$PL_BUILD_PATH_SANITIZED" -eq "${{ env.GITHUB_WORKSPACE }}") {
           $PL_BUILD_PATH = "${{ env.GITHUB_WORKSPACE }}"
         } else {
-          $PL_BUILD_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_BUILD_PATH_SANITIZED }}"
+          $PL_BUILD_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_BUILD_PATH_SANITIZED"
         }
 
-        if ([string]::IsNullOrWhiteSpace("${{ env.PL_BUILD_ARCHIVE_PATH_SANITIZED }}")) {
+        if ([string]::IsNullOrWhiteSpace("$PL_BUILD_ARCHIVE_PATH_SANITIZED")) {
           $PL_BUILD_ARCHIVE_PATH = "${{ env.PL_BUILD_PATH }}"
         } else {
-          $PL_BUILD_ARCHIVE_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_BUILD_ARCHIVE_PATH_SANITIZED }}"
+          $PL_BUILD_ARCHIVE_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_BUILD_ARCHIVE_PATH_SANITIZED"
         }
 
-        if ([string]::IsNullOrWhiteSpace("${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}")) {
+        if ([string]::IsNullOrWhiteSpace("$PL_EXT_PROGRAMS_PATH_SANITIZED")) {
           Write-Host "ext-programs-path cannot be empty."
           exit 1
         } else {
-          $PL_EXT_PROGRAMS_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}"
+          $PL_EXT_PROGRAMS_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
         }
 
-        $PL_ROCKSDB_LIBS_PATH = Join-path -Path ${{ env.PL_EXT_PROGRAMS_PATH }} -ChildPath "rocksdb"
+        $PL_ROCKSDB_LIBS_PATH = Join-path -Path $PL_EXT_PROGRAMS_PATH -ChildPath "rocksdb"
         # set output
 
         echo "pl_build_path=$PL_BUILD_PATH" >> $env:GITHUB_OUTPUT
@@ -189,7 +189,6 @@ runs:
         } else {
             Write-Error "Script '${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}' not found."
         }
-        .\${{ inputs.bootstrap-ci-script-name }}
 
     - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
       with:
@@ -218,11 +217,11 @@ runs:
       run: |
         $RES_PATH = Join-path -Path ${{ env.EXT_PROGRAMS_PATH }} -ChildPath ${{ env.EXT_PROGRAMS_SCRIPT_NAME }}
 
-        if (Test-Path "${{ env.RES_PATH }}" -PathType Leaf) {
-          Copy-Item -Path "${{ env.RES_PATH }}" -Destination "${{ env.BUILD_ARCHIVE_PATH }}" -Verbose
+        if (Test-Path "$RES_PATH" -PathType Leaf) {
+          Copy-Item -Path "$RES_PATH" -Destination "${{ env.BUILD_ARCHIVE_PATH }}" -Verbose
         } else {
           # softfail
-          Write-Host "${{ env.RES_PATH }} script not found"
+          Write-Host "$RES_PATH script not found"
           exit 0
         }
 
