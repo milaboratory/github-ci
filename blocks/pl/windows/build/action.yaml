@@ -209,6 +209,7 @@ runs:
         $argumentsArray = $commandParts[1..($commandParts.Length - 1)]
 
         if (Get-Command $baseCommand -ErrorAction SilentlyContinue) {
+          $env:PKG_CONFIG_PATH = "${{ env.PKG_CONFIG_PATH }}"
           Start-Process -NoNewWindow -FilePath $baseCommand -ArgumentList $argumentsArray -Wait
         } elseif (Test-Path -Path "./$BUILD_COMMAND" -PathType Leaf) {
           & "./$BUILD_COMMAND"
