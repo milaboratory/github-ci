@@ -201,7 +201,6 @@ runs:
       shell: pwsh
       working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
       run: |
-        ls -la "$env:GITHUB_WORKSPACE\external_programs\"
         ${{ inputs.build-command }}
 
     - name: Run build command for the platform
