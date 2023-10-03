@@ -161,7 +161,7 @@ runs:
           $PL_BUILD_ARCHIVE_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "${{ env.PL_BUILD_ARCHIVE_PATH_SANITIZED }}"
         }
 
-        if ([string]::IsNullOrWhiteSpace("${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}") {
+        if ([string]::IsNullOrWhiteSpace("${{ env.PL_EXT_PROGRAMS_PATH_SANITIZED }}")) {
           Write-Host "ext-programs-path cannot be empty."
           exit 1
         } else {
