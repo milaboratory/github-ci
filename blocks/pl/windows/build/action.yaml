@@ -129,6 +129,7 @@ runs:
       id: get_runner_metadata
       shell: pwsh
       env:
+
         PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
         PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path }}
         PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
@@ -149,23 +150,23 @@ runs:
         $PL_BUILD_ARCHIVE_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_BUILD_ARCHIVE_PATH }}"
         $PL_EXT_PROGRAMS_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_EXT_PROGRAMS_PATH }}"
 
-        if ("$PL_BUILD_PATH_SANITIZED" -eq "${{ env.GITHUB_WORKSPACE }}") {
-          $PL_BUILD_PATH = "${{ env.GITHUB_WORKSPACE }}"
+        if ("$PL_BUILD_PATH_SANITIZED" -eq "$env:GITHUB_WORKSPACE") {
+          $PL_BUILD_PATH = "$env:GITHUB_WORKSPACE"
         } else {
-          $PL_BUILD_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_BUILD_PATH_SANITIZED"
+          $PL_BUILD_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_BUILD_PATH_SANITIZED"
         }
 
         if ([string]::IsNullOrWhiteSpace("$PL_BUILD_ARCHIVE_PATH_SANITIZED")) {
           $PL_BUILD_ARCHIVE_PATH = "${{ env.PL_BUILD_PATH }}"
         } else {
-          $PL_BUILD_ARCHIVE_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_BUILD_ARCHIVE_PATH_SANITIZED"
+          $PL_BUILD_ARCHIVE_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_BUILD_ARCHIVE_PATH_SANITIZED"
         }
 
         if ([string]::IsNullOrWhiteSpace("$PL_EXT_PROGRAMS_PATH_SANITIZED")) {
           Write-Host "ext-programs-path cannot be empty."
           exit 1
         } else {
-          $PL_EXT_PROGRAMS_PATH = Join-path -Path "${{ env.GITHUB_WORKSPACE }}" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
+          $PL_EXT_PROGRAMS_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
         }
 
         $PL_ROCKSDB_LIBS_PATH = Join-path -Path $PL_EXT_PROGRAMS_PATH -ChildPath "rocksdb"
