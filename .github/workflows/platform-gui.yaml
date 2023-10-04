@@ -663,6 +663,7 @@ jobs:
         env:
           EXT_PROGRAMS_SCRIPT_NAME_NIX: ${{ inputs.external-programs-script-name-nix }}
           EXT_PROGRAMS_SCRIPT_NAME_WIN: ${{ inputs.external-programs-script-name-win }}
+          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
         with:
           run: |
             GET_OS_ARCH=$(uname -m)
@@ -711,7 +712,6 @@ jobs:
           EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
           PL_DL_LINK: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-dl-link }}
           PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
-          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
         run: |
           New-Item -Path ".\$env:PL_DIST_PATH" -ItemType Directory -Force | Out-Null
           New-Item -Path ".\$env:EXT_PROGRAMS_PATH" -ItemType Directory -Force | Out-Null
@@ -757,7 +757,6 @@ jobs:
           EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
           PL_DL_LINK: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-dl-link }}
           PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
-          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
         with:
           run: |
             mkdir -pv ./"${PL_DIST_PATH}"
