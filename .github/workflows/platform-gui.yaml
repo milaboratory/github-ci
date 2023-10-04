@@ -388,7 +388,7 @@ on:
       pl-dist-path:
         description: |
           A directory that electron will search for the pl binary.
-        type: sting
+        type: string
         required: false
         default: 'pl-dist'
 
