@@ -163,9 +163,9 @@ runs:
         }
 
         if ([string]::IsNullOrWhiteSpace("$PL_EXT_PROGRAMS_PATH_SANITIZED")) {
-          Write-Host "ext-programs-path cannot be empty."
-          exit 1
+          Write-Error "Input variable 'ext-programs-path' cannot be empty."
         } else {
+
           $PL_EXT_PROGRAMS_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
         }
 
@@ -201,13 +201,6 @@ runs:
       shell: pwsh
       working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
       run: |
-        ${{ inputs.build-command }}
-
-    - name: Run build command for the platform
-      if: 1 > 2
-      shell: pwsh
-      working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
-      run: |
         $BUILD_COMMAND = ${{ inputs.build-command }}
 
         $regex = '"[^"]*"|\S+'
@@ -233,7 +226,7 @@ runs:
         $RES_PATH = Join-path -Path ${{ env.EXT_PROGRAMS_PATH }} -ChildPath ${{ env.EXT_PROGRAMS_SCRIPT_NAME }}
 
         if (Test-Path "$RES_PATH" -PathType Leaf) {
-          Copy-Item -Path "$RES_PATH" -Destination "${{ env.BUILD_ARCHIVE_PATH }}" -Verbose
+          Copy-Item -Path "$RES_PATH" -Destination "${{ env.BUILD_ARCHIVE_PATH }}"
         } else {
           # softfail
           Write-Host "$RES_PATH script not found"
