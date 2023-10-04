@@ -722,7 +722,7 @@ jobs:
           if (Test-Path ".\$env:PL_ARCHIVE") {
             Write-Host "Extracting platform archive..."
             Expand-Archive -Path ".\$env:PL_ARCHIVE" -DestinationPath ".\$env:PL_DIST_PATH" -Force
-            Move-Item -Path ".\$env:PL_DIST_PATH\*\*" -Destination ".\$env:PL_DIST_PATH\"
+            Move-Item -Path ".\$env:PL_DIST_PATH\*\*\*" -Destination ".\$env:PL_DIST_PATH\"
             Get-ChildItem ".\$env:PL_DIST_PATH" | Format-Table
           } else {
             Write-Error "Platform archive not found"
