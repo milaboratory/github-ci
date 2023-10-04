@@ -385,19 +385,33 @@ on:
       #
       # Dependencies download control
       #
-      java-url:
+      pl-dist-path:
         description: |
-          JAVA download url.
-        type: string
+          A directory that electron will search for the pl binary.
+        type: sting
         required: false
-        default: 'https://corretto.aws/downloads/latest'
+        default: 'pl-dist'
 
-      mixcr-url:
+      external-programs-path:
         description: |
-          CDN url for MiXCR.
+          A directory that electron will search for dependencies.
         type: string
         required: false
-        default: 'https://cdn.milaboratory.com/software/mixcr'
+        default: 'external_programs'
+
+      external-programs-script-name-nix:
+        description: |
+          Bootstrap script for downloading dependencies on macOS/Linux.
+        type: string
+        required: false
+        default: 'download.sh'
+
+      external-programs-script-name-win:
+        description: |
+          Bootstrap script for downloading dependencies on Windows.
+        type: string
+        required: false
+        default: 'download-windows.ps1'
 
       pl-s3-iam-role-to-assume:
         description: |
@@ -643,14 +657,12 @@ jobs:
           role-to-assume: ${{ inputs.pl-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.pl-s3-region }}
 
-      - name: Get platform gui dependecies
-        id: get_deps
+      - name: Get runner metadata
+        id: get_runner_metadata
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PL_DIST_DIR: "pl-dist"
-          EXT_PROGRAMS_PATH: "external_programs"
-          EXT_PROGRAMS_SCRIPT_NAME: "download.sh"
-          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
+          EXT_PROGRAMS_SCRIPT_NAME_NIX: ${{ inputs.external-programs-script-name-nix }}
+          EXT_PROGRAMS_SCRIPT_NAME_WIN: ${{ inputs.external-programs-script-name-win }}
         with:
           run: |
             GET_OS_ARCH=$(uname -m)
@@ -675,27 +687,95 @@ jobs:
               PL_VERSION="${PL_COMMON_VERSION}"
             fi
 
-            PL_ARCHIVE="pl-${PL_VERSION}-${RUNNER_OS_ARCH}.tgz"
+            if [ "${RUNNER_OS}" = "macOS" ] || [ "${RUNNER_OS}" = "Linux" ];then
+              PL_ARCHIVE="pl-${PL_VERSION}-${RUNNER_OS_ARCH}.tgz"
+              EXT_PROGRAMS_SCRIPT_NAME="${EXT_PROGRAMS_SCRIPT_NAME_NIX}"
+            else
+              PL_ARCHIVE="pl-${PL_VERSION}-${RUNNER_OS_ARCH}.zip"
+              EXT_PROGRAMS_SCRIPT_NAME="${EXT_PROGRAMS_SCRIPT_NAME_WIN}"
+            fi
+
             PL_DL_LINK="s3://${S3_BUKCET}/pl/${RUNNER_OS_SANITEZED}/${PL_ARCHIVE}"
 
-            mkdir -v ./"${PL_DIST_DIR}"
+            #set output
+            ghwa_set_output pl-archive "${PL_ARCHIVE}"
+            ghwa_set_output pl-dl-link "${PL_DL_LINK}"
+            ghwa_set_output ext-programs-script-name "${EXT_PROGRAMS_SCRIPT_NAME}"
+
+      - name: Get platform gui dependecies for windows
+        if: startsWith(runner.os, 'Windows')
+        shell: pwsh
+        env:
+          PL_DIST_PATH: ${{ inputs.pl-dist-path }}
+          EXT_PROGRAMS_PATH: ${{ inputs.external-programs-path }}
+          EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
+          PL_DL_LINK: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-dl-link }}
+          PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
+          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
+        run: |
+          New-Item -Path ".\$env:PL_DIST_PATH" -ItemType Directory -Force | Out-Null
+          New-Item -Path ".\$env:EXT_PROGRAMS_PATH" -ItemType Directory -Force | Out-Null
+
+          Write-Host "Downloading platform archive..."
+          aws s3 cp --no-progress "$env:PL_DL_LINK" ./
+
+          if (Test-Path ".\$env:PL_ARCHIVE") {
+            Write-Host "Extracting platform archive..."
+            Expand-Archive -Path ".\$env:PL_ARCHIVE" -DestinationPath ".\$env:PL_DIST_PATH" -Force
+            Move-Item -Path ".\$env:PL_DIST_PATH\*\*" -Destination ".\$env:PL_DIST_PATH\"
+          } else {
+            Write-Error "Platform archive not found"
+            exit 1
+          }
+
+          Write-Host "Downloading platform dependencies"
+          if (Test-Path ".\$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -PathType Leaf) {
+            Move-Item -Path ".\$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -Destination ".\$env:EXT_PROGRAMS_PATH"
+            Set-Location ".\$env:EXT_PROGRAMS_PATH"
+
+            if (Test-Path -Path ".\$EXT_PROGRAMS_SCRIPT_NAME" -PathType Leaf ) {
+              & ".\$env:EXT_PROGRAMS_SCRIPT_NAME"
+            } else {
+              Write-Host ".\$env:EXT_PROGRAMS_SCRIPT_NAME isn't executable"
+              exit 1
+            }
+
+            Write-Host "Clean-up"
+            Get-ChildItem -Path "." | Format-Table
+            Remove-Item -Path ".\$env:EXT_PROGRAMS_SCRIPT_NAME" -Force
+          } else {
+            Write-Host "Dependencies script not found"
+            exit 1
+          }
+
+      - name: Get platform gui dependecies for macos/linux
+        if: startsWith(runner.os, 'macOS') || startsWith(runner.os, 'Linux')
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PL_DIST_PATH: ${{ inputs.pl-dist-path }}
+          EXT_PROGRAMS_PATH: ${{ inputs.external-programs-path }}
+          EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
+          PL_DL_LINK: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-dl-link }}
+          PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
+          S3_BUKCET: ${{ inputs.pl-s3-bucket }}
+        with:
+          run: |
+            mkdir -pv ./"${PL_DIST_PATH}"
             mkdir -pv ./"${EXT_PROGRAMS_PATH}"
 
             echo "Downloading platform archive..."
             aws s3 cp --no-progress "${PL_DL_LINK}" ./
             if [ -f "${PL_ARCHIVE}" ];then
-             echo "Extracting platform archive..."
-             if [ "${RUNNER_OS}" == "Linux" ] || [ ${RUNNER_OS} == "macOS" ];then
-               tar -zxvf "./${PL_ARCHIVE}" --strip-components=2 -C "./${PL_DIST_DIR}"
-             fi
+              echo "Extracting platform archive..."
+              tar -zxvf "./${PL_ARCHIVE}" --strip-components=2 -C "./${PL_DIST_PATH}"
             else
               echo "Platform archive not found"
               exit 1
             fi
 
             echo "Downloading platform dependencies"
-            if [ -f "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
-              mv "./${PL_DIST_DIR}/${EXT_PROGRAMS_SCRIPT_NAME}" "./${EXT_PROGRAMS_PATH}"
+            if [ -f "./${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
+              mv "./${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "./${EXT_PROGRAMS_PATH}"
               cd "./${EXT_PROGRAMS_PATH}"
               if [ -x "./${EXT_PROGRAMS_SCRIPT_NAME}" ];then
                 "./${EXT_PROGRAMS_SCRIPT_NAME}"
