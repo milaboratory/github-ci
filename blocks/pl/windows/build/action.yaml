@@ -201,7 +201,7 @@ runs:
       shell: pwsh
       working-directory: ${{ steps.get_runner_metadata.outputs.pl_build_path }}
       run: |
-        $BUILD_COMMAND = ${{ inputs.build-command }}
+        $BUILD_COMMAND = '${{ inputs.build-command }}'
 
         $regex = '"[^"]*"|\S+'
         $commandParts = [System.Text.RegularExpressions.Regex]::Matches($BUILD_COMMAND, $regex) | ForEach-Object { $_.Value }
