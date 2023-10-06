@@ -1,6 +1,6 @@
 # This workflow will build and upload nodejs application on the github's npm registry.
 
-name: Build and Upload NodeJS Application
+name: Build and Upload Monorepo NodeJS Applications
 
 on:
   workflow_call:
@@ -86,9 +86,9 @@ on:
         required: false
         default: 'v1'
 
-     #
-     # Build control
-     #
+      #
+      # Build control
+      #
       build-version:
         description: |
           Set version number in 'package.json' file to given value.
@@ -100,55 +100,6 @@ on:
         type: string
         required: true
         default: 'build'
-      is-electron-application:
-        description: |
-          If 'true' enables cache for an Electron application,
-          if 'false', enables cache for a generic NodeJS application.
-        type: string
-        required: false
-        default: 'true'
-
-      #
-      # Archive distribution control
-      #
-      dist-archive-path:
-        description:
-          The name of a distribution folder for nodejs application.
-        type: string
-        required: false
-        default: 'dist'
-
-      dist-artifact-retention:
-        description: |
-          Time in days to keep build artifacts before removing them
-        type: number
-        required: false
-        default: 7
-
-      #
-      # NPM registry settings
-      #
-      registry-url:
-        description: |
-          The npm registry url to set up for auth
-          and publication of the node js package.
-        type: string
-        required: false
-        default: 'https://npm.pkg.github.com'
-
-      scope:
-        description: |
-          Scope for authenticating against npm registries.
-        type: string
-        required: false
-        default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
-      always-auth:
-        description: |
-          Set always-auth in npmrc.
-        type: string
-        required: false
-        default: 'false'
 
       #
       # Release control
@@ -295,13 +246,6 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.dist-archive-path }}
-          retention-days: ${{ inputs.dist-artifact-retention }}
-
   notify-build:
     name: Notify build
     runs-on: ubuntu-latest
@@ -384,8 +328,43 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
+  setup-packages-matrix:
+    name: :setup packages matrix
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Setup packages matrix
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        id: packages-matrix
+        with:
+          dump-stdout: false
+          run: |
+            NPM_PACKAGES_LIST=$(ls ./packages | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output npm-packages-list "$NPM_PACKAGES_LIST"
+
   publish-to-npm:
     name: publish
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.setup-packages-matrix.outputs.npm-packages-list) }}
     runs-on: ubuntu-latest
 
     if: always()
@@ -409,19 +388,10 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
-        if: inputs.git-crypt-unlock
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         with:
-          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
-          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.app-name-slug }}
-          path: ${{ inputs.dist-archive-path }}
-
-      - uses: milaboratory/github-ci/blocks/node/publish@v4-beta
-        with:
+          build-version: ${{ steps.context.outputs.current-version }}
+          build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
@@ -430,38 +400,48 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish npm package
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_PACKAGE_NAME: ${{ matrix.package }}
+        with:
+          run: |
+            cd "./packages/${NPM_PACKAGE_NAME}"
+            npm publish
+
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  notify-release:
-    name: notify release
-    runs-on: ubuntu-latest
+      notify-release:
+        name: notify release
+        runs-on: ubuntu-latest
 
-    if: always()
-      && needs.release.result == 'success'
-      && startsWith(github.ref, 'refs/tags/v')
-    needs:
-      - release
-      - publish-to-npm
-
-    steps:
-      - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
-        with:
-          input: |
-            release
+          && needs.release.result == 'success'
+          && startsWith(github.ref, 'refs/tags/v')
+        needs:
+          - release
+          - publish-to-npm
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+        steps:
+          - id: search-tags
+            if: always()
+            uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+            with:
+              input: |
+                release
 
-          job-status: |
-            ${{ needs.create-release.result }}
-            ${{ needs.publish-to-npm.result }}
+          - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+            with:
+              telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+              telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          product-name: ${{ inputs.app-name }}
-          search-tags: ${{ steps.search-tags.outputs.result }}
+              job-status: |
+                ${{ needs.create-release.result }}
+                ${{ needs.publish-to-npm.result }}
+
+              product-name: ${{ inputs.app-name }}
+              search-tags: ${{ steps.search-tags.outputs.result }}
