@@ -436,15 +436,8 @@ jobs:
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci/actions/node/package-publish-status@v4-beta
-        id: npm-pkg-status
-        with:
-          package-json-path: ${{ format('{0}/packages/{1}', github.workspace, matrix.package) }}
-          npm-registry-url: ${{ inputs.registry-url }}
-
       - name: Publish npm package
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: steps.npm-pkg-status.outputs.exists == '0'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_PACKAGE_NAME: ${{ matrix.package }}
@@ -455,15 +448,6 @@ jobs:
             
             cd "${NPM_PACKAGE_PATH_SANITIZED}"
             npm publish
-
-      - name: Report publish status
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: steps.npm-pkg-status.outputs.exists == '1'
-        env:
-          NPM_PACKAGE_NAME: ${{ matrix.package }}
-        with:
-          run: |
-            echo "Package version for ${NPM_PACKAGE_NAME} already exists on npm registry."
 
     outputs:
       # Even constant outputs become initialized only after job start.
