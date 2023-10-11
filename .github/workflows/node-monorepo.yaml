@@ -424,14 +424,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/node/package-publish-status@v4-beta
-        id: npm-pkg-status
-        with:
-          package-json-path: ${{ format('{0}/packages/{1}', github.workspace, matrix.package) }}
-          npm-registry-url: ${{ inputs.registry-url }}
-
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
-        if: steps.npm-pkg-status.outputs.exists == '0'
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -442,6 +435,12 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: milaboratory/github-ci/actions/node/package-publish-status@v4-beta
+        id: npm-pkg-status
+        with:
+          package-json-path: ${{ format('{0}/packages/{1}', github.workspace, matrix.package) }}
+          npm-registry-url: ${{ inputs.registry-url }}
 
       - name: Publish npm package
         uses: milaboratory/github-ci/actions/shell@v4-beta
