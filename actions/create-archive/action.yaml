@@ -1,4 +1,4 @@
-name: Create Archive
+name: 'Create Archive'
 author: 'MiLaboratories'
 description: |
   A script to create ZIP or TAR.GZ archives based on
@@ -7,20 +7,20 @@ description: |
 
 inputs:
   source-files:
-    description: List of source files.
+    description: 'List of source files.'
     required: true
   include-patterns:
-    description: Include patterns for source files filtering.
+    description: 'Include patterns for source files filtering.'
     required:
     default: false
   exclude-patterns:
-    description: Exclude patterns for source files filtering.
+    description: 'Exclude patterns for source files filtering.'
     required:
     default: false
   archive-name:
-    description: Tha archive name.
+    description: 'Tha archive name.'
     required: false
 
 runs:
-  using: node20
-  main: dist/index.js
+  using: 'node20'
+  main: 'dist/index.js'

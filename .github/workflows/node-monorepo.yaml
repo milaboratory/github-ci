@@ -100,6 +100,38 @@ on:
         type: string
         required: true
         default: 'build'
+      is-electron-application:
+        description: |
+          If 'true' enables cache for an Electron application,
+          if 'false', enables cache for a generic NodeJS application.
+        type: string
+        required: false
+        default: 'true'
+
+      #
+      # NPM registry settings
+      #
+      registry-url:
+        description: |
+          The npm registry url to set up for auth
+          and publication of the node js package.
+        type: string
+        required: false
+        default: 'https://npm.pkg.github.com'
+
+      scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+      always-auth:
+        description: |
+          Set always-auth in npmrc.
+        type: string
+        required: false
+        default: 'false'
 
       #
       # Release control
@@ -388,7 +420,14 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - uses: milaboratory/github-ci/actions/node/package-publish-status@v4-beta
+        id: npm-pkg-status
+        with:
+          package-json-path: ${{ format('{0}/{1}', github.workspace, matrix.package) }}
+          npm-registry-url: ${{ inputs.registry-url }}
+
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+        if: steps.npm-pkg-status.outputs.exists == '0'
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
@@ -402,6 +441,7 @@ jobs:
 
       - name: Publish npm package
         uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: steps.npm-pkg-status.outputs.exists == '0'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_PACKAGE_NAME: ${{ matrix.package }}
@@ -409,6 +449,15 @@ jobs:
           run: |
             cd "./packages/${NPM_PACKAGE_NAME}"
             npm publish
+
+      - name: Report publish status
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: steps.npm-pkg-status.outputs.exists == '1'
+        env:
+          NPM_PACKAGE_NAME: ${{ matrix.package }}
+        with:
+          run: |
+            echo "Package version for ${NPM_PACKAGE_NAME} already exists on npm registry."
 
     outputs:
       # Even constant outputs become initialized only after job start.
