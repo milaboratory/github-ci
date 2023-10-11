@@ -424,7 +424,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Publish npm package
+      - name: Check npm package status in the registry
         uses: milaboratory/github-ci/actions/shell@v4-beta
         id: npm-pkg-status
         env:
