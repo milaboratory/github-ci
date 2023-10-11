@@ -467,33 +467,33 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-      notify-release:
-        name: notify release
-        runs-on: ubuntu-latest
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
 
+    if: always()
+      && needs.release.result == 'success'
+      && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - release
+      - publish-to-npm
+
+    steps:
+      - id: search-tags
         if: always()
-          && needs.release.result == 'success'
-          && startsWith(github.ref, 'refs/tags/v')
-        needs:
-          - release
-          - publish-to-npm
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            release
 
-        steps:
-          - id: search-tags
-            if: always()
-            uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
-            with:
-              input: |
-                release
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
-          - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
-            with:
-              telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-              telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.publish-to-npm.result }}
 
-              job-status: |
-                ${{ needs.create-release.result }}
-                ${{ needs.publish-to-npm.result }}
-
-              product-name: ${{ inputs.app-name }}
-              search-tags: ${{ steps.search-tags.outputs.result }}
+          product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
