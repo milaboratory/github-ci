@@ -423,7 +423,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/node/package-publish-status@v4-beta
         id: npm-pkg-status
         with:
-          package-json-path: ${{ format('{0}/{1}', github.workspace, matrix.package) }}
+          package-json-path: ${{ format('{0}/packages/{1}', github.workspace, matrix.package) }}
           npm-registry-url: ${{ inputs.registry-url }}
 
       - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
@@ -447,7 +447,10 @@ jobs:
           NPM_PACKAGE_NAME: ${{ matrix.package }}
         with:
           run: |
-            cd "./packages/${NPM_PACKAGE_NAME}"
+            NPM_PACKAGE_PATH="${GITHUB_WORKSPACE}/packages/${NPM_PACKAGE_NAME}"
+            NPM_PACKAGE_PATH_SANITIZED=$(mish_sanitized "${NPM_PACKAGE_PATH}")
+            
+            cd "${NPM_PACKAGE_PATH_SANITIZED}"
             npm publish
 
       - name: Report publish status
