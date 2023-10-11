@@ -390,9 +390,9 @@ jobs:
           run: |
             NPM_PACKAGES_LIST=$(ls ./packages | sort | jq -R -s -c 'split("\n")[:-1]')
             ghwa_set_output npm-packages-list "$NPM_PACKAGES_LIST"
-            
+
     outputs:
-      npm-packages-list: ${{ fromJSON(needs.setup-packages-matrix.outputs.data).npm-packages-list) }}
+      npm-packages-list: ${{ fromJSON(needs.setup-packages-matrix.outputs.data).npm-packages-listq }}
 
   publish-to-npm:
     name: publish
