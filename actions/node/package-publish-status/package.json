@@ -1,6 +1,6 @@
 {
   "name": "npm-package-publish-status",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GitHub Action to check the latest version of your npm package in a given repository",
   "main": "./dist/index.js",
   "scripts": {
