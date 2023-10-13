@@ -149,17 +149,61 @@ on:
         type: string
         required: false
         default: '{}'
-      cdn-url:
+      build-cache-paths:
         description: |
-          CDN url for Static and Shared RockDB Libs.
+          List of paths to files or folders to restore/cache before/after each build run.
         type: string
         required: false
-        default: 'https://cdn.mixcr.com/internal/pkgs'
-      rocksdb-version:
+        default: ''
+      build-cache-key:
         description:
-          RocksDB version.
+          Key for additional build cache.
+          Must be used in conjunction with <build-cache-paths>
         type: string
         required: false
+        default: ''
+      #
+      # Test control
+      #
+      test-integration:
+        description: |
+          Run integration tests for the platform.
+        type: boolean
+        required: false
+        default: false
+      test-integration-command:
+        description: |
+          Integration Tests command (initiate integration tests for the platform).
+        type: string
+        required: false
+        default: 'go test ./...'
+      test-integration-cache-paths:
+        description: |
+          List of paths to files or folders to restore/cache before/after each integration tests run.
+        type: string
+        required: false
+        default: ''
+      test-integration-cache-key:
+        description: |
+          Key for additional integration tests cache.
+          Must be used in conjunction with <test-integration-cache-paths>.
+        type: string
+        required: false
+        default: ''
+      test-integration-logs-path:
+        description: |
+          The path relative to github.workspace
+          where the platform write tests logs.
+        type: string
+        required: false
+        default: 'test-logs'
+      test-integration-logs-retention:
+        description: |
+          Time in days to keep platform test logs before removing them
+          from workflow run attachments.
+        type: string
+        required: false
+        default: 7
       #
       # Distribution control
       #
@@ -396,6 +440,8 @@ jobs:
           build-archive-additional-source-files: ${{ inputs.build-archive-additional-source-files }}
           build-archive-include-patterns: ${{ inputs.build-archive-include-patterns }}
           build-archive-exclude-patterns: ${{ inputs.build-archive-exclude-patterns }}
+          build-cache-paths: ${{ inputs.build-cache-paths }}
+          build-cache-key: ${{ inputs.build-cache-key }}
           ext-programs-path: ${{ inputs.ext-programs-path }}
           ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
           netrc-password: ${{ secrets.GITHUB_TOKEN }}
@@ -502,6 +548,91 @@ jobs:
             ${{ needs.build.result }}
           product-name: ${{ inputs.app-name }}
           download-links: ${{ needs.upload-build-results.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  test-integration:
+    name: :test (integration)
+    runs-on: windows-latest
+
+    if: inputs.test-integration
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: milaboratory/github-ci/blocks/pl/windows/test@v4-beta
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          test-integration-cache-paths: ${{ inputs.test-integration-cache-paths }}
+          test-integration-cache-key: ${{ inputs.test-integration-cache-key }}
+          test-command: ${{ inputs.test-integration-command }}
+          ext-programs-path: ${{ inputs.ext-programs-path }}
+          netrc-password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: test-integration-logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}-test-int-logs
+          path: ${{ format('{0}/{1}', github.workspace, inputs.test-integration-logs-path) }}
+          retention-days: ${{ inputs.test-integration-logs-retention }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  notify-test-integration:
+    name: notify integration test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && needs.test-integration.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-integration
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            integration
+            windows
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-integration.result }}
+          tests-type: 'Integration'
+
+          product-name: ${{ inputs.app-name }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
 

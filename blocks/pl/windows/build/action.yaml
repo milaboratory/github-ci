@@ -78,6 +78,17 @@ inputs:
 
     required: false
     default: 'v1'
+  build-cache-paths:
+    description: |
+      List of paths to files or folders to restore/cache before/after each integration tests run.
+    required: false
+    default: ''
+  build-cache-key:
+    description: |
+      Key for additional integration tests cache.
+      Must be used in conjunction with <build-cache-paths>
+    required: false
+    default: ''
   #
   # Github authentication control
   #
@@ -120,6 +131,19 @@ runs:
       with:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
+
+    - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
+      with:
+        machine: ${{ inputs.netrc-machine }}
+        login: ${{ inputs.netrc-login }}
+        password: ${{ inputs.netrc-password }}
+
+    - name: Restore custom cache
+      if: inputs.build-cache-paths != '' && inputs.build-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.build-cache-key }}
+        path: ${{ inputs.build-cache-paths }}
 
     - name: Get runner metadata
       id: get_runner_metadata
@@ -187,12 +211,6 @@ runs:
             Write-Error "Script '${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}' not found."
             exit 1
         }
-
-    - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
-      with:
-        machine: ${{ inputs.netrc-machine }}
-        login: ${{ inputs.netrc-login }}
-        password: ${{ inputs.netrc-password }}
 
     - name: Run build command for the platform
       shell: pwsh

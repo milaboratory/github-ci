@@ -149,17 +149,6 @@ on:
         type: string
         required: false
         default: '{}'
-      cdn-url:
-        description: |
-          CDN url for Static and Shared RockDB Libs.
-        type: string
-        required: false
-        default: 'https://cdn.mixcr.com/internal/pkgs'
-      rocksdb-version:
-        description:
-          RocksDB version.
-        type: string
-        required: false
       #
       # Distribution control
       #
