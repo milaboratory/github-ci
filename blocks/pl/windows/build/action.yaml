@@ -189,7 +189,8 @@ runs:
           $PL_EXT_PROGRAMS_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
         }
 
-        $PL_ROCKSDB_LIBS_PATH = Join-path -Path $PL_EXT_PROGRAMS_PATH -ChildPath "rocksdb"
+        #$PL_ROCKSDB_LIBS_PATH = Join-path -Path $PL_EXT_PROGRAMS_PATH -ChildPath "rocksdb"
+        $PL_ROCKSDB_LIBS_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "rocksdb"
         # set output
 
         echo "pl_build_path=$PL_BUILD_PATH" >> $env:GITHUB_OUTPUT
