@@ -1,10 +1,10 @@
 name: Run a test for the Platform on Linux
 author: 'MiLaboratories'
 description: |
-  Run a test for the Platform on Linux.
+  Run a test for te Platform on Linux.
 
   Prepare agent for running a test for the Platform on Linux.
-  Install Golang specific version, cache dependencies, re-use build results
+  Install Golang specific version, cache dependencies.
 
 inputs:
   test-command:

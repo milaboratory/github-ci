@@ -1,0 +1,156 @@
+name: Run a test for the Platform on Windows
+author: 'MiLaboratories'
+description: |
+  Run a test for te Platform on Windows.
+
+  Prepare agent for running a test for the Platform on Windows.
+  Install Golang specific version, cache dependencies.
+
+inputs:
+  test-command:
+    description: |
+      Test command (initiate test for the platform)
+    required: true
+    default: 'go test ./...'
+  ext-programs-path:
+    description: |
+      The external_programs bootstrap script path.
+    required: false
+    default: 'external_programs'
+  bootstrap-ci-script-name:
+    description: |
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+    required: true
+    default: 'bootstrap-ci-windows.ps1'
+  golang-version:
+    description: |
+      Golang version to use.
+      Examples: '1.19', '1.20'
+    required: true
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+  test-integration-cache-paths:
+    description: |
+      List of paths to files or folders to restore/cache before/after each integration tests run.
+    required: false
+    default: ''
+  test-integration-cache-key:
+    description: |
+      Key for additional integration tests cache.
+      Must be used in conjunction with <test-integration-cache-paths>
+    required: false
+    default: ''
+  #
+  # Github authentication control
+  #
+  netrc-machine:
+    description: |
+      Hostname of a remote machine.
+    required: false
+    default: 'github.com'
+  netrc-login:
+
+    description: |
+      A user on the remote machine.
+    required: false
+    default: 'x-access-token'
+  netrc-password:
+    description: |
+      A password or a token for the user on the remote machine.
+      E.g: github token.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a golang application
+      uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+      with:
+        golang-version: ${{ inputs.golang-version }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - uses: milaboratory/github-ci/actions/git/auth-netrc@v4-beta
+      with:
+        machine: ${{ inputs.netrc-machine }}
+        login: ${{ inputs.netrc-login }}
+        password: ${{ inputs.netrc-password }}
+
+    - name: Restore custom cache
+      if: inputs.test-integration-cache-paths != '' && inputs.test-integration-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.test-integration-cache-key }}
+        path: ${{ inputs.test-integration-cache-paths }}
+
+    - name: Get runner metadata
+      id: get_runner_metadata
+      shell: pwsh
+      env:
+        PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
+      run: |
+        function Mish-Sanitized {
+          param (
+          [string]$path
+          )
+
+          $sanitizedPath = $path -replace '\.\./', ''
+          $sanitizedPath = $sanitizedPath -replace '[;&|]', ''
+          $sanitizedPath = $sanitizedPath -replace '[^a-zA-Z0-9/_\\-]', ''
+
+          return $sanitizedPath
+        }
+
+        $PL_EXT_PROGRAMS_PATH_SANITIZED = Mish-Sanitized -path "${{ env.PL_EXT_PROGRAMS_PATH }}"
+
+        if ([string]::IsNullOrWhiteSpace("$PL_EXT_PROGRAMS_PATH_SANITIZED")) {
+          Write-Error "Input variable 'ext-programs-path' cannot be empty."
+          exit 1
+        } else {
+          $PL_EXT_PROGRAMS_PATH = Join-path -Path "$env:GITHUB_WORKSPACE" -ChildPath "$PL_EXT_PROGRAMS_PATH_SANITIZED"
+        }
+
+        $PL_ROCKSDB_LIBS_PATH = Join-path -Path $PL_EXT_PROGRAMS_PATH -ChildPath "rocksdb"
+
+        # set env
+        echo "PKG_CONFIG_PATH=$PL_ROCKSDB_LIBS_PATH\lib\pkgconfig" >> $env:GITHUB_ENV
+
+    - name: Run boostrap ci script for windows
+      shell: pwsh
+      env:
+        GH_WORKSPACE: ${{ github.workspace }}
+        BOOTSTRAP_CI_SCRIPT_NAME: ${{ inputs.bootstrap-ci-script-name }}
+      run: |
+        if (Test-Path -Path "${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}" -PathType Leaf) {
+            & "./${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}"
+        } else {
+            Write-Error "Script '${{ env.BOOTSTRAP_CI_SCRIPT_NAME }}' not found."
+            exit 1
+        }
+
+    - name: Run test command for the platform
+      shell: pwsh
+      working-directory: ${{ github.workspace }}
+      run: |
+        $TEST_COMMAND = '${{ inputs.test-command }}'
+
+        $regex = '"[^"]*"|\S+'
+        $commandParts = [System.Text.RegularExpressions.Regex]::Matches($TEST_COMMAND, $regex) | ForEach-Object { $_.Value }
+        $baseCommand = $commandParts[0]
+        $argumentsArray = $commandParts[1..($commandParts.Length - 1)]
+
+        if (Get-Command $baseCommand -ErrorAction SilentlyContinue) {
+          Start-Process -NoNewWindow -FilePath $baseCommand -ArgumentList $argumentsArray -Wait
+        } elseif (Test-Path -Path "./$TEST_COMMAND" -PathType Leaf) {
+          & "./$TEST_COMMAND"
+        } else {
+          Write-Error "The command or script '$TEST_COMMAND' is not recognized."
+          exit 1
+        }

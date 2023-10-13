@@ -64,10 +64,6 @@ inputs:
       Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
     required: true
     default: 'bootstrap-ci-windows.ps1'
-  pkg-config-path:
-    description: |
-      Path to pre-build libs for the rocksdb
-    required: false
   golang-version:
     description: |
       Golang version to use.
@@ -129,7 +125,6 @@ runs:
       id: get_runner_metadata
       shell: pwsh
       env:
-
         PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
         PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path }}
         PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
