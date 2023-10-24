@@ -154,6 +154,7 @@ on:
           Build multi-architecture macos binary that includes
           both arm64 and amd64.
         type: boolean
+        required: false
         default: false
       build-architecture-list:
         description: |
