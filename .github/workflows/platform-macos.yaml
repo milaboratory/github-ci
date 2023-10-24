@@ -153,9 +153,9 @@ on:
         description: |
           Build multi-architecture macos binary that includes
           both arm64 and amd64.
-        type: boolean
+        type: string
         required: false
-        default: false
+        default: 'false'
       build-architecture-list:
         description: |
           List of the macOS architectures for building the platform.
