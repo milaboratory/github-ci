@@ -432,8 +432,10 @@ jobs:
           GO_TARGET_ARCH: ${{ matrix.arch }}
         with:
           run: |
+            _GOPATH="$(go env GOPATH)"
+
             ghwa_set_env GOARCH "${GO_TARGET_ARCH}"
-            ghwa_set_env PATH "${PATH}:${GOPATH}/bin"
+            ghwa_set_env PATH "${PATH}:${_GOPATH}/bin"
 
       - uses: milaboratory/github-ci/blocks/pl/macos/build@v4-beta
         env: ${{ fromJSON(inputs.build-env) }}
