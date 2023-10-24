@@ -413,7 +413,7 @@ jobs:
       id-token: write
       contents: read
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         arch: ${{ fromJSON(inputs.build-architecture-list) }}
     steps:
