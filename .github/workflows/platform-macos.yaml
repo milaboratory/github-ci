@@ -159,6 +159,7 @@ on:
         description: |
           List of the macOS architectures for building the platform.
         type: string
+        required: false
         default: ['amd64', 'arm64']
       #
       # Distribution control
