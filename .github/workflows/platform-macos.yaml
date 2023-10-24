@@ -426,10 +426,16 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - name: Set Go build target architecture
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          GO_TARGET_ARCH: ${{ matrix.arch }}
+        with:
+          run: |
+            ghwa_set_env GOARCH "${GO_TARGET_ARCH}"
+
       - uses: milaboratory/github-ci/blocks/pl/macos/build@v4-beta
-        env: |
-          ${{ fromJSON(inputs.build-env) }}
-          GOARCH: ${{ matrix.arch }}
+        env: ${{ fromJSON(inputs.build-env) }}
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
