@@ -7,28 +7,37 @@ description: |
   Install Golang specific version, cache dependencies, re-use build results
 
 inputs:
-  #
-  # Build control
-  #
   build-command:
     description: |
-      Build command (initiate build for the platform)
+      Build command (initiate build for the platform).
     required: false
     default: 'go build .'
   build-path:
     description: |
-      The path where the build command will run
+      The path where the build command will be run.
     required: false
-    default: 'platform/cmd/pl'
+    default: ${{ github.workspace }}
+  build-archive-path:
+    description: |
+      The path to files to save as build artifact. The script will upload the resulting archive to s3.
+      If this is empty, then the build-path will be used instead.
+    required: false
+    default: ''
+  ext-programs-path:
+    description: |
+      The external_programs bootstrap script path.
+    required: false
+    default: 'external_programs'
+  ext-programs-script-name:
+    description: |
+      The name of the bootstrap script.
+    required: false
+    default: 'download.sh'
   bootstrap-ci-script-name:
     description: |
-      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc)
+      Bootstrap CI script name (install go modules, C++ libraries, binary tools, etc).
     required: true
     default: 'bootstrap-ci.sh'
-  pkg-config-path:
-    description: |
-      Path to pre-build libs for the rocksdb
-    required: false
   golang-version:
     description: |
       Golang version to use.
@@ -43,11 +52,23 @@ inputs:
 
     required: false
     default: 'v1'
-  build-static:
+  build-cache-paths:
     description: |
-      Activate additional steps in workflow to build pl statically
+      List of paths to files or folders to restore/cache before/after each integration tests run.
     required: false
-    default: 'false'
+    default: ''
+  build-cache-key:
+    description: |
+      Key for additional integration tests cache.
+      Must be used in conjunction with <build-cache-paths>
+    required: false
+    default: ''
+  build-architecture:
+    description: |
+      macOS target architectures for building the platform.
+    default: 'amd64'
+    required: false
+
   #
   # Github authentication control
   #
@@ -58,22 +79,15 @@ inputs:
   #
   # Artifact control
   #
-  artifact-name:
+  github-artifact-name:
     description: |
-      Name of build artifact to create when <artifact-paths> input is not empty
+      Name of build artifact to create when <artifact-paths> input is not empty.
 
     required: false
     default: 'build-artifacts'
-  artifact-paths:
+  github-artifact-retention:
     description: |
-      List of paths to artifacts to save after build run.
-      Paths are relative to github workspace (repository root).
-      Patterns ('*', '**', etc.) are supported.
-    required: false
-    default: ''
-  artifact-retention:
-    description: |
-      Time in days to keep build artifacts before removing them
+      Time in days to keep build artifacts before removing them.
     required: false
     default: '7'
 
@@ -82,7 +96,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a golang application
-      uses:  milaboratory/github-ci/actions/golang/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
       with:
         golang-version: ${{ inputs.golang-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -90,6 +104,56 @@ runs:
     - uses: milaboratory/github-ci/actions/git/auth@v4-beta
       with:
         github-token: ${{ inputs.github-token }}
+
+    - name: Restore custom cache
+      if: inputs.build-cache-paths != '' && inputs.build-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        key: ${{ inputs.build-cache-key }}
+        path: ${{ inputs.build-cache-paths }}
+
+    - name: Get runner metadata
+      id: get_runner_metadata
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_BUILD_PATH: ${{ inputs.build-path || github.workspace }}
+        PL_BUILD_ARCHIVE_PATH: ${{ inputs.build-archive-path }}
+        PL_EXT_PROGRAMS_PATH: ${{ inputs.ext-programs-path }}
+      with:
+        run: |
+          PL_BUILD_PATH_SANITIZED=$(mish_sanitized "${PL_BUILD_PATH}")
+          PL_BUILD_ARCHIVE_PATH_SANITIZED=$(mish_sanitized "${PL_BUILD_ARCHIVE_PATH}")
+          PL_EXT_PROGRAMS_PATH_SANITIZED=$(mish_sanitized "$PL_EXT_PROGRAMS_PATH")
+
+          if [ "${PL_BUILD_PATH_SANITIZED}" == "${GITHUB_WORKSPACE}" ];then
+            PL_BUILD_PATH="${GITHUB_WORKSPACE}"
+          else
+            PL_BUILD_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_PATH_SANITIZED}"
+          fi
+
+          if [ -z "${PL_BUILD_ARCHIVE_PATH_SANITIZED}" ];then
+            PL_BUILD_ARCHIVE_PATH="${PL_BUILD_PATH}"
+          else
+            PL_BUILD_ARCHIVE_PATH="${GITHUB_WORKSPACE}/${PL_BUILD_ARCHIVE_PATH_SANITIZED}"
+          fi
+
+          if [ -z "${PL_EXT_PROGRAMS_PATH_SANITIZED}" ];then
+            echo "ext-programs-path cannot be empty."
+            exit 1
+          else
+            PL_EXT_PROGRAMS_PATH="${GITHUB_WORKSPACE}/${PL_EXT_PROGRAMS_PATH_SANITIZED}"
+          fi
+
+          PL_ROCKSDB_LIBS_PATH="${PL_EXT_PROGRAMS_PATH}/rocksdb-ci-libs"
+
+          # set outputs
+          ghwa_set_output pl_build_path "${PL_BUILD_PATH}"
+          ghwa_set_output pl_build_archive_path "${PL_BUILD_ARCHIVE_PATH}"
+          ghwa_set_output pl_ext_programs_path "${PL_EXT_PROGRAMS_PATH}"
+
+          # set envs
+          ghwa_set_env PKG_CONFIG_PATH "${PL_ROCKSDB_LIBS_PATH}/lib/pkgconfig"
+          ghwa_set_env DYLIBBUNDLER_SEARCH_LIB_PATH "${PL_ROCKSDB_LIBS_PATH}/lib"
 
     - name: Run boostrap ci script
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -107,52 +171,41 @@ runs:
     - name: Run build command for the platform
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BUILD_CMD: ${{ inputs.build-command }}
-        BUILD_PATH: ${{ inputs.build-path }}
-        BUILD_STATIC: ${{ inputs.build-static }}
+        BUILD_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_path }}
+        BUILD_COMMAND: ${{ inputs.build-command }}
       with:
         dump-stdout: false
         run: |
-          if [ "${BUILD_STATIC}" == "true" ];then
-            echo "Build static flag set to true"
-            export PKG_CONFIG_PATH="${{ inputs.pkg-config-path }}/lib/pkgconfig"
-            cd "${BUILD_PATH}" && ${{ inputs.build-command }}
+          cd "${BUILD_PATH}"
+          if [ -x "${BUILD_COMMAND}" ];then
+            "./${BUILD_COMMAND}"
           else
-            echo "Build static flag set to false"
-            cd "${BUILD_PATH}"
             ${{ inputs.build-command }}
           fi
 
-    - name: Run bundle dylibs
+    - name: Bundle dylibs on macOS
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BUILD_PATH: ${{ inputs.build-path }}
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
       with:
         dump-stdout: false
         run : |
-          cd ${BUILD_PATH}
+          cd "${BUILD_ARCHIVE_PATH}"
           dylibbundler \
             --bundle-deps \
             --create-dir \
             --dest-dir ./libs \
             --install-path '@executable_path/libs/' \
+            --search-path "${DYLIBBUNDLER_SEARCH_LIB_PATH}" \
             --fix-file pl
-
-    - name: Add build results to the archive
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        BUILD_PATH: ${{ inputs.build-path }}
-      with:
-        dump-stdout: false
-        run: |
-          cd "${BUILD_PATH}"
-          7z a pl.zip . '-xr!*.go' '-xr!*.zip' '-xr!*.sum' '-xr!*.mod'
 
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
+      env:
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
       with:
-        name: ${{ inputs.artifact-name }}
+        name: ${{ inputs.github-artifact-name }}-${{ inputs.build-architecture }}
         path: |
-          ${{ inputs.artifact-paths }}
+          "${BUILD_ARCHIVE_PATH}/pl"
           !**/*.go
-        retention-days: ${{ inputs.artifact-retention }}
+        retention-days: ${{ inputs.github-artifact-retention }}

@@ -149,6 +149,17 @@ on:
         type: string
         required: false
         default: '{}'
+      build-fat-binary:
+        description: |
+          Build multi-architecture macos binary that includes
+          both arm64 and amd64.
+        type: boolean
+        default: false
+      build-architecture-list:
+        description: |
+          List of the macOS architectures for building the platform.
+        type: string
+        default: ['amd64', 'arm64']
       #
       # Distribution control
       #
@@ -344,6 +355,7 @@ jobs:
       is-release: ${{ steps.context.outputs.is-release }}
 
   build:
+    if: inputs.build-fat-binary == 'false'
     name: :build-on-macos
     runs-on: macos-latest
     needs:
@@ -381,6 +393,49 @@ jobs:
           build-archive-additional-source-files: ${{ inputs.build-archive-additional-source-files }}
           build-archive-include-patterns: ${{ inputs.build-archive-include-patterns }}
           build-archive-exclude-patterns: ${{ inputs.build-archive-exclude-patterns }}
+          build-cache-paths: ${{ inputs.build-cache-paths }}
+          build-cache-key: ${{ inputs.build-cache-key }}
+          ext-programs-path: ${{ inputs.ext-programs-path }}
+          ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-artifact-name: ${{ inputs.app-name-slug }}
+          github-artifact-retention: ${{ inputs.dist-artifact-retention }}
+
+  build-fat-binary:
+    if: inputs.build-fat-binary == 'true'
+    name: :build-on-macos
+    runs-on: macos-latest
+    needs:
+      - init
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: ${{ fromJSON(inputs.build-architecture-list) }}
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/blocks/pl/macos/build@v4-beta
+        env: |
+          ${{ fromJSON(inputs.build-env) }}
+          GOARCH: ${{ matrix.arch }}
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+
+          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          build-command: ${{ inputs.build-command }}
+          build-path: ${{ inputs.build-path }}
+          build-archive-path: ${{ inputs.build-archive-path }}
           build-cache-paths: ${{ inputs.build-cache-paths }}
           build-cache-key: ${{ inputs.build-cache-key }}
           ext-programs-path: ${{ inputs.ext-programs-path }}
