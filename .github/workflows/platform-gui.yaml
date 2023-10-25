@@ -786,14 +786,14 @@ jobs:
 
             LIB_DIR=$(find "${TMP_DIR}" -type d -name "libs" -print -quit)
             if [ -n "${LIB_DIR}" ]; then
-              cp -a "${LIB_DIR}" "${PL_DIST_PATH}"
+              cp -av "${LIB_DIR}" "${PL_DIST_PATH}"
             fi
 
             if [ "${RUNNER_OS}" == "macOS" ]; then
               for file in ${PL_SEARCH_FILES_LIST}; do
                 FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
                   if [ -n "${FILE_PATH}" ]; then
-                    cp -a "${FILE_PATH}" "${PL_DIST_PATH}"
+                    cp -av "${FILE_PATH}" "${PL_DIST_PATH}"
                   fi
               done
             fi
@@ -803,9 +803,9 @@ jobs:
                 FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
                   if [ -n "${FILE_PATH}" ]; then
                     if [ "$file" == "all_in_one" ]; then
-                      cp -a "${FILE_PATH}" "${PL_DIST_PATH}/pl"
+                      cp -av "${FILE_PATH}" "${PL_DIST_PATH}/pl"
                     else
-                      cp -a "${FILE_PATH}" "${PL_DIST_PATH}"
+                      cp -av "${FILE_PATH}" "${PL_DIST_PATH}"
                     fi
                   fi
               done
@@ -815,7 +815,7 @@ jobs:
             rm -rf "$TMP_DIR"
 
             echo "Downloading platform dependencies"
-            if [ -f "./${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
+            if [ -f "${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
               mv "./${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" "./${EXT_PROGRAMS_PATH}"
               cd "./${EXT_PROGRAMS_PATH}"
               if [ -x "./${EXT_PROGRAMS_SCRIPT_NAME}" ];then
