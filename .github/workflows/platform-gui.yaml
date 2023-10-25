@@ -774,6 +774,8 @@ jobs:
           PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
         with:
           run: |
+            set -x
+            
             mkdir -pv ./"${PL_DIST_PATH}"
             mkdir -pv ./"${EXT_PROGRAMS_PATH}"
             TMP_DIR=$(mktemp -d)
