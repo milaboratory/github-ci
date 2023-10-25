@@ -207,6 +207,6 @@ runs:
       with:
         name: ${{ inputs.github-artifact-name }}-${{ inputs.build-architecture }}
         path: |
-          "${BUILD_ARCHIVE_PATH}/pl"
+          "${{ env.BUILD_ARCHIVE_PATH }}/pl"
           !**/*.go
         retention-days: ${{ inputs.github-artifact-retention }}
