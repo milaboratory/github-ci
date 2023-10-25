@@ -385,6 +385,13 @@ on:
       #
       # Dependencies download control
       #
+      pl-search-files-list:
+        description: |
+          File search list to copy to platform's
+          distribution folder for electron.
+        type: string
+        required: false
+        default: ''
       pl-dist-path:
         description: |
           A directory that electron will search for the pl binary.
@@ -707,31 +714,42 @@ jobs:
         if: startsWith(runner.os, 'Windows')
         shell: pwsh
         env:
+          PL_SEARCH_FILES_LIST: ${{ inputs.pl-search-files-list }}
           PL_DIST_PATH: ${{ inputs.pl-dist-path }}
           EXT_PROGRAMS_PATH: ${{ inputs.external-programs-path }}
           EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
           PL_DL_LINK: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-dl-link }}
           PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
         run: |
-          New-Item -Path ".\$env:PL_DIST_PATH" -ItemType Directory -Force | Out-Null
-          New-Item -Path ".\$env:EXT_PROGRAMS_PATH" -ItemType Directory -Force | Out-Null
+          $TMP_DIR_ROOT = [System.IO.Path]::GetTempPath()
+          $TMP_DIR = Join-Path -Path "$TMP_DIR_ROOT" -ChildPath (New-Guid).Guid
+
+          New-Item -Path "$env:PL_DIST_PATH" -ItemType Directory -Force | Out-Null
+          New-Item -Path "$env:EXT_PROGRAMS_PATH" -ItemType Directory -Force | Out-Null
+          New-Item -Path "$TMP_DIR" -ItemType Directory | Out-Null
 
           Write-Host "Downloading platform archive..."
           aws s3 cp --no-progress "$env:PL_DL_LINK" ./
-
-          if (Test-Path ".\$env:PL_ARCHIVE") {
-            Write-Host "Extracting platform archive..."
-            Expand-Archive -Path ".\$env:PL_ARCHIVE" -DestinationPath ".\$env:PL_DIST_PATH" -Force
-            Move-Item -Path ".\$env:PL_DIST_PATH\*\*\*" -Destination ".\$env:PL_DIST_PATH\"
-            Get-ChildItem ".\$env:PL_DIST_PATH" | Format-Table
-          } else {
-            Write-Error "Platform archive not found"
-            exit 1
+          
+          Expand-Archive -Path "$env:PL_ARCHIVE" -DestinationPath $TMP_DIR -Force
+          
+          $LIB_DIR = Get-ChildItem -Path "$TMP_DIR" -Recurse -Directory -Name 'libs' | Select-Object -First 1
+            if ("$LIB_DIR") {
+            Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination "$env:PL_DIST_PATH" -Recurse
           }
 
+          $FILES = "$env:PL_SEARCH_FILES_LIST"
+            foreach ($file in "$FILES") {
+              $FILE_PATH = Get-ChildItem -Path "$TMP_DIR" -Recurse -File | Where-Object { $_.Name -eq $file } | Select-Object -First 1
+                if ($FILE_PATH) {
+                  Copy-Item -Path $FILE_PATH.FullName -Destination "$env:PL_DIST_PATH"
+                }
+            }
+          Remove-Item -Path "$TMP_DIR" -Recurse -Force
+
           Write-Host "Downloading platform dependencies"
-          if (Test-Path ".\$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -PathType Leaf) {
-            Move-Item -Path ".\$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -Destination ".\$env:EXT_PROGRAMS_PATH"
+          if (Test-Path "$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -PathType Leaf) {
+            Move-Item -Path "$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -Destination "$env:EXT_PROGRAMS_PATH"
 
             Set-Location ".\$env:EXT_PROGRAMS_PATH"
             & ".\$env:EXT_PROGRAMS_SCRIPT_NAME"
@@ -748,6 +766,7 @@ jobs:
         if: startsWith(runner.os, 'macOS') || startsWith(runner.os, 'Linux')
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
+          PL_SEARCH_FILES_LIST: ${{ inputs.pl-search-files-list }}
           PL_DIST_PATH: ${{ inputs.pl-dist-path }}
           EXT_PROGRAMS_PATH: ${{ inputs.external-programs-path }}
           EXT_PROGRAMS_SCRIPT_NAME: ${{ fromJSON(steps.get_runner_metadata.outputs.data).ext-programs-script-name }}
@@ -757,16 +776,43 @@ jobs:
           run: |
             mkdir -pv ./"${PL_DIST_PATH}"
             mkdir -pv ./"${EXT_PROGRAMS_PATH}"
+            TMP_DIR=$(mktemp -d)
 
             echo "Downloading platform archive..."
             aws s3 cp --no-progress "${PL_DL_LINK}" ./
-            if [ -f "${PL_ARCHIVE}" ];then
-              echo "Extracting platform archive..."
-              tar -zxvf "./${PL_ARCHIVE}" --strip-components=2 -C "./${PL_DIST_PATH}"
-            else
-              echo "Platform archive not found"
-              exit 1
+
+            echo "Extract pl archive..."
+            tar -xzf "${PL_ARCHIVE}" -C "${TMP_DIR}"
+
+            LIB_DIR=$(find "${TMP_DIR}" -type d -name "libs" -print -quit)
+            if [ -n "${LIB_DIR}" ]; then
+              cp -a "${LIB_DIR}" "${PL_DIST_PATH}"
             fi
+
+            if [ "${RUNNER_OS}" == "macOS" ]; then
+              for file in ${PL_SEARCH_FILES_LIST}; do
+                FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
+                  if [ -n "${FILE_PATH}" ]; then
+                    cp -a "${FILE_PATH}" "${PL_DIST_PATH}"
+                  fi
+              done
+            fi
+
+            if [ "${RUNNER_OS}" == "Linux" ]; then
+              for file in "${PL_SEARCH_FILES_LIST}"; do
+                FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
+                  if [ -n "${FILE_PATH}" ]; then
+                    if [ "$file" == "all_in_one" ]; then
+                      cp -a "${FILE_PATH}" "${PL_DIST_PATH}/pl"
+                    else
+                      cp -a "${FILE_PATH}" "${PL_DIST_PATH}"
+                    fi
+                  fi
+              done
+            fi
+
+            # Cleanup
+            rm -rf "$TMP_DIR"
 
             echo "Downloading platform dependencies"
             if [ -f "./${PL_DIST_PATH}/${EXT_PROGRAMS_SCRIPT_NAME}" ];then
@@ -779,10 +825,12 @@ jobs:
                 exit 1
               fi
 
-              echo "Clean-up" && ls -la
+              echo "Clean-up"
               rm -vf "./${EXT_PROGRAMS_SCRIPT_NAME}"
-              find . -name "MacOS" -type d -exec rm -rfv {} +
-              find . -name "_CodeSignature" -type d -exec rm -rfv {} +
+              if [ "${RUNNER_OS}" == "macOS" ]; then
+                find . -name "MacOS" -type d -exec rm -rfv {} +
+                find . -name "_CodeSignature" -type d -exec rm -rfv {} +
+              fi
             else
               echo "Dependencies script not found"
               exit 1
