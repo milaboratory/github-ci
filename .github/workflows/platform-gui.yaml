@@ -730,9 +730,9 @@ jobs:
 
           Write-Host "Downloading platform archive..."
           aws s3 cp --no-progress "$env:PL_DL_LINK" ./
-          
+
           Expand-Archive -Path "$env:PL_ARCHIVE" -DestinationPath $TMP_DIR -Force
-          
+
           $LIB_DIR = Get-ChildItem -Path "$TMP_DIR" -Recurse -Directory -Name 'libs' | Select-Object -First 1
             if ("$LIB_DIR") {
             Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination "$env:PL_DIST_PATH" -Recurse
@@ -789,9 +789,11 @@ jobs:
               cp -av "${LIB_DIR}" "${PL_DIST_PATH}"
             fi
 
+            echo "Copy files for ... ${RUNNER_OS}"
+
             if [ "${RUNNER_OS}" == "macOS" ]; then
               for file in ${PL_SEARCH_FILES_LIST}; do
-                FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
+                  FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
                   if [ -n "${FILE_PATH}" ]; then
                     cp -av "${FILE_PATH}" "${PL_DIST_PATH}"
                   fi
@@ -800,7 +802,7 @@ jobs:
 
             if [ "${RUNNER_OS}" == "Linux" ]; then
               for file in "${PL_SEARCH_FILES_LIST}"; do
-                FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
+                  FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
                   if [ -n "${FILE_PATH}" ]; then
                     if [ "$file" == "all_in_one" ]; then
                       cp -av "${FILE_PATH}" "${PL_DIST_PATH}/pl"
