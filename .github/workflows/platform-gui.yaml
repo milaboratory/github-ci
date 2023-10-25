@@ -724,9 +724,9 @@ jobs:
           $TMP_DIR_ROOT = [System.IO.Path]::GetTempPath()
           $TMP_DIR = Join-Path -Path "$TMP_DIR_ROOT" -ChildPath (New-Guid).Guid
 
-          New-Item -Path "$env:PL_DIST_PATH" -ItemType Directory -Force | Out-Null
-          New-Item -Path "$env:EXT_PROGRAMS_PATH" -ItemType Directory -Force | Out-Null
-          New-Item -Path "$TMP_DIR" -ItemType Directory | Out-Null
+          New-Item -Path $env:PL_DIST_PATH -ItemType Directory -Force | Out-Null
+          New-Item -Path $env:EXT_PROGRAMS_PATH -ItemType Directory -Force | Out-Null
+          New-Item -Path $TMP_DIR -ItemType Directory | Out-Null
 
           Write-Host "Downloading platform archive..."
           aws s3 cp --no-progress "$env:PL_DL_LINK" ./
@@ -735,24 +735,25 @@ jobs:
 
           $LIB_DIR = Get-ChildItem -Path $TMP_DIR -Recurse -Directory -Name 'libs' | Select-Object -First 1
           if ($LIB_DIR) {
-            Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination $env:PL_ARCHIVE -Recurse -Verbose
+            Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination $env:PL_DIST_PATH -Recurse -Verbose
           }
 
-          $FILES = $env:PL_SEARCH_FILES_LIST
+          $FILES = $env:PL_SEARCH_FILES_LIST -split ','
           foreach ($file in $FILES) {
             $FILE_PATH = Get-ChildItem -Path $TMP_DIR -Recurse -File | Where-Object { $_.Name -eq $file } | Select-Object -First 1
             if ($FILE_PATH) {
-              Copy-Item -Path $FILE_PATH.FullName -Destination $env:PL_ARCHIVE -Verbose
+              Copy-Item -Path $FILE_PATH.FullName -Destination $env:PL_DIST_PATH -Verbose
             }
           }
 
+          Get-ChildItem -Path $env:PL_DIST_PATH | Format-Table
           Remove-Item -Path "$TMP_DIR" -Recurse -Force
 
           Write-Host "Downloading platform dependencies"
           if (Test-Path "$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -PathType Leaf) {
-            Move-Item -Path "$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -Destination "$env:EXT_PROGRAMS_PATH"
+            Move-Item -Path "$env:PL_DIST_PATH\$env:EXT_PROGRAMS_SCRIPT_NAME" -Destination $env:EXT_PROGRAMS_PATH
 
-            Set-Location ".\$env:EXT_PROGRAMS_PATH"
+            Set-Location "$env:EXT_PROGRAMS_PATH"
             & ".\$env:EXT_PROGRAMS_SCRIPT_NAME"
 
             Write-Host "Clean-up"
