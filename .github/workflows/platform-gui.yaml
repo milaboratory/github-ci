@@ -731,20 +731,21 @@ jobs:
           Write-Host "Downloading platform archive..."
           aws s3 cp --no-progress "$env:PL_DL_LINK" ./
 
-          Expand-Archive -Path "$env:PL_ARCHIVE" -DestinationPath $TMP_DIR -Force
+          Expand-Archive -Path $env:PL_ARCHIVE -DestinationPath $TMP_DIR -Force
 
-          $LIB_DIR = Get-ChildItem -Path "$TMP_DIR" -Recurse -Directory -Name 'libs' | Select-Object -First 1
-            if ("$LIB_DIR") {
-            Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination "$env:PL_DIST_PATH" -Recurse
+          $LIB_DIR = Get-ChildItem -Path $TMP_DIR -Recurse -Directory -Name 'libs' | Select-Object -First 1
+          if ($LIB_DIR) {
+            Copy-Item -Path "$TMP_DIR\$LIB_DIR" -Destination $env:PL_ARCHIVE -Recurse -Verbose
           }
 
-          $FILES = "$env:PL_SEARCH_FILES_LIST"
-            foreach ($file in "$FILES") {
-              $FILE_PATH = Get-ChildItem -Path "$TMP_DIR" -Recurse -File | Where-Object { $_.Name -eq $file } | Select-Object -First 1
-                if ($FILE_PATH) {
-                  Copy-Item -Path $FILE_PATH.FullName -Destination "$env:PL_DIST_PATH"
-                }
+          $FILES = $env:PL_SEARCH_FILES_LIST
+          foreach ($file in $FILES) {
+            $FILE_PATH = Get-ChildItem -Path $TMP_DIR -Recurse -File | Where-Object { $_.Name -eq $file } | Select-Object -First 1
+            if ($FILE_PATH) {
+              Copy-Item -Path $FILE_PATH.FullName -Destination $env:PL_ARCHIVE -Verbose
             }
+          }
+
           Remove-Item -Path "$TMP_DIR" -Recurse -Force
 
           Write-Host "Downloading platform dependencies"
