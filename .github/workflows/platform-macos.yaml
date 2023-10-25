@@ -428,13 +428,9 @@ jobs:
 
       - name: Set Go build environment variables
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          GO_TARGET_ARCH: ${{ matrix.arch }}
         with:
           run: |
-            _GOPATH="$(go env GOPATH)"
-
-            ghwa_set_env GOARCH "${GO_TARGET_ARCH}"
+            ghwa_set_env GO_TARGET_ARCH "${{ matrix.arch }}"
 
       - uses: milaboratory/github-ci/blocks/pl/macos/build@v4-beta
         env: ${{ fromJSON(inputs.build-env) }}
@@ -445,6 +441,7 @@ jobs:
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
+          build-architecture: ${{ matrix.arch }}
           build-archive-path: ${{ inputs.build-archive-path }}
           build-cache-paths: ${{ inputs.build-cache-paths }}
           build-cache-key: ${{ inputs.build-cache-key }}

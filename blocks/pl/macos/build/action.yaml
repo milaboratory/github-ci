@@ -173,6 +173,7 @@ runs:
       env:
         BUILD_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_path }}
         BUILD_COMMAND: ${{ inputs.build-command }}
+        GOARCH: ${{ inputs.build-architecture }}
       with:
         dump-stdout: false
         run: |
