@@ -774,8 +774,6 @@ jobs:
           PL_ARCHIVE: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl-archive }}
         with:
           run: |
-            set -x
-            
             mkdir -pv ./"${PL_DIST_PATH}"
             mkdir -pv ./"${EXT_PROGRAMS_PATH}"
             TMP_DIR=$(mktemp -d)
@@ -803,7 +801,7 @@ jobs:
             fi
 
             if [ "${RUNNER_OS}" == "Linux" ]; then
-              for file in "${PL_SEARCH_FILES_LIST}"; do
+              for file in ${PL_SEARCH_FILES_LIST}; do
                   FILE_PATH=$(find "${TMP_DIR}" -type f -name "$file" -print -quit)
                   if [ -n "${FILE_PATH}" ]; then
                     if [ "$file" == "all_in_one" ]; then
