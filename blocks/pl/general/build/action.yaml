@@ -209,7 +209,19 @@ runs:
               ${{ inputs.build-command }}
             fi
 
-    - name: Bundle dylibs on macOS
+    - name: Run patchelf for Linux
+      if: startsWith(runner.os, 'Linux')
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BUILD_ARCHIVE_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_archive_path }}
+      with:
+        dump-stdout: false
+        run : |
+          cd "${BUILD_ARCHIVE_PATH}"
+          patchelf \
+            --set-rpath "\$ORIGIN/libs" all_in_one
+
+    - name: Run dylibbundler for macOS
       if: startsWith(runner.os, 'macOS')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
