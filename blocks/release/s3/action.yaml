@@ -13,6 +13,17 @@ inputs:
       from GitHub, all its contents will be uploaded to S3.
     required: false
     default: ''
+  artifact-override-os-arch:
+    description: |
+      For cross-compiled binaries, override the target
+      architecture for the resulting archive name.
+
+      For example, if we want to build an arm64 go binary
+      by cross-compiling it on the amd64 machine, we need to override
+      the resulted name of the archive, e.g., app-am64.zip to app-arm64.zip
+      Because by default, we are using an architecture discovered from the os.
+    required: false
+    default: ''
   add-version:
     description: |
       Add verison number to all uploaded files.
@@ -180,20 +191,23 @@ runs:
       id: os_arch
       if: inputs.add-os-arch == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
       with:
         run: |
-          get_os_arch=$(uname -m)
-          case "${get_os_arch}" in
-            x86_64)
-              echo "amd64"
-              ;;
-            aarch64 | arm64)
-              echo "arm64"
-              ;;
-            *)
-              echo "Arch is not in the list: ${get_os_arch}"
-              exit 1
-              ;;
+          if [ ! -z "${OVERRIDE_ARCH}" ];then
+            _target_arch="${OVERRIDE_ARCH}"
+          else
+            _target_arch="$(uname -m)"
+          fi
+
+          case "${_target_arch}" in
+          "arm64"|"aarch64") echo "arm64" ;;
+          "amd64"|"x86_64"|"x86") echo "amd64" ;;
+          *)
+          echo "unknown arch: $_target_arch"
+          exit 1
+          ;;
           esac
 
     - name: Add ARCH

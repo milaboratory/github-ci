@@ -19,6 +19,18 @@ inputs:
     required: false
     default: ''
 
+  artifact-override-os-arch:
+    description: |
+      For cross-compiled binaries, override the target
+      architecture for the resulting archive name.
+
+      For example, if we want to build an arm64 go binary
+      by cross-compiling it on the amd64 machine, we need to override
+      the resulted name of the archive, e.g., app-am64.zip to app-arm64.zip
+      Because by default, we are using an architecture discovered from the os.
+    required: false
+    default: ''
+
   add-branch-name:
     description: |
       Add branch name to all uploaded files.
@@ -33,13 +45,13 @@ inputs:
 
   add-os-arch:
     description: |
-      Add agent's operating system architecture to uploaded files 
+      Add agent's operating system architecture to uploaded files
       If a file in the artifact has an extension e.g 'app.zip' and the current ARCH is,
       for instance, 'amd64', the resulting file name would be: 'app-amd64.zip.'
-      
+
       Files without extension ('myfile') will have
-      os architecture appended ('myfile-amd64'). 
-      
+      os architecture appended ('myfile-amd64').
+
       If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
       to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
 
@@ -185,20 +197,23 @@ runs:
       id: os_arch
       if: inputs.add-os-arch == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
       with:
         run: |
-          get_os_arch=$(uname -m)
-          case "${get_os_arch}" in          
-            x86_64)
-              echo "amd64"
-              ;;          
-            aarch64 | arm64)
-              echo "arm64"
-              ;;         
-            *)
-              echo "Arch is not in the list: ${get_os_arch}"
-              exit 1
-              ;;
+          if [ ! -z "${OVERRIDE_ARCH}" ];then
+            _target_arch="${OVERRIDE_ARCH}"
+          else
+            _target_arch="$(uname -m)"
+          fi
+
+          case "${_target_arch}" in
+          "arm64"|"aarch64") echo "arm64" ;;
+          "amd64"|"x86_64"|"x86") echo "amd64" ;;
+          *)
+          echo "unknown arch: $_target_arch"
+          exit 1
+          ;;
           esac
 
     - name: Add ARCH
@@ -225,7 +240,7 @@ runs:
         run: |
           S3_PATH="${S3_PATH%/}" # trim trailing '/'
           S3_PATH="${S3_PATH#/}" # trim leading '/'
-          
+
           cd "${ARTIFACT_PATH}"
           find . -mindepth 1 -type f,l,p |
             while read -r file_path; do
@@ -249,7 +264,7 @@ runs:
         # all S3 paths not handled by 'alternative-urls'.
         rules: |
           ${{ inputs.alternative-urls }}
-          
+
           ^/ -> https://${{ inputs.s3-bucket }}.s3.${{ inputs.s3-region }}.amazonaws.com/
 
     - id: download-json

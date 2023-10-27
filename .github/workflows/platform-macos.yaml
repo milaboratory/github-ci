@@ -149,19 +149,12 @@ on:
         type: string
         required: false
         default: '{}'
-      build-fat-binary:
-        description: |
-          Build multi-architecture macos binary that includes
-          both arm64 and amd64.
-        type: string
-        required: false
-        default: 'false'
-      build-architecture-list:
+      build-architecture:
         description: |
           List of the macOS architectures for building the platform.
         type: string
         required: false
-        default: '[]'
+        default: 'amd64'
       #
       # Distribution control
       #
@@ -357,7 +350,6 @@ jobs:
       is-release: ${{ steps.context.outputs.is-release }}
 
   build:
-    if: inputs.build-fat-binary == 'false'
     name: :build-on-macos
     runs-on: macos-latest
     needs:
@@ -388,6 +380,7 @@ jobs:
           cache-version: ${{ inputs.cache-version }}
 
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          build-architecture: ${{ inputs.build-architecture }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
           build-archive-path: ${{ inputs.build-archive-path }}
@@ -395,54 +388,6 @@ jobs:
           build-archive-additional-source-files: ${{ inputs.build-archive-additional-source-files }}
           build-archive-include-patterns: ${{ inputs.build-archive-include-patterns }}
           build-archive-exclude-patterns: ${{ inputs.build-archive-exclude-patterns }}
-          build-cache-paths: ${{ inputs.build-cache-paths }}
-          build-cache-key: ${{ inputs.build-cache-key }}
-          ext-programs-path: ${{ inputs.ext-programs-path }}
-          ext-programs-script-name: ${{ inputs.ext-programs-script-name }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-artifact-name: ${{ inputs.app-name-slug }}
-          github-artifact-retention: ${{ inputs.dist-artifact-retention }}
-
-  build-fat-binary:
-    if: inputs.build-fat-binary == 'true'
-    name: :build-on-macos
-    runs-on: macos-latest
-    needs:
-      - init
-    permissions:
-      id-token: write
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ${{ fromJSON(inputs.build-architecture-list) }}
-    steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
-        with:
-          inputs: ${{ inputs.env }}
-          secrets: ${{ secrets.env }}
-
-      - uses: actions/checkout@v4
-        with:
-          submodules: ${{ inputs.checkout-submodules }}
-
-      - name: Set Go build environment variables
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            ghwa_set_env GO_TARGET_ARCH "${{ matrix.arch }}"
-
-      - uses: milaboratory/github-ci/blocks/pl/macos/build@v4-beta
-        env: ${{ fromJSON(inputs.build-env) }}
-        with:
-          golang-version: ${{ inputs.golang-version }}
-          cache-version: ${{ inputs.cache-version }}
-
-          bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
-          build-command: ${{ inputs.build-command }}
-          build-path: ${{ inputs.build-path }}
-          build-architecture: ${{ matrix.arch }}
-          build-archive-path: ${{ inputs.build-archive-path }}
           build-cache-paths: ${{ inputs.build-cache-paths }}
           build-cache-key: ${{ inputs.build-cache-key }}
           ext-programs-path: ${{ inputs.ext-programs-path }}
@@ -464,7 +409,8 @@ jobs:
       - id: s3
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
-          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-name: ${{ inputs.app-name-slug }}-${{ inputs.build-architecture }}
+          artifact-override-os-arch: ${{ inputs.build-architecture }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
           add-os-arch: ${{ inputs.dist-archive-s3-add-os-arch }}
@@ -499,7 +445,8 @@ jobs:
       - id: s3
         uses: milaboratory/github-ci/blocks/update-s3-latest@v4-beta
         with:
-          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-name: ${{ inputs.app-name-slug }}-${{ inputs.build-architecture }}
+          artifact-override-os-arch: ${{ inputs.build-architecture }}
           branch-name: ${{ github.ref_name }}
           add-branch-name: ${{ inputs.dist-archive-latest-s3-add-branch-name }}
           add-sha: ${{ inputs.dist-archive-latest-s3-add-sha }}
@@ -543,6 +490,7 @@ jobs:
           input: |
             build
             macos
+            ${{ inputs.build-architecture }}
 
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:

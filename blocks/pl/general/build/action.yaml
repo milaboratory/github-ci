@@ -86,6 +86,11 @@ inputs:
       Must be used in conjunction with <build-cache-paths>
     required: false
     default: ''
+  build-architecture:
+    description: |
+      Platform target architecture for compiling the pl binary.
+    default: 'amd64'
+    required: false
 
   #
   # Github authentication control
@@ -185,6 +190,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         CI_SCRIPT: ${{ inputs.bootstrap-ci-script-name }}
+        GO_TARGET_ARCH: ${{ inputs.build-architecture }}
       with:
         run: |
           if [ -x "${CI_SCRIPT}" ];then
@@ -199,6 +205,7 @@ runs:
       env:
         BUILD_PATH: ${{ fromJSON(steps.get_runner_metadata.outputs.data).pl_build_path }}
         BUILD_COMMAND: ${{ inputs.build-command }}
+        GOARCH: ${{ inputs.build-architecture }}
       with:
         dump-stdout: false
         run: |
@@ -286,7 +293,7 @@ runs:
     - name: Save build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.github-artifact-name }}
+        name: ${{ inputs.github-artifact-name }}-${{ inputs.build-architecture }}
         path: |
           ${{ inputs.build-archive-name }}
           !**/*.go
