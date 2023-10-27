@@ -162,6 +162,12 @@ on:
         type: string
         required: false
         default: ''
+      build-architecture:
+        description: |
+          List of the macOS architectures for building the platform.
+        type: string
+        required: false
+        default: 'amd64'
       #
       # Test control
       #
@@ -440,6 +446,7 @@ jobs:
           cache-version: ${{ inputs.cache-version }}
 
           bootstrap-ci-script-name: ${{ inputs.bootstrap-ci-script-name }}
+          build-architecture: ${{ inputs.build-architecture }}
           build-command: ${{ inputs.build-command }}
           build-path: ${{ inputs.build-path }}
           build-archive-path: ${{ inputs.build-archive-path }}
@@ -468,7 +475,7 @@ jobs:
       - id: s3
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
-          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-name: ${{ inputs.app-name-slug }}-${{ inputs.build-architecture }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
           add-os-arch: ${{ inputs.dist-archive-s3-add-os-arch }}
@@ -503,7 +510,7 @@ jobs:
       - id: s3
         uses: milaboratory/github-ci/blocks/update-s3-latest@v4-beta
         with:
-          artifact-name: ${{ inputs.app-name-slug }}
+          artifact-name: ${{ inputs.app-name-slug }}-${{ inputs.build-architecture }}
           branch-name: ${{ github.ref_name }}
           add-branch-name: ${{ inputs.dist-archive-latest-s3-add-branch-name }}
           add-sha: ${{ inputs.dist-archive-latest-s3-add-sha }}
