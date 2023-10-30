@@ -120,6 +120,12 @@ on:
         type: string
         required: false
         default: 'true'
+      build-architecture:
+        description: |
+          List of the macOS architectures for building the platform.
+        type: string
+        required: false
+        default: 'amd64'
 
       #
       # Test control
@@ -668,23 +674,26 @@ jobs:
         id: get_runner_metadata
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
+          GO_TARGET_ARCH: ${{ inputs.build-architecture }}
           EXT_PROGRAMS_SCRIPT_NAME_NIX: ${{ inputs.external-programs-script-name-nix }}
           EXT_PROGRAMS_SCRIPT_NAME_WIN: ${{ inputs.external-programs-script-name-win }}
           S3_BUKCET: ${{ inputs.pl-s3-bucket }}
         with:
           run: |
-            GET_OS_ARCH=$(uname -m)
-            case "${GET_OS_ARCH}" in
-              x86_64)
-                RUNNER_OS_ARCH="amd64"
-                ;;
-              aarch64 | arm64)
-                RUNNER_OS_ARCH="arm64"
-                ;;
-              *)
-                echo "Arch is not in the list: ${GET_OS_ARCH}"
-                exit 1
-                ;;
+
+            if [ ! -z "${GO_TARGET_ARCH}" ];then
+              _target_arch="${GO_TARGET_ARCH}"
+            else
+            _target_arch="$(uname -m)"
+            fi
+
+            case "${_target_arch}" in
+            "arm64"|"aarch64") RUNNER_OS_ARCH="arm64" ;;
+            "amd64"|"x86_64"|"x86") RUNNER_OS_ARCH="amd64" ;;
+            *)
+            echo "unknown arch: $_target_arch"
+            exit 1
+            ;;
             esac
 
             RUNNER_OS_SANITEZED=$(echo ${RUNNER_OS} | awk '{print tolower($0)}')
@@ -768,6 +777,7 @@ jobs:
         if: startsWith(runner.os, 'macOS') || startsWith(runner.os, 'Linux')
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
+          GO_TARGET_ARCH: ${{ inputs.build-architecture }}
           PL_SEARCH_FILES_LIST: ${{ inputs.pl-search-files-list }}
           PL_DIST_PATH: ${{ inputs.pl-dist-path }}
           EXT_PROGRAMS_PATH: ${{ inputs.external-programs-path }}
@@ -874,6 +884,8 @@ jobs:
             esac
 
       - uses: milaboratory/github-ci/blocks/node/build/electron@v4-beta
+        env:
+          GO_TARGET_ARCH: ${{ inputs.build-architecture }}
         with:
           build-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
