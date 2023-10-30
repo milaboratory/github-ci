@@ -940,6 +940,7 @@ jobs:
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
           artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
+          artifact-override-os-arch: ${{ inputs.build-architecture }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
@@ -1278,7 +1279,7 @@ jobs:
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
           artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
-
+          artifact-override-os-arch: ${{ inputs.build-architecture }}
           add-version: ${{ inputs.release-s3-add-version }}
           add-sha: ${{ inputs.release-s3-add-sha }}
 
