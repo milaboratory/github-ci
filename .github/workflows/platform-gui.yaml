@@ -856,6 +856,7 @@ jobs:
         env:
           APP_NAME: ${{ inputs.app-name }}
           APP_NAME_SLUG: ${{ inputs.app-name-slug }}
+          APP_ARCH: ${{ inputs.build-architecture }}
         with:
           dump-stdout: false
           run: |
@@ -863,17 +864,17 @@ jobs:
               Linux)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-linux"
                 ghwa_set_output "path" "dist/*.AppImage"
-                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
+                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS} ${APP_ARCH}"
                 ;;
               macOS)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-macos"
                 ghwa_set_output "path" "dist/*.dmg"
-                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
+                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS} ${APP_ARCH}"
                 ;;
               Windows)
                 ghwa_set_output "app_name_slug" "${APP_NAME_SLUG}-windows"
                 ghwa_set_output "path" "dist/*.exe"
-                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS}"
+                ghwa_set_output "app_name" "${APP_NAME} ${RUNNER_OS} ${APP_ARCH}"
                 ;;
               *)
                 echo "Agent OS couldn't be determined: ${RUNNER_OS}"
@@ -1028,6 +1029,7 @@ jobs:
           input: |
             test
             unit
+            ${{ inputs.build-architecture }}
 
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
@@ -1111,6 +1113,8 @@ jobs:
           input: |
             test
             static
+            ${{ inputs.build-architecture }}
+
 
       - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
         with:
@@ -1144,6 +1148,7 @@ jobs:
         with:
           input: |
             build
+            ${{ inputs.build-architecture }}
 
       - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
         with:
@@ -1314,6 +1319,7 @@ jobs:
         with:
           input: |
             release
+            ${{ inputs.build-architecture }}
 
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         with:
