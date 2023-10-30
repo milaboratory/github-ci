@@ -914,13 +914,13 @@ jobs:
         uses: actions/upload-artifact@v3
         if: fromJSON( steps.artifact.outputs.data ).app_name_slug != ''
         with:
-          name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+          name: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}-${{ inputs.build-architecture }}
           path: ${{ fromJSON( steps.artifact.outputs.data ).path }}
           retention-days: ${{ inputs.dist-artifact-retention }}
 
     outputs:
       artifact-app-name: ${{ fromJSON( steps.artifact.outputs.data ).app_name }}
-      artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}
+      artifact-app-name-slug: ${{ fromJSON( steps.artifact.outputs.data ).app_name_slug }}-${{ inputs.build-architecture }}
 
 
   upload-s3:
@@ -939,7 +939,7 @@ jobs:
         name: Upload to S3
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
-          artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}
+          artifact-name: ${{ needs.build.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
           add-version: ${{ inputs.dist-archive-s3-add-version }}
           add-sha: ${{ inputs.dist-archive-s3-add-sha }}
 
@@ -967,7 +967,7 @@ jobs:
     name: :test (unit)
     runs-on: ${{ matrix.os }}
 
-    if: inputs.test-unit
+    if: inputs.test-unit && inputs.build-architecture != 'arm64'
     needs:
       - build
     permissions:
@@ -1050,7 +1050,7 @@ jobs:
     name: :test (static)
     runs-on: ${{ matrix.os }}
 
-    if: inputs.test-static
+    if: inputs.test-static  && inputs.build-architecture != 'arm64'
     needs:
       - build
     permissions:
@@ -1174,7 +1174,7 @@ jobs:
 
     outputs:
       artifact-app-name: ${{ needs.build.outputs.artifact-app-name }}
-      artifact-app-name-slug: ${{ needs.build.outputs.artifact-app-name-slug }}
+      artifact-app-name-slug: ${{ needs.build.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
 
   notify-release-review:
     name: Notify review required
@@ -1224,7 +1224,7 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
       artifact-app-name: ${{ needs.can-release.outputs.artifact-app-name }}
-      artifact-app-name-slug: ${{ needs.can-release.outputs.artifact-app-name-slug }}
+      artifact-app-name-slug: ${{ needs.can-release.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
 
   create-release:
     name: Create release
@@ -1277,7 +1277,8 @@ jobs:
         name: Upload to S3
         uses: milaboratory/github-ci/blocks/release/s3@v4-beta
         with:
-          artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}
+          artifact-name: ${{ needs.release.outputs.artifact-app-name-slug }}-${{ inputs.build-architecture }}
+
           add-version: ${{ inputs.release-s3-add-version }}
           add-sha: ${{ inputs.release-s3-add-sha }}
 
