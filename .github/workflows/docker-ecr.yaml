@@ -324,7 +324,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            sudo apt-get install -y jq
+            sudo apt-get update && sudo apt-get install -y jq
 
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
@@ -391,7 +391,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            sudo apt-get install -y jq
+            sudo apt-get update && sudo apt-get install -y jq
 
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
