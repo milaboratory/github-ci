@@ -679,6 +679,12 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && sudo apt-get install -y jq
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
