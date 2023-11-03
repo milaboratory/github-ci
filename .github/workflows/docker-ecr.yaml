@@ -319,6 +319,13 @@ jobs:
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-platforms) }}
     runs-on: ${{ matrix.agent }}
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: matrix.agent == 'linux-arm64'
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get install -y jq
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -379,6 +386,13 @@ jobs:
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-build) }}
     runs-on: ${{ matrix.agent }}
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: matrix.agent == 'linux-arm64'
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get install -y jq
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
