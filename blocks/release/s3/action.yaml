@@ -137,7 +137,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -146,7 +146,7 @@ runs:
         aws-region: ${{ inputs.s3-region }}
 
     - id: artifact-path
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: echo './release-artifact'
 
@@ -158,7 +158,7 @@ runs:
 
     - name: Add version
       if: inputs.add-version == 'true'
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
@@ -166,7 +166,7 @@ runs:
     - name: Get SHA suffix
       id: sha
       if: inputs.add-sha != 'false' && inputs.add-sha != ''
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         ADD_SHA: ${{ inputs.add-sha }}
       with:
@@ -182,7 +182,7 @@ runs:
 
     - name: Add SHA
       if: steps.sha.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'
@@ -190,7 +190,7 @@ runs:
     - name: Get ARCH
       id: os_arch
       if: inputs.add-os-arch == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
       with:
@@ -212,13 +212,13 @@ runs:
 
     - name: Add ARCH
       if: steps.os_arch.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.os_arch.outputs.stdout }}'
 
     - name: Upload files
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           aws s3 cp --recursive \
@@ -226,7 +226,7 @@ runs:
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
     - id: uploaded-list
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
         S3_PATH: ${{ inputs.s3-path }}
@@ -242,12 +242,12 @@ runs:
             done
 
     - id: uploaded-json
-      uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+      uses: milaboratory/github-ci/actions/strings/json-list@v4
       with:
         input: ${{ steps.uploaded-list.outputs.stdout }}
 
     - id: download-list
-      uses: milaboratory/github-ci/actions/strings/replace@v4-beta
+      uses: milaboratory/github-ci/actions/strings/replace@v4
       with:
         input: ${{ steps.uploaded-list.outputs.stdout }}
 
@@ -262,6 +262,6 @@ runs:
           ^/ -> https://${{ inputs.s3-bucket }}.s3.${{ inputs.s3-region }}.amazonaws.com/
 
     - id: download-json
-      uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+      uses: milaboratory/github-ci/actions/strings/json-list@v4
       with:
         input: ${{ steps.download-list.outputs.result }}
