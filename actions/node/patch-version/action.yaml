@@ -1,0 +1,34 @@
+name: Patch Node package version
+author: 'MiLaboratories'
+description: |
+  Set version number in 'package.json' file to given value.
+  Useful for automatic builds.
+
+  When version number is empty, action leaves 'package.json' file intact.
+  Action does not commit the changes to the repository.
+
+inputs:
+  version:
+    description: 'Force application version to given value before building'
+    required: false
+    default: ''
+
+  package_json:
+    description: |
+      Path to 'package.json' file that should be used for version patching.
+      By default, 'package.json' at repository root is used as target.
+
+    required: false
+    default: './package.json'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: patch package version
+      if: inputs.version != ''
+      shell: bash
+      run: |
+        tmp_package_json="$(mktemp)"
+        jq '.version = "${{ inputs.version }}"' '${{ inputs.package_json }}' > "${tmp_package_json}"
+        mv "${tmp_package_json}" '${{ inputs.package_json }}'

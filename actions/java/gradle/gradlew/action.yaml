@@ -1,0 +1,43 @@
+name: Run 'gradlew'
+author: 'MiLaboratories'
+description: |
+  Run 'gradlew' script located in gradle project proot
+
+inputs:
+  arguments:
+    description: |
+      Newline-separated list of arguments to run.
+    required: true
+
+  properties:
+    description: |
+      Properties to set for each task run
+    required: false
+    default: ''
+
+  working-directory:
+    description: |
+      Path to directory with ./gradlew file
+    required: false
+    default: ./
+
+  cache-key:
+    description: |
+      Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Run 'gradlew ${{ inputs.target }}'
+      uses: milaboratory/github-ci/actions/java/gradle/cache@v3
+      with:
+        job-id: ${{ inputs.cache-key }}
+        build-root-directory: ${{ inputs.working-directory }}
+        properties: |-
+          mi-ci=true
+          mi-release=false
+          ${{ inputs.properties }}
+        arguments: ${{ inputs.arguments }}

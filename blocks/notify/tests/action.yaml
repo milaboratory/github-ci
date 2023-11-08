@@ -1,0 +1,95 @@
+name: Send notifications about build result
+author: 'MiLaboratories'
+description: |
+  Send notifications about build result.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      ID of Telegram Channel or User to notify on build results.
+    required: true
+
+  telegram-token:
+    description: |
+      Telegram Bot API authorization token
+    required: true
+
+  notification-mode:
+    description: |
+      'true'         - notify both successes and failures
+      'failure-only' - notify only about failed tests
+      'success-only' - notify only about successful tests
+    required: false
+    default: 'true'
+
+  tests-status:
+    description: |
+      Tests job status.
+
+      To get it, put it into job's outputs (status: {{ job.status }}),
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
+    required: true
+  tests-type:
+    description: |
+      Tests type: integration, unit, functional, acceptance, etc.
+    required: false
+    default: 'Unit'
+
+  report-url:
+    description: |
+      Tests report URL
+    required: false
+    default: ''
+
+  product-name:
+    description: |
+      App name in human-readable form,
+      ss it is supposed to be shown in messages and notifications.
+    required: false
+    default: ${{ github.repository }}
+
+  additional-info:
+    description: |
+      Any additional text to append to notification.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v3
+
+    - id: tests-status
+      name: Merge test statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v3
+      with:
+        statuses: ${{ inputs.tests-status }}
+
+    - name: Report tests result to Telegram
+      if:  inputs.telegram-target != ''
+        && !( steps.tests-status.outputs.status != 'failure'
+           && inputs.notification-mode == 'failure-only' )
+        && !( steps.tests-status.outputs.status != 'success'
+           && inputs.notification-mode == 'success-only' )
+
+      uses: milaboratory/github-ci/actions/notify/telegram/tests@v3
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.context.outputs.current-version }}
+        tests-status: ${{ steps.tests-status.outputs.status }}
+        tests-type: ${{ inputs.tests-type }}
+        report-url: ${{ inputs.report-url }}
+
+        additional-info: ${{ inputs.additional-info }}

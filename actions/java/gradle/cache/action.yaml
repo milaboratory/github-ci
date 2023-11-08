@@ -1,0 +1,156 @@
+name: 'Gradle Cache'
+
+description: |
+  Wrapper for Vladimir Sitnikov's gradle cache action with commit hardening
+  See original action at burrunan/gradle-cache-action
+author: 'Denis Korenevskiy'
+
+outputs:
+  build-scan-url:
+    description: Link to the build scan if any
+    value: ${{ steps.cache.outputs.build-scan-url }}
+
+inputs:
+  job-id:
+    description: |
+      A job identifier to avoid cache pollution from different jobs.
+      When empty, defaults to '<java distribution>-<java major version>'.
+        Example: 'Temurin-11'.
+    required: false
+  build-root-directory:
+    description: Relative path under $GITHUB_WORKSPACE where Git repository is placed
+    required: false
+  gradle-version:
+    description: (wrapper | or explicit version) Caches often depend on the Gradle version, so this parameter sets the ID to use for cache keys. It does not affect the Gradle version used for build
+    required: false
+    default: wrapper
+  read-only:
+    description: Configures caches for read-only opreration (e.g. to save GitHub Actions storage limit)
+    required: false
+    default: 'false'
+  save-generated-gradle-jars:
+    description: Enables caching of $HOME/.gradle/caches/*.*/generated-gradle-jars
+    required: false
+    default: 'true'
+  save-local-build-cache:
+    description: Enables caching of $HOME/.gradle/caches/build-cache-1
+    required: false
+    default: 'true'
+  multi-cache-enabled:
+    description: Adds com.github.burrunan.multi-cache plugin to settings.gradle so GitHub Actions cache can be used in parallel with Gradle remote build cache
+    required: false
+    default: 'true'
+  multi-cache-version:
+    description: Configures com.github.burrunan.multi-cache version to use
+    required: false
+    default: '1.0'
+  multi-cache-repository:
+    description: Configures repository where com.github.burrunan.multi-cache can be located
+    required: false
+    default: ''
+  multi-cache-group-id-filter:
+    description: Configures group id for selecting only com.github.burrunan.multi-cache artifacts (it enables Gradle to use custom repository for multi-cache only)
+    required: false
+    default: 'com[.]github[.]burrunan[.]multi-?cache'
+  save-gradle-dependencies-cache:
+    description: Enables caching of ~/.gradle/caches/modules-*
+    required: false
+    default: 'true'
+  execution-only-caches:
+    description: |
+      Activates only the caches that are relevant for executing gradle command.
+      This is helpful when build job executes multiple gradle commands sequentially.
+      Then the caching is implemented in the very first one, and the subsequent should be marked
+      with execution-only-caches: true
+    required: false
+    default: 'false'
+  remote-build-cache-proxy-enabled:
+    description: Activates a remote cache that proxies requests to GitHub Actions cache
+    required: false
+    default: 'true'
+  gradle-dependencies-cache-key:
+    description: Extra files to take into account for ~/.gradle/caches dependencies
+    required: false
+  save-maven-dependencies-cache:
+    description: Enables caching of ~/.m2/repository/
+    required: false
+    default: 'true'
+  maven-local-ignore-paths:
+    description: Specifies ignored paths in the Maven Local repository (e.g. the artifacts of the current project)
+    required: false
+    default: ''
+  debug:
+    description: Shows extra logging to debug the action
+    required: false
+    default: 'true'
+  concurrent:
+    description: Enables concurent cache download and upload (disabled by default for better log output)
+    required: false
+    default: 'false'
+  arguments:
+    description: Gradle arguments to pass (optionally multiline)
+    required: false
+  properties:
+    description: Extra Gradle properties (multiline) which would be passed as -Pname=value arguments
+    required: false
+  gradle-build-scan-report:
+    description: Publishes Gradle Build Scan URL to job report.
+    required: false
+    default: 'true'
+  gradle-distribution-sha-256-sum-warning:
+    description: Enables warning when distributionSha256Sum property is missing in gradle-wrapper.properties
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - id: job-id
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        CACHE_KEY: ${{ inputs.job-id }}
+      with:
+        run: |
+          if [ -n "${CACHE_KEY}" ]; then
+            echo "${CACHE_KEY}"
+            exit 0
+          fi
+
+          # Use java binary from PATH by default
+          JAVA_EXE="java"
+
+          # When available, use java bin from JAVA_HOME
+          if [ -x "${JAVA_HOME}/bin/java" ]; then
+            JAVA_EXE="${JAVA_HOME}/bin/java"
+          fi
+
+          # Try to detect cache key automatically using java version
+          "${JAVA_EXE}" --version |
+            awk '/Environment/{print $4}' |
+            awk -F '[-.]' '{printf "%s-%s", $1, $2}'
+
+    - uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf
+      id: cache
+      with:
+        job-id: ${{ steps.job-id.outputs.stdout }}
+        build-root-directory: ${{ inputs.build-root-directory }}
+        gradle-version: ${{ inputs.gradle-version }}
+        read-only: ${{ inputs.read-only }}
+        save-generated-gradle-jars: ${{ inputs.save-generated-gradle-jars }}
+        save-local-build-cache: ${{ inputs.save-local-build-cache }}
+        multi-cache-enabled: ${{ inputs.multi-cache-enabled }}
+        multi-cache-version: ${{ inputs.multi-cache-version }}
+        multi-cache-repository: ${{ inputs.multi-cache-repository }}
+        multi-cache-group-id-filter: ${{ inputs.multi-cache-group-id-filter }}
+        save-gradle-dependencies-cache: ${{ inputs.save-gradle-dependencies-cache }}
+        execution-only-caches: ${{ inputs.execution-only-caches }}
+        remote-build-cache-proxy-enabled: ${{ inputs.remote-build-cache-proxy-enabled }}
+        gradle-dependencies-cache-key: ${{ inputs.gradle-dependencies-cache-key }}
+        save-maven-dependencies-cache: ${{ inputs.save-maven-dependencies-cache }}
+        maven-local-ignore-paths: ${{ inputs.maven-local-ignore-paths }}
+        debug: ${{ inputs.debug }}
+        concurrent: ${{ inputs.concurrent }}
+        arguments: ${{ inputs.arguments }}
+        properties: ${{ inputs.properties }}
+        gradle-build-scan-report: ${{ inputs.gradle-build-scan-report }}
+        gradle-distribution-sha-256-sum-warning: ${{ inputs.gradle-distribution-sha-256-sum-warning }}

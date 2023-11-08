@@ -1,0 +1,67 @@
+name: 'Telegram Message Notify'
+description: |
+  Sending a Telegram message
+  This is a wrapper for third-party action.
+  The action is pre-built from our local fork at milaboratory/telegram-action
+author: 'Bo-Yi Wu'
+
+inputs:
+  to:
+    description: 'telegram user'
+    required: false
+  token:
+    description: 'telegram token'
+    required: false
+  message:
+    description: 'telegram message'
+    required: false
+  message_file:
+    description: 'overwrite the default message template with the contents of the specified file'
+    required: false
+  socks5:
+    description: 'support socks5 proxy URL'
+    required: false
+  photo:
+    description: 'send the photo message.'
+    required: false
+  document:
+    description: 'send the document message.'
+    required: false
+  sticker:
+    description: 'send the sticker message.'
+    required: false
+  audio:
+    description: 'send the audio message.'
+    required: false
+  voice:
+    description: 'send the voice message.'
+    required: false
+  location:
+    description: 'send the location message.'
+    required: false
+  venue:
+    description: 'send the venue message.'
+    required: false
+  video:
+    description: 'send the video message.'
+    required: false
+  debug:
+    description: 'enable debug mode.'
+    required: false
+  format:
+    description: 'message format: markdown or html'
+    required: false
+  disable_web_page_preview:
+    description: 'disables link previews for links in this message'
+    required: false
+  disable_notification:
+    description: 'disables notifications for this message, supports sending a message without notification,'
+    required: false
+
+runs:
+  using: "docker"
+  image: docker://ghcr.io/milaboratory/telegram-action/telegram:c88270c3afefe1eeaff50dcc3dc67a59ecd07181
+
+branding:
+  icon: 'message-square'
+  color: 'blue'

@@ -1,0 +1,135 @@
+name: Treat several CI job statuses as single
+author: 'MiLaboratories'
+description: |
+  Merge several CI job statuses into single 'overall' status.
+
+  Statuses severeness:
+    <any unknown status>: -1
+    skipped: 0
+    cancelled: 1
+    success: 2
+    failure: 3
+
+  The merge logic is simple: get maximum of severeness among input statues.
+
+  Unknown statuses are ignored if any of known statuses present in list.
+  If input statuses list keeps only unknown statuses, the merge result is empty string.
+
+  Examples:
+    input: [ "cancelled", "skipped", "cancelled" ]
+    result: max([1, 0, 1] = 1 -> 'canceled'
+
+    input: [ "canceled", "success" ]
+    result: max([1, 2]) = 2 -> 'success'
+
+    input: [ "success", "failure" ]
+    result: max([2, 3]) = 2 -> 'failure'
+
+    input: [ "unknown1", "unknown2", "", "alala" ]
+    result: max([-1, -1, -1, -1]) = -1 -> ''
+
+inputs:
+  statuses:
+    description: |
+      Newline-separated list of statuses of jobs to merge
+      Empty lines are ignored
+      Unknown statuses are ignored
+    required: true
+
+outputs:
+  status:
+    description: |
+      Status merged by severity (see the action description)
+    value: ${{ fromJSON(steps.merge.outputs.data).status }}
+
+  has-success:
+    description: |
+      Gets 'success' if at least one input status is 'success'
+      Otherwise equals to 'status' output
+    value: ${{ fromJSON(steps.merge.outputs.data).has-success }}
+
+  has-cancelled:
+    description: |
+      Gets 'cancelled' if at least one input status is 'cancelled'
+      Otherwise equals to 'status' output
+    value: ${{ fromJSON(steps.merge.outputs.data).has-cancelled }}
+
+  has-skipped:
+    description: |
+      Gets 'skipped' if at least one input status is 'skipped'
+      Otherwise equals to 'status' output
+    value: ${{ fromJSON(steps.merge.outputs.data).has-skipped }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: merge
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        INPUT_STATUSES: ${{ inputs.statuses }}
+      with:
+        dump-stdout: false
+
+        run: |
+          has_failure=false
+          has_success=false
+          has_cancelled=false
+          has_skipped=false
+
+          while read -r status; do
+            case "$( mish_trim "${status}" )" in
+              "skipped")
+                has_skipped=true
+                ;;
+              "cancelled")
+                has_cancelled=true
+                ;;
+              "success")
+                has_success=true
+                ;;
+              "failure")
+                has_failure=true
+                ;;
+            esac
+          done <<<"${INPUT_STATUSES}"
+
+          #
+          # Calculate result status
+          #
+          result_status=''
+          if "${has_skipped}"; then
+            result_status='skipped'
+          fi
+          if "${has_cancelled}"; then
+            result_status='cancelled'
+          fi
+          if "${has_success}"; then
+            result_status='success'
+          fi
+          if "${has_failure}"; then
+            result_status='failure'
+          fi
+
+          #
+          # Set outputs
+          #
+          ghwa_set_output "status" "${result_status}"
+
+          if "${has_success}"; then
+            ghwa_set_output "has-success" "success"
+          else
+            ghwa_set_output "has-success" "${result_status}"
+          fi
+
+          if "${has_cancelled}"; then
+            ghwa_set_output "has-cancelled" "cancelled"
+          else
+            ghwa_set_output "has-cancelled" "${result_status}"
+          fi
+
+          if "${has_skipped}"; then
+            ghwa_set_output "has-skipped" "skipped"
+          else
+            ghwa_set_output "has-skipped" "${result_status}"
+          fi

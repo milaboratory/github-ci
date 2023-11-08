@@ -1,0 +1,27 @@
+name: "Automerge 'v2' to 'master'"
+
+on:
+  push:
+    branches: [ 'v2' ]
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - shell: bash
+        env:
+          TARGET_BRANCH: 'master'
+        run: |
+          # Merge ${{ env.GITHUB_REF_NAME }} into ${{ env.TARGET_BRANCH }}
+
+          git config user.email "ci@milaboratory.com"
+          git config user.name "Mi CI/CD Robot"
+
+          git checkout "${TARGET_BRANCH}"
+          git merge --no-edit "${GITHUB_REF_NAME}"
+          git push

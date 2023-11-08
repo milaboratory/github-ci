@@ -1,0 +1,93 @@
+name: Update artifact's link on CDN
+author: 'MiLaboratories'
+description: |
+    This action updates the the CDN link that
+    redirect to the latest build results.
+
+    For example, you have a daily build for the development branch
+    and you would like to share it with your auditory,
+    and at the same time, you don't want to upload your results twice,
+    by uploading build results and re-writing the latest archive on the s3 bucket.
+    Thus this action will come in handy just creating
+    a zero-byte object that redirects the user to actual build results.
+
+    Requirements:
+      - initialized context (actions/context/init)
+
+inputs:
+  cdn-redirect-link:
+    description: |
+      External URL where an zero-byte object will redirect request.
+      Amazon S3 stores the value of this header in the object metadata.
+    required: true
+
+  s3-key-id:
+    description: |
+      AWS Key ID for S3 auth
+    required: false
+    default: ''
+  s3-key-secret:
+    description: |
+      AWS Key Secret for S3 auth
+    required: false
+    default: ''
+
+  s3-bucket-path:
+    description: |
+       The path to a zero-byte object on an S3 bucket
+
+       Example:
+        'link/software/mixcr'
+
+    required: true
+  s3-bucket-key:
+    description: |
+       The name of a zero-byte object.
+       In particular it should be a combination
+       of the application name, branch name and extention.
+
+       Example:
+        'mixcr-develop.zip'
+
+    required: true
+
+  s3-region:
+    description: |
+      AWS region with target S3 bucket
+    required: false
+    default: 'eu-central-1'
+  s3-bucket:
+    description: |
+      AWS S3 bucket name
+      This bucket must be configurated as an s3 static website.
+    required: true
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v3
+
+    - name: Configure AWS CLI
+      if: inputs.s3-key-id != ''
+      uses: milaboratory/github-ci/actions/aws/configure@v3
+      with:
+        key-id: ${{ inputs.s3-key-id }}
+        key-secret: ${{ inputs.s3-key-secret }}
+        region: ${{ inputs.s3-region }}
+        append: false
+
+    - name: Update website-redirect-location metadata in the file
+      uses: milaboratory/github-ci/actions/aws@v3
+      with:
+        args: |
+          s3api
+          put-object
+          --bucket
+          ${{ inputs.s3-bucket }}
+          --key
+          ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
+          --website-redirect-location
+          ${{ inputs.cdn-redirect-link }}

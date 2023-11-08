@@ -1,0 +1,230 @@
+name: Build Java project using gradle
+author: 'MiLaboratories'
+description: |
+  Build Java project with gradle.
+
+  This action cares about caching and re-using build results and
+  uploading selected build results into GitHub Actions artifacts storage.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  #
+  # Build control
+  #
+  project:
+    description: |
+      Gradle project name to build _without_ task name:
+        gradle :<project>:<task>
+      For 'root' project just leave input empty
+
+    required: false
+    default: ''
+
+  project-dir:
+    description: |
+      Path to project root directory.
+      Defaults to repository root.
+    required: false
+    default: './'
+
+  tasks:
+    description: |
+      Gradle build tasks.
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: build
+
+  exclude-tasks:
+    description: |
+      Tasks to skip (--exclude-task options).
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: ''
+
+  custom-arguments:
+    description: |
+      Custom arguments for gradle command.
+      Each line is considered as single argument:
+          '-b <file>'
+        on single line will cause error. Put
+          '-b
+           <file>' to get what you want.
+
+    required: false
+    default: ''
+
+  #
+  # Environment control
+  #
+  java-version:
+    description: |
+      Version of JAVA to use for build.
+
+      Empty value makes action to skip environment preparation step.
+    required: false
+    default: ''
+
+  java-distribution:
+    description: |
+      Java distribution to use.
+      Example: 'temurin', 'zulu', ...
+      See 'https://github.com/actions/setup-java#supported-distributions'
+      for complete list of supported distributions.
+    required: false
+    default: 'temurin'
+
+  properties:
+    description: |
+      Contents for '~/.gradle/gradle.properties' to be set before gradle command run.
+
+      Empty value makes actions to keep '~/.gradle/gradle.properties' file intact.
+    required: false
+    default: ''
+
+  gradle-cache-key:
+    description: |
+      Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+  data-cache-key:
+    description: |
+      Key to use for custom build data caching.
+
+      Both <data-cache-key> and <data-cache-paths> are
+      required for feature to work.
+
+      Some builds produce project-specific data as a build result,
+      This data can be re-used in subsequent builds.
+    required: false
+    default: ''
+
+  data-cache-paths:
+    description: |
+      Additional paths to cache between runs.
+
+      Both <data-cache-key> and <data-cache-paths> are
+      required for feature to work.
+
+      Some builds produce project-specific data as a build result,
+      This data can be re-used in subsequent builds.
+    required: false
+    default: ''
+
+  #
+  # Artifact control
+  #
+  artifact-name:
+    description: |
+      Name of build artifact to create when <artifact-paths> input is not empty
+
+    required: false
+    default: 'build-artifacts'
+
+  artifact-paths:
+    description: |
+      List of paths to artifacts to save after build run.
+      Empty list disables artifacts upload.
+
+      Relative paths are relative to gradle 'buildDir' project's property.
+      Absolute paths (starting with '/') are relative to repository root.
+      Patterns ('*', '**', etc.) are supported.
+
+    required: false
+    default: ''
+
+  artifact-retention:
+    description: |
+      Time in days to keep build artifacts before removing them
+    required: false
+    default: '7'
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v3
+
+    - name: Prepare env for Java application build
+      if: inputs.java-version != ''
+      uses: actions/setup-java@v2
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Restore data cache
+      if:  inputs.data-cache-paths != ''
+        && inputs.data-cache-key != ''
+
+      uses: actions/cache@v2
+      with:
+        key: ${{ inputs.data-cache-key }}
+        path: ${{ inputs.data-cache-paths }}
+
+    - name: Set gradle.properties
+      if: inputs.properties != ''
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v3
+      with:
+        properties: ${{ inputs.properties }}
+
+    - name: Generate list of tasks to exclude
+      id: excludes
+      uses: milaboratory/github-ci/actions/strings/prefix@v3
+      with:
+        input: ${{ inputs.exclude-tasks }}
+        prefix: |-
+          --exclude-task
+          ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
+
+    - name: Generate build tasks
+      id: tasks
+      uses: milaboratory/github-ci/actions/strings/prefix@v3
+      with:
+        input: ${{ inputs.tasks }}
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
+
+    - name: Build project
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v3
+      with:
+        working-directory: ${{ inputs.project-dir }}
+        properties: |
+          version=${{ steps.context.outputs.current-version }}
+          mi-release=${{ steps.context.outputs.is-release }}
+
+        arguments: |-
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          ${{ steps.tasks.outputs.result }}
+        cache-key: ${{ inputs.gradle-cache-key }}
+
+    - name: Read actual project properties
+      id: gradle-props
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v3
+      with:
+        project-dir: ${{ inputs.project-dir }}
+        project-name: ${{ inputs.project }}
+
+    - name: Generate artifacts paths
+      id: artifact-paths
+      uses: milaboratory/github-ci/actions/strings/convert-paths@v3
+      with:
+        rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
+        abs-root: .
+        paths: ${{ inputs.artifact-paths }}
+
+    - name: Save build artifacts
+      if: steps.artifact-paths.outputs.result != ''
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.artifact-paths.outputs.result }}
+        retention-days: ${{ inputs.artifact-retention }}

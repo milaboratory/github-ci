@@ -1,0 +1,309 @@
+# This workflow will build and deploy documentation on the aws cloudfront.
+
+name: Build and Deploy Documentation (AWS Cloudfront)
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+      #
+      # Checkout settings
+      #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+        type: boolean
+        required: false
+        default: false
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+      #
+      # Environment settings
+      #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: '{}'
+      #
+      # Build settings
+      #
+      plantuml-version:
+        description: |
+          The version of Plantuml to install.
+          (Generate diagrams from textual description )
+        type: string
+        required: false
+        default: '1.2022.0'
+      python-version:
+        description: |
+          The version of Python to install
+        type: string
+        required: false
+        default: '3.10'
+      #
+      # Archive distribution control
+      #
+      dist-archive-path:
+        description: The name of a distribution folder for generate docs.
+        type: string
+        required: false
+        default: 'site'
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+      #
+      # AWS settings
+      #
+      aws-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: true
+      aws-region:
+        description: |
+          The AWS region
+        type: string
+        required: true
+        default: 'us-east-1'
+      aws-cloudfront-distribution-id:
+        description: |
+          The ID of an AWS Cloudfront distribution
+        type: string
+        required: true
+      aws-cloudfront-s3-bucket-name:
+        description: |
+          The name of an aws s3 bucket to sync static files
+        type: string
+        required: true
+      aws-cloudfront-cache-invalidation:
+        description: |
+          Invalidate the cache on the AWS Cloudfornt for a given distribution
+        type: string
+        required: false
+        default: 'true'
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
+      notify-deployment:
+          description: |
+            Enable notifications about deployment status (deployment ready/failed)
+            Possible values are:
+             - 'true' - send all notifications about deployment status (both success and failed)
+             - 'false' - don't send notifications about deployment results at all.
+          required: false
+          type: string
+          default: 'true'
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+  build:
+    name: :build
+    runs-on: ubuntu-latest
+    needs:
+      - init
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v3
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get install -y graphviz
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            sudo curl -s -L "https://github.com/plantuml/plantuml/releases/download/v${{ inputs.plantuml-version }}/plantuml-${{ inputs.plantuml-version }}.jar" --output /opt/plantuml.jar
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            echo '#!/bin/bash' > /usr/local/bin/plantuml
+            echo 'java $PLANTUML_JAVAOPTS -jar /opt/plantuml.jar ${@}' >> /usr/local/bin/plantuml
+            chmod +x /usr/local/bin/plantuml
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            pip install -r requirements.txt
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        with:
+          dump-stdout: false
+          run: |
+            mkdocs build
+
+      - id: artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.dist-archive-path }}
+          retention-days: ${{ inputs.dist-artifact-retention }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+    if: always() 
+      && inputs.notify-telegram 
+      && inputs.notify-build != 'false' 
+      && needs.build.result != 'cancelled'
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          build-status: |
+            ${{ needs.build.result }}
+          product-name: ${{ inputs.app-name }}
+
+  deployment:
+    name: :deployment
+    runs-on: ubuntu-latest
+    needs:
+      - init
+      - build
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.app-name-slug }}
+          path: ${{ inputs.app-name-slug }}
+
+      - uses: milaboratory/github-ci/actions/aws/cloudfront@v3-beta
+        with:
+          aws-iam-role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+          aws-cloudfront-distribution-id: ${{ inputs.aws-cloudfront-distribution-id }}
+          aws-cloudfront-s3-bucket-name: ${{ inputs.aws-cloudfront-s3-bucket-name }}
+          aws-cloudfront-cache-invalidation: ${{ inputs.aws-cloudfront-cache-invalidation }}
+          dist-assets: ${{ inputs.app-name-slug }}/
+
+  notify-deployment:
+    name: notify deployment
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-deployment != 'false'
+    needs:
+      - deployment
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/deployment@v3-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.deployment.result }}
+          product-name: ${{ inputs.app-name }}

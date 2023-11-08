@@ -1,0 +1,349 @@
+name: Build docker image (github)
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      product-name:
+        description: |
+          Project name in human-readable form for notifications and logs.
+        type: string
+        required: true
+
+      dockerfile:
+        description: |
+          Path to Dockerfile.
+          Defaults to 'Dockerfile' in repository root
+
+          Relative paths are relative to repository root
+        type: string
+        required: false
+        default: Dockerfile
+
+      build-context:
+        description: |
+          Path to docker build context root.
+          Defaults to directory with dockerfile.
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Checkout settings
+      #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+
+        type: boolean
+        required: false
+        default: false
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Push settings
+      #
+      push-dev-targets:
+        description: |
+          Push targets without registry and version.
+          Defaults to '{{ github.repository }}/build'.
+        type: string
+        required: false
+        default: ''
+
+      push-release-targets:
+        description: |
+          Push targets without registry and version.
+          Defaults to '{{ github.repository }}/build'.
+        type: string
+        required: false
+        default: ''
+
+      push-dev-versions:
+        description: |
+          'true' - push images with ':<closest tag>-<commits>-<branch>' version for branch builds
+          'false' - don't push tags with this verisons
+        type: boolean
+        required: false
+        default: false
+
+      push-branch-latest:
+        description: |
+          Update ':latest-<branch>' tag each time <branch> gets new commits
+        type: boolean
+        required: false
+        default: false
+
+      push-release-latest:
+        description: |
+          Update ':latest' tag after building new release
+        type: boolean
+        required: false
+        default: true
+
+      push-release-latest-major:
+        description: |
+          Update ':N' tag with major version number after building new release
+        type: boolean
+        required: false
+        default: true
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+    outputs:
+      pushed-tags:
+        description: |
+          Docker tags pushed by workflow.
+          Plaintext, one tag per line.
+        value: ${{ jobs.build.outputs.docker-tags }}
+      pushed-tags-json:
+        description: |
+          Docker tags pushed by workflow.
+          Valid JSON array.
+        value: ${{ jobs.build.outputs.docker-tags-json }}
+
+    secrets:
+      DOCKER_REGISTRY_USER:
+        description: |
+          Login for Docker Registry
+        required: true
+      DOCKER_REGISTRY_TOKEN:
+        description: |
+          Token or password for Docker Registry
+        required: true
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+    outputs:
+      is-release: ${{ steps.context.outputs.is-release }}
+
+  build:
+    name: Build docker image
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v3
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - name: Build Docker Image
+        uses: milaboratory/github-ci/actions/docker/build@v3
+        with:
+          dockerfile: ${{ inputs.dockerfile }}
+          context: ${{ inputs.build-context }}
+          tags: 'build:local'
+
+      - uses: milaboratory/github-ci/actions/shell@v3
+        id: tags
+        env:
+          PUSH_DEV_TARGETS: ${{ inputs.push-dev-targets }}
+          PUSH_RELEASE_TARGETS: ${{ inputs.push-release-targets }}
+          PUSH_DEV_VERSIONS: ${{ inputs.push-dev-versions }}
+          PUSH_BRANCH_LATEST: ${{ inputs.push-branch-latest }}
+          PUSH_RELEASE_LATEST: ${{ inputs.push-release-latest }}
+          PUSH_RELEASE_LATEST_MAJOR: ${{ inputs.push-release-latest-major }}
+
+          CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+          IS_RELEASE: ${{ steps.context.outputs.is-release }}
+          IS_LATEST_VERSION: ${{ steps.context.outputs.is-latest-version }}
+          IS_LATEST_MAJOR: ${{ steps.context.outputs.is-latest-major }}
+          IS_LATEST_COMMIT: ${{ steps.context.outputs.is-branch-head }}
+
+        with:
+          run: |
+            if [ -z "${PUSH_RELEASE_TARGETS}" ]; then
+              # Default release targets to dev, when not set
+              PUSH_RELEASE_TARGETS="${PUSH_DEV_TARGETS}"
+            fi
+
+            versions=()
+            push_targets=()
+
+            if [ "${IS_RELEASE}" = 'true' ]; then
+              #
+              # This is release.
+              #
+
+              mapfile -t push_targets <<<"${PUSH_RELEASE_TARGETS}"
+
+              versions+=( "${CURRENT_VERSION}" )
+
+              if [ "${IS_LATEST_VERSION}" = 'true' ] &&
+                 [ "${PUSH_RELEASE_LATEST}" = 'true' ]; then
+
+                versions+=( "latest" )
+              fi
+
+              if [ "${IS_LATEST_MAJOR}" = 'true' ] &&
+                 [ "${PUSH_RELEASE_LATEST_MAJOR}" = 'true' ]; then
+                versions+=( "${CURRENT_VERSION%%.*}" ) # get <major> part of version
+              fi
+
+            else
+              #
+              # This is dev build
+              #
+
+              mapfile -t push_targets <<<"${PUSH_DEV_TARGETS}"
+
+              if [ "${PUSH_DEV_VERSIONS}" = 'true' ]; then
+                versions+=( "${CURRENT_VERSION}" )
+              fi
+
+              if [ "${IS_LATEST_COMMIT}" = 'true' ] &&
+                 [ "${PUSH_BRANCH_LATEST}" = 'true' ]; then
+                versions+=( "latest-${GITHUB_REF_NAME}" )
+              fi
+            fi
+
+            # Default empty targets list to '<current repo>/build'
+            if [ "${#push_targets[@]}" -eq 0 ]; then
+              push_targets=( "${GITHUB_REPOSITORY}/build" )
+            fi
+
+            # Combine versions list with targets list and return them
+            for target in "${push_targets[@]}"; do
+              for version in "${versions[@]}"; do
+                echo "${target}:${version}"
+              done
+            done
+
+      - uses: milaboratory/github-ci/actions/docker/push@v3
+        id: push
+        with:
+          source: 'build:local'
+          targets: ${{ steps.tags.outputs.stdout }}
+          auth-user: ${{ secrets.DOCKER_REGISTRY_USER }}
+          auth-token: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+    outputs:
+      status: ${{ job.status }}
+      docker-tags: ${{ steps.push.outputs.pushed }}
+      docker-tags-json: ${{ steps.push.outputs.pushed-json }}
+
+  notify-build:
+    name: Notify build
+    runs-on: ubuntu-latest
+
+    if: always() && inputs.notify-telegram
+
+    needs:
+      - build
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/build@v3
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          build-status: ${{ needs.build.outputs.status }}
+          product-name: ${{ inputs.product-name }}
+          docker-images: ${{ needs.build.outputs.docker-tags-json }}
+
+  release:
+    name: Release image
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+      - build
+
+    if: fromJSON(needs.init.outputs.is-release)
+    environment: release
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v3
+
+      - id: create-release
+        name: Create release
+        uses: milaboratory/github-ci/actions/release/create@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-version-tag }}
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-url: ${{ steps.create-release.outputs.html_url }}
