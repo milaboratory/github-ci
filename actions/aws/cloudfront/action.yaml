@@ -1,0 +1,68 @@
+name: Deploy NodeJS application to the AWS Cloudfront
+author: 'MiLaboratories'
+description: |
+  This action authorizes in the AWS with provided IAM role
+  and deploys NodeJS application to the AWS CloudFront with optional cache invalidation.
+
+inputs:
+  aws-iam-role-to-assume:
+    description: |
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
+    required: true
+
+  aws-region:
+    description: |
+      The AWS region
+    required: true
+    default: 'us-east-1'
+
+  aws-cloudfront-distribution-id:
+    description: |
+      The ID of an AWS Cloudfront distribution
+    required: true
+
+  aws-cloudfront-s3-bucket-name:
+    description: |
+      The name of an aws s3 bucket to sync static files
+    required: true
+
+  aws-cloudfront-cache-invalidation:
+    description: |
+      Invalidate the cache on the AWS Cloudfornt for a given distribution
+    required: false
+    default: 'true'
+
+  dist-assets:
+    description: |
+      Assets to upload to the AWS Cloudfront S3 bucket
+      Must be a directory.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        CF_DIST_ID: ${{ inputs.aws-cloudfront-distribution-id }}
+        CF_S3_BUCKET_NAME: ${{ inputs.aws-cloudfront-s3-bucket-name }}
+        CF_CACHE_INVALD: ${{ inputs.aws-cloudfront-cache-invalidation }}
+        CF_ASSESTS: ${{ inputs.dist-assets }}
+      with:
+        dump-stdout: false
+        run: |
+          aws s3 sync "$CF_ASSESTS" s3://"$CF_S3_BUCKET_NAME" --delete
+          if [ "$CF_CACHE_INVALD" == 'true' ];then
+            aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
+          else
+            echo "AWS Cloudfront cache invalidation is set to: $CF_CACHE_INVALD"
+          fi

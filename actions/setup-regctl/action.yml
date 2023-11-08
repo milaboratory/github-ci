@@ -1,0 +1,15 @@
+name: 'Regctl tool installer'
+description: 'Install a specific version of regctl binary. Acceptable values are latest or any semantic version string like v0.45.0'
+inputs:
+   version:
+      description: 'Version of regctl'
+      required: true
+      default: 'latest'
+outputs:
+   kubectl-path:
+      description: 'Path to the cached regctl binary'
+branding:
+   color: 'blue'
+runs:
+   using: 'node16'
+   main: 'lib/index.js'

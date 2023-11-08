@@ -1,0 +1,171 @@
+name: Render Jinja2 template
+description: |
+  Render Jinja2 template
+author: 'MiLaboratories'
+
+inputs:
+  #
+  # Template body control
+  #
+  template:
+    description: |
+      Template to render in plaintext.
+      This content is saved to <template-file> if not empty.
+      When <template> is empty, existing contents of <template-file> are used
+      for rendering.
+    required: false
+    default: ''
+
+  template-file:
+    description: |
+      Path to file with J2 template.
+      If <template> is not empty and <template-file> is not set,
+      tmp file is used (See 'man mktemp' for more info).
+    required: false
+    default: ''
+
+  #
+  # Template data control
+  #
+  strict:
+    description: |
+      Fail on missing values
+    required: false
+    default: 'false'
+  variables:
+    description: |
+      Additional variables for template in 'env' format:
+        <var1>=<value1>
+        <var2>=<value2>
+        ...
+    required: false
+  data:
+    description: |
+      Variables for template.
+      See <data-format> for supported formats.
+    required: false
+    default: ''
+  data-file:
+    description: |
+      Variables for template
+      See <data-format> for supported formats.
+      If <data> is not empty and <data-file> is not set,
+      tmp file is used (See 'man mktemp' for more info).
+    required: false
+    default: ''
+  data-format:
+    description: |
+      <data-file> or <data> contents format (encoding).
+      Can be one of: env, ini, yaml or json
+    required: false
+    default: yaml
+
+  #
+  # Output control
+  #
+  out-file:
+    description: |
+      Path to file for rendered data.
+      When empty, tmp file is created.
+      (see 'man mktemp' for more info).
+    required: false
+  dump-output:
+    description: |
+      Makes action to pass rendered data to action's <data> output.
+      You may want to disable this for large render results.
+    required: false
+    default: 'true'
+
+outputs:
+  out-file:
+    description: |
+      Path to file with rendered template.
+    value: ${{ steps.out-path.outputs.stdout }}
+
+  data:
+    description: |
+      Template render result 'as is'.
+      Contents of this output equals to contents of <out-file>.
+    value: ${{ steps.result.outputs.stdout }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Detect template path
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: tpl-path
+      env:
+        TEMPLATE: ${{ inputs.template }}
+        TEMPLATE_FILE: ${{ inputs.template-file }}
+      with:
+        run: |
+          if [ -n "${TEMPLATE_FILE}" ]; then
+            echo "${TEMPLATE_FILE}"
+            exit 0
+          fi
+
+          if [ -z "${TEMPLATE}" ]; then
+            ghwa_error "Both <template> and <template-file> inputs are empty"
+            exit 1
+          fi
+
+          # Generate temp file name and put template into it
+          temp_tpl_path="$(mktemp ./XXXXXXXXXXX)"
+          printf "%s\n" "${TEMPLATE}" > "${temp_tpl_path}"
+
+          echo "${temp_tpl_path}"
+
+    - name: Detect data path
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: data-path
+      env:
+        DATA: ${{ inputs.data }}
+        DATA_FILE: ${{ inputs.data-file }}
+        DATA_FORMAT: ${{ inputs.data-format }}
+      with:
+        run: |
+          if [ -n "${DATA_FILE}" ]; then
+            echo "${DATA_FILE}"
+            exit 0
+          fi
+
+          if [ -z "${DATA}" ]; then
+            exit 0
+          fi
+
+          # Generate temp file name and put data into it
+          temp_data_path="$(mktemp ./XXXXXXXXXXX)"
+          printf "%s\n" "${DATA}" > "${temp_data_path}"
+
+          echo "${temp_data_path}"
+
+    - name: Detect output path
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: out-path
+      env:
+        OUTPUT_FILE: ${{ inputs.out-file }}
+      with:
+        run: |
+          if [ -n "${OUTPUT_FILE}" ] ; then
+            echo "${OUTPUT_FILE}"
+            exit 0
+          fi
+
+          mktemp ./XXXXXXXXXXX
+
+    - uses: milaboratory/github-ci/actions/templates/jinja/wrapper@v4-beta
+      with:
+        template: ${{ steps.tpl-path.outputs.stdout }}
+        output_file: ${{ steps.out-path.outputs.stdout }}
+        strict: ${{ inputs.strict }}
+        variables: ${{ inputs.variables }}
+        data_file: ${{ steps.data-path.outputs.stdout }}
+        data_format: ${{ inputs.data-format }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: result
+      if: inputs.dump-output
+      env:
+        OUTPUT_FILE: ${{ steps.out-path.outputs.stdout }}
+      with:
+        run: cat "${OUTPUT_FILE}"

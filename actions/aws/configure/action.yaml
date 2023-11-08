@@ -1,0 +1,73 @@
+name: Configure 'aws' utility
+author: 'MiLaboratories'
+description: |
+  Generate configuration files for 'aws' CLI utility
+
+inputs:
+  key-id:
+    description: |
+      AWS Access Key ID for API requests
+    required: true
+
+  key-secret:
+    description: |
+      AWS Access Key Secret for API requests
+    required: true
+
+  region:
+    description: |
+      AWS region.
+    required: true
+
+  append:
+    description: |
+      When 'true' action will append data to existing config and credentials files
+      instead of replacing them.
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: credentials
+      shell: bash
+      env:
+        KEY_ID: ${{ inputs.key-id }}
+        KEY_SECRET: ${{ inputs.key-secret }}
+        AWS_CONFIG_APPEND: ${{ inputs.append }}
+      run: |
+        # Generate ~/.aws/credentials file
+        mkdir -p ~/.aws
+
+        if [ "${AWS_CONFIG_APPEND}" != 'true' ]; then
+          # Clear credentials file
+          true > ~/.aws/credentials
+        fi
+
+        cat >> ~/.aws/credentials <<EndOfCreds
+        [default]
+        aws_access_key_id=${KEY_ID}
+        aws_secret_access_key=${KEY_SECRET}
+
+        EndOfCreds
+
+    - id: config
+      shell: bash
+      env:
+        AWS_CONFIG_APPEND: ${{ inputs.append }}
+        REGION: ${{ inputs.region }}
+      run: |
+        # Generate ~/.aws/config file
+        mkdir -p ~/.aws
+
+        if [ "${AWS_CONFIG_APPEND}" != 'true' ]; then
+          # Clear config file
+          true > ~/.aws/config
+        fi
+
+        cat >> ~/.aws/config <<EndOfConfig
+        [default]
+        region=${REGION}
+
+        EndOfConfig

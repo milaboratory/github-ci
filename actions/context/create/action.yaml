@@ -1,0 +1,13 @@
+name: Create context artifact
+author: 'MiLaboratories'
+description: |
+  Create context artifact so other actions could work with it.
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: mike-ainsel/upload-artifact@v3
+      with:
+        name: context
+        path: ${{ github.action_path }}/init.txt

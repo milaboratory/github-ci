@@ -1,0 +1,2189 @@
+# This workflow will prepare given version of Java and use it to build gradle application.
+# All gradle dependencies will be cached for next runs.
+
+name: Build Java project
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      product-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+
+      product-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
+      #
+      # Checkout settings
+      #
+      git-crypt-unlock:
+        description: |
+          Perform `git ctypt unlock` after each fresh repository checkout
+
+          NOTE: don't forget to set the following secrets:
+                  - GIT_CRYPT_GPG_KEY
+                  - GIT_CRYPT_KEY_PASSWORD
+
+        type: boolean
+        required: false
+        default: false
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Environment control
+      #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: '{}'
+
+      java-version:
+        description: |
+          Version of JAVA to use for build
+        type: string
+        required: true
+
+      java-distribution:
+        description: |
+          Java distribution to use.
+          Example: 'temurin', zulu, ...
+          See 'https://github.com/actions/setup-java#supported-distributions'
+          for complete list of supported distributions
+        type: string
+        required: false
+        default: 'temurin'
+
+      #
+      # Gradle cache control
+      #
+      build-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+      build-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      build-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      build-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-unit-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+      test-unit-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-unit-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-unit-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-integration-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: 'true'
+      test-integration-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-integration-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-integration-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      test-regression-gradle-cache-read-only:
+        description: |
+          When 'true', existing entries will be read from the cache but no entries will be written.
+          By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+        type: string
+        required: false
+        default: 'true'
+      test-regression-gradle-cache-write-only:
+        description: |
+          When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+          Setting this to 'true' implies cache-read-only will be 'false'.
+        type: string
+        required: false
+        default: 'false'
+      test-regression-gradle-home-cache-includes:
+        description: Paths within Gradle User Home to cache.
+        type: string
+        required: false
+        default: |
+          caches
+          notifications
+      test-regression-gradle-home-cache-excludes:
+        description: Paths within Gradle User Home to exclude from cache.
+        type: string
+        required: false
+
+      #
+      # Build control
+      #
+      build-project:
+        description: |
+          Gradle project name to build: gradle :<project>:<command>
+        type: string
+        required: false
+        default: ''
+
+      build-project-dir:
+        description: |
+          Path to project root directory
+          Defaults to repository root
+        type: string
+        required: false
+        default: './'
+
+      build-tasks:
+        description: |
+          Gradle build tasks.
+          You can put several tasks here (one per line)
+
+          NOTE: for 'publish*' tasks use 'publish-*-tasks' inputs.
+
+        type: string
+        required: false
+        default: build
+
+      build-data-cache-key:
+        description: |
+          Key to use for custom build data caching.
+
+          Both <build-data-cache-key> and <build-data-cache-paths> are
+          required for feature to work.
+
+          Some builds produce project-specific data as a build result,
+          This data can be re-used in subsequent builds.
+        required: false
+        type: string
+        default: ''
+
+      build-data-cache-paths:
+        description: |
+          Additional paths to cache between runs.
+
+          Both <build-data-cache-key> and <build-data-cache-paths> are
+          required for feature to work.
+
+          Some builds produce project-specific data as a build result,
+          This data can be re-used in subsequent builds.
+        required: false
+        type: string
+        default: ''
+
+      build-upload-obfuscation-mapping:
+        description: |
+          Whether or not to upload obfuscation mapping to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
+
+      # artifact-paths:
+      #   description: |
+      #     List of paths to artifacts to save after build run.
+      #     Empty list disables artifacts storage.
+      #
+      #     Relative paths are relative to gradle 'buildDir' project's property.
+      #     Absolute paths (starting with '/') are relative to repository root.
+      #     Patterns ('*', '**', etc.) are supported.
+      #
+      #   type: string
+      #   required: false
+      #   default: ''
+
+      #
+      # Tests control
+      #
+      test-unit:
+        description: |
+          Run unit tests
+        type: boolean
+        required: false
+        default: true
+      test-unit-before-tasks:
+        description: |
+          Run these gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-unit-tasks:
+        description: |
+          Run these gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
+      test-unit-cache:
+        description: |
+          Cache test data for unit tests
+        type: boolean
+        required: false
+        default: false
+      test-unit-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each unit tests run
+        type: string
+        required: false
+        default: ''
+      test-unit-cache-key:
+        description: |
+          Key for unit tests cached data
+        type: string
+        required: false
+        default: ''
+      test-unit-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: true
+
+      test-integration:
+        description: |
+          Run integration tests
+        type: boolean
+        required: false
+        default: false
+      test-integration-before-tasks:
+        description: |
+          Run these gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-integration-tasks:
+        description: |
+          Run these gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
+      test-integration-cache:
+        description: |
+          Cache test data for integration tests
+        type: boolean
+        required: false
+        default: false
+      test-integration-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each integration tests run
+        type: string
+        required: false
+        default: ''
+      test-integration-cache-key:
+        description: |
+          Key for integration tests cached data
+        type: string
+        required: false
+        default: ''
+      test-integration-python-version:
+        description: |
+           Version of Python to install
+        type: string
+        required: false
+        default: ''
+      test-integration-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
+
+      test-regression:
+        description: |
+          Run regression tests
+        type: boolean
+        required: false
+        default: false
+      test-regression-before-tasks:
+        description: |
+          Run these gradlew tasks before running hooks
+        type: string
+        required: false
+        default: ''
+      test-regression-tasks:
+        description: |
+          Run these gradlew tasks to start tests
+        type: string
+        required: false
+        default: 'test'
+      test-regression-cache:
+        description: |
+          Cache test data for integration tests
+        type: boolean
+        required: false
+        default: false
+      test-regression-cache-paths:
+        description: |
+          Path to files to restore/cache before/after each integration tests run
+        type: string
+        required: false
+        default: ''
+      test-regression-cache-key:
+        description: |
+          Key for integration tests cached data
+        type: string
+        required: false
+        default: ''
+      test-regression-directory:
+        description: |
+          Change directory into the input directory before running test command.
+        type: string
+        required: false
+        default: 'regression'
+      test-regression-changed-files-list:
+        description: |
+          The list of folders and/or files to track changes
+          after regression tests execution.
+        type: string
+        required: false
+        default: |
+          regression/cli-help
+          regression/presets
+          regression/reports
+          regression/schemas
+      test-regression-upload-report:
+        description: |
+          Whether or not to upload tests report to a given s3 bucket.
+        type: boolean
+        required: false
+        default: false
+
+      #
+      # Test reports control
+      #
+      test-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      test-s3-region:
+        description: |
+          AWS region with target S3 bucket
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      test-s3-bucket:
+        description: |
+          S3 bucket to use for tests
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-public-files'
+
+      test-s3-path-prefix:
+        description: |
+          Prefix for all uploaded test files.
+
+          Tests report will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+        type: string
+        required: false
+        default: 'cdn/internal/ci'
+
+      #
+      # Docker distribution control
+      #
+      dist-docker:
+        description: |
+          Distribute application in Docker image
+        type: boolean
+        required: false
+        default: false
+
+      dist-docker-tasks:
+        description: |
+          Tasks to run to build docker image with application
+        type: string
+        required: false
+        default: dockerBuildImage
+
+      dist-docker-image-name:
+        description: |
+          Name of docker image, created by <dist-docker-tasks>, without
+          version part (the text after colon).
+          E.g. for 'ubuntu:20.04' tag we need only 'ubuntu' in this input.
+
+          Defaults to <build-project> input.
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Archive distribution control
+      #
+      dist-archive:
+        description: |
+          Distribute application in archive:
+           - upload to GitHub Artifacts storage;
+           - save as GitHub Release asset;
+           - upload to S3 bucket
+             (see <dist-archive-s3> and <release-to-s3> inputs);
+
+        type: boolean
+        required: false
+        default: false
+
+      dist-archive-tasks:
+        description: |
+          Tasks for archive distribution generation (.zip, .tar and so on)
+        type: string
+        required: false
+        default: 'distTar'
+
+      dist-archive-paths:
+        description: |
+          Files to save as build artifact, release asset and to upload to S3
+          Each file matched by this patterns would be added to GitHub action
+          as individual asset.
+        type: string
+        required: false
+        default: './distributions/*.tar'
+
+      dist-artifact-retention:
+        description: |
+          Time in days to keep build artifacts before removing them
+        type: number
+        required: false
+        default: 7
+
+      dist-archive-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      dist-archive-s3:
+        description: |
+          Upload application archives to S3 bucket.
+          Archive is uploaded to bucket immediately after creation regardless
+          of build type (release/dev/...).
+
+          This means, that if you use the same upload settings for
+          <dist-archive-s3-*> and <release-s3-*>, the release file will be
+          uploaded to S3 bucket _before_ release confirmation.
+
+        type: boolean
+        required: false
+        default: false
+
+      dist-archive-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      dist-archive-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milaboratory-artefacts-public-files'
+
+      dist-archive-s3-alternative-urls:
+        description: |
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
+
+      dist-archive-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.event.repository.name }}'
+
+      dist-archive-obfuscation-s3-bucket:
+        description: |
+          S3 bucket to use for obfuscation mapping
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-private-files'
+
+      dist-archive-obfuscation-s3-path-prefix:
+        description: |
+          Prefix for all uploaded obfuscation mapping files.
+          Obfuscation mapping file will be uploaded to:
+            's3://<bucket>/<path-prefix>/<repository>/<hash>/obfuscation'
+
+        type: string
+        required: false
+        default: 'obfuscation'
+
+      dist-archive-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+
+      dist-archive-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
+
+      #
+      # CDN control
+      #
+      cdn-url:
+        description: |
+          Main part of the CDN URL.
+        type: string
+        required: false
+        default: 'https://cdn.milaboratory.com'
+
+      #
+      # CDN redirect link control
+      #
+      cdn-redirect-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      cdn-redirect-s3:
+        description: |
+          Whether or not to enable the CDN link
+          to redirect to the latest build results.
+
+        type: boolean
+        required: false
+        default: false
+
+      cdn-redirect-s3-bucket:
+        description: |
+          Public S3 bucket for cdn redirect zero length objects
+        type: string
+        required: false
+        default: 'milaboratory-artefacts-redirects'
+
+      cdn-redirect-s3-region:
+        description: |
+          Upload cdn redirect zero length objects to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      cdn-redirect-s3-bucket-path:
+        description: |
+          The path to a zero-byte object on an S3 bucket
+
+        type: string
+        default: 'link/software/${{ github.event.repository.name }}'
+        required: false
+
+      cdn-redirect-s3-bucket-key:
+        description: |
+          The name of a zero-byte object.
+          In particular it should be a combination
+          of the application name, branch name and extention.
+
+        type: string
+        default: '${{ github.event.repository.name }}-${{ github.ref_name }}.zip'
+        required: false
+
+      #
+      # Library distribution control
+      #
+      dist-library:
+        description: |
+          Distribute product as library: run specific tasks to publish dev
+          and release library versions to repositories
+        type: boolean
+        required: false
+        default: false
+
+      dist-library-dev-tasks:
+        description: |
+          Newline-separated list of tasks to run on library publication step.
+        type: string
+        required: false
+        default: publish
+
+      dist-library-release-tasks:
+        description: |
+          Newline-separated list of tasks to run on library publication step.
+        type: string
+        required: false
+        default: ''
+
+      dist-library-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      dist-library-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      #
+      # Release control
+      #
+      changelog-exclude-types:
+        description: |
+          Comma-separated list of change types to skip during
+          changelog generation for release.
+
+          See 'Conventional Commits' spec for more info:
+          https://www.conventionalcommits.org/en/v1.0.0/
+
+          Default: 'doc,chore'
+        type: string
+        required: false
+        default: doc,chore
+
+      release-github-draft:
+        description: |
+          Create GitHub Release draft instead of final release.
+          This makes developer to manually confirm release publication, but
+          also allows to update release description and changelog before publication.
+        type: boolean
+        required: false
+        default: false
+
+      release-to-s3:
+        description: |
+          Set it to 'true' if you want to upload releases to S3 bucket
+          This feature requires 'dist-archive' feature to be enabled and
+          configured. The file created at 'dist-archive' step is uploaded
+          to S3 storage.
+        type: boolean
+        required: false
+        default: false
+
+      release-s3-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+        default: 'arn:aws:iam::013783277167:role/milab-euce1-prod-github-oidc-role-mirepos'
+
+      release-s3-region:
+        description: |
+          Upload application release artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      release-s3-bucket:
+        description: |
+          Upload application release artifact's files to
+          given AWS S3 bucket.
+        required: false
+        type: string
+        default: 'milaboratory-artefacts-public-files'
+
+      release-s3-path:
+        description: |
+          Upload application release artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'cdn/software/${{ github.event.repository.name }}'
+
+      release-s3-alternative-urls:
+        description: |
+          Customizes S3 object download URLs in notifications:
+            <path regexp> -> <url>
+
+          For more information see:
+            blocks/release/s3/action.yaml -> inputs -> alternative-urls
+
+        required: false
+        type: string
+        default: |
+          ^/cdn/software/ -> https://cdn.milaboratory.com/software/
+
+      release-s3-add-version:
+        description: |
+          Add version number to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<version>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<version>'.
+
+        type: boolean
+        required: false
+        default: true
+
+      release-s3-add-sha:
+        description: |
+          Add SHA to all files uploaded to S3 bucket.
+          Depending on extension presence in file name one of the following happens:
+            - file with extension get version number before extension:
+              'myfile.zip' becomes 'myfile-<SHA>.zip'.
+            - files without extension get version number appended to the name:
+              'myfile' becomes 'myfile-<SHA>'.
+
+          'false' or '' (empty string) disables feature
+          'true'     - adds full SHA to file names
+          '<number>' - adds to file names SHA abbreviated to given length in symbols,
+                       e.g. '3' will cause only first 3 symbols of SHA to be added to file names.
+
+        type: string
+        required: false
+        default: 'false'
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
+
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
+
+      notify-tests-regression:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'failure-only'
+
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      GRADLE_PROPERTIES:
+        description: |
+          Create properties file with given contents before starting the build
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+      GIT_CRYPT_GPG_KEY:
+        description: |
+          base64-encoded GPG key pair
+          (see actions/git/crypt inputs description)
+        required: false
+
+      GIT_CRYPT_KEY_PASSWORD:
+        description: |
+          Password for GPG key
+        required: false
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+    outputs:
+      is-release: ${{ steps.context.outputs.is-release }}
+
+  build:
+    name: :build
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
+      - id: build-gradle
+        uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.build-tasks }}
+          exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          gradle-home-cache-includes: ${{ inputs.build-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.build-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.build-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.build-gradle-cache-write-only }}
+
+          properties: |
+            mi-ci-stage=build
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
+      - name: notify build
+        if: always()
+          && inputs.notify-telegram
+          && inputs.notify-build != 'false'
+          && steps.build-gradle.conclusion != 'cancelled'
+
+        uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ steps.build-gradle.conclusion }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+          product-name: ${{ inputs.product-name }}
+
+  setup-tests-matrix:
+    name: :setup tests matrix
+    runs-on: ubuntu-latest
+
+    if: inputs.test-integration || inputs.test-regression
+    needs:
+      - build
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Setup tests matrix
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        id: tests-matrix
+        with:
+          dump-stdout: false
+          run: |
+            # Get all integration tests
+            #INT_TESTS_LIST=$(ls ./itests/ | sed 's/\(.*\)\..*/\1/' | grep -v ignored | sort | jq -R -s -c 'split("\n")[:-1]')
+            # Get integration tests with only .sh extensions
+            INT_TESTS_LIST=$(ls ./itests/*.sh | sed 's:\.\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output "int-tests-list" "$INT_TESTS_LIST"
+
+            # Get regression tests with only .sh extensions
+            REG_TESTS_LIST=$(ls ./regression/itests/*.sh | sed 's:\.\/regression\/itests\/::' | sed 's:\.sh::' | grep -v 'ignored' | sort | jq -R -s -c 'split("\n")[:-1]')
+            ghwa_set_output "reg-tests-list" "$REG_TESTS_LIST"
+
+            # Generate branch name for regression tests
+            REG_TESTS_BRANCH_NAME="mixcr-regression-tests/${GITHUB_REF_NAME}"
+            ghwa_set_output "reg-tests-branch-name" "$REG_TESTS_BRANCH_NAME"
+
+    outputs:
+      int-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).int-tests-list }}
+      reg-tests-list: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-list }}
+      reg-tests-branch-name: ${{ fromJSON(steps.tests-matrix.outputs.data).reg-tests-branch-name }}
+
+  test-unit:
+    name: :test (unit)
+    runs-on: ubuntu-latest
+
+    if: inputs.test-unit
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
+          aws-region: ${{ inputs.test-s3-region }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          before-hooks-tasks: ${{ inputs.test-unit-before-tasks }}
+          tasks: ${{ inputs.test-unit-tasks }}
+
+          gradle-home-cache-includes: ${{ inputs.test-unit-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-unit-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-unit-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-unit-gradle-cache-write-only }}
+
+          hook-before: .mi-ci/hooks/test-unit-before.sh
+          hook-after: .mi-ci/hooks/test-unit-after.sh
+          test-type: 'unit'
+
+          test-data-cache-enabled: ${{ inputs.test-unit-cache }}
+          test-data-cache-paths: ${{ inputs.test-unit-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-unit-cache-key }}
+
+          properties: |
+            mi-ci-stage=test
+            mi-ci-test-type=unit
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-unit-upload-report }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
+
+  notify-test-unit:
+    name: notify unit test
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && inputs.notify-telegram
+      && needs.test-unit.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+    needs:
+      - test-unit
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            unit
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-unit.result }}
+          tests-type: 'Unit'
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+          product-name: ${{ inputs.product-name }}
+          report-url: ${{ fromJSON(needs.test-unit.outputs.report-uploaded) && needs.test-unit.outputs.report-url || '' }}
+
+  test-integration:
+    name: :test (int)
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-tests-matrix.outputs.int-tests-list) }}
+    runs-on: ubuntu-latest
+
+    if: inputs.test-integration
+    needs:
+      - setup-tests-matrix
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
+          aws-region: ${{ inputs.test-s3-region }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          before-hooks-tasks: ${{ inputs.test-integration-before-tasks }}
+          tasks: ${{ inputs.test-integration-tasks }}
+
+          gradle-home-cache-includes: ${{ inputs.test-integration-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-integration-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-integration-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-integration-gradle-cache-write-only }}
+
+          hook-before: .mi-ci/hooks/test-integration-before.sh
+          test-command: ${{ matrix.test }}
+          test-type: 'integration'
+
+          test-data-cache-enabled: ${{ inputs.test-integration-cache }}
+          test-data-cache-paths: ${{ inputs.test-integration-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-integration-cache-key }}
+
+          python-version: ${{ inputs.test-integration-python-version }}
+
+          properties: |
+            mi-ci-stage=test
+            mi-ci-test-type=integration
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-integration-upload-report }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
+
+  notify-test-integration:
+    name: notify integration test
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && inputs.notify-telegram
+      && needs.test-integration.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-integration
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            integration
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.test-integration.result }}
+          tests-type: 'Integration'
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+          product-name: ${{ inputs.product-name }}
+          report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
+
+  test-regression:
+    name: :test (reg)
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-tests-matrix.outputs.reg-tests-list) }}
+    runs-on: ubuntu-latest
+
+    if: inputs.test-regression
+    needs:
+      - setup-tests-matrix
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: 0
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
+          aws-region: ${{ inputs.test-s3-region }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/java/test@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          before-hooks-tasks: ${{ inputs.test-regression-before-tasks }}
+          tasks: ${{ inputs.test-integration-tasks }}
+
+          gradle-home-cache-includes: ${{ inputs.test-regression-gradle-home-cache-includes }}
+          gradle-home-cache-excludes: ${{ inputs.test-regression-gradle-home-cache-excludes }}
+          gradle-cache-read-only: ${{ inputs.test-regression-gradle-cache-read-only }}
+          gradle-cache-write-only: ${{ inputs.test-regression-gradle-cache-write-only }}
+
+          hook-before: .mi-ci/hooks/test-regression-before.sh
+          test-directory: ${{ inputs.test-regression-directory }}
+          test-command: ${{ matrix.test }}
+          test-type: 'regression'
+
+          test-data-cache-enabled: ${{ inputs.test-regression-cache }}
+          test-data-cache-paths: ${{ inputs.test-regression-cache-paths }}
+          test-data-cache-key: ${{ inputs.test-regression-cache-key }}
+
+          properties: |
+            mi-ci-stage=test
+            mi-ci-test-type=regression
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          s3-bucket: ${{ inputs.test-s3-bucket }}
+          s3-path-prefix: ${{ inputs.test-s3-path-prefix }}
+          upload-report: ${{ inputs.test-regression-upload-report }}
+
+      - id: verify-changed-files
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
+        with:
+          files: ${{ inputs.test-regression-changed-files-list }}
+          separator: ','
+
+      - id: prepare-files-list
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          CHANGED_FILES: ${{ steps.verify-changed-files.outputs.changed_files }}
+          WORKAROUND_DIR: 'workaround/files'
+        with:
+          dump-stdout: false
+          run: |
+            _CHANGED_FILES=$(echo "${CHANGED_FILES}" | sed 's:,:\n:g')
+            ghwa_set_output "changed-files" "${_CHANGED_FILES}" "EndOfValue"
+
+            # workaround for upload artifact action to have a file
+            # which doesn't have the same base path as all the other files
+            # this way the action doesn't find any least common ancestor
+            if [ ! -d "${WORKAROUND_DIR}" ];then
+               mkdir -p "${WORKAROUND_DIR}"
+            fi
+            UUID=$(uuidgen)
+            echo "${UUID}" >> "${WORKAROUND_DIR}"/random-uuid
+            ghwa_set_output "workaround-dir" "${WORKAROUND_DIR}"
+
+            RAN_SEC=$((RANDOM % 20))
+            echo "Wait random number of second before saving the artifact."
+            sleep "${RAN_SEC}"
+
+      - uses: actions/upload-artifact@v3
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        with:
+          name: test-regression
+          path: |
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).workaround-dir }}
+            ${{ fromJSON(steps.prepare-files-list.outputs.data).changed-files }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      report-uploaded: ${{ steps.test.outputs.report-uploaded }}
+      report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
+
+  test-regression-create-pr:
+    name: :test (reg) create pr
+    runs-on: ubuntu-latest
+
+    needs:
+      - test-regression
+      - setup-tests-matrix
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - id: artifact
+        uses: milaboratory/github-ci/actions/artifact/exists@v4-beta
+        with:
+          name: test-regression
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock && steps.artifact.outputs.exists == 'true'
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - id: get-tag-branch
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            _RAW=$(git branch -r --contains ${{ github.ref }})
+            _BRANCH_NAME=${_RAW##*/}
+
+            ghwa_set_output "branch-name" "$_BRANCH_NAME"
+
+      - uses: actions/download-artifact@v3
+        if: steps.artifact.outputs.exists == 'true'
+        with:
+          name: test-regression
+
+      - id: verify-changed-files
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
+        with:
+          files: ${{ inputs.test-regression-changed-files-list }}
+          separator: ','
+
+      - id: create-pull-request
+        uses: milaboratory/github-ci/actions/git/create-pull-request@v4-beta
+        with:
+          add-paths: ${{ steps.verify-changed-files.outputs.changed_files }}
+          commit-message: 'regression tests automated change'
+          title: ${{ format('Regression tests changes in the {0}', github.ref_name) }}
+          body: 'Automated changes generated after CI workflow run.'
+          branch: ${{ needs.setup-tests-matrix.outputs.reg-tests-branch-name }}
+          base: ${{ github.ref_type == 'tag' && fromJSON(steps.get-tag-branch.outputs.data).branch-name || github.ref_name }}
+
+    outputs:
+      started: 'true'
+      pr-number: ${{ steps.create-pull-request.outputs.pull-request-number }}
+      pr-url: ${{ steps.create-pull-request.outputs.pull-request-url }}
+      pr-operation: ${{ steps.create-pull-request.outputs.pull-request-operation }}
+
+  notify-test-regression-changes:
+    name: notify regression tests changes
+    runs-on: ubuntu-latest
+
+    if: inputs.notify-telegram
+      && needs.test-regression-create-pr.outputs.started == 'true'
+      && needs.test-regression-create-pr.outputs.pr-number != ''
+      && needs.test-regression-create-pr.outputs.pr-operation != 'closed'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-regression-create-pr
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            regression
+
+      - uses: milaboratory/github-ci/blocks/notify/test-regression@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          product-name: ${{ inputs.product-name }}
+          pull-request-url: ${{ needs.test-regression-create-pr.outputs.pr-url }}
+          pull-request-number: ${{ needs.test-regression-create-pr.outputs.pr-number }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  fail-workflow-on-test-regression-changes:
+    name: fail workflow on regression tests changes
+    runs-on: ubuntu-latest
+
+    if: needs.test-regression-create-pr.outputs.started == 'true'
+      && needs.test-regression-create-pr.outputs.pr-number != ''
+      && needs.test-regression-create-pr.outputs.pr-operation != 'closed'
+
+    needs:
+      - test-regression-create-pr
+    steps:
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PR_URL: ${{ needs.test-regression-create-pr.outputs.pr-url }}
+        with:
+          dump-stdout: false
+          run: |
+            echo "Regression tests changes have been detected."
+            echo "Fail workflow on purpose, so a developer doesn't forget to commit them."
+            echo "Please, review changes in: ${PR_URL}"
+
+            exit 1
+
+  notify-test-regression:
+    name: notify regression test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && needs.test-regression.outputs.started == 'true'
+      && inputs.notify-tests != 'false'
+
+    needs:
+      - test-regression
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            regression
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests-regression }}
+          tests-status: ${{ needs.test-regression.result }}
+          tests-type: 'Regression'
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+          product-name: ${{ inputs.product-name }}
+          report-url: ${{ fromJSON(needs.test-regression.outputs.report-uploaded) && needs.test-regression.outputs.report-url || '' }}
+
+  distArchive:
+    name: archive
+    runs-on: ubuntu-latest
+
+    if: inputs.dist-archive
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
+      - uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        id: with-mapping
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.dist-archive-tasks }}
+          exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          artifact-name: ${{ inputs.product-name-slug }}
+          artifact-paths: ${{ inputs.dist-archive-paths }}
+          artifact-retention: ${{ inputs.dist-artifact-retention }}
+
+          properties: |
+            mi-ci-stage=dist
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+          obfuscation-s3-bucket: ${{ inputs.dist-archive-obfuscation-s3-bucket }}
+          obfuscation-s3-path-prefix: ${{ inputs.dist-archive-obfuscation-s3-path-prefix }}
+          upload-obfuscation-mapping: ${{ inputs.build-upload-obfuscation-mapping }}
+
+      - name: Upload to S3
+        id: s3
+        if: ${{ inputs.dist-archive-s3 }}
+        uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+        with:
+          artifact-name: ${{ inputs.product-name-slug }}
+          add-version: ${{ inputs.dist-archive-s3-add-version }}
+          add-sha: ${{ inputs.dist-archive-s3-add-sha }}
+
+          s3-iam-role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.dist-archive-s3-region }}
+          s3-bucket: ${{ inputs.dist-archive-s3-bucket }}
+          s3-path: ${{ inputs.dist-archive-s3-path }}
+
+          alternative-urls: ${{ inputs.dist-archive-s3-alternative-urls }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
+      obfus-mapping-s3-path: ${{ steps.with-mapping.outputs.obfuscation-mapping-s3-path }}
+
+  notify-build-distArchive:
+    name: notify archive build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.dist-archive
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && ( needs.distArchive.result != 'cancelled' || needs.distArchive.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
+    needs:
+      - distArchive
+      - build
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            archive
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distArchive.result }}
+          product-name: ${{ format('{0} - Archive', inputs.product-name) }}
+          download-links: ${{ needs.distArchive.outputs.s3-urls-json }}
+          additional-info: ${{ needs.distArchive.outputs.obfus-mapping-s3-path }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  distDocker:
+    name: docker
+    runs-on: ubuntu-latest
+
+    if: inputs.dist-docker
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-archive-s3-region }}
+
+      - uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.dist-docker-tasks }}
+          exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          properties: |
+            mi-ci-stage=dist
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+      - uses: milaboratory/github-ci/actions/helpers/default-value@v4-beta
+        id: project
+        with:
+          value: ${{ inputs.dist-docker-image-name }}
+          default: ${{ inputs.build-project }}
+
+      - uses: milaboratory/github-ci/blocks/java/publish/docker@v4-beta
+        id: docker-push
+        with:
+          project: ${{ steps.project.outputs.value }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
+
+  notify-build-distDocker:
+    name: notify docker build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.dist-docker
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && ( needs.distDocker.result != 'cancelled' || needs.distDocker.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
+    needs:
+      - distDocker
+      - build
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            docker
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distDocker.result }}
+          product-name: ${{ format('{0} - Docker', inputs.product-name) }}
+          docker-images: ${{ needs.distDocker.outputs.docker-tags }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  distLibrary:
+    name: library
+    runs-on: ubuntu-latest
+
+    if:  inputs.dist-library
+      && inputs.dist-library-dev-tasks != ''
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.dist-library-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.dist-library-s3-region }}
+
+      - name: publish lib to dev
+        uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.dist-library-dev-tasks }}
+          exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          properties: |
+            mi-ci-stage=publish
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+      - id: props
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |-
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      libs-list: ${{ steps.libs-list.outputs.result }}
+
+  notify-build-distLibrary:
+    name: notify library build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.dist-library
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
+    needs:
+      - distLibrary
+      - build
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            library
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.distLibrary.result }}
+          product-name: ${{ format('{0} - Library', inputs.product-name) }}
+          maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  update-cdn-link:
+    name: update the latest build link on the CDN
+    runs-on: ubuntu-latest
+
+    if: inputs.cdn-redirect-s3
+      &&  ( needs.distLibrary.result != 'cancelled' || needs.distLibrary.result != 'skipped' )
+
+    needs:
+      - distArchive
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - id: cdn-string
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            CDN_URL=$(echo '${{ needs.distArchive.outputs.s3-urls-json }}' | jq -r  -c '.[]')
+            ghwa_set_output "converted_cdn_url" "${CDN_URL}"
+
+      - uses: milaboratory/github-ci/blocks/update-cdn-link@v4-beta
+        with:
+          cdn-redirect-link: ${{ fromJSON( steps.cdn-string.outputs.data ).converted_cdn_url }}
+          s3-iam-role-to-assume: ${{ inputs.cdn-redirect-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.cdn-redirect-s3-region }}
+          s3-bucket: ${{ inputs.cdn-redirect-s3-bucket }}
+          s3-bucket-path: ${{ inputs.cdn-redirect-s3-bucket-path }}
+          s3-bucket-key: ${{ inputs.cdn-redirect-s3-bucket-key }}
+
+  can-release:
+    name: can release
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+
+      - build
+      - distDocker
+      - distArchive
+      - distLibrary
+
+    if: always()
+      && fromJSON(needs.init.outputs.is-release)
+
+      && needs.build.result       != 'failure'
+      && needs.distDocker.result  != 'failure'
+      && needs.distArchive.result != 'failure'
+      && needs.distLibrary.result != 'failure'
+
+
+      && (
+           needs.distDocker.result  != 'skipped'
+        || needs.distArchive.result != 'skipped'
+        || needs.distLibrary.result != 'skipped'
+      )
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+  notify-release-review:
+    name: notify review required
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.can-release.result == 'success'
+      && (
+           needs.test-unit.outputs.started        == 'true'
+        || needs.test-integration.outputs.started == 'true'
+        || needs.test-regression.outputs.started == 'true'
+      )
+
+    needs:
+      - can-release
+
+      # Send 'review required' notification only after all tests finished
+      - notify-test-unit
+      - notify-test-integration
+      - notify-test-regression
+
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          message: new version of app is ready for release.
+          product-name: ${{ inputs.product-name }}
+
+  release:
+    name: confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if:  always()
+      && needs.can-release.result == 'success'
+
+    environment: release
+
+    steps:
+      - shell: bash
+        run: 'true'
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+  create-release:
+    name: github release
+    runs-on: ubuntu-latest
+
+    needs:
+      - release
+
+    if:  always()
+      && needs.release.result == 'success'
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - uses: actions/download-artifact@v3
+        if: inputs.dist-archive
+        with:
+          name: ${{ inputs.product-name-slug }}
+          path: release-files
+
+      - name: Create release
+        uses: milaboratory/github-ci/actions/release/create@v4-beta
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: ${{ steps.context.outputs.current-version }}
+          tag: ${{ steps.context.outputs.current-version-tag }}
+          draft: ${{ inputs.release-github-draft }}
+
+          assets: |
+            release-files/**
+
+          changelog-exclude-types: ${{ inputs.changelog-exclude-types }}
+
+  upload-release-s3:
+    name: s3 archive release
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.release.result == 'success'
+      && inputs.release-to-s3
+      && inputs.dist-archive
+
+    needs:
+      - release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - id: s3
+        name: Upload to S3
+        uses: milaboratory/github-ci/blocks/release/s3@v4-beta
+        with:
+          artifact-name: ${{ inputs.product-name-slug }}
+          add-version: ${{ inputs.release-s3-add-version }}
+          add-sha: ${{ inputs.release-s3-add-sha }}
+
+          s3-iam-role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
+          s3-region: ${{ inputs.release-s3-region }}
+          s3-bucket: ${{ inputs.release-s3-bucket }}
+          s3-path: ${{ inputs.release-s3-path }}
+
+          alternative-urls: ${{ inputs.release-s3-alternative-urls }}
+
+    outputs:
+      s3-files: ${{ steps.s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.s3.outputs.uploaded-json }}
+      s3-urls: ${{ steps.s3.outputs.download }}
+      s3-urls-json: ${{ steps.s3.outputs.download-json }}
+
+  publish-release-lib:
+    name: library release
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.release.result == 'success'
+      && inputs.dist-library
+      && inputs.dist-library-release-tasks != ''
+    needs:
+      - release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
+          aws-region: ${{ inputs.release-s3-region }}
+
+      - name: publish lib
+        uses: milaboratory/github-ci/blocks/java/build@v4-beta
+        with:
+          project: ${{ inputs.build-project }}
+          project-dir: ${{ inputs.build-project-dir }}
+          tasks: ${{ inputs.dist-library-release-tasks }}
+          exclude-tasks: test
+
+          data-cache-key: ${{ inputs.build-data-cache-key }}
+          data-cache-paths: ${{ inputs.build-data-cache-paths }}
+
+          properties: |
+            mi-ci-stage=publish
+            ${{ secrets.GRADLE_PROPERTIES }}
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+
+      - id: props
+        uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
+        with:
+          project-dir: ${{ inputs.build-project-dir }}
+          project-name: ${{ inputs.build-project }}
+
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - name: Prepare JSON list of published libraries
+        id: libs-list
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |-
+            ${{ steps.props.outputs.group}}:${{ steps.props.outputs.name }}:${{ steps.context.outputs.current-version }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      libs-list: ${{ steps.libs-list.outputs.result }}
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && needs.release.result == 'success'
+    needs:
+      - release
+
+      - create-release
+      - upload-release-s3
+      - publish-release-lib
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            release
+
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.create-release.result }}
+            ${{ needs.upload-release-s3.result }}
+            ${{ needs.publish-release-lib.result }}
+
+          product-name: ${{ inputs.product-name }}
+
+          maven-packages: ${{ needs.publish-release-lib.outputs.libs-list }}
+          download-links: ${{ needs.upload-release-s3.outputs.s3-urls-json }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

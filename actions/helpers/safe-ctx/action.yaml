@@ -1,0 +1,32 @@
+name: Safe context
+description: |
+  Produces JSON-encoded context with sensitive data cut away
+
+outputs:
+  github:
+    description: |
+      JSON-encoded {{ github }} context with .token removed
+    value: ${{ fromJSON(steps.safe-ctx.outputs.data).github }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      with:
+        dump-stdout: false
+        run: |
+          # Cut sensitive information from contexts
+          # to pass safely to template
+
+          safe_github_ctx="$(
+            jq \
+              --compact-output \
+              "del(.token)" \
+              <<<"${GITHUB_CONTEXT}"
+          )"
+
+          ghwa_set_output "github" "${safe_github_ctx}"

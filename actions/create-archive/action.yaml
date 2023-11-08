@@ -1,0 +1,26 @@
+name: 'Create Archive'
+author: 'MiLaboratories'
+description: |
+  A script to create ZIP or TAR.GZ archives based on
+  OS detection and provided file patterns.
+
+
+inputs:
+  source-files:
+    description: 'List of source files.'
+    required: true
+  include-patterns:
+    description: 'Include patterns for source files filtering.'
+    required:
+    default: false
+  exclude-patterns:
+    description: 'Exclude patterns for source files filtering.'
+    required:
+    default: false
+  archive-name:
+    description: 'Tha archive name.'
+    required: false
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

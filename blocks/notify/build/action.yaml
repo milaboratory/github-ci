@@ -1,0 +1,152 @@
+name: Send notifications about build result
+author: 'MiLaboratories'
+description: |
+  Send notifications about build result.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      ID of Telegram Channel or User to notify on build results.
+    required: true
+
+  telegram-token:
+    description: |
+      Telegram Bot API authorization token
+    required: true
+
+  notification-mode:
+    description: |
+      'true'         - notify both successes and failures
+      'failure-only' - notify only about failed builds
+      'success-only' - notify only about successful builds
+    required: false
+    default: 'true'
+
+  build-status:
+    description: |
+      Build job status.
+
+      To get it, put it into job's outputs (status: {{ job.status }}),
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
+    required: true
+
+  product-name:
+    description: |
+      App name in human-readable form,
+      ss it is supposed to be shown in messages and notifications.
+    required: false
+    default: ${{ github.repository }}
+
+  docker-images:
+    description: |
+      List of docker images in JSON format to put into notification
+      Empty string is silently converted to '[]' for convenience.
+    required: false
+    default: ''
+
+  maven-packages:
+    description: |
+      List of java libraries in JSON format to put into notification.
+      Empty string is silently converted to '[]' for convenience.
+    required: false
+    default: ''
+
+  download-links:
+    description: |
+      List of distribution download links libraries in JSON format to put into notification.
+      Empty string is silently converted to '[]' for convenience.
+    required: false
+    default: ''
+
+  search-tags:
+    description: |
+     List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
+  additional-info:
+    description: |
+      Any additional text to append to notification.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - id: category
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+      with:
+        run: |
+          if [ "${IS_RELEASE}" = "true" ]; then
+            echo "release"
+          else
+            echo "dev"
+          fi
+
+    - id: build-status
+      name: Merge build statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      with:
+        statuses: ${{ inputs.build-status }}
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Report build failure to Telegram
+      if:  steps.build-status.outputs.status != 'success'
+        && inputs.notification-mode != 'success-only'
+
+      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v4-beta
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.context.outputs.current-version }}
+
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Report build is ready
+      if:  steps.build-status.outputs.status == 'success'
+        && inputs.notification-mode != 'failure-only'
+
+      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v4-beta
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.context.outputs.current-version }}
+        build-category: ${{ steps.category.outputs.stdout }}
+
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
+        download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}

@@ -1,0 +1,73 @@
+name: Add given suffix to all listed files
+author: 'MiLaboratories'
+description: |
+  Rename all <paths> by adding <suffix> to their names
+
+  File extension is taken into account:
+    - if file has extension (e.g. 'app.zip') and suffix
+      is '-1.3.5', the file would be renamed to 'app-1.3.5.zip'.
+    - if file has no extension, (e.g. 'datafile'), the suffix
+      is appended to the name: datafile-1.3.5
+
+inputs:
+  paths:
+    description: |
+      Paths to files to rename.
+      When directory is pointed, all files in directory will be
+      renamed recursively. Directories will not be renamed.
+
+    required: true
+
+  suffix:
+    description: |
+      Suffix to add to file names.
+      E.g. '-1.3.5'
+
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Rename files
+      if: inputs.suffix != ''
+      shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        SUFFIX: ${{ inputs.suffix }}
+      run: |
+        # add-suffix: rename files in given paths
+
+        set -o nounset
+        set -o errexit
+
+        mapfile -t input_paths <<<"${PATHS}"
+
+        for input_path in "${input_paths[@]}"; do
+          if [ -z "${input_path}" ]; then
+            continue
+          fi
+
+          if [ -d "${input_path}" ]; then
+            find "${input_path}" \
+              -mindepth 1 -and -type b,c,f,l,p,s
+          else
+            echo "${input_path}"
+          fi
+        done |
+          while read -r file_path; do
+            file_name=$(basename "${file_path}")
+            extension="${file_name##*.}"
+
+            if [ "${file_name}" = "${extension}" ]; then
+              extension=""
+            fi
+
+            SANITIZED_SUFFIX=$(echo ${SUFFIX} | sed 's:/:-:g')
+            if [ -n "${extension}" ]; then
+              mv -- "${file_path}" "${file_path%.*}${SANITIZED_SUFFIX}.${extension}"
+            else
+              mv -- "${file_path}" "${file_path}${SANITIZED_SUFFIX}"
+            fi
+          done

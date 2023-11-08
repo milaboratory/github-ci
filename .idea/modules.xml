@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/github-ci.iml" filepath="$PROJECT_DIR$/.idea/github-ci.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../github-ci-tests/.idea/github-ci-tests.iml" filepath="$PROJECT_DIR$/../github-ci-tests/.idea/github-ci-tests.iml" />
+    </modules>
+  </component>
+</project>

@@ -1,0 +1,121 @@
+name: 'Docker Build'
+description: 'Build Docker image'
+author: 'docker'
+
+inputs:
+  dockerfile:
+    description: |
+      Path to Dockerfile.
+      Defaults to 'Dockerfile' in repository root.
+
+      Relative paths are relative to repository root.
+
+    required: false
+    default: Dockerfile
+
+  context:
+    description: |
+      Path to docker build context root.
+      Defaults to directory with dockerfile.
+
+    required: false
+    default: ''
+
+  target:
+    description: |
+      --target build option.
+      Target to build in multistage builds.
+    required: false
+    default: ''
+
+  tags:
+    description: |
+      List of tags to attach to built image
+
+      One tag per line:
+        app:latest
+        app:1.2.3
+
+    required: false
+    default: 'build:local'
+
+  args:
+    description: |
+      List of build args (ARG Dockerfile instruction)
+      to pass to `docker build` command:
+        --build-arg <arg>
+
+      One line - one argument:
+        NODE_ENV=production
+        CUSTOM_VAR=value1
+
+    required: false
+    default: ''
+
+  env:
+    description: |
+      Environment variables to set before running
+      `docker build` command
+
+      One line - one env var:
+        NODE_ENV=production
+        CUSTOM_VAR=value1
+
+      Check dockerfile reference for difference between ENV and ARG
+
+    required: false
+    default: ''
+
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build Docker Image
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: build-image
+      env:
+        DOCKERFILE: ${{ inputs.dockerfile }}
+        BUILD_CONTEXT: ${{ inputs.context }}
+        BUILD_TARGET: ${{ inputs.target }}
+        BUILD_ARGS: ${{ inputs.args }}
+        BUILD_ENV: ${{ inputs.env }}
+        IMAGE_TAGS: ${{ inputs.tags }}
+
+      with:
+        dump-stdout: false
+        run: |
+          if [ -z "${BUILD_CONTEXT:-}" ]; then
+            BUILD_CONTEXT=$(dirname "${DOCKERFILE}")
+          fi
+
+          options=()
+          if [ -n "${BUILD_TARGET}" ]; then
+            options+=( --target "${BUILD_TARGET}" )
+          fi
+
+          build_args=()
+          while read -r _arg; do
+            if [ -n "${_arg}" ]; then
+              build_args+=( --build-arg "${_arg}" )
+            fi
+          done <<<"${BUILD_ARGS}"
+
+          tags=()
+          while read -r _tag; do
+            if [ -n "${_tag}" ]; then
+              tags+=( --tag "${_tag}" )
+            fi
+          done <<<"${IMAGE_TAGS}"
+
+          while read _env; do
+            if [ -n "${_env}" ]; then
+              declare -x "${_env}"
+            fi
+          done <<<"${BUILD_ENV}"
+
+          docker build \
+            --file "${DOCKERFILE}" \
+            "${options[@]}" \
+            "${tags[@]}" \
+            "${build_args[@]}" \
+            "${BUILD_CONTEXT}"

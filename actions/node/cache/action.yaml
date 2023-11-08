@@ -1,0 +1,60 @@
+name: Cache NodeJs/Electron
+author: 'MiLaboratories'
+description: |
+  Cache Electon or NodeJS modules and (optionally) local node_modules
+
+inputs:
+  local-cache:
+    description: enable/disable local 'node_modules' cache
+    required: false
+    default: 'off'
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Cache Electron libs
+      uses: actions/cache@v3
+      if: inputs.is-electron-application == 'true'
+      with:
+        path: |
+          ~/.cache/electron/
+          ~/Library/Caches/electron/
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
+
+    - name: Cache local 'node_modules'
+      if: inputs.local-cache == 'on' && inputs.is-electron-application == 'true'
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
+
+    - name: Cache Node modules
+      uses: actions/cache@v3
+      if: inputs.is-electron-application == 'false'
+      with:
+        path: ~/.npm
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-      

@@ -1,0 +1,37 @@
+name: 'Delete Draft Releases'
+description: |
+  Delete draft releases in your repository.
+
+inputs:
+   draft-ttl-threshold:
+      description: |
+        Delete drafts older than the set threshold (e.g. '1s', '5d', '1y')
+        Available units of time:
+
+          seconds: 's'
+          minutes: 'm' 'min'
+          hours: 'h' 'hr'
+          days: 'd'
+          weeks: 'w' 'wk'
+          months:
+          years: 'y' 'yr'
+
+      type: string
+      required: false
+
+   token:
+      description: |
+        Copy "github_token" input variable to "GITHUB_TOKEN" env variable.
+      type: string
+      required: true
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: hugo19941994/delete-draft-releases@1bdca1ea7ffb25ae7f468a7bdb40056dae98175e
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        threshold: ${{ inputs.draft-ttl-threshold }}

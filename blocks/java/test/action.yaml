@@ -1,0 +1,412 @@
+name: Run Java project tests and publish results
+author: 'MiLaboratories'
+description: |
+  Run Java project tests with gradle.
+
+  Upload test results to remote storage so developer could see the report.
+
+  This action cares about caching and re-using build results.
+  This means tests use results build jobs finished before this
+  action has started.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  #
+  # Test run control
+  #
+  project:
+    description: |
+      Gradle project name to build _without_ task name:
+        gradle :<project>:<task>
+      For 'root' project just leave input empty
+
+    required: false
+    default: ''
+
+  project-dir:
+    description: |
+      Path to project root directory.
+      Defaults to repository root.
+    required: false
+    default: './'
+
+  tasks:
+    description: |
+      Test tasks to run.
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: test
+
+  exclude-tasks:
+    description: |
+      Tasks to skip (--exclude-task options).
+      You can put several tasks here (one per line).
+      Each task will be prefixed with <project> name:
+        gradle :<project>:<task>
+
+    required: false
+    default: ''
+
+  custom-arguments:
+    description: |
+      Custom arguments for gradle command.
+      Each line is considered as single argument:
+          '-b <file>'
+        on single line will cause error. Put
+          '-b
+           <file>' to get what you want.
+
+    required: false
+    default: ''
+
+  test-directory:
+    description: |
+      Change directory into the input directory before running test command.
+
+      Note here, we run test-command through wrapper script itests.sh
+      thus this script must also be present in the directory where you are changing into.
+    required: false
+    default: ''
+
+  test-command:
+    description: |
+      Test command (initiate single test for java project)
+    required: false
+    default: ''
+
+  test-type:
+    description: |
+      Test type: unit, integration, regression e.t.c
+    required: false
+    default: ''
+
+  #
+  # Cache gradle control
+  #
+  gradle-cache-read-only:
+    description: |
+      When 'true', existing entries will be read from the cache but no entries will be written.
+      By default this value is 'false' for workflows on the GitHub default branch and 'true' for workflows on other branches.
+    required: false
+    default: ${{ github.event.repository != null && github.ref_name != github.event.repository.default_branch }}
+  gradle-cache-write-only:
+    description: |
+      When 'true', entries will not be restored from the cache but will be saved at the end of the Job.
+      Setting this to 'true' implies cache-read-only will be 'false'.
+    required: false
+    default: 'false'
+  gradle-home-cache-includes:
+    description: Paths within Gradle User Home to cache.
+    required: false
+    default: |
+      caches
+      notifications
+  gradle-home-cache-excludes:
+    description: Paths within Gradle User Home to exclude from cache.
+    required: false
+
+  #
+  # Test data cache control
+  #
+  test-data-cache-enabled:
+    description: |
+      Enable test data caching (e.g. downloadable data samples, required for tests)
+    required: false
+    default: 'false'
+  test-data-cache-paths:
+    description: |
+      Paths to files to store in cache
+    required: false
+    default: ''
+  test-data-cache-key:
+    description: |
+      Cache key
+    required: false
+    default: ''
+
+  #
+  # Hook settings
+  #
+  before-hooks-tasks:
+    description: |
+      Task to run before hooks. You can pre-build code to get required
+      binaries before running hook scripts.
+
+      You can put several tasks here (one per line).
+    required: false
+    default: ''
+  hook-before:
+    description: |
+      Hook to run AFTER build but BEFORE tests execution.
+    required: false
+    default: ''
+  hook-after:
+    description: |
+      Hook to run AFTER tests execution.
+    required: false
+    default: ''
+
+  #
+  # Results upload control
+  #
+  upload-report:
+    description: |
+      Set it to 'false' if you want to skip report upload steps
+    required: false
+    default: 'true'
+  s3-bucket:
+    description: |
+      S3 bucket to use for tests
+    required: false
+    default: 'milaboratory-artefacts-public-files'
+  s3-path-prefix:
+    description: |
+      Prefix for all uploaded test files.
+
+      Tests report will be uploaded to:
+        's3://<bucket>/<path-prefix>/<repository>/<hash>-<run-number>-<random-str>/tests'
+
+    required: false
+    default: 'cdn/internal/ci'
+
+  #
+  # Environment control
+  #
+  java-version:
+    description: |
+      Version of JAVA to use for build.
+    required: true
+
+  java-distribution:
+    description: |
+      Java distribution to use.
+      Example: 'temurin', 'zulu', ...
+      See 'https://github.com/actions/setup-java#supported-distributions'
+      for complete list of supported distributions.
+    required: false
+    default: 'temurin'
+
+  python-version:
+    description: |
+      Version of Python to install.
+
+      Empty value makes action to skip environment preparation step.
+    required: false
+    default: ''
+
+  properties:
+    description: |
+      Create properties file with given contents before starting the build
+    required: false
+    default: ''
+
+  cache-key:
+    description: |
+      Key to use for gradle build cache, shared across builds in single repository.
+    required: false
+    default: ''
+
+outputs:
+  report-path:
+    description: |
+      Tests report path in S3 bucket without {{ s3-path-prefix }}
+    value: ${{ steps.upload-path.outputs.stdout }}
+
+  report-path-full:
+    description: |
+      Tests report path in S3 bucket with {{ s3-path-prefix }}
+    value: ${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}
+
+  report-uploaded:
+    description: |
+      'true' when report was uploaded to S3.
+      'false' when upload was skipped or failed.
+    value: ${{ steps.upload-report.outcome == 'success' }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - name: Prepare env for Java application build
+      uses: actions/setup-java@v3
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Install Python on the env
+      if: inputs.python-version != ''
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Set gradle.properties
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
+      with:
+        properties: |
+          ${{ inputs.properties }}
+          miRepoAccessKeyId=${{ env.AWS_ACCESS_KEY_ID }}
+          miRepoSecretAccessKey=${{ env.AWS_SECRET_ACCESS_KEY }}
+          miRepoSessionToken=${{ env.AWS_SESSION_TOKEN }}
+
+    - name: Read actual project properties
+      id: gradle-props
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
+      with:
+        project-dir: ${{ inputs.project-dir }}
+        project-name: ${{ inputs.project }}
+
+        gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
+        gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
+        cache-read-only: ${{ inputs.gradle-cache-read-only }}
+        cache-write-only: ${{ inputs.gradle-cache-write-only }}
+
+    - name: Generate upload path
+      id: upload-path
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          rand="$(
+            shasum - <<<"${RANDOM}${RANDOM}${RANDOM}" |
+              awk '{print $1}'
+          )"
+
+          echo "${GITHUB_REPOSITORY}/${GITHUB_SHA:0:8}-${GITHUB_RUN_NUMBER}-${rand:0:15}/tests/"
+
+    - name: Generate list of tasks to exclude
+      id: excludes
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      with:
+        input: ${{ inputs.exclude-tasks }}
+        prefix: |-
+          --exclude-task
+          ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
+
+    - name: Download cached test data
+      if: inputs.test-data-cache-enabled == 'true' && inputs.test-data-cache-paths != '' && inputs.test-data-cache-key != ''
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.test-data-cache-paths }}
+        key: ${{ inputs.test-data-cache-key }}
+
+    - name: Generate before-hooks tasks
+      id: before-hooks-tasks
+      if: inputs.before-hooks-tasks != ''
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      with:
+        input: ${{ inputs.before-hooks-tasks }}
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
+
+    - name: Run before-hooks tasks
+      if: steps.before-hooks-tasks.outputs.result != ''
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
+      with:
+        build-root-directory: ${{ inputs.project-dir }}
+        arguments: |-
+          -Pmi-ci=true
+          -Pversion=${{ steps.context.outputs.current-version }}
+          -Pmi-release=${{ steps.context.outputs.is-release }}
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          ${{ steps.before-hooks-tasks.outputs.result }}
+
+    - name: Run 'before-tests' hook
+      if: inputs.hook-before != ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
+      with:
+        script-path: ${{ inputs.hook-before }}
+
+    - name: Generate test tasks
+      id: test-tasks
+      if: inputs.tasks != ''
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
+      with:
+        input: ${{ inputs.tasks }}
+        prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
+
+    - name: Run tests
+      if: steps.test-tasks.outputs.result != ''
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
+      with:
+        build-root-directory: ${{ inputs.project-dir }}
+        arguments: |-
+          -Pmi-ci=true
+          -Pversion=${{ steps.context.outputs.current-version }}
+          -Pmi-release=${{ steps.context.outputs.is-release }}
+          ${{ steps.excludes.outputs.result }}
+          ${{ inputs.custom-arguments }}
+          ${{ steps.test-tasks.outputs.result }}
+
+    - name: Run test command
+      if: inputs.hook-after == '' && inputs.test-command != ''
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        TEST_CMD: ${{ inputs.test-command }}
+        TEST_DIR: ${{ inputs.test-directory }}
+        TEST_TYPE: ${{ inputs.test-type }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ ! -z "${TEST_DIR}" ];then
+            cd "${TEST_DIR}"
+          fi
+
+          if [ "${TEST_TYPE}" == "regression" ];then
+            ./itests.sh "${TEST_CMD}"
+          else
+            ./itests.sh test "${TEST_CMD}"
+          fi
+
+    - name: Run 'after-tests' hook
+      if: inputs.hook-after != '' && inputs.test-command == ''
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
+      with:
+        script-path: ${{ inputs.hook-after }}
+
+    - name: Check if we should upload results to S3
+      id: should-upload
+      if: always()
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        UPLOAD_ENABLED: ${{ inputs.upload-report }}
+        BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
+        REPORT_DIR: reports/tests/test
+        REPORT_PATH: ${{ steps.gradle-props.outputs.buildDir }}/reports/tests/test
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${UPLOAD_ENABLED}" != 'true' ]; then
+            exit 0
+          fi
+
+          REPORT_PATH="${BUILD_DIR}/${REPORT_DIR}"
+
+          if ! [ -e "${REPORT_PATH}" ]; then
+            ghwa_notice "Tests report '<build dir>/${REPORT_DIR}' does not exist, nothing to upload."
+            exit 0
+          fi
+
+          if [ -z "$(ls -A ${REPORT_PATH})" ]; then
+            ghwa_error "Tests report '<build dir>/${REPORT_DIR}' is empty, nothing to upload. It seems something broke gradle process."
+            exit 0
+          fi
+
+          ghwa_set_env "REPORT_PATH" "${REPORT_PATH}"
+          ghwa_set_env "UPLOAD_REPORT" "true"
+
+    - name: Upload test results
+      id: upload-report
+      if: always() && env.UPLOAD_REPORT == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          aws s3 cp --recursive \
+          ${{ env.REPORT_PATH }} \
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path-prefix }}/${{ steps.upload-path.outputs.stdout }}

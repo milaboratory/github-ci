@@ -1,0 +1,59 @@
+name: Notify about approval required
+author: 'MiLaboratories'
+description: |
+  Send notifications about required deployment approval
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  message:
+    description: |
+      Message to display in notification
+    required: true
+  reviewers:
+    description: |
+      List of reviewers to call for action (one per line)
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - name: Send new release notigication to Telegram
+      if: inputs.telegram-target != ''
+      uses: milaboratory/github-ci/actions/notify/telegram/review-required@v4-beta
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        message: ${{ inputs.message }}
+        reviewers: ${{ inputs.reviewers }}
+
+        product-name: ${{ inputs.product-name }}
+        additional-info: ${{ inputs.additional-info }}

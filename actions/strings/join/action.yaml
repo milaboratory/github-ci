@@ -1,0 +1,71 @@
+name: Join multiline text into single line
+author: 'MiLaboratories'
+description: |
+  Replace all line feeds ('\n') with <separator>, optionally
+  skipping empty lines to avoid separator duplication.
+
+  NOTE: the last line feed in the <input> is ignored.
+
+inputs:
+  input:
+    description: |
+      Lines to join.
+    required: true
+
+  separator:
+    description: |
+      Prefix to add to all lines from <input>
+    required: false
+    default: ','
+
+  skip-empty:
+    description: |
+      Skip empty lines
+    required: false
+    default: 'false'
+
+outputs:
+  result:
+    description: |
+      All lines from <input> glued into single line with <separator> as delimiter.
+
+    value: ${{ steps.join.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Join lines
+      id: join
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        INPUT_TEXT: ${{ inputs.input }}
+        SEPARATOR: ${{ inputs.separator }}
+        SKIP_EMPTY: ${{ inputs.skip-empty }}
+      with:
+        run: |
+          function skip_empty() {
+            if [ "${SKIP_EMPTY}" != "true" ]; then
+              cat
+              return 0
+            fi
+
+            grep --extended-regexp --invert-match '^[[:space:]]*$'
+          }
+
+          function concat() {
+            local _sep="${1}"
+
+            awk -v "sep=${_sep}" '
+              FNR == 1 {
+                printf "%s", $0;
+
+                while ( getline == 1 ) {
+                    printf "%s%s", sep, $0;
+                }
+              }'
+          }
+
+          printf "%s" "${INPUT_TEXT}" |
+            skip_empty |
+            concat "${SEPARATOR}"

@@ -1,0 +1,85 @@
+name: Clean stale pull requests form the regression tests.
+author: 'MiLaboratories'
+description: |
+  This script will search for all open pull requests, then for each PR,
+  it checks if the name of the base branch (base_ref) is part of the branch name (head_ref) for this PR.
+  If it isn't, it will close the PR and leave a comment.
+
+inputs:
+  branch-prefix:
+    description: |
+      Branch search prefix.
+    required: false
+    default: 'mixcr-regression-tests'
+  github-token:
+    description: |
+      Github token
+    required: true
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/github-script@v6
+      env:
+        BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          async function run() {
+            const branch_prefix = process.env.BRANCH_PREFIX;
+          
+            try {
+              const {data: prs} = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open'
+              });
+
+              for (const pr of prs) {
+                if (!pr.head.ref.startsWith(branch_prefix)) continue; 
+
+                const baseBranchName = pr.base.ref;
+                const headBranchName = pr.head.ref;
+                const branchAfterSlash = headBranchName.split('/')[1];
+          
+                console.log(`Head Branch: ${headBranchName}`);
+                console.log(`Base Branch: ${baseBranchName}`);
+                console.log(`Prefix: ${branch_prefix}`);
+      
+                try {
+                    await github.rest.repos.getBranch({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      branch: branchAfterSlash
+                    });
+                    // If the branch exists, skip to the next PR
+                    continue;
+                } catch (error) {
+                    // If the branch doesn't exist, this error will be thrown
+                    // We can ignore this error and proceed to close the PR
+                }
+
+                if (!headBranchName.includes(baseBranchName)) {
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.number,
+                    state: 'closed'
+                  });
+  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: 'It has been automatically closed by the housekeeping workflow.'
+                  });
+                }
+              }
+            } catch (error) {
+              core.setFailed(error.message);
+            }
+          }
+
+          run();

@@ -1,0 +1,120 @@
+name: Send notifications about build result
+author: 'MiLaboratories'
+description: |
+  Send notifications about build result.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  job-status:
+    description: |
+      Publication job status.
+
+      To get it, put it into job's outputs (status: {{ job.status }}),
+      then get it from needs.<job-id>.outputs.status.
+
+      You can pass several statuses here, one per line. The will be merged into single status by
+      severity level (cancelled -> success -> failure).
+
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+  product-type:
+    description: |
+      Type of published resource (library, package, etc.)
+    required: false
+    default: 'library'
+
+  repository-category:
+    description: |
+      Repository category: 'dev', 'release', etc.
+    required: false
+    default: 'dev'
+  repository-type:
+    description: |
+      Type of repository (maven, npm, py, etc.)
+    required: false
+    default: 'maven'
+  packages:
+    description: |
+      List of published packages in JSON format
+    required: false
+    default: '[]'
+  search-tags:
+    description: |
+      List of search tags for the telegram notification channel
+    required: false
+    default: ''
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: category
+      env:
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+      with:
+        run: |
+          if [ "${IS_RELEASE}" = "true" ]; then
+            echo "release"
+          else
+            echo "dev"
+          fi
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - id: job-status
+      name: Merge publish job statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      with:
+        statuses: ${{ inputs.job-status }}
+
+    - name: Report publish result to Telegram
+      if: inputs.telegram-target != ''
+      uses: milaboratory/github-ci/actions/notify/telegram/publish@v4-beta
+      with:
+        telegram-target: ${{ inputs.telegram-target }}
+        telegram-token: ${{ inputs.telegram-token }}
+
+        job-status: ${{ steps.job-status.outputs.status }}
+
+        product-name: ${{ inputs.product-name }}
+        product-type: ${{ inputs.product-type }}
+        build-category: ${{ steps.category.outputs.stdout }}
+
+        repository-category: ${{ inputs.repository-category }}
+        repository-type: ${{ inputs.repository-type }}
+        packages: ${{ inputs.packages }}
+        search-tags: ${{ inputs.search-tags }}
+        additional-info: ${{ inputs.additional-info }}

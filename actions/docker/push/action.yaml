@@ -1,0 +1,128 @@
+name: Publish docker image to GitHub Docker registry
+author: 'MiLaboratories'
+description: |
+  Publish given docker tag into GitHub Docker registry
+
+inputs:
+  source:
+    description: |
+      Source tag to push, including version part: <tag-name>:<tag-version>
+      E.g.:
+        myapp:v0.1.0
+    required: true
+
+  targets:
+    description: |
+      Push target tags without registry name.
+      Newline-separated list of tags to push into target registry.
+      E.g.:
+        milaboratory/example/myapp:v0.1.0
+        milaboratory/example/myapp:latest
+
+      Defaults to {{github.repository}}/{{inputs.source}}
+
+    required: false
+    default: ''
+
+  #
+  # Docker Registry Configuration
+  #
+  registry:
+    description: |
+      Target Docker registry.
+      Defaults to ghcr.io (GitHub Docker registry)
+    required: false
+    default: 'ghcr.io'
+  auth-user:
+    description: |
+      Authentication user for docker registry.
+    required: false
+    default: ${{ github.actor }}
+  auth-token:
+    description: |
+      Authentication token for docker registry.
+      Use secrets.GITHUB_TOKEN
+    required: true
+
+outputs:
+  pushed:
+    description: |
+      Newline separated list of full tag names pushed to target registry
+      (including registry name prefix).
+    value: ${{ fromJSON(steps.push.outputs.data).pushed }}
+
+  pushed-json:
+    description: |
+      List of pushed tags as JSON string.
+      Use 'fromJSON()' to decode.
+    value: ${{ steps.push-json.outputs.result }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/docker/login@v4-beta
+      with:
+        registry: ${{ inputs.registry }}
+        user: ${{ inputs.auth-user }}
+        password: ${{ inputs.auth-token }}
+
+    - name: Render target tag names
+      id: targets
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        SOURCE_TAG: ${{ inputs.source }}
+        TARGET_REGISTRY: ${{ inputs.registry }}
+        TARGET_TAGS: ${{ inputs.targets }}
+      with:
+        dump-stdout: false
+        run: |
+          # Render full target tags (<registry>/<path>:<version>)
+
+          if [ -z "${TARGET_TAGS}" ]; then
+            TARGET_TAGS="${GITHUB_REPOSITORY}/${SOURCE_TAG}"
+          fi
+
+          result="$(
+            while read -r target_tag; do
+              # Don't try to push empty tags
+              if [ -z "${target_tag// /}" ]; then
+                continue
+              fi
+
+              echo "${TARGET_REGISTRY}/${target_tag}"
+
+            done <<<"${TARGET_TAGS}"
+          )"
+
+          ghwa_set_env "PUSH_TARGETS" "${result}"
+
+    - name: Pushing tags to '${{ inputs.registry }}'
+      id: push
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        SOURCE_TAG: ${{ inputs.source }}
+      with:
+        dump-stdout: false
+        run: |
+          # Pushing tags to '${{ inputs.registry }}'
+
+          mapfile -t push_targets <<<"${PUSH_TARGETS}"
+
+          for target in "${push_targets[@]}"; do
+            ghwa_group "Pushing '${target}'..."
+
+            docker tag "${SOURCE_TAG}" "${target}"
+            docker push "${target}"
+
+            ghwa_endgroup
+          done
+
+          ghwa_notice "Pushed Docker tags:"$'\n'"${PUSH_TARGETS}"
+          ghwa_set_output "pushed" "${PUSH_TARGETS}"
+
+    - name: Convert targets list to JSON array
+      id: push-json
+      uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+      with:
+        input: ${{ fromJSON(steps.push.outputs.data).pushed }}

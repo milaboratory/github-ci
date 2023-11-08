@@ -1,0 +1,75 @@
+name: Update artifact's link on CDN
+author: 'MiLaboratories'
+description: |
+    This action updates the the CDN link that
+    redirect to the latest build results.
+
+    For example, you have a daily build for the development branch
+    and you would like to share it with your auditory,
+    and at the same time, you don't want to upload your results twice,
+    by uploading build results and re-writing the latest archive on the s3 bucket.
+    Thus this action will come in handy just creating
+    a zero-byte object that redirects the user to actual build results.
+
+inputs:
+  cdn-redirect-link:
+    description: |
+      External URL where an zero-byte object will redirect request.
+      Amazon S3 stores the value of this header in the object metadata.
+    required: true
+
+  s3-iam-role-to-assume:
+    description: |
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
+    required: false
+    default: ''
+
+  s3-bucket-path:
+    description: |
+       The path to a zero-byte object on an S3 bucket
+
+       Example:
+        'link/software/mixcr'
+
+    required: true
+  s3-bucket-key:
+    description: |
+       The name of a zero-byte object.
+       In particular it should be a combination
+       of the application name, branch name and extention.
+
+       Example:
+        'mixcr-develop.zip'
+
+    required: true
+
+  s3-region:
+    description: |
+      AWS region with target S3 bucket
+    required: false
+    default: 'eu-central-1'
+  s3-bucket:
+    description: |
+      AWS S3 bucket name
+      This bucket must be configurated as an s3 static website.
+    required: true
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
+
+    - name: Update website-redirect-location metadata in the file
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          aws s3api put-object --bucket ${{ inputs.s3-bucket }} \
+          --key ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }} \
+          --website-redirect-location ${{ inputs.cdn-redirect-link }}

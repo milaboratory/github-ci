@@ -1,0 +1,77 @@
+name: Tag and push Docker image
+author: 'MiLaboratories'
+description: |
+  Tag and push docker image built with Gradle
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  project:
+    description: |
+      Gradle project name to build _without_ task name:
+        gradle :<project>:<task>
+      For 'root' project just leave input empty
+
+    required: false
+    default: ''
+
+  github-token:
+    description: |
+      Auth token for GitHub Container Registry
+    required: false
+    default: ''
+
+outputs:
+  pushed:
+    description: List of pushed docker tags in plaintext format (one per line)
+    value: ${{ steps.docker-push.outputs.pushed }}
+
+  pushed-json:
+    description: List of pushed docker tags in JSON format
+    value: ${{ steps.docker-push.outputs.pushed-json }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - name: Generate push targets list
+      id: push-targets
+
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+        IS_LATEST_VERSION: ${{ steps.context.outputs.is-latest-version }}
+        IS_BRANCH_HEAD: ${{ steps.context.outputs.is-branch-head }}
+        BUILD_NAME: ${{ inputs.project }}
+        BUILD_VERSION: ${{ steps.context.outputs.current-version }}
+
+      with:
+        run: |
+          # Always push '<tag name>:<version>' 'as is'
+          echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:${BUILD_VERSION}"
+
+          if [ "${IS_RELEASE}" = 'true' ]; then
+            if [ "${IS_LATEST_VERSION}" = 'true' ]; then
+              # For latest releases also update :latest tag
+              echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest"
+            fi
+          else
+            if [ "${IS_BRANCH_HEAD}" = 'true' ]; then
+              # For branch builds update :latest-<branch> tag when we build
+              # latest branch commit
+              echo "${GITHUB_REPOSITORY}/${BUILD_NAME}:latest-${GITHUB_REF_NAME}"
+            fi
+          fi
+
+    - name: Publish docker image
+      id: docker-push
+
+      uses: milaboratory/github-ci/actions/docker/push@v4-beta
+      with:
+        auth-token: ${{ inputs.github-token }}
+        source: ${{ inputs.project }}:${{ steps.context.outputs.current-version }}
+        targets: ${{ steps.push-targets.outputs.stdout }}

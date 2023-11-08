@@ -1,0 +1,82 @@
+name: Run shell script
+author: 'MiLaboratories'
+description: |
+  Run shell script with MiLib loaded and error handling on
+
+inputs:
+  run:
+    description: |
+      Shell script body
+    required: true
+
+  dump-stdout:
+    description: |
+      Save script's stdout to action's outputs.stdout
+    required: false
+    default: 'true'
+
+outputs:
+  stdout:
+    description: Script's stdout. Saved only on script's zero exit code
+    value: ${{ steps.script.outputs.stdout }}
+
+  data:
+    description: |
+      All outputs from script in JSON string. Use fromJSON() to decode.
+    value: ${{ toJSON(steps.script.outputs) }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Generate script
+      id: script-generator
+      shell: bash
+      run: |
+        # Generate '${{ github.action }}':
+
+        tmp_script_path="${{ github.action_path }}/tmp-script.sh"
+
+        # Generate and run script, saving full STDOUT to step's output
+        end_marker="$(date "+%s%N" | openssl sha256 | awk '{print $2}')"
+        cat >"${tmp_script_path}" <<"EndOfTmpScript-${end_marker}"
+        #!/usr/bin/env bash
+
+        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+        source "${{ github.action_path }}/../lib/sh/mish-lib.sh"
+
+        ${{ inputs.run }}
+
+        EndOfTmpScript-${end_marker}
+
+        chmod u+x "${tmp_script_path}"
+
+    - name: Run script
+      id: script
+      shell: bash
+      env:
+        MISH_DUMP_STDOUT: ${{ inputs.dump-stdout }}
+
+      run: |
+        # Run '${{ github.action }}'
+
+        source "${{ github.action_path }}/../lib/sh/ghwa-commands.sh"
+        set -o nounset
+        set -o errexit
+
+        tmp_script_path="${{ github.action_path }}/tmp-script.sh"
+        tmp_script_output="${{ github.action_path }}/tmp-script.stdout"
+
+        if [ "${MISH_DUMP_STDOUT}" != 'true' ]; then
+          # Don't duplicate script's stdout to file.
+          # We won't need it.
+
+          "${tmp_script_path}"
+          exit 0
+        fi
+
+        # Dump all script's stdout to temp file and save it into step's output.
+        set -o pipefail # its important for us to not mask script exit code with 'tee'
+        "${tmp_script_path}" | tee "${tmp_script_output}"
+
+        ghwa_set_output "stdout" "$(cat "${tmp_script_output}")"
