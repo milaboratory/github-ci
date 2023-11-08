@@ -1,0 +1,37 @@
+name: Prepare environment for Node project
+author: 'MiLaboratories'
+description: |
+  Prepare environment: get specific version of Node, download package caches and so on.
+
+inputs:
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+
+    - name: Cache electron libs
+      uses: milaboratory/github-ci/actions/node/electron/cache@v2
+      with:
+        cache-version: ${{ inputs.cache-version }}
+        local-cache: 'on'

@@ -1,0 +1,50 @@
+name: Simplifies environment setup in called workflows
+author: 'MiLaboratories'
+description: |
+  This action is designed to simplify environment variables
+  setting through workflow inputs.
+  When calling reusable workflows GitHub does not allow to
+  patch workflow jobs from the caller side. If you set default
+  environment variables in parent (caller) workflow (in the project's
+  repository), this variables will not be set in called workflow.
+
+  The only way to control environment variables inside jobs from 'outside'
+  is to add special steps with environment setting to all jobs where we need
+  such control.
+
+  In addition, when calling reusable workflow, caller can't put secrets
+  to called workflow inputs, only to secrets. At the same time, secrets
+  are masked, this makes actions debugging a bit less comfortable when
+  you face run-time problems.
+
+  This action helps in variables setting from both input and secrets
+  in single action call
+
+inputs:
+  inputs:
+    description: |
+      JSON-encoded map of env variables to set.
+      Values of environment variables will be shown in action logs.
+
+      Use <secrets> input for sensitive data.
+    required: true
+
+  secrets:
+    description: |
+      JSON-encoded map of env variables to set.
+      Values of environment variables will be masked in logs.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/env/set@v3
+      with:
+        json: ${{ inputs.inputs }}
+        mask-values: false
+
+    - uses: milaboratory/github-ci/actions/env/set@v3
+      with:
+        json: ${{ inputs.secrets }}
+        mask-values: true

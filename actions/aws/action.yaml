@@ -1,0 +1,63 @@
+name: Run 'aws' CLI utility
+author: 'MiLaboratories'
+description: |
+  Run 'aws' CLI utility in action
+
+inputs:
+  args:
+    description: |
+      Command arguments, one per line.
+    required: true
+
+  version:
+    description: |
+      AWS CLI utility version to use
+      Use exact full version number:
+        2.x - wrong
+        2.4.10 - OK.
+
+      For latest version set input to 'latest'
+
+    required: false
+    default: '2.4.16'
+
+runs:
+  using: "composite"
+
+  steps:
+    # GitHub Actions does not allow passing arguments from action's inputs
+    # down to container for 'using: "docker"' action type.
+    # That is why we have to wrap container with custom executor to keep
+    # action's logic simple
+    - shell: bash
+      env:
+        INPUT_ARGS: ${{ inputs.args }}
+        CLI_VERSION: ${{ inputs.version }}
+      run: |
+        # aws-cli in docker
+
+        # Make sure directories exist so bind mounts will not fail docker container run.
+        mkdir -p \
+          "${HOME}/.aws" \
+          "${HOME}/.docker"
+
+        workdir="$(pwd)"
+        mounts=(
+          --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock"
+          --mount "type=bind,source=${HOME}/.docker,destination=/root/.docker"
+          --mount "type=bind,source=${HOME}/.aws,destination=/root/.aws"
+          --mount "type=bind,source=${workdir},destination=${workdir}"
+        )
+
+        args=()
+        while read -r _arg; do
+          if [ -n "${_arg}" ]; then
+            args+=( "${_arg}" )
+          fi
+        done <<<"${INPUT_ARGS}"
+
+        docker run \
+          "${mounts[@]}" \
+          --workdir "${workdir}" \
+          "amazon/aws-cli:${CLI_VERSION}" \
+          "${args[@]}"

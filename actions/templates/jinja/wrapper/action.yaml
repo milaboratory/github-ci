@@ -1,0 +1,34 @@
+name: 'Jinja2 Action'
+description: |
+  This is the wrapper for Jinja2 Action, that uses pre-built docker image
+
+inputs:
+  template:
+    description: 'Template-file to render'
+    required: true
+  output_file:
+    description: 'Render result file path'
+    required: true
+  strict:
+    description: 'Fails on missing values'
+    required: false
+    default: 'false'
+  variables:
+    description: 'Variables to set in template context'
+    required: false
+  data_file:
+    description: 'See "data_format" for supported formats'
+    required: false
+  data_format:
+    description: 'To be used with the "data_file" input, can be one of: env, ini, yaml or json'
+    required: false
+    default: 'yaml'
+
+runs:
+  using: 'docker'
+  image: docker://ghcr.io/milaboratory/jinja2-action/render:80dd04e7893f22f782bf0d5f33584622172e43c4
+  entrypoint: /app/entrypoint.py
+
+branding:
+  icon: 'sliders'
+  color: 'red'

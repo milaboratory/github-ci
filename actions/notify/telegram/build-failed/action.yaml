@@ -1,0 +1,52 @@
+name: Telegram Message
+description: |
+  Notify User or Channel about build failure
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+  build-version:
+    description: |
+      Build version to display in message
+    required: true
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: short-sha
+      uses: milaboratory/github-ci/actions/shell@v3
+      with:
+        run: |
+          echo "${GITHUB_SHA:0:8}"
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: |
+          💩 \[${{ inputs.product-name }}] Build failed: ${{ inputs.build-version }}
+            Branch: ${{ github.ref_name }} ([${{ steps.short-sha.outputs.stdout }}](${{github.server_url}}/${{github.repository}}/commit/${{github.sha}}))
+          \[ [Source code](${{github.server_url}}/${{github.repository}}/tree/${{github.sha}}) | [CI logs](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) ]
+
+          ${{ inputs.additional-info }}

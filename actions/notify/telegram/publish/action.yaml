@@ -1,0 +1,113 @@
+name: Notify library has been published
+description: |
+  Notify User or Channel about new library publication
+
+inputs:
+  telegram-target:
+    description: |
+      Target telegram User or Channel ID
+    required: true
+  telegram-token:
+    description: |
+      Telegram Bot token
+    required: true
+
+  job-status:
+    description: |
+      Publication job status.
+      To get it, put it into job's outputs (status: {{ job.status }}),
+      then get it from needs.<job-id>.outputs.status
+    required: true
+
+  product-name:
+    description: |
+      Name of product that was built
+    required: false
+    default: ${{ github.repository }}
+  product-type:
+    description: |
+      Type of published resource (library, package, etc.)
+    required: false
+    default: 'library'
+
+  repository-category:
+    description: |
+      Repository category: 'dev', 'release', etc.
+    required: false
+    default: 'dev'
+  repository-type:
+    description: |
+      Type of repository (maven, npm, py, etc.)
+    required: false
+    default: 'maven'
+  packages:
+    description: |
+      List of published packages in JSON format
+    required: false
+    default: '[]'
+
+  additional-info:
+    description: |
+      Additional text to append to message
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v3
+
+    - uses: milaboratory/github-ci/actions/templates/jinja@v3
+      id: message
+      with:
+        data: |
+          { "product": { "name": ${{ toJSON(inputs.product-name) }},
+                         "type": ${{ toJSON(inputs.product-type) }},
+                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
+
+            "github": ${{ steps.safe-ctx.outputs.github }},
+
+            "repository": { "category": ${{ toJSON(inputs.repository-category) }},
+                            "type": ${{ toJSON(inputs.repository-type) }} },
+
+            "job": { "status": ${{ toJSON(inputs.job-status) }} },
+
+            "packages": ${{ inputs.packages }} }
+
+        template: |
+          {%- macro case_first(text) -%}
+            {{ text[0]|upper}}{{text[1:] }}
+          {%- endmacro %}
+          {%- if job["status"] == "failure" -%}
+
+          ❌ \[{{ product["name"] }}] {{ case_first(product["type"]) }} publication failed to {{ repository["type"] }} {{ repository["category"] }} repository.
+
+          {%- else -%}
+
+          🍾 \[{{ product["name"] }}] {{ case_first(product["type"]) }} was published to {{ repository["type"] }} {{ repository["category"] }} repository.
+
+          {%- endif %}
+            Branch: {{ github["ref_name"] }} ([{{ github["sha"][:8] }}](
+              {{- github["server_url"] }}/{{ github["repository"] }}/commit/{{ github["sha"] -}}
+            ))
+            Packages:
+            {%- for i in packages %}
+              - ```{{ i }}```
+            {%- endfor %}
+            \[ [Source code](
+              {{- github["server_url"] }}/{{ github["repository"] }}/tree/{{ github["sha"] -}}
+            ) | [CI logs](
+              {{- github["server_url"] }}/{{ github["repository"] }}/actions/runs/{{ github["run_id"] -}}
+            ) ]
+
+          {{ product["additional_info"] }}
+
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v3
+      with:
+        to: ${{ inputs.telegram-target }}
+        token: ${{ inputs.telegram-token }}
+        format: markdown
+        disable_web_page_preview: true
+        message: ${{ steps.message.outputs.data }}

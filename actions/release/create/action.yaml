@@ -1,0 +1,147 @@
+name: 'Create release'
+description: |
+  Create release and upload assets to it.
+
+inputs:
+  token:
+    description: |
+      Secret for access to GitHub REST API to control builds:
+        secrets.GITHUB_TOKEN
+    required: true
+
+  #
+  # Main release attributes settings
+  #
+  name:
+    description: |
+      Name of release.
+      Defaults to tag name when empty.
+    required: false
+    default: ''
+  tag:
+    description: |
+      Release tag to use.
+      It will be created for <commit> if does not exist.
+    required: false
+    default: ''
+  commit:
+    description: |
+      An optional commit reference.
+      This will be used to create the tag if it does not exist.
+    required: false
+    default: ${{ github.sha }}
+
+  #
+  # Release assets settings
+  #
+  assets:
+    description: |
+      '\n' or ','-delimited list of assets to upload to release.
+      Globbing is supported.
+      Example:
+        assets: |
+          dir1/*.txt
+          dir2/file1.exe
+          dir2/file2.dmg
+          dir3/**
+    required: true
+
+  #
+  # Release creation settings
+  #
+  draft:
+    description: |
+      Mark release as 'draft'
+    required: false
+    default: 'false'
+  pre-release:
+    description: |
+      Mark release as 'pre-release'
+    required: false
+    default: 'false'
+  allow-updates:
+    description: |
+      Allow updates of existing release. When false, the action will
+      fail on attempt to re-create existing release
+    required: false
+    default: 'true'
+  update-only-unreleased:
+    description: |
+      When allowUpdates is enabled, this will fail the action
+      if the release it is updating is not a draft or a prerelease.
+    required: false
+    default: 'true'
+  #
+  # Changelog generation settings
+  #
+  changelog-exclude-types:
+    description: |
+      Comma-separated list of change types to skip during
+      changelog generation for release.
+
+      See 'Conventional Commits' spec for more info:
+      https://www.conventionalcommits.org/en/v1.0.0/
+
+      Default: 'doc,chore'
+    required: false
+    default: doc,chore
+
+outputs:
+  #
+  # Release info
+  #
+  id:
+    description: "ID of created/updated release"
+    value: ${{ steps.create.outputs.id }}
+  html-url:
+    description: "HTML URL of the release"
+    value: ${{ steps.create.outputs.html_url }}
+  upload-url:
+    description: The URL for uploading assets to the release.
+    value: ${{ steps.create.outputs.upload_url }}
+
+  #
+  # Changelog info
+  #
+  changelog:
+    description: |
+      Changelog for the latest tag, including the version/date header (suitable for prepending to a CHANGELOG.md file).
+    value: ${{ steps.changelog.outputs.changelog }}
+  changes:
+    description: |
+      Changelog for the latest tag, without the version/date header (suitable for GitHub Releases).
+    value: ${{ steps.changelog.outputs.changes }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Generate changelog
+      id: changelog
+      uses: loopwerk/tag-changelog@6730d9b2742044f6cedff39324e8179f5867c6d4
+      with:
+        token: ${{ inputs.token }}
+        exclude_types: ${{ inputs.changelog-exclude-types }}
+
+    - id: assets
+      uses: milaboratory/github-ci/actions/strings/join@v3
+      with:
+        input: ${{ inputs.assets }}
+        separator: ','
+        skip-empty: true
+
+    - name: Create release
+      id: create
+      uses: ncipollo/release-action@3ac4132803a6419fa2a7f4e9dbd1d93fceb690b9
+      with:
+        token: ${{ inputs.token }}
+        name: ${{ inputs.name }}
+        tag: ${{ inputs.tag }}
+        body: ${{ steps.changelog.outputs.changes }}
+
+        updateOnlyUnreleased: ${{ inputs.update-only-unreleased }}
+        allowUpdates: ${{ inputs.allow-updates }}
+        draft: ${{ inputs.draft }}
+        prerelease: ${{ inputs.pre-release }}
+        artifacts: ${{ steps.assets.outputs.result }}
+        commit: ${{ inputs.commit }}

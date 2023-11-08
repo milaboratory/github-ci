@@ -1,0 +1,61 @@
+name: Put data into context.
+author: 'MiLaboratories'
+description: |
+  Put data into context so other jobs can read it later.
+  Consider context as key-value store with immutable values.
+  Once stored under specific key, the value can not be changed.
+
+  NOTE: for large files use 'cache' GitHub Actions functionality
+        as 'context' is based on 'artifacts' and is slow on big files.
+
+inputs:
+  key:
+    description: |
+      The key to use for value storage.
+      The value could be retreived from context by this key.
+    required: true
+
+  value:
+    description: |
+      The value to store under key.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - shell: bash
+      env:
+        CTX_PATH: ${{ github.action_path }}/../ctx
+
+      run: rm -rf "${CTX_PATH}"
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: context
+        path: ${{ github.action_path }}/../ctx
+
+    - id: create_key
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        CTX_PATH: ${{ github.action_path }}/../ctx
+        CTX_KEY: ${{ inputs.key }}
+        CTX_VALUE: ${{ inputs.value }}
+
+      with:
+        run: |
+          random="$(printf "%05d" "${RANDOM}")"
+          file_path="${CTX_PATH}/${CTX_KEY}.${random}"
+
+          if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
+            ghwa_error "Key '${CTX_KEY}' already is set in context artifact"
+            exit 1
+          fi
+
+          printf "%s" "${CTX_VALUE}" > "${file_path}"
+          echo "$(mish_abspath "${file_path}")"
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: context
+        path: ${{ steps.create_key.outputs.stdout }}

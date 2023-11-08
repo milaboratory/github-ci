@@ -1,0 +1,55 @@
+name: Convert list of paths by setting prefixes
+author: 'MiLaboratories'
+description: |
+  Prefix all absolute paths (starting with '/') with <abs-root> prefix
+  Prefix all relative paths (not starting with '/') with <rel-root> prefix
+
+inputs:
+  paths:
+    description: |
+      Lines to prefix with <prefix>
+    required: true
+
+  abs-root:
+    description: |
+      Prefix for absolute paths
+    required: false
+    default: ''
+
+  rel-root:
+    description: |
+      Prefix for relative paths
+    required: false
+    default: ''
+
+outputs:
+  result:
+    description: |
+      All paths from <paths> prefixed by algorithm
+
+    value: ${{ steps.converted.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Convert paths
+      id: converted
+      uses: milaboratory/github-ci/actions/shell@v3
+      env:
+        ABS_ROOT: ${{ inputs.abs-root }}
+        REL_ROOT: ${{ inputs.rel-root }}
+        PATHS: ${{ inputs.paths }}
+      with:
+        run: |
+          while read -r p; do
+            if [ -z "${p}" ]; then
+              continue
+            fi
+
+            if [[ "${p}" = /* ]]; then
+              mish_abspath "${ABS_ROOT}${p}"
+            else
+              mish_abspath "${REL_ROOT}${p}"
+            fi
+          done <<<"${PATHS}"

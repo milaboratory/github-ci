@@ -1,0 +1,81 @@
+name: Detect application version
+author: 'MiLaboratories'
+description: |
+  This action tries to get current code version from git tags:
+    * When git tag directly points to the current commit, it is used as
+      current version number (v-prefix is trimmed)
+    * When no git tag for current commit was found, the version number is
+      generated with the following template: '<prev vesrsion>-<branch name>-<ahead commits count>'
+      E.g. when the latest tag in repo is v1.3.2 and 'master' branch is ahead of that tag
+      by 3 commits, the version for 'master' would be: 1.3.2-master-3
+
+  The action does not mutate any files in repository or affect application builds.
+  It only sets outputs the user can then pass to other workflows/jobs/steps.
+
+inputs:
+  fetch-depth:
+    description: |
+      The number of commits of git history from current HEAD to fetch
+    required: false
+    default: '200'
+  canonize:
+    description: |
+      Canonize version number to make it always look like regular semver: '<major>.<minor>.<patch>'.
+      This makes git tag 'v1.1' to produce version '1.1.0' instead of '1.1'.
+    required: false
+    default: 'false'
+
+outputs:
+  current-version:
+    description: |
+      Version number read from git tags
+  current-tag:
+    description: |
+      Tag used for version detection 'as-is'
+  current-sha:
+    description: |
+      Full hash of git commit the version belongs to
+  previous-version:
+    description: |
+      Previous version number read from git tags
+  previous-tag:
+    description: |
+      Previous version tag 'as-is'
+  previous-sha:
+    description: |
+      Full hash of git commit the previous version belongs to
+  latest-version:
+    description: |
+      The latest version number we could read from git tags
+  latest-tag:
+    description: |
+      The latest version tag 'as-is' (sorted as version numbers)
+  latest-sha:
+    description: |
+      Full hash of git commit the latest version belongs to
+  is-release:
+    description: |
+      Checks if current version is release version (current commit has some tag).
+  is-branch-head:
+    description: |
+      Checks if remote version of current branch points to the same SHA as local.
+
+      This can be used to detect old workflow restarts when needed, for example
+      to prevent :latest docker image tag from being replaced by old workflow.
+  is-latest-version:
+    description: |
+      Checks if current version is latest of all known versions
+      (detected by tags in repository)
+  is-latest-major:
+    description: |
+      Checks if current version is the latest modification of the major version.
+      E.g. for list of versions
+        1.4.0
+        1.4.2
+        2.0.1
+      'is-latest-major' would be 'true' for 1.4.2 (the latest known v1)
+      and 2.0.1 (the latest known v2)
+
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
