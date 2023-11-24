@@ -24,6 +24,13 @@ inputs:
       Because by default, we are using an architecture discovered from the os.
     required: false
     default: ''
+  artifact-os-name:
+    description: |
+      Target os name for artifacts inside the archive. e.g., linux.
+      This will be added to resulting json with detailed information
+      about uploaded archives on s3.
+    required: false
+    default: ''
   add-version:
     description: |
       Add verison number to all uploaded files.
@@ -54,7 +61,7 @@ inputs:
     description: |
       Add agent's operating system architecture to uploaded files
       If a file in the artifact has an extension e.g 'app.zip' and the current ARCH is,
-      for instance, 'amd64', the resulting file name would be: 'app-amd64.zip.'
+      for instance, 'amd64', the resulting file name will be: 'app-amd64.zip.'
 
       Files without extension ('myfile') will have
       os architecture appended ('myfile-amd64').
@@ -62,6 +69,19 @@ inputs:
       If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
       to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
 
+    required: false
+    default: 'false'
+  add-github-run-id:
+    description: |
+      Github Run ID is a unique number for each workflow run within a repository.
+      This number does not change if you re-run the workflow run.
+
+      Add github run id to uploaded files. If a file in the artifact has an extension
+      e.g., 'app.zip' and the current Run ID is, for instance, '3475688987', the resulting
+      file name will be: 'app-3475688987.zip'
+
+      If 'add-version', 'add-sha', 'add-arch', and 'add-github-run-id' are true, Run ID is added
+      to the file name after the version and sha, but before arch: 'app-1.2.3-deadbeef-3475688987-amd64'
     required: false
     default: 'false'
 
@@ -132,6 +152,12 @@ outputs:
       'download' in JSON format
     value: ${{ steps.download-json.outputs.result }}
 
+  artifacts-list:
+    description: |
+      List of artefacts in JSON format with detailed information:
+      size, sha256, relative path on s3, arch, os
+    value: ${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}
+
 runs:
   using: "composite"
 
@@ -187,6 +213,13 @@ runs:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'
 
+    - name: Add Github Run ID
+      if: inputs.add-github-run-id == 'true'
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ github.run_id }}'
+
     - name: Get ARCH
       id: os_arch
       if: inputs.add-os-arch == 'true'
@@ -230,26 +263,42 @@ runs:
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
         S3_PATH: ${{ inputs.s3-path }}
+        OS_NAME: ${{ inputs.artifact-os-name }}
+        OS_ARCH: ${{ steps.os_arch.outputs.stdout }}
       with:
         run: |
           S3_PATH="${S3_PATH%/}" # trim trailing '/'
           S3_PATH="${S3_PATH#/}" # trim leading '/'
 
+          file_infos=()
+          file_paths=()
+
           cd "${ARTIFACT_PATH}"
-          find . -mindepth 1 -type f,l,p |
-            while read -r file_path; do
-              echo "/${S3_PATH}/${file_path#./}"
-            done
+          while read -r file_path; do
+              trimmed_file_path=${file_path#./}
+              full_path="/${S3_PATH}/${trimmed_file_path}"
+              file_size=$(stat -c%s "$trimmed_file_path")
+              sha256=$(sha256sum "$trimmed_file_path" | awk '{ print $1 }')
+
+              file_infos+=("{\"path\": \"$full_path\", \"file_size\": \"$file_size\", \"sha256\": \"$sha256\", \"arch\": \"$OS_ARCH\", \"os\": \"$OS_NAME\" }")
+              file_paths+=("$full_path")
+          done < <(find . -mindepth 1 -type f,l,p)
+
+          json_array_infos=$(printf '%s\n' "${file_infos[@]}" | jq -s '.')
+          array_paths=$(printf '%s\n' "${file_paths[@]}")
+
+          ghwa_set_output json_array_infos "{\"artifacts\": $json_array_infos}"
+          ghwa_set_output array_paths "${array_paths}"
 
     - id: uploaded-json
       uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
       with:
-        input: ${{ steps.uploaded-list.outputs.stdout }}
+        input: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
 
     - id: download-list
       uses: milaboratory/github-ci/actions/strings/replace@v4-beta
       with:
-        input: ${{ steps.uploaded-list.outputs.stdout }}
+        input: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
 
         # Any public S3 object is accessible through special URL:
         #   https://<bucket-name>.s3.<region>.amazonaws.com/<s3-path>
