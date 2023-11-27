@@ -152,11 +152,11 @@ outputs:
       'download' in JSON format
     value: ${{ steps.download-json.outputs.result }}
 
-  artifacts-list:
+  artifacts-list-json:
     description: |
       List of artefacts in JSON format with detailed information:
       size, sha256, relative path on s3, arch, os
-    value: ${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}
+    value: ${{ steps.artifacts-list.outputs.stdout }}
 
 runs:
   using: "composite"
@@ -318,3 +318,9 @@ runs:
       uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
       with:
         input: ${{ steps.download-list.outputs.result }}
+
+    - id: artifacts-list
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          echo "${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}"
