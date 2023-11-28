@@ -42,7 +42,10 @@ runs:
         set -o nounset
         set -o errexit
 
-        mapfile -t input_paths <<<"${PATHS}"
+        input_paths=()
+        while IFS= read -r line; do
+          input_paths+=("$line")
+        done <<< "${PATHS}"
 
         for input_path in "${input_paths[@]}"; do
           if [ -z "${input_path}" ]; then
