@@ -47,30 +47,30 @@ runs:
           input_paths+=("$line")
         done <<< "${PATHS}"
 
-        for input_path in "${input_paths[@]}"; do
-          if [ -z "${input_path}" ]; then
-            continue
+        while read -r file_path; do
+          file_name=$(basename "${file_path}")
+          extension="${file_name##*.}"
+
+          if [ "${file_name}" = "${extension}" ]; then
+            extension=""
           fi
 
-          if [ -d "${input_path}" ]; then
-            find "${input_path}" \
-              -mindepth 1 -and -type b,c,f,l,p,s
+          SANITIZED_SUFFIX=$(echo ${SUFFIX} | sed 's:/:-:g')
+          if [ -n "${extension}" ]; then
+            mv -- "${file_path}" "${file_path%.*}${SANITIZED_SUFFIX}.${extension}"
           else
-            echo "${input_path}"
+            mv -- "${file_path}" "${file_path}${SANITIZED_SUFFIX}"
           fi
-        done |
-          while read -r file_path; do
-            file_name=$(basename "${file_path}")
-            extension="${file_name##*.}"
-
-            if [ "${file_name}" = "${extension}" ]; then
-              extension=""
+        done < <(
+          for input_path in "${input_paths[@]}"; do
+            if [ -z "${input_path}" ]; then
+              continue
             fi
 
-            SANITIZED_SUFFIX=$(echo ${SUFFIX} | sed 's:/:-:g')
-            if [ -n "${extension}" ]; then
-              mv -- "${file_path}" "${file_path%.*}${SANITIZED_SUFFIX}.${extension}"
+            if [ -d "${input_path}" ]; then
+              find "${input_path}" -mindepth 1 -and -type f,l,p
             else
-              mv -- "${file_path}" "${file_path}${SANITIZED_SUFFIX}"
+              echo "${input_path}"
             fi
           done
+        )
