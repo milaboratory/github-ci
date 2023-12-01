@@ -289,7 +289,7 @@ runs:
                 sha256=$(shasum -a 256 "$trimmed_file_path" | awk '{ print $1 }')
               fi
 
-              file_infos+=("{\"path\": \"$full_path\", \"file_size\": \"$file_size\", \"sha256\": \"$sha256\", \"arch\": \"$OS_ARCH\", \"os\": \"$OS_NAME\" }")
+              file_infos+=("{\"path\": \"$full_path\", \"file_size\": \"$file_size\", \"sha256\": \"$sha256\", \"arch\": \"${OS_ARCH}\", \"os\": \"${OS_NAME}\" }")
               file_paths+=("$full_path")
           done < <(find . -mindepth 1 -type f,l,p)
 
