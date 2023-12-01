@@ -1,0 +1,28 @@
+name: 'Matrix outputs - write'
+author: 'MiLaboratories'
+description: |
+  Write outputs for github actions matrix
+  See original action cloudposse/github-action-matrix-outputs-write
+
+inputs:
+  matrix-step-name:
+    required: false
+    description: "Matrix step name"
+  matrix-key:
+    required: false
+    description: "Matrix key"
+  outputs:
+    required: false
+    description: "YAML structured map of outputs"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Write matrix output
+      id: matrix-output-write
+      uses: cloudposse/github-action-matrix-outputs-write@1326f1114208ee82052fdd48cd8ad97c21ae9dc0
+      with:
+        matrix-step-name: ${{ inputs.matrix-step-name }}
+        matrix-key: ${{ inputs.matrix-key }}
+        outputs: ${{ inputs.outputs }}

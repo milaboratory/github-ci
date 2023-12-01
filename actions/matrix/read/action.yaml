@@ -1,0 +1,24 @@
+name: 'Matrix outputs - read'
+author: 'MiLaboratories'
+description: |
+  Read outputs for github actions matrix
+  See original action cloudposse/github-action-matrix-outputs-write
+
+inputs:
+  matrix-step-name:
+    required: true
+    description: "Matrix step name"
+outputs:
+  result:
+    description: "Outputs result"
+    value: "${{ steps.context.outputs.result }}"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Read matrix output
+      id: matrix-output-read
+      uses: cloudposse/github-action-matrix-outputs-read@5690ce6664e0dcdf06e27e4ba27e7a424951da56
+      with:
+        matrix-step-name: ${{ inputs.matrix-step-name }}
