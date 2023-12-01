@@ -184,7 +184,7 @@ runs:
 
     - name: Add version
       if: inputs.add-version == 'true'
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-staging
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
@@ -208,14 +208,14 @@ runs:
 
     - name: Add SHA
       if: steps.sha.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-staging
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.sha.outputs.stdout }}'
 
     - name: Add Github Run ID
       if: inputs.add-github-run-id == 'true'
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-staging
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ github.run_id }}'
@@ -245,7 +245,7 @@ runs:
 
     - name: Add ARCH
       if: steps.os_arch.outputs.stdout != ''
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-staging
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.os_arch.outputs.stdout }}'
