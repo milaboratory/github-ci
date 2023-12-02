@@ -1,0 +1,125 @@
+name: Write artifact metadata
+author: 'MiLaboratories'
+description: |
+  Write/Update detailed artifact metadata to/in the database.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  db_url:
+    description: |
+      Database url.
+    required: false
+  db_user:
+    description: |
+      Database user.
+    required: false
+  db_password:
+    description: |
+      Database password.
+    required: false
+  db_name:
+    description: |
+      Database name.
+    required: false
+    default: 'builds'
+  format:
+    description: |
+      Number of the format for the JSON document.
+    required: false
+    default: '1'
+  document_id:
+    description: |
+      Document ID, must be uniq in the database. Default to github run id.
+      Because it's a unique number for each workflow run within a repository.
+      This number does not change if you re-run the workflow run.
+    required: false
+    default: ${{ github.run_id }}
+  artifacts-list:
+    description: |
+      List of artifacts in the JSON format.
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - name: Get repository name
+      id: repo
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          REPO=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          echo $REPO
+
+    - name: Get version type
+      id: version-type
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+      with:
+        run: |
+          if [ "${IS_RELEASE}" == "true" ];then
+            echo "release"
+          else
+            echo "snapshot"
+          fi
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        DB_URL: ${{ inputs.db_url }}
+        DB_USER: ${{ inputs.db_user }}
+        DB_PASSWORD: ${{ inputs.db_user }}
+        DB_NAME: ${{ inputs.db_name }}
+        FORMAT: ${{ inputs.format }}
+        DOCUMENT_ID: ${{ inputs.documnet_id }}
+        REPOSITORY: ${{ steps.repo.outputs.stdout }}
+        VERSION: ${{ steps.context.outputs.current-version }}
+        VERSION_TYPE: ${{ steps.version-type.outputs.stdout }}
+        COMMIT_HASH: ${{ github.sha }}
+        ARTIFACTS_LIST: ${{ inputs.artifacts-list }}
+      with:
+        run: |
+          TIMESTAMP=$(date +%s)
+
+          JSON=$(cat <<EOF
+          {
+            "format": "${FORMAT}",
+            "repository": "${REPOSITORY}",
+            "version": "${VERSION}",
+            "timestamp": ${TIMESTAMP},
+            "commit_hash": "${COMMIT_HASH}",
+            "version_type": "${VERSION_TYPE}"
+          }
+          EOF
+          )
+
+          DB_ENDPOINT="${DB_URL}/${DB_NAME}/${DOCUMENT_ID}"
+          AUTH="${DB_USER}:${DB_PASSWORD}"
+
+          HTTP_RESPONSE=$(curl -s -u "${AUTH}" --write-out "HTTPSTATUS:%{http_code}" --request GET "${DB_ENDPOINT}")
+          HTTP_BODY=$(echo "${HTTP_RESPONSE}" | sed -E 's/HTTPSTATUS\:[0-9]{3}$//')
+          HTTP_STATUS=$(echo "${HTTP_RESPONSE}" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+          if [ "${HTTP_STATUS}" -eq "404" ];then
+            echo "Document does not exist, creating..."
+            MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "${JSON}") <(echo "${ARTIFACTS_LIST}"))
+            curl -s -u "${AUTH}" -X PUT "${COUCHDB_ENDPOINT}" -d "${MERGED_JSON}"
+
+          elif [ "${HTTP_STATUS}" -eq "200" ];then
+            echo "Document exists, updating..."
+            MERGED_JSON=$(jq -s '.[0] + {artifacts: (. | map(.files[]) | unique)}' <(echo "${HTTP_BODY}") <(echo "${ARTIFACTS_LIST}"))
+            curl -s -u "${AUTH}" -X PUT "${DB_ENDPOINT}" -d "${MERGED_JSON}"
+
+          else
+            echo "HTTP Status neither: 404, nor 200. It's: ${HTTP_STATUS}"
+            exit 1
+          fi
+
+
+
+
