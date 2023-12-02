@@ -277,6 +277,9 @@ runs:
           while read -r file_path; do
               trimmed_file_path=${file_path#./}
               full_path="/${S3_PATH}/${trimmed_file_path}"
+
+              file_type="${trimmed_file_path##*.}"
+
               if [ "${RUNNER_OS}" == "macOS" ];then
                 file_size=$(stat -f%z "$trimmed_file_path")
               else
@@ -289,7 +292,7 @@ runs:
                 sha256=$(shasum -a 256 "$trimmed_file_path" | awk '{ print $1 }')
               fi
 
-              file_infos+=("{\"path\": \"$full_path\", \"file_size\": \"$file_size\", \"sha256\": \"$sha256\", \"arch\": \"${OS_ARCH}\", \"os\": \"${OS_NAME}\" }")
+              file_infos+=("{\"path\": \"${full_path}\", \"file_size\": \"${file_size}\", \"sha256\": \"${sha256}\", \"type\": \"${file_type}\", \"arch\": \"${OS_ARCH}\", \"os\": \"${OS_NAME}\" }")
               file_paths+=("$full_path")
           done < <(find . -mindepth 1 -type f,l,p)
 
