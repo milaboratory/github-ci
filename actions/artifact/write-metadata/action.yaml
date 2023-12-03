@@ -107,12 +107,12 @@ runs:
 
           if [ "${HTTP_STATUS}" -eq "404" ];then
             echo "Document does not exist, creating..."
-            MERGED_JSON=$(jq -r -s '.[0] * .[1]' <(echo "${JSON}") <(echo "${ARTIFACTS_LIST}"))
+            MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "${JSON}") <(echo "${ARTIFACTS_LIST}" | jq -r))
             curl -s -u "${AUTH}" -X PUT "${DB_ENDPOINT}" -d "${MERGED_JSON}"
 
           elif [ "${HTTP_STATUS}" -eq "200" ];then
             echo "Document exists, updating..."
-            MERGED_JSON=$(jq -r -s '.[0] + {artifacts: (. | map(.artifacts[]) | unique)}' <(echo "${HTTP_BODY}") <(echo "${ARTIFACTS_LIST}"))
+            MERGED_JSON=$(jq -s '.[0] + {artifacts: (. | map(.artifacts[]) | unique)}' <(echo "${HTTP_BODY}") <(echo "${ARTIFACTS_LIST}" | jq -r))
             curl -s -u "${AUTH}" -X PUT "${DB_ENDPOINT}" -d "${MERGED_JSON}"
 
           else
