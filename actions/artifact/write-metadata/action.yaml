@@ -81,7 +81,7 @@ runs:
         VERSION: ${{ steps.context.outputs.current-version }}
         VERSION_TYPE: ${{ steps.version-type.outputs.stdout }}
         COMMIT_HASH: ${{ github.sha }}
-        ARTIFACTS_LIST: ${{ toJSON(inputs.artifacts-list) }}
+        ARTIFACTS_LIST: ${{ inputs.artifacts-list }}
       with:
         run: |
           TIMESTAMP=$(date +%s)

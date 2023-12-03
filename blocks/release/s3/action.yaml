@@ -329,6 +329,8 @@ runs:
 
     - id: artifacts-list
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        JSON_ARRAY: ${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}
       with:
         run: |
-          echo "${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}"
+          echo "${JSON_ARRAY}"
