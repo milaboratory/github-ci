@@ -156,7 +156,7 @@ outputs:
     description: |
       List of artefacts in JSON format with detailed information:
       size, sha256, relative path on s3, arch, os
-    value: ${{ toJSON(steps.artifacts-list.outputs.stdout) }}
+    value: ${{ steps.artifacts-list.outputs.stdout }}
 
 runs:
   using: "composite"
