@@ -91,7 +91,7 @@ runs:
             "format": "${FORMAT}",
             "repository": "${REPOSITORY}",
             "version": "${VERSION}",
-            "timestamp": ${TIMESTAMP},
+            "timestamp": "${TIMESTAMP}",
             "commit_hash": "${COMMIT_HASH}",
             "version_type": "${VERSION_TYPE}"
           }
@@ -112,7 +112,7 @@ runs:
 
           elif [ "${HTTP_STATUS}" -eq "200" ];then
             echo "Document exists, updating..."
-            MERGED_JSON=$(jq -s '.[0] + {artifacts: (. | map(.files[]) | unique)}' <(echo "${HTTP_BODY}") <(echo "${ARTIFACTS_LIST}"))
+            MERGED_JSON=$(jq -s '.[0] + {artifacts: (. | map(.artifacts[]) | unique)}' <(echo "${HTTP_BODY}") <(echo "${ARTIFACTS_LIST}"))
             curl -s -u "${AUTH}" -X PUT "${DB_ENDPOINT}" -d "${MERGED_JSON}"
 
           else
