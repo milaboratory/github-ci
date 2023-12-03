@@ -7,39 +7,39 @@ description: |
     - initialized context (actions/context/init)
 
 inputs:
-  db_url:
-    description: |
-      Database url.
-    required: false
-  db_user:
-    description: |
-      Database user.
-    required: false
-  db_password:
-    description: |
-      Database password.
-    required: false
-  db_name:
-    description: |
-      Database name.
-    required: false
-    default: 'builds'
-  format:
-    description: |
-      Number of the format for the JSON document.
-    required: false
-    default: '1'
-  document_id:
-    description: |
-      Document ID, must be uniq in the database. Default to github run id.
-      Because it's a unique number for each workflow run within a repository.
-      This number does not change if you re-run the workflow run.
-    required: false
-    default: ${{ github.run_id }}
-  artifacts-list:
-    description: |
-      List of artifacts in the JSON format.
-    required: false
+    db_url:
+      description: |
+        Database url.
+      required: false
+    db_user:
+      description: |
+        Database user.
+      required: false
+    db_password:
+      description: |
+        Database password.
+      required: false
+    db_name:
+      description: |
+        Database name.
+      required: false
+      default: 'builds'
+    format:
+      description: |
+        Number of the format for the JSON document.
+      required: false
+      default: '1'
+    document_id:
+      description: |
+        Document ID, must be uniq in the database. Default to github run id.
+        Because it's a unique number for each workflow run within a repository.
+        This number does not change if you re-run the workflow run.
+      required: false
+      default: ${{ github.run_id }}
+    artifacts-list:
+      description: |
+        List of artifacts in the JSON format.
+      required: false
 
 runs:
   using: "composite"
@@ -76,7 +76,7 @@ runs:
         DB_PASSWORD: ${{ inputs.db_user }}
         DB_NAME: ${{ inputs.db_name }}
         FORMAT: ${{ inputs.format }}
-        DOCUMENT_ID: ${{ inputs.documnet_id }}
+        DOCUMENT_ID: ${{ inputs.document_id }}
         REPOSITORY: ${{ steps.repo.outputs.stdout }}
         VERSION: ${{ steps.context.outputs.current-version }}
         VERSION_TYPE: ${{ steps.version-type.outputs.stdout }}
@@ -108,7 +108,7 @@ runs:
           if [ "${HTTP_STATUS}" -eq "404" ];then
             echo "Document does not exist, creating..."
             MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "${JSON}") <(echo "${ARTIFACTS_LIST}"))
-            curl -s -u "${AUTH}" -X PUT "${COUCHDB_ENDPOINT}" -d "${MERGED_JSON}"
+            curl -s -u "${AUTH}" -X PUT "${DB_ENDPOINT}" -d "${MERGED_JSON}"
 
           elif [ "${HTTP_STATUS}" -eq "200" ];then
             echo "Document exists, updating..."
@@ -119,7 +119,3 @@ runs:
             echo "HTTP Status neither: 404, nor 200. It's: ${HTTP_STATUS}"
             exit 1
           fi
-
-
-
-
