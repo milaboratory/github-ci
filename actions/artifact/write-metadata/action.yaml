@@ -7,19 +7,19 @@ description: |
     - initialized context (actions/context/init)
 
 inputs:
-    db_url:
+    db-url:
       description: |
         Database url.
       required: false
-    db_user:
+    db-user:
       description: |
         Database user.
       required: false
-    db_password:
+    db-password:
       description: |
         Database password.
       required: false
-    db_name:
+    db-name:
       description: |
         Database name.
       required: false
@@ -29,7 +29,7 @@ inputs:
         Number of the format for the JSON document.
       required: false
       default: '1'
-    document_id:
+    document-id:
       description: |
         Document ID, must be uniq in the database. Default to github run id.
         Because it's a unique number for each workflow run within a repository.
@@ -71,12 +71,12 @@ runs:
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        DB_URL: ${{ inputs.db_url }}
-        DB_USER: ${{ inputs.db_user }}
-        DB_PASSWORD: ${{ inputs.db_user }}
-        DB_NAME: ${{ inputs.db_name }}
+        DB_URL: ${{ inputs.db-url }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        DB_NAME: ${{ inputs.db-name }}
         FORMAT: ${{ inputs.format }}
-        DOCUMENT_ID: ${{ inputs.document_id }}
+        DOCUMENT_ID: ${{ inputs.document-id }}
         REPOSITORY: ${{ steps.repo.outputs.stdout }}
         VERSION: ${{ steps.context.outputs.current-version }}
         VERSION_TYPE: ${{ steps.version-type.outputs.stdout }}
