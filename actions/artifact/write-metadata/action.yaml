@@ -69,7 +69,9 @@ runs:
             echo "snapshot"
           fi
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - name: Write metadata on Linux/macOS
+      if: startsWith(runner.os, 'macOS') || startsWith(runner.os, 'Linux')
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         DB_URL: ${{ inputs.db-url }}
         DB_USER: ${{ inputs.db-user }}
@@ -119,3 +121,60 @@ runs:
             echo "HTTP Status neither: 404, nor 200. It's: ${HTTP_STATUS}"
             exit 1
           fi
+
+    - name: Write metadata on Windows
+      if: startsWith(runner.os, 'Windows')
+      shell: pwsh
+      env:
+        DB_URL: ${{ inputs.db-url }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        DB_NAME: ${{ inputs.db-name }}
+        FORMAT: ${{ inputs.format }}
+        DOCUMENT_ID: ${{ inputs.document-id }}
+        REPOSITORY: ${{ steps.repo.outputs.stdout }}
+        VERSION: ${{ steps.context.outputs.current-version }}
+        VERSION_TYPE: ${{ steps.version-type.outputs.stdout }}
+        COMMIT_HASH: ${{ github.sha }}
+        ARTIFACTS_LIST: ${{ inputs.artifacts-list }}
+      run: |
+        $TIMESTAMP = [int][double]::Parse((Get-Date -UFormat %s))
+
+        $JSON = @"
+        {
+          "format": "$env:FORMAT",
+          "repository": "$env:REPOSITORY",
+          "version": "$env:VERSION",
+          "timestamp": "$TIMESTAMP",
+          "commit_hash": "$env:COMMIT_HASH",
+          "version_type": "$env:VERSION_TYPE"
+        }
+        "@
+
+        $DB_ENDPOINT="$env.DB_URL/$env:DB_NAME/$env:DOCUMENT_ID"
+        $SECUREPASS = ConvertTo-SecureString $env:DB_PASSWORD -AsPlainText -Force
+        $CREDS = = New-Object System.Management.Automation.PSCredential ($env:DB_USER, $SECUREPASS)
+
+        try {
+          $HTTP_RESPONSE = Invoke-RestMethod -Uri $DB_ENDPOINT -Method Get -Credential $CREDS  -ContentType "application/json"
+          $HTTP_STATUS = 200
+        }
+        catch {
+          $HTTP_STATUS = $_.Exception.Response.StatusCode.Value__
+        }
+
+        if ($HTTP_STATUS -eq 404) {
+            Write-Host "Document does not exist, creating..."
+            $MERGED_JSON = $JSON, $env:ARTIFACTS_LIST | jq -s '.[0] * .[1]' | Out-String
+            Invoke-RestMethod -Uri $DB_ENDPOINT -Method Put -Credential $CREDS -Body $MERGED_JSON -ContentType 'application/json'
+        }
+        elseif ($HTTP_STATUS -eq 200) {
+            Write-Host "Document exists, updating..."
+            $HTTP_BODY = $HTTP_RESPONSE | ConvertTo-Json
+            $MERGED_JSON = $HTTP_BODY, $env:ARTIFACTS_LIST | jq -s '.[0] + {artifacts: (. | map(.artifacts[]) | unique)}' | Out-String
+            Invoke-RestMethod -Uri $DB_ENDPOINT -Method Put -Credential $CREDS -Body $MERGED_JSON -ContentType 'application/json'
+        }
+        else {
+            Write-Host "HTTP Status neither: 404, nor 200. It's: $HTTP_STATUS"
+            exit 1
+        }
