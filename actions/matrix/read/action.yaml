@@ -6,12 +6,12 @@ description: |
 
 inputs:
   matrix-step-name:
-    required: true
     description: "Matrix step name"
+    required: true
 outputs:
   result:
     description: "Outputs result"
-    value: "${{ steps.matrix-output-read.outputs.result }}"
+    value: ${{ steps.matrix-output-read.outputs.result }}
 
 runs:
   using: "composite"
