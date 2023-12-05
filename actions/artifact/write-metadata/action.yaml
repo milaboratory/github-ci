@@ -151,9 +151,9 @@ runs:
         }
         "@
 
-        $DB_ENDPOINT="$env.DB_URL/$env:DB_NAME/$env:DOCUMENT_ID"
+        $DB_ENDPOINT = "$env.DB_URL/$env:DB_NAME/$env:DOCUMENT_ID"
         $SECUREPASS = ConvertTo-SecureString $env:DB_PASSWORD -AsPlainText -Force
-        $CREDS = = New-Object System.Management.Automation.PSCredential ($env:DB_USER, $SECUREPASS)
+        $CREDS = New-Object System.Management.Automation.PSCredential ($env:DB_USER, $SECUREPASS)
 
         try {
           $HTTP_RESPONSE = Invoke-RestMethod -Uri $DB_ENDPOINT -Method Get -Credential $CREDS  -ContentType "application/json"
