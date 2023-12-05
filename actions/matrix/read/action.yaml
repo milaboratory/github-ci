@@ -11,7 +11,7 @@ inputs:
 outputs:
   result:
     description: "Outputs result"
-    value: "${{ steps.context.outputs.result }}"
+    value: "${{ steps.matrix-output-read.outputs.result }}"
 
 runs:
   using: "composite"
