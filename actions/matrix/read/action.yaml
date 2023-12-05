@@ -11,14 +11,16 @@ inputs:
 outputs:
   result:
     description: "Outputs result"
-    value: ${{ steps.matrix-output-read.outputs.result }}
+    value: ${{ steps.context.outputs.result }}
 
 runs:
   using: "composite"
 
   steps:
-    - name: Read matrix output
-      id: matrix-output-read
-      uses: cloudposse/github-action-matrix-outputs-read@5690ce6664e0dcdf06e27e4ba27e7a424951da56
-      with:
-        matrix-step-name: ${{ inputs.matrix-step-name }}
+    - uses: actions/download-artifact@v3
+
+    - id: context
+      shell: bash
+      run: |
+        result="$(find . -name ${{ inputs.matrix-step-name }} -maxdepth 2 -exec cat {} \; | jq -c --slurp 'map(to_entries | map(.key as $matrix_key | .value | map_values({($matrix_key): .}))) | flatten | reduce .[] as $item ({}; . * $item)' )"
+        echo "result=${result}" >> $GITHUB_OUTPUT
