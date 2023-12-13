@@ -1,0 +1,91 @@
+name: 'GHCR Pruning'
+author: 'MiLaboratories'
+description: |
+  GitHub Action to prune/delete container versions from GitHub Container Registry (ghcr.io)
+  See original action https://github.com/vlaurin/action-ghcr-prune
+
+inputs:
+  token:
+    description: 'Secret access token with scopes `packages:read` and `packages:delete` and write permissions on the targeted container'
+    required: true
+  organization:
+    description: 'Organisation to which the container belongs, mutually exclusive with input `user`'
+    required: false
+  user:
+    description: 'User to which the container belongs, mutually exclusive with input `organization`'
+    required: false
+  container:
+    description: 'Name of the container to prune'
+    required: true
+  dry-run:
+    description: 'When `true` prints out matching container versions without pruning them'
+    required: false
+    default: 'false'
+  older-than:
+    description: 'Minimum age in days of container versions to prune'
+    required: false
+    default: '0'
+    deprecationMessage: Replaced by input `keep-younger-than`. This input will be removed in v2.0.0.
+  keep-last:
+    description: 'Count of most recent, matching containers to exclude from pruning'
+    required: false
+    default: '0'
+  keep-tags:
+    description: |
+      List of tags to exclude from pruning, one per line.
+      Any version with at least one matching tag will be excluded.
+      Matching is exact and case-sensitive.
+    required: false
+  keep-tags-regexes:
+    description: |
+      List of regular expressions for tags to exclude from pruning, one per line.
+      Each expression will be evaluated against all tags of a version.
+      Any version with at least one tag matching the expression will be excluded from pruning.
+    required: false
+  keep-younger-than:
+    description: 'Minimum age in days of container versions that will be pruned'
+    required: false
+    default: '0'
+  prune-tags-regexes:
+    description: |
+      List of regular expressions for tags to include in pruning, one per line.
+      Each expression will be evaluated against all tags of a version.
+      Any version with at least one tag matching the expression will be included in pruning.
+    required: false
+  prune-untagged:
+    description: 'Whether untagged container versions should be pruned'
+    required: false
+    default: 'false'
+  untagged:
+    description: 'Whether untagged container versions should be pruned'
+    required: false
+    default: 'false'
+    deprecationMessage: Replaced by input `prune-untagged`. This input will be removed in v2.0.0.
+  tag-regex:
+    description: 'Regular expression matching tagged container versions which should be pruned'
+    required: false
+    deprecationMessage: Replaced by input `prune-tags-regexes`. This input will be removed in v2.0.0.
+outputs:
+  count:
+    description: 'Count of container versions that were pruned'
+    value: ${{ steps.prune.outputs.count }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: GHCR Pruning
+      id: prune
+      uses: vlaurin/action-ghcr-prune@0a539594d122b915e71c59733a5b115bfaaf5d52
+      with:
+        token: ${{ inputs.token }}
+        organization: ${{ inputs.organization }}
+        user: ${{ inputs.user }}
+        container: ${{ inputs.container }}
+        dry-run: ${{ inputs.dry-run }}
+        keep-last: ${{ inputs.keep-last }}
+        keep-tags: ${{ inputs.keep-tags }}
+        keep-tags-regexes: ${{ inputs.keep-tags-regexes }}
+        keep-younger-than: ${{ inputs.keep-younger-than }}
+        prune-tags-regexes: ${{ inputs.prune-tags-regexes }}
+        prune-untagged: ${{ inputs.prune-untagged }}

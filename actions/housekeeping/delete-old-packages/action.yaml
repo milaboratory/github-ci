@@ -1,0 +1,76 @@
+name: 'Delete old packages'
+author: 'MiLaboratories'
+description: |
+  Deletes old package versions
+  See original https://github.com/SmartsquareGmbH/delete-old-packages
+
+inputs:
+  user:
+    description: >-
+      User hosting the package(s).
+    required: false
+
+  organization:
+    description: >-
+      Organization hosting the package(s).
+    required: false
+
+  names:
+    description: >-
+      Names of the packages.
+    required: true
+
+  semver-pattern:
+    description: >-
+      Semver range pattern of the versions.
+    required: false
+
+  version-pattern:
+    description: >-
+      Regex pattern of the versions.
+      Defaults to true for all versions.
+    required: false
+
+  keep:
+    description: >-
+      Number of versions to exclude from deletions.
+      Defaults to 2.
+    required: false
+
+  type:
+    description: >-
+      The type of the packages, e.g. "npm" or "container".
+    required: false
+
+  token:
+    description: >-
+      Token with the necessary scopes to delete and list package versions.
+      Defaults to github.token scoped to the repo running the action. To delete package versions
+      of a package outside the repo the action is running in use a Personal Access Token stored as a secret.
+    required: false
+    default: ${{ github.token }}
+
+  dry-run:
+    description: >-
+      If the action should only print what it would delete instead of actually deleting.
+    required: false
+    default: "false"
+
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Delete old packages
+      uses: smartsquaregmbh/delete-old-packages@0660d3ee46b6b05c0759824c7d57e3da998ef9a7
+      with:
+        user: ${{ inputs.user }}
+        organization: ${{ inputs.organization }}
+        names: ${{ inputs.names }}
+        semver-pattern: ${{ inputs.semver-pattern }}
+        version-pattern: ${{ inputs.version-pattern }}
+        keep: ${{ inputs.keep }}
+        type: ${{ inputs.type }}
+        token: ${{ inputs.token }}
+        dry-run: ${{ inputs.dry-run }}
