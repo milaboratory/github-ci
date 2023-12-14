@@ -236,7 +236,7 @@ runs:
 
           case "${_target_arch}" in
           "arm64"|"aarch64") echo "arm64" ;;
-          "amd64"|"x86_64"|"x86") echo "amd64" ;;
+          "amd64"|"x86_64"|"x86"|"x64") echo "amd64" ;;
           *)
           echo "unknown arch: $_target_arch"
           exit 1
