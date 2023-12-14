@@ -24,6 +24,14 @@ inputs:
       Because by default, we are using an architecture discovered from the os.
     required: false
     default: ''
+  artifact-override-download-path:
+    description: |
+      Override artifact download path.
+      For example, if you want to work with two different artifacts
+      on one agent with this action, you need this option; otherwise
+      they will end up in one folder.
+    required: false
+    default: ''
   artifact-os-name:
     description: |
       Target os name for artifacts inside the archive. e.g., linux.
@@ -173,8 +181,15 @@ runs:
 
     - id: artifact-path
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OVERRIDE_ARTIFACT_DOWNLOAD_PATH: ${{ inputs.artifact-override-download-path }}
       with:
-        run: echo './release-artifact'
+        run: |
+          if [ ! -z "${OVERRIDE_ARTIFACT_DOWNLOAD_PATH}" ];then
+            echo "./${OVERRIDE_ARTIFACT_DOWNLOAD_PATH}"
+          else
+            echo "./release-artifact"
+          fi
 
     - name: Download artifact
       uses: actions/download-artifact@v3
