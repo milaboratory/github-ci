@@ -55,7 +55,7 @@ function getCurrentOS() {
 }
 
 async function run() {
-    const release = getActionInput('release', true) === 'true';
+    const release = getActionInput('release', true) === 'false';
     const buildScriptName = getActionInput('build-script-name', true);
     const skipBuild = getActionInput('skip-build') === 'true';
     const electronBuilderArgs = getActionInput('electron-builder-args') || '';
