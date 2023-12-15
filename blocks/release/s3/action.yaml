@@ -229,7 +229,7 @@ runs:
         suffix: '-${{ steps.sha.outputs.stdout }}'
 
     - name: Add Github Run ID
-      if: inputs.add-github-run-id == 'true'
+      if: inputs.add-github-run-id == 'true' && inputs.add-github-run-id != ''
       uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
@@ -237,7 +237,6 @@ runs:
 
     - name: Get ARCH
       id: os_arch
-      if: inputs.add-os-arch == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
@@ -259,7 +258,7 @@ runs:
           esac
 
     - name: Add ARCH
-      if: steps.os_arch.outputs.stdout != ''
+      if: inputs.add-os-arch == 'true' && inputs.add-os-arch != ''
       uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
