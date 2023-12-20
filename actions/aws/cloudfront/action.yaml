@@ -60,13 +60,13 @@ runs:
         dump-stdout: false
         run: |
           if [ ! -z "${CF_S3_BUCKET_NAME}" ] && [ ! -z "${CF_ASSETS}" ];then
-            aws s3 sync "$CF_ASSETS" s3://"$CF_S3_BUCKET_NAME" --delete
+            aws s3 sync "${CF_ASSETS}" s3://"${CF_S3_BUCKET_NAME}" --delete
           else
             echo "Skipping assets sync."
           fi
 
-          if [ "$CF_CACHE_INVALD" == 'true' ];then
-            aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
+          if [ "${CF_CACHE_INVALD}" == 'true' ];then
+            aws cloudfront create-invalidation --distribution-id "${CF_DIST_ID}" --paths "/*"
           else
-            echo "AWS Cloudfront cache invalidation is set to: $CF_CACHE_INVALD"
+            echo "AWS Cloudfront cache invalidation is set to: ${CF_CACHE_INVALD}"
           fi
