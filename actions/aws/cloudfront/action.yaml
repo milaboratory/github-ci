@@ -25,7 +25,8 @@ inputs:
   aws-cloudfront-s3-bucket-name:
     description: |
       The name of an aws s3 bucket to sync static files
-    required: true
+    required: false
+    default: ''
 
   aws-cloudfront-cache-invalidation:
     description: |
@@ -37,15 +38,13 @@ inputs:
     description: |
       Assets to upload to the AWS Cloudfront S3 bucket
       Must be a directory.
-    required: true
+    required: false
+    default: ''
 
 runs:
   using: "composite"
 
   steps:
-    - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
-
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
@@ -56,11 +55,16 @@ runs:
         CF_DIST_ID: ${{ inputs.aws-cloudfront-distribution-id }}
         CF_S3_BUCKET_NAME: ${{ inputs.aws-cloudfront-s3-bucket-name }}
         CF_CACHE_INVALD: ${{ inputs.aws-cloudfront-cache-invalidation }}
-        CF_ASSESTS: ${{ inputs.dist-assets }}
+        CF_ASSETS: ${{ inputs.dist-assets }}
       with:
         dump-stdout: false
         run: |
-          aws s3 sync "$CF_ASSESTS" s3://"$CF_S3_BUCKET_NAME" --delete
+          if [ ! -z "${CF_S3_BUCKET_NAME}" ] && [ ! -z "${CF_ASSETS}" ];then
+            aws s3 sync "$CF_ASSETS" s3://"$CF_S3_BUCKET_NAME" --delete
+          else
+            echo "Skipping assets sync."
+          fi
+
           if [ "$CF_CACHE_INVALD" == 'true' ];then
             aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
           else
