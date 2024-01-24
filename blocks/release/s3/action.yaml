@@ -145,7 +145,7 @@ outputs:
     description: |
       Newline-separated list of S3 keys for uploaded files
       (without bucket and region name)
-    value: ${{ steps.uploaded-list.outputs.stdout }}
+    value: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
   uploaded-json:
     description: |
       'uploaded' in JSON format
