@@ -145,7 +145,7 @@ outputs:
     description: |
       Newline-separated list of S3 keys for uploaded files
       (without bucket and region name)
-    value: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
+    value: ${{ steps.uploaded-list.outputs.stdout }}
   uploaded-json:
     description: |
       'uploaded' in JSON format
@@ -272,7 +272,7 @@ runs:
           ${{ steps.artifact-path.outputs.stdout }}/ \
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
-    - id: uploaded-list
+    - id: files-list
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
@@ -316,15 +316,23 @@ runs:
           ghwa_set_output json_array_infos "{\"artifacts\": $json_array_infos}"
           ghwa_set_output array_paths "${array_paths}"
 
+    - id: uploaded-list
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        UPLOADED_FILES: ${{ fromJSON(steps.files-list.outputs.data).array_paths }}
+      with:
+        run: |
+          echo "${UPLOADED_FILES}"
+
     - id: uploaded-json
       uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
       with:
-        input: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
+        input: ${{ fromJSON(steps.files-list.outputs.data).array_paths }}
 
     - id: download-list
       uses: milaboratory/github-ci/actions/strings/replace@v4-beta
       with:
-        input: ${{ fromJSON(steps.uploaded-list.outputs.data).array_paths }}
+        input: ${{ fromJSON(steps.files-list.outputs.data).array_paths }}
 
         # Any public S3 object is accessible through special URL:
         #   https://<bucket-name>.s3.<region>.amazonaws.com/<s3-path>
@@ -344,7 +352,7 @@ runs:
     - id: artifacts-list
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        JSON_ARRAY: ${{ fromJSON(steps.uploaded-list.outputs.data).json_array_infos }}
+        JSON_ARRAY: ${{ fromJSON(steps.files-list.outputs.data).json_array_infos }}
       with:
         run: |
           echo "${JSON_ARRAY}"
