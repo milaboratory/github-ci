@@ -11,4 +11,4 @@ Acceptable values are latest or any semantic version string like `v0.4.5`. Use t
 ```
 ## Credits
 
-Code of this actions is absed on: https://github.com/Azure/setup-kubectl
+Code of this actions is based on: https://github.com/Azure/setup-kubectl

@@ -6,10 +6,10 @@ inputs:
       required: true
       default: 'latest'
 outputs:
-   kubectl-path:
+   regctl-path:
       description: 'Path to the cached regctl binary'
 branding:
    color: 'blue'
 runs:
-   using: 'node16'
+   using: 'node20'
    main: 'lib/index.js'
