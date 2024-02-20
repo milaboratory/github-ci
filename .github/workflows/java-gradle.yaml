@@ -1393,7 +1393,7 @@ jobs:
             echo "Wait random number of second before saving the artifact."
             sleep "${RAN_SEC}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         with:
           name: test-regression
@@ -1451,7 +1451,7 @@ jobs:
 
             ghwa_set_output "branch-name" "$_BRANCH_NAME"
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         if: steps.artifact.outputs.exists == 'true'
         with:
           name: test-regression
@@ -2018,7 +2018,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         if: inputs.dist-archive
         with:
           name: ${{ inputs.product-name-slug }}

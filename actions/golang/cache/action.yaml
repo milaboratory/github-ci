@@ -20,7 +20,7 @@ runs:
   steps:
     - name: Cache Golang modules on Linux
       if: startsWith(runner.os, 'Linux')
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/go-build
@@ -31,7 +31,7 @@ runs:
 
     - name: Cache Golang modules on macOS
       if: startsWith(runner.os, 'macOS')
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/Library/Caches/go-build
@@ -42,7 +42,7 @@ runs:
 
     - name: Cache Golang modules on Windows
       if: startsWith(runner.os, 'Windows')
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~\AppData\Local\go-build

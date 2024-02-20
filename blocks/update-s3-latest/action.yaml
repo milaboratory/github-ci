@@ -157,7 +157,7 @@ runs:
         run: echo './release-artifact'
 
     - name: Download artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifact-path.outputs.stdout }}

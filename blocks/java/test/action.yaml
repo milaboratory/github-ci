@@ -236,14 +236,14 @@ runs:
       uses: milaboratory/github-ci/actions/context@v4-beta
 
     - name: Prepare env for Java application build
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
 
     - name: Install Python on the env
       if: inputs.python-version != ''
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
 
@@ -291,7 +291,7 @@ runs:
 
     - name: Download cached test data
       if: inputs.test-data-cache-enabled == 'true' && inputs.test-data-cache-paths != '' && inputs.test-data-cache-key != ''
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ inputs.test-data-cache-paths }}
         key: ${{ inputs.test-data-cache-key }}

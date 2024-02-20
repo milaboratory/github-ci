@@ -7,7 +7,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: mike-ainsel/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: context
         path: ${{ github.action_path }}/init.txt
