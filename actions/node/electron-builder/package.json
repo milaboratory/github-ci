@@ -1,6 +1,6 @@
 {
   "name": "electron-builder-action",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A GitHub action to build, package, and sign Electron applications using electron-builder",
   "main": "dist/index.js",
   "private": true,
@@ -21,17 +21,17 @@
   "author": "Vladimir Antropov",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.6.0",
-    "@actions/exec": "^1.1.0"
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.1"
    },
    "devDependencies": {
-    "@vercel/ncc": "^0.34.0",
-    "@typescript-eslint/eslint-plugin": "5.28.0",
-    "eslint": "^8.39.0",
+    "@vercel/ncc": "^0.38.1",
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "eslint": "^8.56.0",
     "eslint-config-airbnb-base": "15.0.0",
-    "eslint-config-prettier": "^8.8.0",
-    "eslint-plugin-import": "^2.27.2",
-    "prettier": "^2.8.0"
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.2.5"
   }
 }
 

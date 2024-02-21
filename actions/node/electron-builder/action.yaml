@@ -15,7 +15,7 @@ inputs:
   release:
     description: Whether the app should be released after a successful build
     required: false
-    default: false
+    default: "false"
   windows-certs:
     description: Base64-encoded code signing certificate for Windows
     required: false
@@ -33,12 +33,12 @@ inputs:
   skip-build:
     description: Whether the action should execute the NPM build script before running `electron-builder`
     required: false
-    default: false
+    default: "false"
   electron-builder-args:
     description: Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
     required: false
     default: ""
 
 runs:
-  using: node16
+  using: node20
   main: dist/index.js
