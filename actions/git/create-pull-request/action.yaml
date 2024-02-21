@@ -26,12 +26,12 @@ inputs:
     description: >
       The committer name and email address in the format `Display Name <email@address.com>`.
       Defaults to the GitHub Actions bot user.
-    default: 'GitHub <noreply@github.com>'
+    default: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
   author:
     description: >
       The author name and email address in the format `Display Name <email@address.com>`.
       Defaults to the user who triggered the workflow run.
-    default: '${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>'
+    default: '${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>'
   signoff:
     description: 'Add `Signed-off-by` line by the committer at the end of the commit log message.'
     default: 'false'
@@ -98,7 +98,7 @@ runs:
   steps:
     - name: Create Pull Request
       id: create
-      uses: peter-evans/create-pull-request@284f54f989303d2699d373481a0cfa13ad5a6666
+      uses: peter-evans/create-pull-request@b1ddad2c994a25fbc81a28b3ec0e368bb2021c50
       with:
         token: ${{ inputs.token }}
         path: ${{ inputs.path }}

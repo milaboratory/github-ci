@@ -1,8 +1,8 @@
 name: Create empty artifact for regression tests
 author: 'MiLaboratories'
 description: |
-  Create empty artifact for regression tests because
-  actions/upload-artifact/merge@v4 now it doesn't support option
+  Create empty artifact for regression tests because now
+  actions/upload-artifact/merge@v4 doesn't support option
   if-no-files-found: ignore
 
 runs:

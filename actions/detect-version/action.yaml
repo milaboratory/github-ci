@@ -87,5 +87,5 @@ outputs:
       and 2.0.1 (the latest known v2)
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'

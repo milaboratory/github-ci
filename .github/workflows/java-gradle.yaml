@@ -1396,7 +1396,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         with:
-          name: test-regression
+          name: test-regression-${{ matrix.test }}
           path: |
             ${{ fromJSON(steps.prepare-files-list.outputs.data).workaround-dir }}
             ${{ fromJSON(steps.prepare-files-list.outputs.data).changed-files }}
@@ -1426,11 +1426,6 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - id: artifact
-        uses: milaboratory/github-ci/actions/artifact/exists@v4-beta
-        with:
-          name: test-regression
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -1451,8 +1446,18 @@ jobs:
 
             ghwa_set_output "branch-name" "$_BRANCH_NAME"
 
+      - uses: milaboratory/github-ci/actions/artifact/create-empty@v4-beta
+
+      - id: merged-artifact
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: test-regression
+          pattern: test-regression-*
+          separate-directories: false
+          delete-merged: true
+
       - uses: actions/download-artifact@v4
-        if: steps.artifact.outputs.exists == 'true'
+        if: steps.merged-artifact.outputs.artifact-id != ''
         with:
           name: test-regression
 
