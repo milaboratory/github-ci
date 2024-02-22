@@ -40,9 +40,6 @@ inputs:
   build-root-directory:
     description: Path to the root directory of the build
     required: false
-  gradle-executable:
-    description: Path to the Gradle executable
-    required: false
   generate-job-summary:
     description: When 'false', no Job Summary will be generated for the Job.
     required: false
@@ -75,7 +72,6 @@ runs:
         gradle-home-cache-excludes: ${{ inputs.gradle-home-cache-excludes }}
         arguments: ${{ inputs.arguments }}
         build-root-directory: ${{ inputs.build-root-directory }}
-        gradle-executable: ${{ inputs.gradle-executable }}
         generate-job-summary: ${{ inputs.generate-job-summary }}
         gradle-home-cache-strict-match: ${{ inputs.gradle-home-cache-strict-match }}
         workflow-job-context: ${{ inputs.workflow-job-context }}
