@@ -1464,7 +1464,9 @@ jobs:
       - id: verify-changed-files
         uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
         with:
-          files: ${{ inputs.test-regression-changed-files-list }}
+          files: |
+            ${{ inputs.test-regression-changed-files-list }}
+            !init.txt
           separator: ','
 
       - id: create-pull-request
