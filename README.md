@@ -48,4 +48,7 @@ This version introduces the following new features:
   - changes required for https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/
 
 Breaking changes:
-   - in java-gradle s3-key and s3-secret have been removed in favor of aws iam assume role with oidc provider to generate aws credentials
+  - in java-gradle s3-key and s3-secret have been removed in favor of aws iam assume role with oidc provider to generate aws credentials
+
+Recent changes:
+  - switch to node20 because node16 has reached end-of-life
