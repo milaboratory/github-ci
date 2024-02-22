@@ -30,6 +30,6 @@ runs:
         go-version: ${{ inputs.golang-version }}
 
     - name: Setup Cache for Golang project
-      uses: milaboratory/github-ci/actions/golang/cache@v4-beta
+      uses: milaboratory/github-ci/actions/golang/cache@v4
       with:
         cache-version: ${{ inputs.cache-version }}
