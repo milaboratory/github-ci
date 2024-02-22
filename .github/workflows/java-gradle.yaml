@@ -1461,12 +1461,17 @@ jobs:
         with:
           name: test-regression
 
+      - uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            echo "Delete empty file from the test-regression-empty archive"
+            find . -type f -name 'init.txt' -exec rm -v {} \;
+
       - id: verify-changed-files
         uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
         with:
-          files: |
-            ${{ inputs.test-regression-changed-files-list }}
-            !init.txt
+          files: ${{ inputs.test-regression-changed-files-list }}
           separator: ','
 
       - id: create-pull-request
