@@ -21,7 +21,7 @@ runs:
   steps:
     - name: Write matrix output
       id: matrix-output-write
-      uses: cloudposse/github-action-matrix-outputs-write@e90c7018e27e1c9466e0fa3cfe64720d9969ffca
+      uses: cloudposse/github-action-matrix-outputs-write@ed06cf3a6bf23b8dce36d1cf0d63123885bb8375
       with:
         matrix-step-name: ${{ inputs.matrix-step-name }}
         matrix-key: ${{ inputs.matrix-key }}
