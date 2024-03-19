@@ -2,7 +2,7 @@ name: Check artifact existence
 author: 'MiLaboratories'
 description: |
   Check existence of an artifact uploaded in the workflow by the upload-artifact action
-  See original action xSAVIKx/artifact-exists-action
+  See original action LIT-Protocol/artifact-exists-action
 
 inputs:
   name:
@@ -19,6 +19,6 @@ runs:
   steps:
     - name: Check artifact existence
       id: check
-      uses: xSAVIKx/artifact-exists-action@a9dc5938acb0f91260b31a952a914001defb642c
+      uses: LIT-Protocol/artifact-exists-action@ff41b0e92208918c585721cbf3e866dfddaf7879
       with:
         name: ${{ inputs.name }}
