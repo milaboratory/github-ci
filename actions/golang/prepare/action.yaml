@@ -28,6 +28,7 @@ runs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.golang-version }}
+        cache-dependency-path: "go.work.sum"
 
     - name: Setup Cache for Golang project
       uses: milaboratory/github-ci/actions/golang/cache@v4
