@@ -36,6 +36,12 @@ inputs:
     required: false
     default: '**/go.work.sum'
 
+  cache-enabled-in-setup-go:
+    description: |
+      Set to true, if you'd like to enable caching in setup-go action.
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
@@ -45,6 +51,7 @@ runs:
       with:
         go-version: ${{ inputs.golang-version }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        cache: ${{ inputs.cache-enabled-in-setup-go }}
 
     - name: Setup Cache for Golang project
       uses: milaboratory/github-ci/actions/golang/cache@v4-beta

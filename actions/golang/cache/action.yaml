@@ -44,7 +44,7 @@ runs:
       with:
         path: |
           ~/Library/Caches/go-build
-          ~/
+          ~/go/pkg/mod
         key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
           ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
