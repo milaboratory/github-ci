@@ -54,7 +54,6 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'npm'
         registry-url: ${{ inputs.registry-url }}
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
