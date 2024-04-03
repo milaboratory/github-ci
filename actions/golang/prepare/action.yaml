@@ -2,7 +2,7 @@ name: Prepare environment for building a Golang application
 author: 'MiLaboratories'
 description: |
   Prepare environment: install specific version of Golang, restore cache for modules.
-  
+
 inputs:
   golang-version:
     description: |
@@ -20,6 +20,22 @@ inputs:
     required: false
     default: 'v1'
 
+  cache-dependency-path:
+    description: |
+      Used to specify the path to a dependency file,
+      the path should be relative to the GITHUB_WORKSPACE.
+    required: false
+    default: 'go.work.sum'
+
+  cache-dependency-hashfiles-path:
+    description: |
+      Returns a single hash for the set of files that matches the path pattern.
+      You can provide a single path pattern or multiple path patterns separated by commas.
+      The path is relative to the GITHUB_WORKSPACE directory
+      and can only include files inside of the GITHUB_WORKSPACE.
+    required: false
+    default: '**/go.work.sum'
+
 runs:
   using: "composite"
 
@@ -28,8 +44,10 @@ runs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.golang-version }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
 
     - name: Setup Cache for Golang project
       uses: milaboratory/github-ci/actions/golang/cache@v4-beta
       with:
         cache-version: ${{ inputs.cache-version }}
+        cache-dependency-hashfiles-path: ${{ inputs.cache-dependency-hashfiles-path }}

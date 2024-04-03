@@ -14,6 +14,15 @@ inputs:
     required: false
     default: 'v1'
 
+  cache-dependency-hashfiles-path:
+    description: |
+      Returns a single hash for the set of files that matches the path pattern.
+      You can provide a single path pattern or multiple path patterns separated by commas.
+      The path is relative to the GITHUB_WORKSPACE directory
+      and can only include files inside of the GITHUB_WORKSPACE.
+    required: false
+    default: '**/go.work.sum'
+
 runs:
   using: "composite"
 
@@ -25,7 +34,7 @@ runs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
           ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
 
@@ -36,9 +45,9 @@ runs:
         path: |
           ~/Library/Caches/go-build
           ~/
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}      
+          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
 
     - name: Cache Golang modules on Windows
       if: startsWith(runner.os, 'Windows')
@@ -47,7 +56,7 @@ runs:
         path: |
           ~\AppData\Local\go-build
           ~\go\pkg\mod
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}      
-          
+          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
+
