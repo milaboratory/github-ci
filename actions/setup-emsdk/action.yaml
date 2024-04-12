@@ -1,0 +1,43 @@
+name: Setup Emscripten toolchain
+author: 'MiLaboratories'
+description: |
+  Download emsdk and optionally install a version of Emscripten'.
+  See original action mymindstorm/setup-emsdk
+
+inputs:
+  version:
+    description: 'Version to install'
+    default: 'latest'
+  no-install:
+    description: "If true will not download any version of Emscripten. emsdk will still be added to PATH."
+    default: false
+  no-cache:
+    description: "If true will not cache any downloads with tc.cacheDir."
+    default: false
+  actions-cache-folder:
+    description: "Directory to cache emsdk in. This folder will go under $GITHUB_HOME (I.e. build dir) and be cached using @actions/cache."
+    default: ''
+  cache-key:
+    description: "Override the cache key. By default, it is `{Github workflow name}-{Emscripten version}-{OS type}-${CPU architecture}`."
+    default: ''
+  update:
+    description: "Fetch package information for all the new tools and SDK versions"
+    default: false
+  update-tags:
+    descript√ion: "Deprecated in favor of `update`."
+    default: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Emscripten toolchain
+      uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
+      with:
+        version: ${{ inputs.version }}
+        no-install: ${{ inputs.no-install }}
+        no-cache: ${{ inputs.no-cache }}
+        actions-cache-folder: ${{ inputs.actions-cache-folder }}
+        cache-key: ${{ inpputs.cache-key }}
+        update: ${{ inputs.update }}
+        update-tags: ${{ inputs.update-tags }}
