@@ -1,0 +1,34 @@
+name: Install ninja-build tool
+author: 'MiLaboratories'
+description: |
+  Installs ninja and adds it to the path'.
+  See original action seanmiddleditch/gha-setup-ninja
+
+inputs:
+  version:
+    description: 'Version of ninja-build to install'
+    default: '1.12.0'
+    required: true
+  platform:
+    description: 'Override default platform with one of [win, mac, linux]'
+    required: false
+  destination:
+    description: 'Destination directory, will be added to PATH'
+    default: 'ninja-build'
+    required: false
+  http_proxy:
+    description: 'Proxy server'
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Ninja-build tool
+      id: ninja-build-tool
+      uses: seanmiddleditch/gha-setup-ninja@8b297075da4cd2a5f1fd21fe011b499edf06e9d2
+      with:
+        version: ${{ inputs.version }}
+        platform: ${{ inputs.platform }}
+        destination: ${{ inputs.destination }}
+        http_proxy: ${{ inputs.http_proxy }}
