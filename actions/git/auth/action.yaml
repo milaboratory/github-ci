@@ -11,6 +11,7 @@ inputs:
   github-url-rewrite:
     description: |
       Rewrite URLs for a Git operation. Substitute git@github.com with https://github.com.
+      And substitute ssh:// with https://
     required: false
     default: 'false'
 
@@ -24,9 +25,11 @@ runs:
       with:
         run: |
           BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+          echo "Set auth header."
           git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
 
           if [ "${GH_URL_REWRITE}" == 'true' ];then
+            echo "Set url rewrite config."
             git config --global url."https://github.com/".insteadOf git@github.com:
-            git config --global url."https://".insteadOf git://
+            git config --global url."https://".insteadOf ssh://
           fi
