@@ -1,7 +1,7 @@
 name: Setup Emscripten toolchain
 author: 'MiLaboratories'
 description: |
-  Download emsdk and optionally install a version of Emscripten'.
+  Download emsdk and optionally install a version of Emscripten.
   See original action mymindstorm/setup-emsdk
 
 inputs:
@@ -10,10 +10,10 @@ inputs:
     default: 'latest'
   no-install:
     description: "If true will not download any version of Emscripten. emsdk will still be added to PATH."
-    default: false
+    default: 'false'
   no-cache:
     description: "If true will not cache any downloads with tc.cacheDir."
-    default: false
+    default: 'false'
   actions-cache-folder:
     description: "Directory to cache emsdk in. This folder will go under $GITHUB_HOME (I.e. build dir) and be cached using @actions/cache."
     default: ''
@@ -22,10 +22,10 @@ inputs:
     default: ''
   update:
     description: "Fetch package information for all the new tools and SDK versions"
-    default: false
+    default: 'false'
   update-tags:
-    descript√ion: "Deprecated in favor of `update`."
-    default: false
+    description: "Deprecated in favor of `update`."
+    default: 'false'
 
 runs:
   using: "composite"
