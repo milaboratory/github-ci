@@ -38,6 +38,6 @@ runs:
         no-install: ${{ inputs.no-install }}
         no-cache: ${{ inputs.no-cache }}
         actions-cache-folder: ${{ inputs.actions-cache-folder }}
-        cache-key: ${{ inpputs.cache-key }}
+        cache-key: ${{ inputs.cache-key }}
         update: ${{ inputs.update }}
         update-tags: ${{ inputs.update-tags }}
