@@ -4179,6 +4179,7 @@ async function run() {
 
     // Install dependencies
     log('Installing dependencies using npm');
+    setEnv('NODE_AUTH_TOKEN', githubToken);
     await executeShellCommand('npm ci', workingDirectory);
 
     if (skipBuild) {
