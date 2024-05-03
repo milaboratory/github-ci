@@ -95,9 +95,9 @@ runs:
 
           gcloud kms asymmetric-sign \
               --version ${{ inputs.gcloud-kms-key-version }} \
-              --key {{ inputs.gcloud-kms-key-name }} \
-              --keyring {{ inputs.gcloud-kms-keyring }} \
-              --location {{ inputs.gcloud-kms-location }} \
-              --digest-algorithm {{ inputs.gcloud-kms-digest-algorithm }}\
+              --key ${{ inputs.gcloud-kms-key-name }} \
+              --keyring ${{ inputs.gcloud-kms-keyring }} \
+              --location ${{ inputs.gcloud-kms-location }} \
+              --digest-algorithm ${{ inputs.gcloud-kms-digest-algorithm }}\
               --input-file "${FILE_PATH}" \
               --signature-file "${FILE_PARENT_PATH}/${FILE_SIG}"
