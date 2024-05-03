@@ -911,6 +911,7 @@ on:
           set to "latest", it will download the latest available SDK. If set to a
           version constraint, it will download the latest available version that
           matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+        type: string
         required: false
         default: 'latest'
 
