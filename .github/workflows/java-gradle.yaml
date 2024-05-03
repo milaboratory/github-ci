@@ -2029,7 +2029,7 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/registry-bin@v4-beta
+      - uses: milaboratory/github-ci/blocks/release/registry-bin@v4-beta
         with:
           artifact-name: ${{ inputs.product-name-slug }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
