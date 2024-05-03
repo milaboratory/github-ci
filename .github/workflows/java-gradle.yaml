@@ -997,33 +997,33 @@ on:
           Password for GPG key
         required: false
 
-      SIGN-DIST-ARCHIVE-S3-IAM-ROLE-TO-ASSUME:
+      SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME:
         description: |
           The ARN of a IAM role to assume and configure the Actions environment with
           assumed role credentials.
         required: false
 
-      SIGN-DIST-ARCHIVE-S3-BUCKET:
+      SIGN_DIST_ARCHIVE_S3_BUCKET:
         description: |
           Registry's S3 Bucket name to upload signed artifacts.
         required: false
 
-      SIGN-GCLOUD-KMS-WORKLOAD-IDENTITY-PROVIDER:
+      SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
         description: |
           Tha name of the GCP workload identity federation provider.
         required: false
 
-      SIGN-GCLOUD-KMS-SERVICE-ACCOUNT:
+      SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
         description: |
           The name of the GCP service account.
         required: false
 
-      SIGN-GCLOUD-KMS-KEYRING:
+      SIGN_GCLOUD_KMS_KEYRING:
         description: |
           KMS keyring name in GCP.
         required: false
 
-      SIGN-GCLOUD-KMS-KEY-NAME:
+      SIGN_GCLOUD_KMS_KEY_NAME:
         description: |
           KMS key name in GCP.
         required: false
@@ -2035,14 +2035,14 @@ jobs:
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
           gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
-          gcloud-workload-identity-provider: ${{ secrets.SIGN-GCLOUD-KMS-WORKLOAD-IDENTITY-PROVIDER }}
-          gcloud-service-account: ${{ secrets.SIGN-GCLOUD-KMS-SERVICE-ACCOUNT }}
-          gcloud-kms-keyring: ${{ secrets.SIGN-GCLOUD-KMS-KEYRING }}
-          gcloud-kms-key-name: ${{ secrets.SIGN-GCLOUD-KMS-KEY-NAME }}
+          gcloud-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          gcloud-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
+          gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
+          gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
           s3-region: ${{ inputs.sign-dist-archive-s3-region }}
           s3-path: ${{ inputs.sign-dist-archive-s3-path }}
-          s3-iam-role-to-assume: ${{ secrets.SIGN-DIST-ARCHIVE-S3-IAM-ROLE-TO-ASSUME }}
-          s3-bucket: ${{ secrets.SIGN-DIST-ARCHIVE-S3-BUCKET }}
+          s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
+          s3-bucket: ${{ secrets.SIGN_DIST_ARCHIVE_S3_BUCKET }}
 
 
   update-cdn-link:
