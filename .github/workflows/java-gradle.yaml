@@ -850,6 +850,72 @@ on:
         default: 'false'
 
       #
+      #  Archive singing control
+      #
+      sign-dist-archive:
+        description: |
+          Set it to 'true' if you want to sign and upload archive to registry S3 bucket
+          This feature requires 'dist-archive' feature to be enabled and
+          configured. The file created at 'dist-archive' step is signed and uploaded
+          to registry S3 storage.
+        type: boolean
+        required: false
+        default: false
+
+      sign-dist-archive-s3-region:
+        description: |
+          Upload signed application artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      sign-dist-archive-s3-path:
+        description: |
+          Upload signed application artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'pub/milaboratories/${{ github.event.repository.name }}'
+
+      sign-gcloud-kms-digest-algorithm:
+        description: |
+          The algorithm to digest the input.
+          Must be one of: sha256, sha384, sha512.
+        type: string
+        required: false
+        default: 'sha256'
+
+      sign-gcloud-kms-key-version:
+        description: |
+          Version of KMS key.
+        type: string
+        required: false
+        default: '1'
+
+      sign-gcloud-kms-location:
+        description: |
+          KMS key and keyring location.
+        type: string
+        required: false
+        default: 'europe-west3'
+
+      sign-gcloud-sdk-version:
+        description: |
+          Version or version constraint of the gcloud SDK to install. If
+          unspecified, it will accept any installed version of the gcloud SDK. If
+          set to "latest", it will download the latest available SDK. If set to a
+          version constraint, it will download the latest available version that
+          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+        type: string
+        required: false
+        default: 'latest'
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -931,6 +997,38 @@ on:
         description: |
           Password for GPG key
         required: false
+
+      SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        required: false
+
+      SIGN_DIST_ARCHIVE_S3_BUCKET:
+        description: |
+          Registry's S3 Bucket name to upload signed artifacts.
+        required: false
+
+      SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+
+      SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
+        description: |
+          The name of the GCP service account.
+        required: false
+
+      SIGN_GCLOUD_KMS_KEYRING:
+        description: |
+          KMS keyring name in GCP.
+        required: false
+
+      SIGN_GCLOUD_KMS_KEY_NAME:
+        description: |
+          KMS key name in GCP.
+        required: false
+
 
 jobs:
   init:
@@ -1902,6 +2000,91 @@ jobs:
             ${{ needs.distLibrary.result }}
           product-name: ${{ format('{0} - Library', inputs.product-name) }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  signDistArchive:
+    name: sign-archive
+    runs-on: ubuntu-latest
+
+    if: inputs.sign-dist-archive
+    needs:
+      - distArchive
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - id: registry-s3
+        uses: milaboratory/github-ci/blocks/release/registry-bin@v4
+        with:
+          artifact-name: ${{ inputs.product-name-slug }}
+          gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
+          gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
+          gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
+          gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
+          gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
+          gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
+          gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
+          s3-region: ${{ inputs.sign-dist-archive-s3-region }}
+          s3-path: ${{ inputs.sign-dist-archive-s3-path }}
+          s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
+          s3-bucket: ${{ secrets.SIGN_DIST_ARCHIVE_S3_BUCKET }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      s3-files: ${{ steps.registry-s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.registry-s3.outputs.uploaded-json }}
+
+  notify-build-signDistArchive:
+    name: notify sign archive build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.sign-dist-archive
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && ( needs.signDistArchive.result != 'cancelled' || needs.signDistArchive.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
+    needs:
+      - signDistArchive
+      - build
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            build
+            sign
+            archive
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.signDistArchive.result }}
+          product-name: ${{ format('{0} - Signed Archive', inputs.product-name) }}
+          additional-info: ${{ needs.signDistArchive.outputs.s3-files }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:

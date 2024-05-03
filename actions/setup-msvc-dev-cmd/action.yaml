@@ -1,0 +1,40 @@
+name: Enable Developer Command Prompt
+author: 'MiLaboratories'
+description: |
+  Configure Microsoft Visual C++ command line.
+  See original action ilammy/msvc-dev-cmd
+
+inputs:
+  arch:
+    description: Target architecture
+    default: 'amd64'
+    required: true
+  sdk:
+    description: 'Windows SDK number to build for'
+    required: false
+  spectre:
+    description: 'Enable Specre mitigations'
+    required: false
+  toolset:
+    description: 'VC++ compiler toolset version'
+    required: false
+  uwp:
+    description: 'Build for Universal Windows Platform'
+    required: false
+  vsversion:
+    description: 'The Visual Studio version to use. This can be the version number (e.g. 16.0 for 2019) or the year (e.g. "2019").'
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+      with:
+        arch: ${{ inputs.arch }}
+        sdk: ${{ inputs.sdk }}
+        spectre: ${{ inputs.spectre }}
+        toolset: ${{ inputs.toolset }}
+        uwp: ${{ inputs.uwp }}
+        vsversion: ${{ inputs.vsversion }}

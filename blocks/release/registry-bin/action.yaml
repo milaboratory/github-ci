@@ -1,0 +1,210 @@
+name: Upload re-packed artifact to platforma's registry
+author: 'MiLaboratories'
+description: |
+  Re-pack artifact as .tgz archive, sign with gcloud kms asymmetric-sign
+  and upload archive to platforma's registry bin bucket.
+
+  Requirements:
+    - initialized context (actions/context/init)
+
+inputs:
+  artifact-name:
+    description: |
+      Name of artifact to work with. This artifact will be downloaded
+      from GitHub, all its contents will be uploaded to S3.
+    required: false
+
+ #
+ # GCP Control
+ #
+  gcloud-kms-workload-identity-provider:
+    description: |
+      Tha name of the GCP workload identity federation provider.
+    required: false
+
+  gcloud-kms-service-account:
+    description: |
+      The name of the GCP service account.
+    required: false
+
+  gcloud-sdk-version:
+    description: |
+      Version or version constraint of the gcloud SDK to install. If
+      unspecified, it will accept any installed version of the gcloud SDK. If
+      set to "latest", it will download the latest available SDK. If set to a
+      version constraint, it will download the latest available version that
+      matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+    required: false
+    default: 'latest'
+
+  gcloud-kms-location:
+    description: |
+      KMS key and keyring location
+    required: false
+    default: 'europe-west3'
+
+  gcloud-kms-digest-algorithm:
+    description: |
+      The algorithm to digest the input.
+      Must be one of: sha256, sha384, sha512.
+    required: false
+    default: 'sha256'
+
+  gcloud-kms-key-version:
+    description: |
+      Version of KMS key.
+    required: false
+    default: '1'
+
+  gcloud-kms-keyring:
+    description: |
+      KMS keyring name in GCP.
+    required: false
+
+  gcloud-kms-key-name:
+    description: |
+      KMS key name in GCP.
+    required: false
+
+ #
+ # AWS Control
+ #
+  s3-iam-role-to-assume:
+    description: |
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
+    required: false
+
+  s3-region:
+    description: |
+      AWS region for Registry's S3 bucket
+    required: false
+    default: 'eu-central-1'
+
+  s3-bucket:
+    description: |
+      Registry's S3 bucket
+    required: false
+
+  s3-path:
+    description: |
+      Put artifact's files into given 'directory' in
+      S3 bucket.
+
+      Files will be uploaded to:
+        's3://<s3-bucket>/<s3-path>/<file-name>'
+
+    required: false
+
+outputs:
+  uploaded:
+    description: |
+      Newline-separated list of S3 keys for uploaded files
+      (without bucket and region name)
+    value: ${{ steps.uploaded-list.outputs.stdout }}
+  uploaded-json:
+    description: |
+      'uploaded' in JSON format
+    value: ${{ steps.uploaded-json.outputs.result }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
+
+    - id: artifact-path
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        run: echo './release-artifact'
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.artifact-path.outputs.stdout }}
+
+    - name: Add version
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.context.outputs.current-version }}'
+
+    - name: Re-pack artifact as tgz archive
+      id: repack
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
+        ARCHIVE_PATH: ${{ format('{0}/result-archive', github.workspace) }}
+      with:
+        run: |
+          if [ ! -d "${ARCHIVE_PATH}" ]; then
+            echo "Creating: ${ARCHIVE_PATH}"
+            mkdir -p "${ARCHIVE_PATH}"
+          fi
+
+          while read zip_file; do
+            filename=$(basename "$zip_file")
+            base_name="${filename%.zip}"
+
+            temp_dir=$(mktemp -d)
+            unzip "$zip_file" -d "$temp_dir"
+
+            (cd "$temp_dir" && tar -czf "${ARCHIVE_PATH}/${base_name}.tgz" .)
+            echo "Repacked $zip_file to ${ARCHIVE_PATH}/${base_name}.tgz"
+
+            ARCHIVE_FULL_PATH="${ARCHIVE_PATH}/${base_name}.tgz"
+
+          done < <(find ${ARTIFACT_PATH} -type f -name "*.zip")
+
+          ghwa_set_output archive-full-path "${ARCHIVE_FULL_PATH}"
+          ghwa_set_output archive-path "${ARCHIVE_PATH}"
+
+    - name: Create sig file for re-packed archive
+      uses: milaboratory/github-ci/actions/gcloud-kms-sign@v4
+      with:
+        file-path: ${{ fromJSON(steps.repack.outputs.data).archive-full-path }}
+        gcloud-kms-workload-identity-provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
+        gcloud-kms-service-account: ${{ inputs.gcloud-kms-service-account }}
+        gcloud-sdk-version: ${{ inputs.gcloud-sdk-version }}
+        gcloud-kms-location: ${{ inputs.gcloud-kms-location }}
+        gcloud-kms-digest-algorithm: ${{ inputs.gcloud-kms-digest-algorithm }}
+        gcloud-kms-key-version: ${{ inputs.gcloud-kms-key-version }}
+        gcloud-kms-keyring: ${{ inputs.gcloud-kms-keyring }}
+        gcloud-kms-key-name: ${{ inputs.gcloud-kms-key-name }}
+
+    - name: Upload files
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        run: |
+          aws s3 cp --recursive \
+          ${{ fromJSON(steps.repack.outputs.data).archive-path }}/ \
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
+
+    - id: uploaded-list
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        ARTIFACT_PATH: ${{ fromJSON(steps.repack.outputs.data).archive-path }}
+        S3_PATH: ${{ inputs.s3-path }}
+      with:
+        run: |
+          S3_PATH="${S3_PATH%/}" # trim trailing '/'
+          S3_PATH="${S3_PATH#/}" # trim leading '/'
+
+          cd "${ARTIFACT_PATH}"
+          find . -mindepth 1 -type f,l,p |
+            while read -r file_path; do
+              echo "/${S3_PATH}/${file_path#./}"
+            done
+
+    - id: uploaded-json
+      uses: milaboratory/github-ci/actions/strings/json-list@v4
+      with:
+        input: ${{ steps.uploaded-list.outputs.stdout }}
