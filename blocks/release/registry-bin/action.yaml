@@ -165,7 +165,7 @@ runs:
         gcloud-sdk-version: ${{ inputs.gcloud-sdk-version }}
         gcloud-kms-location: ${{ inputs.gcloud-kms-location }}
         gcloud-kms-digest-algorithm: ${{ inputs.gcloud-kms-digest-algorithm }}
-        gcloud-kms-key-version: ${{inputs.gcloud-kms-key-version }}
+        gcloud-kms-key-version: ${{ inputs.gcloud-kms-key-version }}
         gcloud-kms-keyring: ${{ inputs.gcloud-kms-keyring }}
         gcloud-kms-key-name: ${{ inputs.gcloud-kms-key-name }}
 
@@ -175,4 +175,4 @@ runs:
         run: |
           aws s3 cp --recursive \
           ${{ fromJSON(steps.repack.outputs.data).archive-path }}/ \
-          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }
+          s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
