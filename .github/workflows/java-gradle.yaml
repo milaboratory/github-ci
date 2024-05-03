@@ -2029,7 +2029,8 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/release/registry-bin@v4-beta
+      - id: registry-s3
+        uses: milaboratory/github-ci/blocks/release/registry-bin@v4-beta
         with:
           artifact-name: ${{ inputs.product-name-slug }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
@@ -2045,6 +2046,46 @@ jobs:
           s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
           s3-bucket: ${{ secrets.SIGN_DIST_ARCHIVE_S3_BUCKET }}
 
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+
+      s3-files: ${{ steps.registry-s3.outputs.uploaded }}
+      s3-files-json: ${{ steps.registry-s3.outputs.uploaded-json }}
+
+  notify-build-signDistArchive:
+    name: notify sign archive build
+    runs-on: ubuntu-latest
+    if: always()
+      && inputs.sign-dist-archive
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && ( needs.signDistArchive.result != 'cancelled' || needs.signDistArchive.result != 'skipped' )
+      && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
+    needs:
+      - signDistArchive
+      - build
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+            sign
+            archive
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          notification-mode: ${{ inputs.notify-build }}
+          build-status: |
+            ${{ needs.signDistArchive.result }}
+          product-name: ${{ format('{0} - Signed Archive', inputs.product-name) }}
+          additional-info: ${{ needs.signDistArchive.outputs.s3-files }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
     name: update the latest build link on the CDN
