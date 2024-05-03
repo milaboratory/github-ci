@@ -10,19 +10,19 @@ inputs:
     default: 'amd64'
     required: true
   sdk:
-    description: Windows SDK number to build for
+    description: 'Windows SDK number to build for'
     required: false
   spectre:
-    description: Enable Specre mitigations
+    description: 'Enable Specre mitigations'
     required: false
   toolset:
-    description: VC++ compiler toolset version
+    description: 'VC++ compiler toolset version'
     required: false
   uwp:
-    description: Build for Universal Windows Platform
+    description: 'Build for Universal Windows Platform'
     required: false
   vsversion:
-    description: The Visual Studio version to use. This can be the version number (e.g. 16.0 for 2019) or the year (e.g. "2019").
+    description: 'The Visual Studio version to use. This can be the version number (e.g. 16.0 for 2019) or the year (e.g. "2019").'
     required: false
 
 runs:

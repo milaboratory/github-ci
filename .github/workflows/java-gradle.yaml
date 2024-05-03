@@ -850,6 +850,71 @@ on:
         default: 'false'
 
       #
+      #  Archive singing control
+      #
+      sign-dist-archive:
+        description: |
+          Set it to 'true' if you want to sign and upload archive to registry S3 bucket
+          This feature requires 'dist-archive' feature to be enabled and
+          configured. The file created at 'dist-archive' step is signed and uploaded
+          to registry S3 storage.
+        type: boolean
+        required: false
+        default: false
+
+      sign-dist-archive-s3-region:
+        description: |
+          Upload signed application artifact's files to
+          AWS S3 bucket in given region.
+        type: string
+        required: false
+        default: 'eu-central-1'
+
+      sign-dist-archive-s3-path:
+        description: |
+          Upload signed application artifact's files to given 'path'
+          in S3 bucket.
+
+          Released application files would be uploaded to:
+            's3://<s3-bucket>/<s3-path>/<file>'
+
+        type: string
+        required: false
+        default: 'pub/milaboratories/${{ github.event.repository.name }}'
+
+      sign-gcloud-kms-digest-algorithm:
+        description: |
+          The algorithm to digest the input.
+          Must be one of: sha256, sha384, sha512.
+        type: string
+        required: false
+        default: 'sha256'
+
+      sign-gcloud-kms-key-version:
+        description: |
+          Version of KMS key.
+        type: string
+        required: false
+        default: '1'
+
+      sign-gcloud-kms-location:
+        description: |
+          KMS key and keyring location.
+        type: string
+        required: false
+        default: 'europe-west3'
+
+      sign-gcloud-sdk-version:
+        description: |
+          Version or version constraint of the gcloud SDK to install. If
+          unspecified, it will accept any installed version of the gcloud SDK. If
+          set to "latest", it will download the latest available SDK. If set to a
+          version constraint, it will download the latest available version that
+          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+        required: false
+        default: 'latest'
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -931,6 +996,38 @@ on:
         description: |
           Password for GPG key
         required: false
+
+      SIGN-DIST-ARCHIVE-S3-IAM-ROLE-TO-ASSUME:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        required: false
+
+      SIGN-DIST-ARCHIVE-S3-BUCKET:
+        description: |
+          Registry's S3 Bucket name to upload signed artifacts.
+        required: false
+
+      SIGN-GCLOUD-KMS-WORKLOAD-IDENTITY-PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+
+      SIGN-GCLOUD-KMS-SERVICE-ACCOUNT:
+        description: |
+          The name of the GCP service account.
+        required: false
+
+      SIGN-GCLOUD-KMS-KEYRING:
+        description: |
+          KMS keyring name in GCP.
+        required: false
+
+      SIGN-GCLOUD-KMS-KEY-NAME:
+        description: |
+          KMS key name in GCP.
+        required: false
+
 
 jobs:
   init:
@@ -1903,6 +2000,50 @@ jobs:
           product-name: ${{ format('{0} - Library', inputs.product-name) }}
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
           search-tags: ${{ steps.search-tags.outputs.result }}
+
+  signDistArchive:
+    name: sign-archive
+    runs-on: ubuntu-latest
+
+    if: inputs.sign-dist-archive
+    needs:
+      - build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/git/crypt@v4-beta
+        if: inputs.git-crypt-unlock
+        with:
+          gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
+          gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
+
+      - uses: milaboratory/github-ci/blocks/registry-bin@v4-beta
+        with:
+          artifact-name: ${{ inputs.product-name-slug }}
+          gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
+          gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
+          gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
+          gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
+          gcloud-workload-identity-provider: ${{ secrets.SIGN-GCLOUD-KMS-WORKLOAD-IDENTITY-PROVIDER }}
+          gcloud-service-account: ${{ secrets.SIGN-GCLOUD-KMS-SERVICE-ACCOUNT }}
+          gcloud-kms-keyring: ${{ secrets.SIGN-GCLOUD-KMS-KEYRING }}
+          gcloud-kms-key-name: ${{ secrets.SIGN-GCLOUD-KMS-KEY-NAME }}
+          s3-region: ${{ inputs.sign-dist-archive-s3-region }}
+          s3-path: ${{ inputs.sign-dist-archive-s3-path }}
+          s3-iam-role-to-assume: ${{ secrets.SIGN-DIST-ARCHIVE-S3-IAM-ROLE-TO-ASSUME }}
+          s3-bucket: ${{ secrets.SIGN-DIST-ARCHIVE-S3-BUCKET }}
+
 
   update-cdn-link:
     name: update the latest build link on the CDN
