@@ -17,12 +17,12 @@ inputs:
  #
  # GCP Control
  #
-  gcloud-workload-identity-provider:
+  gcloud-kms-workload-identity-provider:
     description: |
       Tha name of the GCP workload identity federation provider.
     required: false
 
-  gcloud-service-account:
+  gcloud-kms-service-account:
     description: |
       The name of the GCP service account.
     required: false
@@ -160,8 +160,8 @@ runs:
       uses: milaboratory/github-ci/actions/gcloud-kms-sign@v4-beta
       with:
         file-path: ${{ fromJSON(steps.repack.outputs.data).archive-full-path }}
-        gcloud-kms-workload-identity-provider: ${{ inputs.gcloud-workload-identity-provider }}
-        gcloud-kms-service-account: ${{ inputs.gcloud-service-account }}
+        gcloud-kms-workload-identity-provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
+        gcloud-kms-service-account: ${{ inputs.gcloud-kms-service-account }}
         gcloud-sdk-version: ${{ inputs.gcloud-sdk-version }}
         gcloud-kms-location: ${{ inputs.gcloud-kms-location }}
         gcloud-kms-digest-algorithm: ${{ inputs.gcloud-kms-digest-algorithm }}

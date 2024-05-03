@@ -2036,8 +2036,8 @@ jobs:
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
           gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
-          gcloud-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          gcloud-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
+          gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
           gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
           gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
           s3-region: ${{ inputs.sign-dist-archive-s3-region }}

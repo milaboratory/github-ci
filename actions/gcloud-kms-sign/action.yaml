@@ -74,8 +74,8 @@ runs:
        id: gcp_auth
        uses: google-github-actions/auth@v2
        with:
-         workload_identity_provider: ${{ inputs.gcloud-workload-identity-provider }}
-         service_account: ${{ inputs.gcloud-service-account }}
+         workload_identity_provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
+         service_account: ${{ inputs.gcloud-kms-service-account }}
          token_format: 'access_token'
 
     - name: Set up GCloud SDK
