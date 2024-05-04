@@ -74,6 +74,9 @@ mish_sanitized() {
    echo "${_sanitized_path}"
 }
 
+# Perform URL encode operation.
+# Arguments:
+#  [1] - data to encode
 mish_urlencode() {
   local _text="${1}"
 
@@ -85,6 +88,13 @@ mish_urlencode() {
       --data-urlencode "to_encode=${_text}" \
       "localhost" |
     awk -F'=' '{print $2}' # drop 'http://localhost/?to_encode=' prefix
+}
+
+# Check data format in STDIN:
+#  - exits with 0 if STDIN is valid JSON;
+#  - exits with non-zero exit code if not.
+mish_is_json() {
+  jq empty 2>/dev/null
 }
 
 set -o nounset
