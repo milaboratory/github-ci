@@ -74,6 +74,19 @@ mish_sanitized() {
    echo "${_sanitized_path}"
 }
 
+mish_urlencode() {
+  local _text="${1}"
+
+  curl \
+      --get \
+      --silent \
+      --output /dev/null \
+      --write-out '%{url_effective}' \
+      --data-urlencode "to_encode=${_text}" \
+      "localhost" |
+    awk -F'=' '{print $2}' # drop 'http://localhost/?to_encode=' prefix
+}
+
 set -o nounset
 set -o errexit
 
