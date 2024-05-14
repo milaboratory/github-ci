@@ -11,13 +11,13 @@ inputs:
 
   select:
     description: |
-      'jq' select query. Like 'jq '<select>' '<file>'
+      'jq' select query. Like "jq '<select>' '<file>'"
     default: '.'
 
 outputs:
   value:
     description: |
-      JSON-encoded {{ github }} context with .token removed
+      Data produced by JQ as is
     value: ${{ fromJSON(steps.jq.outputs.data).json }}
 
 runs:
@@ -32,4 +32,8 @@ runs:
       with:
         dump-stdout: false
         run: |
-          ghwa_set_output "json" "$(jq "${JQ_SELECT}" "${INPUT_FILE}")"
+          ghwa_set_output "json" "$(
+            jq --raw-output \
+              "${JQ_SELECT}" \
+              "${INPUT_FILE}"
+          )"
