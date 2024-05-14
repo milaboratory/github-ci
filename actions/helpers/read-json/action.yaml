@@ -15,7 +15,7 @@ outputs:
   v:
     description: |
       JSON-encoded {{ github }} context with .token removed
-    value: ${{ fromJSON(steps.readJSON.outputs.data) }}
+    value: ${{ steps.readJSON.outputs.data }}
 
 runs:
   using: "composite"
