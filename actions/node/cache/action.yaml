@@ -26,6 +26,12 @@ inputs:
     required: false
     default: 'true'
 
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for package-lock.json
+    required: false
+    default: '**/package-lock.json'
+
 runs:
   using: "composite"
 
@@ -37,7 +43,7 @@ runs:
         path: |
           ~/.cache/electron/
           ~/Library/Caches/electron/
-        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
 
@@ -46,7 +52,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: node_modules
-        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
 
@@ -55,6 +61,6 @@ runs:
       if: inputs.is-electron-application == 'false'
       with:
         path: ~/.npm
-        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-      
