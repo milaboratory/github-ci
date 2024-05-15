@@ -1,0 +1,32 @@
+name: Repository Dispatch
+author: 'MiLaboratories'
+description: |
+  Create a repository dispatch event
+
+  See original action peter-evans/repository-dispatch/
+
+inputs:
+  token:
+    description: 'GITHUB_TOKEN or a `repo` scoped Personal Access Token (PAT)'
+    default: ${{ github.token }}
+  repository:
+    description: 'The full name of the repository to send the dispatch.'
+    default: ${{ github.repository }}
+  event-type:
+    description: 'A custom webhook event name.'
+    required: true
+  client-payload:
+    description: 'JSON payload with extra information about the webhook event that your action or worklow may use.'
+    default: '{}'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Repository Dispatch
+      uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0
+      with:
+        token: ${{ inputs.token }}
+        repository: ${{ inputs.repository }}
+        event-type: ${{ inputs.event-type }}
+        client-payload: ${{ inputs.client-payload }}
