@@ -1,0 +1,39 @@
+name: Run 'jq' against file and save its output in single field
+description: |
+  Reads file with valid JSON object, passes it to JQ and saves the result 
+  to 'value' output.
+
+inputs:
+  file:
+    description: |
+      Path to file to read
+    required: true
+
+  select:
+    description: |
+      'jq' select query. Like "jq '<select>' '<file>'"
+    default: '.'
+
+outputs:
+  value:
+    description: |
+      Data produced by JQ as is
+    value: ${{ fromJSON(steps.jq.outputs.data).json }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: jq
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        INPUT_FILE: ${{ inputs.file }}
+        JQ_SELECT: ${{ inputs.select }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "json" "$(
+            jq --raw-output \
+              "${JQ_SELECT}" \
+              "${INPUT_FILE}"
+          )"
