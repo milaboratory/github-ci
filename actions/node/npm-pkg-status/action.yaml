@@ -1,0 +1,113 @@
+name: Check NPM package status in a registry
+author: 'MiLaboratories'
+description: |
+  Check the status of a NPM package within a registry
+
+inputs:
+  npm-pkg-name:
+    description: |
+      NPM package name to check in a `registry-url`.
+    required: false
+
+  npm-pkg-version:
+    description: |
+      Version for a `npm-pkg-name` to check in a `registry-url`.
+    required: false
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  npm-auth-token:
+    description: |
+      NPM private registry auth token
+    required: false
+
+outputs:
+  exist:
+    description: |
+      Status of an npm package in a registry
+      '1' exist
+      '0' doesn't exist
+    value: ${{ steps.set-status.outputs.stdout }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Check NPM package status in a registry
+      uses: milaboratory/github-ci/actions/shell@v4
+      id: npm-pkg-status
+      env:
+        NPM_PKG_NAME: ${{ inputs.npm-pkg-name }}
+        NPM_PKG_VERSION: ${{ inputs.npm-pkg-version }}
+        NPM_REGISTRY: ${{ inputs.registry-url }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          NPM_PKG_NAME_URLENCODED="$(mish_urlencode "${NPM_PKG_NAME}")"
+          
+          RES_JSON=$(curl -s \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${NODE_AUTH_TOKEN}" \
+            "${NPM_REGISTRY}/${NPM_PKG_NAME_URLENCODED}")
+          
+          if ! mish_is_json <<<"${RES_JSON}"; then
+            echo "NPM registry '${NPM_REGISTRY}' responded with non-json output for package ${NPM_PKG_NAME}"
+            echo "  original request: '${NPM_REGISTRY}/${NPM_PKG_NAME_URLENCODED}'"
+            echo "  response: ${RES_JSON}"
+          
+            exit 1
+          fi
+          
+          has_error=$( jq 'has("error")' <<<"${RES_JSON}" )
+          
+          if [ "${has_error}" = "true" ]; then
+          
+            echo "GitHub NPM registry '${NPM_REGISTRY}' response for '${NPM_PKG_NAME}' contains error"
+            jq <<<"${RES_JSON}"
+          
+            if ! jq --raw-output '.error' <<<"${RES_JSON}" |
+              grep -q -E 'npm package .* does not exist'; then
+          
+              # When package is built for the first time, we get 'npm package <package name> does not exist'
+              # error from GitHub. This error should be ignored. Any other error should lead to action fail.
+              exit 1
+          
+            fi
+          fi
+          
+          # The GitHub NPM registry response format for package is:
+          #  { ..., "versions": { "<version name>": { <package info> } } }
+          # or
+          #  { "error": ... }
+          # In any case, to check the given version of package existence we just need to be sure
+          # the response has '.versions[<version name>]' key.
+          
+          version_exists=$(
+            jq \
+              --arg version "${NPM_PKG_VERSION}" \
+              '.versions | has($version)' \
+              <<<"${RES_JSON}" \
+          )
+          
+          if [ "${version_exists}" = "true" ] ; then
+          
+            echo "Package: ${NPM_PKG_NAME}@${NPM_PKG_VERSION} found in registry."
+            ghwa_set_output exist "1"
+          
+            exit 0
+          
+          fi
+          
+          echo "Package: ${NPM_PKG_NAME}@${NPM_PKG_VERSION} not found in registry."
+          ghwa_set_output exist "0"
+
+    - id: set-status
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        run: |
+          echo "${{ fromJSON(steps.npm-pkg-status.outputs.data).exist }}"
