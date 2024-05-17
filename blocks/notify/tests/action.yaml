@@ -72,16 +72,16 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - id: tests-status
       name: Merge test statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
       with:
         statuses: ${{ inputs.tests-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         SEARCH_TAGS: ${{ inputs.search-tags }}
       with:
@@ -96,7 +96,7 @@ runs:
         && !( steps.tests-status.outputs.status != 'success'
            && inputs.notification-mode == 'success-only' )
 
-      uses: milaboratory/github-ci/actions/notify/telegram/tests@v4-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/tests@v4
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

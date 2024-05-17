@@ -65,7 +65,7 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Setup cache for a NodeJS/Electron application
-      uses: milaboratory/github-ci/actions/node/cache@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache@v4
       with:
         is-electron-application: ${{ inputs.is-electron-application }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
