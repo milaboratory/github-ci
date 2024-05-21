@@ -1,0 +1,63 @@
+name: Delete objects under a prefix in a S3 bucket
+author: 'MiLaboratories'
+description: |
+  Delete all object under a given prefix from a given s3 bucket.
+
+inputs:
+  s3-bucket-name:
+    description: |
+      S3 bucket name.
+    required: false
+  s3-prefix-name:
+    description: |
+      Prefix name to delete all objects under on the `s3-bucket-name`.
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Delete objects under a prefix
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+       BUCKET_NAME: ${{ inputs.s3-bucket-name }}
+       PREFIX: ${{ inputs.s3-prefix-name }}
+      with:
+        run: |
+          # Ensure the prefix ends with a '/'
+          if [[ "${PREFIX}" != */ ]]; then
+            PREFIX="${PREFIX}/"
+          fi
+          
+          # Function to delete a batch of objects
+          delete_batch() {
+            echo "Deleting batch..."
+            aws s3api delete-objects --bucket "${BUCKET_NAME}" --delete "$1" > /dev/null
+          }
+
+          # Loop through all objects in the prefix in batches
+          while : ; do
+            # Retrieve a batch of objects
+            response=$(aws s3api list-objects-v2 --bucket "${BUCKET_NAME}" --prefix "${PREFIX}" --max-keys 1000)
+
+            # Check if there are no contents
+            num_objects=$(echo "${response}" | jq '.Contents | length')
+            if [[ -z "${num_objects}" ]] || [[ "${num_objects}" -eq 0 ]]; then
+              echo "No more objects to delete."
+              break
+            fi
+
+            # Prepare the list for deletion
+            batch_list=$(echo ${response} | jq -c '{Objects: [.Contents[] | {Key: .Key}]}')
+
+            # Call the delete batch function
+            delete_batch "${batch_list}"
+
+            # Check if there are more objects to fetch
+            if [[ "$(echo "${response}" | jq -r '.IsTruncated')" != "true" ]]; then
+              echo "All objects deleted."
+              break
+            fi
+          done
+
+          echo "Deleted all objects under the prefix ${PREFIX}"
