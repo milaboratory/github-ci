@@ -1,13 +1,12 @@
-name: Install Ninja build tool
-author: 'MiLaboratories'
-description: |
-  Installs ninja and adds it to the path'.
-  See original action seanmiddleditch/gha-setup-ninja
-
+name: 'Install ninja-build tool'
+description: 'Installs ninja and adds it to the path'
+branding:
+  icon: 'terminal'
+  color: 'white'
 inputs:
   version:
     description: 'Version of ninja-build to install'
-    default: '1.12.0'
+    default: '1.12.1'
     required: true
   platform:
     description: 'Override default platform with one of [win, mac, linux]'
@@ -19,15 +18,6 @@ inputs:
   http_proxy:
     description: 'Proxy server'
     required: false
-
 runs:
-  using: "composite"
-
-  steps:
-    - name: Ninja build tool
-      uses: seanmiddleditch/gha-setup-ninja@8b297075da4cd2a5f1fd21fe011b499edf06e9d2
-      with:
-        version: ${{ inputs.version }}
-        platform: ${{ inputs.platform }}
-        destination: ${{ inputs.destination }}
-        http_proxy: ${{ inputs.http_proxy }}
+  using: 'node20'
+  main: 'dist/index.js'
