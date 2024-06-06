@@ -53,10 +53,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         SEARCH_TAGS: ${{ inputs.search-tags }}
       with:
@@ -64,7 +64,7 @@ runs:
         run: |
           ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/telegram/test-regression@v4
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
