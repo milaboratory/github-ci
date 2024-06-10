@@ -91,13 +91,13 @@ outputs:
   # Release info
   #
   id:
-    description: "ID of created/updated release"
+    description: 'ID of created/updated release.'
     value: ${{ steps.create.outputs.id }}
   html-url:
-    description: "HTML URL of the release"
+    description: 'HTML URL of the release'.
     value: ${{ steps.create.outputs.html_url }}
   upload-url:
-    description: The URL for uploading assets to the release.
+    description: 'The URL for uploading assets to the release.'
     value: ${{ steps.create.outputs.upload_url }}
 
   #
@@ -118,7 +118,7 @@ runs:
   steps:
     - name: Generate changelog
       id: changelog
-      uses: loopwerk/tag-changelog@96adce531513edec860ed73a00d5d4dd11d2efc2
+      uses: loopwerk/tag-changelog@941366edb8920e2071eae0449031830984b9f26e
       with:
         token: ${{ inputs.token }}
         exclude_types: ${{ inputs.changelog-exclude-types }}
@@ -132,7 +132,7 @@ runs:
 
     - name: Create release
       id: create
-      uses: ncipollo/release-action@eb05307dcee34deaad054e98128088a30d7980dc
+      uses: ncipollo/release-action@e2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
