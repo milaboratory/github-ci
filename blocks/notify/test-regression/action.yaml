@@ -70,7 +70,7 @@ runs:
           else
             echo "${CURRENT_VERSION}"
           fi
-
+          
     - id: json
       uses: milaboratory/github-ci/actions/shell@v4
       env:
