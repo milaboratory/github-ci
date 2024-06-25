@@ -44,6 +44,13 @@ inputs:
     required: false
     default: ${{ github.repository }}
 
+  override-version:
+    description: |
+      This option allows the user to manually specify a version number.
+      This custom version overrides the version that would be derived during the "get context" step
+    required: false
+    default: ''
+
   docker-images:
     description: |
       List of docker images in JSON format to put into notification
@@ -96,6 +103,19 @@ runs:
             echo "dev"
           fi
 
+    - id: define-version
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OVERRIDE_VERSION: ${{ inputs.override-version }}
+        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_VERSION}" ];then
+            echo "${OVERRIDE_VERSION}"
+          else
+            echo "${CURRENT_VERSION}"
+          fi
+
     - id: build-status
       name: Merge build statuses
       uses: milaboratory/github-ci/actions/helpers/merge-status@v4
@@ -127,7 +147,7 @@ runs:
         telegram-token: ${{ inputs.telegram-token }}
 
         product-name: ${{ inputs.product-name }}
-        build-version: ${{ steps.context.outputs.current-version }}
+        build-version: ${{ steps.define-version.outputs.stdout }}
 
         search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
         additional-info: ${{ inputs.additional-info }}
@@ -142,7 +162,7 @@ runs:
         telegram-token: ${{ inputs.telegram-token }}
 
         product-name: ${{ inputs.product-name }}
-        build-version: ${{ steps.context.outputs.current-version }}
+        build-version: ${{ steps.define-version.outputs.stdout }}
         build-category: ${{ steps.category.outputs.stdout }}
 
         docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
