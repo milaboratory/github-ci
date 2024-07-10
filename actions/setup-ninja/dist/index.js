@@ -32011,7 +32011,7 @@ try {
     const destDir = core.getInput('destination') || 'ninja-build'
     const proxyServer = core.getInput('http_proxy')
 
-    const [error, platform] = selectPlatforn(core.getInput('platform'));
+    const [error, platform] = selectPlatform(core.getInput('platform'));
     if (error) throw error
 
     const url = new URL(`https://github.com/ninja-build/ninja/releases/download/v${version}/ninja-${platform}.zip`)
@@ -32054,12 +32054,12 @@ try {
 
             core.addPath(fullDestDir)
             console.log(`added '${fullDestDir}' to PATH`)
-            
+
             const result = spawn(ninjaName, ['--version'], {encoding: 'utf8'})
             if (result.error) throw error
 
             const installedVersion = result.stdout.trim()
-            
+
             console.log(`$ ${ninjaName} --version`)
             console.log(installedVersion)
 
