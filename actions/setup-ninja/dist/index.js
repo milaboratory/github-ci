@@ -31988,19 +31988,30 @@ const { https } = __nccwpck_require__(7707)
 const AdmZip = __nccwpck_require__(6761)
 const HttpsProxyAgent = __nccwpck_require__(7219)
 
-const selectPlatforn = (platform) =>
-    platform ? [null, platform] :
-    process.platform === 'win32' ? [null, 'win'] :
-    process.platform === 'darwin' ? [null, 'mac'] :
-    process.platform === 'linux' ? [null, 'linux'] :
-    [new Error(`Unsupported platform '${process.platform}'`), '']
+const selectPlatform = (platform) => {
+    if (platform) return [null, platform]
+    switch (process.platform) {
+        case 'win32':
+            return [null, 'win']
+        case 'darwin':
+            return [null, 'mac']
+        case 'linux':
+            // Detect if it's ARM64 architecture
+            if (process.arch === 'arm64') {
+                return [null, 'linux-aarch64']
+            }
+            return [null, 'linux']
+        default:
+            return [new Error(`Unsupported platform '${process.platform}'`), '']
+    }
+}
 
 try {
     const version = core.getInput('version', {required: true})
     const destDir = core.getInput('destination') || 'ninja-build'
     const proxyServer = core.getInput('http_proxy')
 
-    const [error, platform] = selectPlatforn(core.getInput('platform'));
+    const [error, platform] = selectPlatform(core.getInput('platform'))
     if (error) throw error
 
     const url = new URL(`https://github.com/ninja-build/ninja/releases/download/v${version}/ninja-${platform}.zip`)
@@ -32043,12 +32054,12 @@ try {
 
             core.addPath(fullDestDir)
             console.log(`added '${fullDestDir}' to PATH`)
-            
+
             const result = spawn(ninjaName, ['--version'], {encoding: 'utf8'})
             if (result.error) throw error
 
             const installedVersion = result.stdout.trim()
-            
+
             console.log(`$ ${ninjaName} --version`)
             console.log(installedVersion)
 
