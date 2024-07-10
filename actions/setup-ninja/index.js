@@ -8,12 +8,23 @@ const { https } = require('follow-redirects')
 const AdmZip = require('adm-zip')
 const HttpsProxyAgent = require('https-proxy-agent')
 
-const selectPlatforn = (platform) =>
-    platform ? [null, platform] :
-    process.platform === 'win32' ? [null, 'win'] :
-    process.platform === 'darwin' ? [null, 'mac'] :
-    process.platform === 'linux' ? [null, 'linux'] :
-    [new Error(`Unsupported platform '${process.platform}'`), '']
+const selectPlatform = (platform) => {
+    if (platform) return [null, platform];
+    switch (process.platform) {
+        case 'win32':
+            return [null, 'win'];
+        case 'darwin':
+            return [null, 'mac'];
+        case 'linux':
+            // Detect if it's ARM64 architecture
+            if (process.arch === 'arm64') {
+                return [null, 'linux-aarch64'];
+            }
+            return [null, 'linux'];
+        default:
+            return [new Error(`Unsupported platform '${process.platform}'`), ''];
+    }
+}
 
 try {
     const version = core.getInput('version', {required: true})
