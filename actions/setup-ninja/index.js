@@ -9,20 +9,20 @@ const AdmZip = require('adm-zip')
 const HttpsProxyAgent = require('https-proxy-agent')
 
 const selectPlatform = (platform) => {
-    if (platform) return [null, platform];
+    if (platform) return [null, platform]
     switch (process.platform) {
         case 'win32':
-            return [null, 'win'];
+            return [null, 'win']
         case 'darwin':
-            return [null, 'mac'];
+            return [null, 'mac']
         case 'linux':
             // Detect if it's ARM64 architecture
             if (process.arch === 'arm64') {
-                return [null, 'linux-aarch64'];
+                return [null, 'linux-aarch64']
             }
-            return [null, 'linux'];
+            return [null, 'linux']
         default:
-            return [new Error(`Unsupported platform '${process.platform}'`), ''];
+            return [new Error(`Unsupported platform '${process.platform}'`), '']
     }
 }
 
@@ -31,7 +31,7 @@ try {
     const destDir = core.getInput('destination') || 'ninja-build'
     const proxyServer = core.getInput('http_proxy')
 
-    const [error, platform] = selectPlatform(core.getInput('platform'));
+    const [error, platform] = selectPlatform(core.getInput('platform'))
     if (error) throw error
 
     const url = new URL(`https://github.com/ninja-build/ninja/releases/download/v${version}/ninja-${platform}.zip`)
