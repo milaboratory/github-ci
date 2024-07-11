@@ -65,6 +65,19 @@ inputs:
 
     required: false
     default: 'false'
+  add-os-name:
+    description: |
+      Add operating system name to uploaded files.
+      If a file in the artifact has an extension e.g 'app.zip' and the current OS_NAME is,
+      for instance, 'linux', the resulting file name will be: 'app-linux.zip.'
+
+      Files without extension ('myfile') will have
+      os name appended ('myfile-linux').
+
+      If 'add-version', 'add-sha', are true and 'add-os-name' is not empty , OS_NAME is added
+      to the file name after the version and sha : 'app-1.2.3-deadbeef-linux'
+    required: false
+    default: ''
   add-os-arch:
     description: |
       Add agent's operating system architecture to uploaded files
@@ -74,8 +87,8 @@ inputs:
       Files without extension ('myfile') will have
       os architecture appended ('myfile-amd64').
 
-      If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
-      to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
+      If 'add-version', 'add-sha', 'add-os-name' and 'add-arch' are true, ARCH is added
+      to the file name after the version, sha and os-name: 'app-1.2.3-deadbeef-linux-amd64'
 
     required: false
     default: 'false'
@@ -88,8 +101,8 @@ inputs:
       e.g., 'app.zip' and the current Run ID is, for instance, '3475688987', the resulting
       file name will be: 'app-3475688987.zip'
 
-      If 'add-version', 'add-sha', 'add-arch', and 'add-github-run-id' are true, Run ID is added
-      to the file name after the version and sha, but before arch: 'app-1.2.3-deadbeef-3475688987-amd64'
+      If 'add-version', 'add-sha', 'add-arch', 'add-os-name' and 'add-github-run-id' are true, Run ID is added
+      to the file name after the version and sha, but before arch: 'app-1.2.3-deadbeef-3475688987-linux-amd64'
     required: false
     default: 'false'
 
@@ -234,6 +247,29 @@ runs:
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ github.run_id }}'
+
+    - name: Get OS NAME
+      id: os_name
+      if: inputs.add-os-name != ''
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OS_NAME: ${{ inputs.add-os-name }}
+      with:
+        run: |
+          _os_input_lower=$(echo "${OS_NAME}" | tr '[:upper:]' '[:lower:]')
+          if [[ "${_os_input_lower}" == "linux" || "${_os_input_lower}" == "macos" || "${_os_input_lower}" == "windows" ]];then
+            echo "${_os_input_lower}"
+          else
+            echo "Invalid input. Please enter 'linux', 'macos', or 'windows'."
+            exit 1
+          fi
+
+    - name: Add OS NAME
+      if: inputs.add-os-name != ''
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.os_name.outputs.stdout }}'
 
     - name: Get ARCH
       id: os_arch
