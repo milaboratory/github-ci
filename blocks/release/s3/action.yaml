@@ -39,6 +39,13 @@ inputs:
       about uploaded archives on s3.
     required: false
     default: ''
+  upload-to-registry:
+    description: |
+      This parameter specifies whether to perform architecture renaming as part of the action's processing.
+      When set to true, the action will automatically convert architecture names
+      from 'arm64' to 'aarch64' and from 'amd64' to 'x64'
+    required: false
+    default: 'false'
   add-version:
     description: |
       Add verison number to all uploaded files.
@@ -276,6 +283,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
+        UPLOAD_TO_REGISTRY: ${{ inputs.upload-to-registry }}
       with:
         run: |
           if [ ! -z "${OVERRIDE_ARCH}" ];then
@@ -285,12 +293,24 @@ runs:
           fi
 
           case "${_target_arch}" in
-          "arm64"|"aarch64") echo "arm64" ;;
-          "amd64"|"x86_64"|"x86"|"x64") echo "amd64" ;;
+          "arm64"|"aarch64")
+            if [ "${UPLOAD_TO_REGISTRY}" = "true" ]; then
+              echo "aarch64"
+            else
+              echo "arm64"
+            fi
+            ;;
+          "amd64"|"x86_64"|"x86"|"x64")
+            if [ "${UPLOAD_TO_REGISTRY}" = "true" ]; then
+              echo "x64"
+            else
+              echo "amd64"
+            fi
+            ;;
           *)
-          echo "unknown arch: $_target_arch"
-          exit 1
-          ;;
+            echo "unknown arch: $_target_arch"
+            exit 1
+            ;;
           esac
 
     - name: Add ARCH
