@@ -39,6 +39,13 @@ inputs:
       about uploaded archives on s3.
     required: false
     default: ''
+  upload-to-registry:
+    description: |
+      This parameter specifies whether to perform architecture renaming as part of the action's processing.
+      When set to true, the action will automatically convert architecture names
+      from 'arm64' to 'aarch64' and from 'amd64' to 'x64'
+    required: false
+    default: 'false'
   add-version:
     description: |
       Add verison number to all uploaded files.
@@ -65,6 +72,19 @@ inputs:
 
     required: false
     default: 'false'
+  add-os-name:
+    description: |
+      Add operating system name to uploaded files.
+      If a file in the artifact has an extension e.g 'app.zip' and the current OS_NAME is,
+      for instance, 'linux', the resulting file name will be: 'app-linux.zip.'
+
+      Files without extension ('myfile') will have
+      os name appended ('myfile-linux').
+
+      If 'add-version', 'add-sha', are true and 'add-os-name' is not empty , OS_NAME is added
+      to the file name after the version and sha : 'app-1.2.3-deadbeef-linux'
+    required: false
+    default: ''
   add-os-arch:
     description: |
       Add agent's operating system architecture to uploaded files
@@ -74,8 +94,8 @@ inputs:
       Files without extension ('myfile') will have
       os architecture appended ('myfile-amd64').
 
-      If 'add-version' 'add-sha' and 'add-arch' are true, ARCH is added
-      to the file name after the version and sha: 'app-1.2.3-deadbeef-amd64'
+      If 'add-version', 'add-sha', 'add-os-name' and 'add-arch' are true, ARCH is added
+      to the file name after the version, sha and os-name: 'app-1.2.3-deadbeef-linux-amd64'
 
     required: false
     default: 'false'
@@ -88,8 +108,8 @@ inputs:
       e.g., 'app.zip' and the current Run ID is, for instance, '3475688987', the resulting
       file name will be: 'app-3475688987.zip'
 
-      If 'add-version', 'add-sha', 'add-arch', and 'add-github-run-id' are true, Run ID is added
-      to the file name after the version and sha, but before arch: 'app-1.2.3-deadbeef-3475688987-amd64'
+      If 'add-version', 'add-sha', 'add-arch', 'add-os-name' and 'add-github-run-id' are true, Run ID is added
+      to the file name after the version and sha, but before arch: 'app-1.2.3-deadbeef-3475688987-linux-amd64'
     required: false
     default: 'false'
 
@@ -235,11 +255,35 @@ runs:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ github.run_id }}'
 
+    - name: Get OS NAME
+      id: os_name
+      if: inputs.add-os-name != ''
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OS_NAME: ${{ inputs.add-os-name }}
+      with:
+        run: |
+          _os_input_lower=$(echo "${OS_NAME}" | tr '[:upper:]' '[:lower:]')
+          if [[ "${_os_input_lower}" == "linux" || "${_os_input_lower}" == "macos" || "${_os_input_lower}" == "windows" ]];then
+            echo "${_os_input_lower}"
+          else
+            echo "Invalid input. Please enter 'linux', 'macos', or 'windows'."
+            exit 1
+          fi
+
+    - name: Add OS NAME
+      if: inputs.add-os-name != ''
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
+      with:
+        paths: ${{ steps.artifact-path.outputs.stdout }}
+        suffix: '-${{ steps.os_name.outputs.stdout }}'
+
     - name: Get ARCH
       id: os_arch
       uses: milaboratory/github-ci/actions/shell@v4
       env:
         OVERRIDE_ARCH: ${{ inputs.artifact-override-os-arch }}
+        UPLOAD_TO_REGISTRY: ${{ inputs.upload-to-registry }}
       with:
         run: |
           if [ ! -z "${OVERRIDE_ARCH}" ];then
@@ -249,12 +293,24 @@ runs:
           fi
 
           case "${_target_arch}" in
-          "arm64"|"aarch64") echo "arm64" ;;
-          "amd64"|"x86_64"|"x86"|"x64") echo "amd64" ;;
+          "arm64"|"aarch64")
+            if [ "${UPLOAD_TO_REGISTRY}" = "true" ]; then
+              echo "aarch64"
+            else
+              echo "arm64"
+            fi
+            ;;
+          "amd64"|"x86_64"|"x86"|"x64")
+            if [ "${UPLOAD_TO_REGISTRY}" = "true" ]; then
+              echo "x64"
+            else
+              echo "amd64"
+            fi
+            ;;
           *)
-          echo "unknown arch: $_target_arch"
-          exit 1
-          ;;
+            echo "unknown arch: $_target_arch"
+            exit 1
+            ;;
           esac
 
     - name: Add ARCH
