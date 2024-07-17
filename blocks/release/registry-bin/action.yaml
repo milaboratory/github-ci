@@ -137,12 +137,35 @@ runs:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
 
+    - name: Search for the package.yaml inside github workspace
+      id: pkg-yaml-status
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PKG_YAML_SEARCH_PATH: ${{ format('{0}/{1}', github.workspace, 'package.yaml') }}
+      with:
+        run: |
+          if [ -f "${PKG_YAML_SEARCH_PATH}" ];then
+            echo "File 'package.yaml' exists in '${{ github.workspace }}'."
+            ghwa_set_output exist "1"
+          else
+            echo "Warning: File 'package.yaml' does not exist in '${{ github.workspace }}'."
+            ghwa_set_output exist "0"
+          fi
+
+    - name: Patch package version
+      if: fromJSON(steps.pkg-yaml-status.outputs.data).exist != '0'
+      uses: milaboratory/github-ci/actions/yaml/patch-version@v4-beta
+      with:
+        version: ${{ steps.context.outputs.current-version }}
+
     - name: Re-pack artifact as tgz archive
       id: repack
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
         ARCHIVE_PATH: ${{ format('{0}/result-archive', github.workspace) }}
+        PKG_YAML_STATUS: ${{ fromJSON(steps.pkg-yaml-status.outputs.data).exist }}
+        PKG_YAML_SEARCH_PATH: ${{ format('{0}/{1}', github.workspace, 'package.yaml') }}
       with:
         run: |
           if [ ! -d "${ARCHIVE_PATH}" ]; then
@@ -155,10 +178,13 @@ runs:
             base_name="${filename%.zip}"
 
             temp_dir=$(mktemp -d)
-            unzip "$zip_file" -d "$temp_dir"
+            unzip "${zip_file}" -d "${temp_dir}"
+            if [ "${PKG_YAML_STATUS}" != "0" ];then
+              cp -av "${PKG_YAML_SEARCH_PATH}" "${temp_dir}"/
+            fi
 
-            (cd "$temp_dir" && tar -czf "${ARCHIVE_PATH}/${base_name}.tgz" .)
-            echo "Repacked $zip_file to ${ARCHIVE_PATH}/${base_name}.tgz"
+            (cd "${temp_dir}" && tar -czf "${ARCHIVE_PATH}/${base_name}.tgz" .)
+            echo "Repacked ${zip_file} to ${ARCHIVE_PATH}/${base_name}.tgz"
 
             ARCHIVE_FULL_PATH="${ARCHIVE_PATH}/${base_name}.tgz"
 

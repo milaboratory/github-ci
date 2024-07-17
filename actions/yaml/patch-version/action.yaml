@@ -1,0 +1,33 @@
+name: Patch yaml package version
+author: 'MiLaboratories'
+description: |
+  Set version number in 'package.yaml' file to given value.
+  Useful for automatic builds.
+
+  When version number is empty, action leaves 'package.yaml' file intact.
+  Action does not commit the changes to the repository.
+
+inputs:
+  version:
+    description: |
+      Use provided value in package.yaml.
+    required: false
+    default: ''
+
+  package_yaml:
+    description: |
+      Path to 'package.yaml' file that should be used for version patching.
+      By default, 'package.yaml' at repository root is used as target.
+
+    required: false
+    default: './package.yaml'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: patch package version
+      if: inputs.version != ''
+      shell: bash
+      run: |
+        yq -i '.version = "${{ inputs.version }}"' '${{ inputs.package_yaml }}'
