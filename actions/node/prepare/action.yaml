@@ -56,7 +56,7 @@ runs:
   using: "composite"
 
   steps:
-    - name: Install NodeJS ${{ inputs.node-version }}
+    - name: Install NodeJS - ${{ inputs.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}

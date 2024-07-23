@@ -20,6 +20,12 @@ inputs:
     required: false
     default: 'v1'
 
+  pnpm-version:
+    description: |
+      Version of pnpm to install
+    required: false
+    default: 'latest'
+
   hashfiles-search-path:
     description: |
       Hashfiles search path for pnpm-lock.yaml
@@ -49,13 +55,18 @@ runs:
   using: "composite"
 
   steps:
-    - name: Install NodeJS ${{ inputs.node-version }}
+    - name: Install NodeJS - ${{ inputs.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: ${{ inputs.registry-url }}
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
+
+    - name: Install pnpm - ${{ inputs.pnpm-version }}
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
 
     - name:  Set up cache for a NodeJS PNPM application
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
