@@ -1,0 +1,41 @@
+name: Cache NodeJS PNPM
+author: 'MiLaboratories'
+description: |
+  Cache NodeJS modules when using pnpm.
+
+inputs:
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Get pnpm store path
+      id: pnpm-store-path
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          STORE_PATH=$(pnpm store path)
+          echo "${STORE_PATH}"
+
+    - name: Cache Node modules
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-store-path.outputs.stdout }}
+        key: ${{ runner.OS }}-pnpm-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles(inputs.hashfiles-search-path) }}
+        restore-keys: |
+          ${{ runner.OS }}-pnpm-cache-${{ inputs.cache-version }}-genericnodejs-
