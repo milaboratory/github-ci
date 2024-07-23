@@ -57,14 +57,7 @@ runs:
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
 
-    - name: Get npm cache directory on Windows
-      if: runner.os == 'Windows'
-      id: npm-cache-dir
-      shell: pwsh
-      run: echo "dir=$(npm config get cache)" >> ${env:GITHUB_OUTPUT}
-
-    - name: Get npm cache directory on macOS/Linux
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+    - name: Get npm cache directory
       id: npm-cache-dir
       shell: bash
       run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
