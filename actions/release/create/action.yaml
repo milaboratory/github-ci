@@ -94,7 +94,7 @@ outputs:
     description: 'ID of created/updated release.'
     value: ${{ steps.create.outputs.id }}
   html-url:
-    description: 'HTML URL of the release'.
+    description: 'HTML URL of the release.'
     value: ${{ steps.create.outputs.html_url }}
   upload-url:
     description: 'The URL for uploading assets to the release.'
