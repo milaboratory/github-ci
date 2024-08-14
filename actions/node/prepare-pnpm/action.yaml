@@ -69,7 +69,7 @@ runs:
         version: ${{ inputs.pnpm-version }}
 
     - name:  Set up cache for a NodeJS PNPM application
-      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       with:
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
