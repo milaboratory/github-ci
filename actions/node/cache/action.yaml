@@ -1,4 +1,4 @@
-name: Cache NodeJs/Electron
+name: Cache NodeJS/Electron
 author: 'MiLaboratories'
 description: |
   Cache Electon or NodeJS modules and (optionally) local node_modules
@@ -43,6 +43,7 @@ runs:
         path: |
           ~/.cache/electron/
           ~/Library/Caches/electron/
+          ~/AppData/Local/electron/Cache/
         key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-electron-
@@ -56,11 +57,16 @@ runs:
         restore-keys: |
           ${{ runner.OS }}-cache-${{ inputs.cache-version }}-node_modules-
 
+    - name: Get npm cache directory
+      id: npm-cache-dir
+      shell: bash
+      run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
+
     - name: Cache Node modules
       uses: actions/cache@v4
       if: inputs.is-electron-application == 'false'
       with:
-        path: ~/.npm
+        path: ${{ steps.npm-cache-dir.outputs.dir }}
         key: ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
-          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-      
+          ${{ runner.OS }}-cache-${{ inputs.cache-version }}-genericnodejs-

@@ -1,4 +1,4 @@
-name: Prepare environment for NodeJS/Electron application
+name: Prepare environment for NodeJS PNPM
 author: 'MiLaboratories'
 description: |
   Prepare environment: install specific version of Node, restore cache for modules.
@@ -20,18 +20,17 @@ inputs:
     required: false
     default: 'v1'
 
+  pnpm-version:
+    description: |
+      Version of pnpm to install
+    required: false
+    default: 'latest'
+
   hashfiles-search-path:
     description: |
-      Hashfiles search path for package-lock.json
+      Hashfiles search path for pnpm-lock.yaml
     required: false
-    default: '**/package-lock.json'
-
-  is-electron-application:
-    description: |
-      If 'true' enables cache for an Electron application,
-      if 'false', enables cache for a generic NodeJS application.
-    required: false
-    default: 'true'
+    default: '**/pnpm-lock.yaml'
 
   registry-url:
     description: |
@@ -64,10 +63,13 @@ runs:
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
 
-    - name: Set up cache for a NodeJS/Electron application
-      uses: milaboratory/github-ci/actions/node/cache@v4
+    - name: Install pnpm - ${{ inputs.pnpm-version }}
+      uses: pnpm/action-setup@v4
       with:
-        is-electron-application: ${{ inputs.is-electron-application }}
+        version: ${{ inputs.pnpm-version }}
+
+    - name:  Set up cache for a NodeJS PNPM application
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
+      with:
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
-        local-cache: 'on'
