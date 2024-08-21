@@ -223,6 +223,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
           cd "${WORKING_DIRECTORY}"
