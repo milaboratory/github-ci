@@ -870,18 +870,6 @@ on:
         required: false
         default: 'eu-central-1'
 
-      sign-dist-archive-s3-path:
-        description: |
-          Upload signed application artifact's files to given 'path'
-          in S3 bucket.
-
-          Released application files would be uploaded to:
-            's3://<s3-bucket>/<s3-path>/<file>'
-
-        type: string
-        required: false
-        default: 'pub/milaboratories/${{ github.event.repository.name }}'
-
       sign-gcloud-kms-digest-algorithm:
         description: |
           The algorithm to digest the input.
@@ -914,6 +902,68 @@ on:
         type: string
         required: false
         default: 'latest'
+
+      node-execution-path:
+        description: |
+          Specify the path where to execute release script.
+        type: string
+        required: false
+        default: './pl-pkg'
+
+      node-version:
+        description: |
+          Node version to use.
+          Examples: '20.x', '18.x'.
+        type: string
+        required: false
+        default: '20.x'
+
+      node-cache-version:
+        description: |
+          Simple hack, that allows to 'reset' cache for particular job.
+
+          Just change the value of this parameter and the next run will
+          not find build cache and will have to start from scratch.
+
+        type: string
+        required: false
+        default: 'v1'
+
+      node-hashfiles-search-path:
+        description: |
+          Hashfiles search path for package-lock.json.
+        type: string
+        required: false
+        default: '**/package-lock.json'
+
+      node-registry-url:
+        description: |
+          The npm registry url to set up for auth
+          and publication of the node js package.
+        type: string
+        required: false
+        default: 'https://npm.pkg.github.com'
+
+      node-scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+      npm-auth-token:
+        description: |
+          Specify auth token for the npm private registry.
+        type: string
+        required: false
+
+      node-always-auth:
+        description: |
+          Set always-auth in npmrc.
+        type: string
+        required: false
+        default: 'false'
+
 
       #
       # Notifications
@@ -2011,6 +2061,7 @@ jobs:
       - distArchive
     permissions:
       id-token: write
+      packages: write
       contents: read
 
     steps:
@@ -2029,10 +2080,17 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - id: registry-s3
-        uses: milaboratory/github-ci/blocks/release/registry-bin@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4-beta
         with:
           artifact-name: ${{ inputs.product-name-slug }}
+          execution-path: ${{ inputs.node-execution-path }}
+          node-version: ${{ inputs.node-version }}
+          node-cache-version: ${{ inputs.node-cache-version }}
+          hashfiles-search-path: ${{ inputs.node-hashfiles-search-path }}
+          registry-url: ${{ inputs.node-registry-url }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          scope: ${{ inputs.node-scope }}
+          always-auth: ${{ inputs.node-always-auth }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
@@ -2042,17 +2100,12 @@ jobs:
           gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
           gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
           s3-region: ${{ inputs.sign-dist-archive-s3-region }}
-          s3-path: ${{ inputs.sign-dist-archive-s3-path }}
           s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
-          s3-bucket: ${{ secrets.SIGN_DIST_ARCHIVE_S3_BUCKET }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-
-      s3-files: ${{ steps.registry-s3.outputs.uploaded }}
-      s3-files-json: ${{ steps.registry-s3.outputs.uploaded-json }}
 
   notify-build-signDistArchive:
     name: notify sign archive build
@@ -2084,7 +2137,6 @@ jobs:
           build-status: |
             ${{ needs.signDistArchive.result }}
           product-name: ${{ format('{0} - Signed Archive', inputs.product-name) }}
-          additional-info: ${{ needs.signDistArchive.outputs.s3-files }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
