@@ -201,6 +201,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
