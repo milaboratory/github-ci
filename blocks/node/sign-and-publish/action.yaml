@@ -212,7 +212,6 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
-        ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
       with:
         run: |
           cd "${WORKING_DIRECTORY}"

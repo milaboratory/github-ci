@@ -908,7 +908,7 @@ on:
           Specify the path where to execute release script.
         type: string
         required: false
-        default: './pl-pkg'
+        default: 'pl-pkg'
 
       node-version:
         description: |
