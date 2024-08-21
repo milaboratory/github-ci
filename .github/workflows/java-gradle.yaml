@@ -2065,6 +2065,9 @@ jobs:
       contents: read
 
     steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -2083,6 +2086,7 @@ jobs:
       - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4-beta
         with:
           artifact-name: ${{ inputs.product-name-slug }}
+          build-version: ${{ steps.context.outputs.current-version }}
           execution-path: ${{ inputs.node-execution-path }}
           node-version: ${{ inputs.node-version }}
           node-cache-version: ${{ inputs.node-cache-version }}
