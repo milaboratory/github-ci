@@ -200,9 +200,11 @@ runs:
     - name: Install NodeJS packages with npm
       uses: milaboratory/github-ci/actions/shell@v4
       env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
+          cd "${WORKING_DIRECTORY}"
           npm ci
 
     - name: Run release - ${{ inputs.release-script-name }}
