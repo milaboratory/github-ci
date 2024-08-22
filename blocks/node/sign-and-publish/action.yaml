@@ -1,0 +1,230 @@
+name: Upload re-packed artifact to platforma's registry
+author: 'MiLaboratories'
+description: |
+  Re-pack artifact as .tgz archive, sign with gcloud kms asymmetric-sign
+  and upload archive to platforma's registry bin bucket.
+
+inputs:
+  build-version:
+    description: |
+      Set version number in 'package.json' file to given value.
+    required: false
+
+  artifact-name:
+    description: |
+      Name of artifact to work with. This artifact will be downloaded
+      from GitHub, all its contents will be uploaded to S3.
+    required: false
+  #
+  # NodeJS Control
+  #
+  release-script-name:
+    description: |
+      Specify the name of the release script to be executed via npm.
+    required: false
+    default: 'release'
+
+  execution-path:
+    description: |
+      Specify the path where to execute release script.
+    required: false
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '20.x', '18.x'.
+    required: false
+    default: '20.x'
+
+  node-cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for package-lock.json.
+    required: false
+    default: '**/package-lock.json'
+
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'false'
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      Specify auth token for the npm private registry.
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+  #
+  # GCP Control
+  #
+  gcloud-kms-workload-identity-provider:
+    description: |
+      Tha name of the GCP workload identity federation provider.
+    required: false
+
+  gcloud-kms-service-account:
+    description: |
+      The name of the GCP service account.
+    required: false
+
+  gcloud-sdk-version:
+    description: |
+      Version or version constraint of the gcloud SDK to install. If
+      unspecified, it will accept any installed version of the gcloud SDK. If
+      set to "latest", it will download the latest available SDK. If set to a
+      version constraint, it will download the latest available version that
+      matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+    required: false
+    default: 'latest'
+
+  gcloud-kms-location:
+    description: |
+      KMS key and keyring location
+    required: false
+    default: 'europe-west3'
+
+  gcloud-kms-digest-algorithm:
+    description: |
+      The algorithm to digest the input.
+      Must be one of: sha256, sha384, sha512.
+    required: false
+    default: 'sha256'
+
+  gcloud-kms-key-version:
+    description: |
+      Version of KMS key.
+    required: false
+    default: '1'
+
+  gcloud-kms-keyring:
+    description: |
+      KMS keyring name in GCP.
+    required: false
+
+  gcloud-kms-key-name:
+    description: |
+      KMS key name in GCP.
+    required: false
+
+  #
+  # AWS Control
+  #
+  s3-iam-role-to-assume:
+    description: |
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
+    required: false
+
+  s3-region:
+    description: |
+      AWS region for Registry's S3 bucket
+    required: false
+    default: 'eu-central-1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
+
+    - name: Configure GCP credentials
+      id: gcp_auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
+        service_account: ${{ inputs.gcloud-kms-service-account }}
+        token_format: 'access_token'
+
+    - name: Set up GCloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        version: ${{ inputs.gcloud-sdk-version }}
+
+    - id: artifact-path
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+      with:
+        run: echo "${GITHUB_WORKSPACE}/${WORKING_DIRECTORY}/release-artifact"
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.artifact-path.outputs.stdout }}
+
+    - name: Prepare environment for building a NodeJS application
+      uses: milaboratory/github-ci/actions/node/prepare@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.node-cache-version }}
+        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        is-electron-application: ${{ inputs.is-electron-application }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
+
+    - name: Update npm to latest available version
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        run: |
+          npm i -g npm@latest
+
+    - name: Install NodeJS packages with npm
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          cd "${WORKING_DIRECTORY}"
+          npm ci
+
+    - name: Patch package version
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
+      with:
+        package_json: ${{ format('{0}/{1}/package.json', github.workspace, inputs.execution-path) }}
+        version: ${{ inputs.build-version }}
+
+    - name: Run release - ${{ inputs.release-script-name }}
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          cd "${WORKING_DIRECTORY}"
+          npm run ${{ inputs.release-script-name }}
