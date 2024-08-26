@@ -1,4 +1,5 @@
 import {git, version} from 'milib'
+import * as semver from 'semver'
 
 // <tag name> -> <version>
 export interface versionsMap {
@@ -87,4 +88,20 @@ export function isLatestMajor(
     }
   }
   return false
+}
+/**
+ Check an input string and replace all characters that
+ do not conform to semantic versioning (semver) criteria with the - character
+ */
+export function sanitizeVersionInput(input: string): string {
+  const regex = /[^0-9A-Za-z.+-]/g
+  return input.replace(regex, '-')
+}
+
+/**
+ Filter out tags that are not valid semantic versions
+ Sort tags in descending order (newest first)
+*/
+export function sortTagsBySemver(tags: string[]): string[] {
+  return tags.filter(tag => semver.valid(tag) !== null).sort(semver.rcompare)
 }
