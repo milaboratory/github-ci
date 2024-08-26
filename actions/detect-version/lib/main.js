@@ -122,9 +122,14 @@ function loadTagVersions(depth) {
                 latestVersion = knownVersions[previousValidTag];
             }
         }
-        const prevTag = yield milib_1.git.previousTag();
+        let prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
-        const prevVersion = knownVersions[prevTag];
+        let prevVersion = knownVersions[prevTag];
+        if (prevTag.toLowerCase() === 'nightly') {
+            // Adjust to use the latest valid semver version if previous tag is 'nightly'
+            prevVersion = latestVersion;
+            prevTag = latestTag;
+        }
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion;

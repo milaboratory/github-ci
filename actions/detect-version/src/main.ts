@@ -102,9 +102,15 @@ async function loadTagVersions(depth: number): Promise<void> {
     }
   }
 
-  const prevTag = await git.previousTag()
+  let prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
-  const prevVersion = knownVersions[prevTag]
+  let prevVersion = knownVersions[prevTag]
+
+  if (prevTag.toLowerCase() === 'nightly') {
+    // Adjust to use the latest valid semver version if previous tag is 'nightly'
+    prevVersion = latestVersion
+    prevTag = latestTag
+  }
 
   const curSha = await git.resolveRef('HEAD')
   let curTag = ''
