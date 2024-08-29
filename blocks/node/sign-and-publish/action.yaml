@@ -229,9 +229,7 @@ runs:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         GCP_KMS_KEY_VERSION: ${{ inputs.gcloud-kms-key-version }}
         GCP_KMS_KEY_NAME: ${{ inputs.gcloud-kms-key-name }}
-        GCP_KMS_KEYRING
-
-        : ${{ inputs.gcloud-kms-keyring }}
+        GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
         GCP_KMS_LOCATION: ${{ inputs.gcloud-kms-location }}
         GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
       with:
