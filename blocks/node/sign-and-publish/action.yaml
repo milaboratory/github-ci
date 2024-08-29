@@ -173,7 +173,6 @@ runs:
         version: ${{ inputs.gcloud-sdk-version }}
 
     - name: Add MiLab shell utils to PATH
-
       uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
     - id: artifact-path
