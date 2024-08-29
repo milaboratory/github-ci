@@ -2095,6 +2095,7 @@ jobs:
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
           scope: ${{ inputs.node-scope }}
           always-auth: ${{ inputs.node-always-auth }}
+          pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
