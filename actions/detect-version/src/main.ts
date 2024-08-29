@@ -77,6 +77,19 @@ async function loadBranchVersions(targetBranch: string): Promise<void> {
   })
 }
 
+async function getSanitizedVersion(
+  tag: string,
+  knownVersions: {[key: string]: version.versionInfo}
+): Promise<version.versionInfo | null> {
+  const originalVersion = knownVersions[tag]
+  if (originalVersion && originalVersion.original) {
+    const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original)
+    return version.parse(sanitizedStr)
+  }
+  // Handle the case where version parsing fails or original is missing
+  return null
+}
+
 async function loadTagVersions(depth: number): Promise<void> {
   await prepareRepository(depth)
 
@@ -84,11 +97,10 @@ async function loadTagVersions(depth: number): Promise<void> {
 
   let latestTag = utils.latestVersionTag(knownVersions)
   const latestSha = await git.resolveRef(latestTag)
-  let latestVersion = knownVersions[latestTag]
+  let latestVersion = await getSanitizedVersion(latestTag, knownVersions)
 
-  if (latestVersion && latestVersion.original) {
-    latestVersion.original = utils.sanitizeVersionInput(latestVersion.original)
-    latestVersion = version.parse(latestVersion.original)
+  if (!latestVersion) {
+    throw new Error('Failed to parse latest version.')
   }
 
   if (latestTag.toLowerCase() === 'nightly') {
@@ -104,7 +116,7 @@ async function loadTagVersions(depth: number): Promise<void> {
 
   let prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
-  let prevVersion = knownVersions[prevTag]
+  let prevVersion = await getSanitizedVersion(prevTag, knownVersions)
 
   if (prevTag.toLowerCase() === 'nightly') {
     // Adjust to use the latest valid semver version if previous tag is 'nightly'
@@ -112,19 +124,22 @@ async function loadTagVersions(depth: number): Promise<void> {
     prevTag = latestTag
   }
 
+  if (!prevVersion) {
+    throw new Error('Failed to parse previous version.')
+  }
+
   const curSha = await git.resolveRef('HEAD')
   let curTag = ''
   let curVersion: version.versionInfo
   try {
     curTag = await git.currentTag()
-    curVersion = knownVersions[curTag]
-    // Sanitize the current version and handle 'nightly'
-    if (curVersion && curVersion.original) {
-      curVersion.original = utils.sanitizeVersionInput(curVersion.original)
-      curVersion = version.parse(curVersion.original)
-      if (curTag.toLowerCase() === 'nightly' && prevVersion) {
-        curVersion = await genDevVersion(prevVersion, prevTag)
-      }
+    const potentialCurVersion = await getSanitizedVersion(curTag, knownVersions)
+    if (!potentialCurVersion) {
+      throw new Error('Failed to parse current version.')
+    }
+    curVersion = potentialCurVersion // Now we are sure curVersion is not null
+    if (curTag.toLowerCase() === 'nightly' && prevVersion) {
+      curVersion = await genDevVersion(prevVersion, prevTag)
     }
   } catch (error) {
     if (!(error instanceof Error)) {
@@ -134,6 +149,9 @@ async function loadTagVersions(depth: number): Promise<void> {
     core.notice(
       `Current commit seems to have no tag. Version number will be generated.\n${error.message}`
     )
+    if (!prevVersion) {
+      throw new Error('Previous version is required but not available.')
+    }
     curVersion = await genDevVersion(prevVersion, prevTag)
   }
 

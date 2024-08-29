@@ -103,16 +103,26 @@ function loadBranchVersions(targetBranch) {
         });
     });
 }
+function getSanitizedVersion(tag, knownVersions) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const originalVersion = knownVersions[tag];
+        if (originalVersion && originalVersion.original) {
+            const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original);
+            return milib_1.version.parse(sanitizedStr);
+        }
+        // Handle the case where version parsing fails or original is missing
+        return null;
+    });
+}
 function loadTagVersions(depth) {
     return __awaiter(this, void 0, void 0, function* () {
         yield prepareRepository(depth);
         const knownVersions = yield utils.getVersions();
         let latestTag = utils.latestVersionTag(knownVersions);
         const latestSha = yield milib_1.git.resolveRef(latestTag);
-        let latestVersion = knownVersions[latestTag];
-        if (latestVersion && latestVersion.original) {
-            latestVersion.original = utils.sanitizeVersionInput(latestVersion.original);
-            latestVersion = milib_1.version.parse(latestVersion.original);
+        let latestVersion = yield getSanitizedVersion(latestTag, knownVersions);
+        if (!latestVersion) {
+            throw new Error("Failed to parse latest version.");
         }
         if (latestTag.toLowerCase() === 'nightly') {
             const sortedTags = utils.sortTagsBySemver(Object.keys(knownVersions));
@@ -124,25 +134,27 @@ function loadTagVersions(depth) {
         }
         let prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
-        let prevVersion = knownVersions[prevTag];
+        let prevVersion = yield getSanitizedVersion(prevTag, knownVersions);
         if (prevTag.toLowerCase() === 'nightly') {
             // Adjust to use the latest valid semver version if previous tag is 'nightly'
             prevVersion = latestVersion;
             prevTag = latestTag;
+        }
+        if (!prevVersion) {
+            throw new Error("Failed to parse previous version.");
         }
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion;
         try {
             curTag = yield milib_1.git.currentTag();
-            curVersion = knownVersions[curTag];
-            // Sanitize the current version and handle 'nightly'
-            if (curVersion && curVersion.original) {
-                curVersion.original = utils.sanitizeVersionInput(curVersion.original);
-                curVersion = milib_1.version.parse(curVersion.original);
-                if (curTag.toLowerCase() === 'nightly' && prevVersion) {
-                    curVersion = yield genDevVersion(prevVersion, prevTag);
-                }
+            const potentialCurVersion = yield getSanitizedVersion(curTag, knownVersions);
+            if (!potentialCurVersion) {
+                throw new Error("Failed to parse current version.");
+            }
+            curVersion = potentialCurVersion; // Now we are sure curVersion is not null
+            if (curTag.toLowerCase() === 'nightly' && prevVersion) {
+                curVersion = yield genDevVersion(prevVersion, prevTag);
             }
         }
         catch (error) {
@@ -150,6 +162,9 @@ function loadTagVersions(depth) {
                 throw error;
             }
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
+            if (!prevVersion) {
+                throw new Error("Previous version is required but not available.");
+            }
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
         setOutputs({
