@@ -28,14 +28,15 @@ async function genDevVersion(
   baseRef: string
 ): Promise<version.versionInfo> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
+  const sanitizedRefName = utils.sanitizeVersionInput(currentRefName)
   const count = await git.countCommits(baseRef, 'HEAD')
 
   return {
     major: baseVersion.major,
     minor: baseVersion.minor,
     patch: baseVersion.patch,
-    suffix: `${count}-${currentRefName}`,
-    original: `${baseVersion.original}-${count}-${currentRefName}`,
+    suffix: `${count}-${sanitizedRefName}`,
+    original: `${baseVersion.original}-${count}-${sanitizedRefName}`,
     semver: true
   } as version.versionInfo
 }
@@ -47,8 +48,9 @@ async function loadBranchVersions(targetBranch: string): Promise<void> {
   const runNumber: string = process.env.GITHUB_RUN_NUMBER as string
   const currentSha: string = await git.resolveRef('HEAD')
   const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`
+  const sanitizedRefName = utils.sanitizeVersionInput(currentVersionStr)
 
-  const currentVersion = version.parse(currentVersionStr)
+  const currentVersion = version.parse(sanitizedRefName)
   const isRelease = refType === 'branch' && refName === targetBranch
   const isBranchHead = await utils.isBranchHead()
 
@@ -75,25 +77,71 @@ async function loadBranchVersions(targetBranch: string): Promise<void> {
   })
 }
 
+async function getSanitizedVersion(
+  tag: string,
+  knownVersions: {[key: string]: version.versionInfo}
+): Promise<version.versionInfo | null> {
+  const originalVersion = knownVersions[tag]
+  if (originalVersion && originalVersion.original) {
+    const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original)
+    return version.parse(sanitizedStr)
+  }
+  // Handle the case where version parsing fails or original is missing
+  return null
+}
+
 async function loadTagVersions(depth: number): Promise<void> {
   await prepareRepository(depth)
 
   const knownVersions = await utils.getVersions()
 
-  const latestTag = utils.latestVersionTag(knownVersions)
-  const latestSha = await git.resolveRef(latestTag)
-  const latestVersion = knownVersions[latestTag]
+  let latestTag = utils.latestVersionTag(knownVersions)
+  let latestSha = await git.resolveRef(latestTag)
+  let latestVersion = await getSanitizedVersion(latestTag, knownVersions)
 
-  const prevTag = await git.previousTag()
+  if (!latestVersion) {
+    throw new Error('Failed to parse latest version.')
+  }
+
+  if (latestTag.toLowerCase() === 'nightly') {
+    const sortedTags = utils.sortTagsBySemver(Object.keys(knownVersions))
+    const previousValidTag = sortedTags.find(
+      tag => tag.toLowerCase() !== 'nightly'
+    )
+    if (previousValidTag) {
+      latestTag = previousValidTag
+      latestVersion = knownVersions[previousValidTag]
+      latestSha = await git.resolveRef(previousValidTag)
+    }
+  }
+
+  let prevTag = await git.previousTag()
   const prevSha = await git.resolveRef(prevTag)
-  const prevVersion = knownVersions[prevTag]
+  let prevVersion = await getSanitizedVersion(prevTag, knownVersions)
+
+  if (prevTag.toLowerCase() === 'nightly') {
+    // Adjust to use the latest valid semver version if previous tag is 'nightly'
+    prevVersion = latestVersion
+    prevTag = latestTag
+  }
+
+  if (!prevVersion) {
+    throw new Error('Failed to parse previous version.')
+  }
 
   const curSha = await git.resolveRef('HEAD')
   let curTag = ''
   let curVersion: version.versionInfo
   try {
     curTag = await git.currentTag()
-    curVersion = knownVersions[curTag]
+    const potentialCurVersion = await getSanitizedVersion(curTag, knownVersions)
+    if (!potentialCurVersion) {
+      throw new Error('Failed to parse current version.')
+    }
+    curVersion = potentialCurVersion // Now we are sure curVersion is not null
+    if (curTag.toLowerCase() === 'nightly' && prevVersion) {
+      curVersion = await genDevVersion(prevVersion, prevTag)
+    }
   } catch (error) {
     if (!(error instanceof Error)) {
       throw error
@@ -102,6 +150,9 @@ async function loadTagVersions(depth: number): Promise<void> {
     core.notice(
       `Current commit seems to have no tag. Version number will be generated.\n${error.message}`
     )
+    if (!prevVersion) {
+      throw new Error('Previous version is required but not available.')
+    }
     curVersion = await genDevVersion(prevVersion, prevTag)
   }
 

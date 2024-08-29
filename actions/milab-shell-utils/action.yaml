@@ -1,0 +1,14 @@
+name: MiLab various shell utilities
+author: 'MiLaboratories'
+description: |
+  Brings scripts inside this action into workflow
+  and makes them available to be called by name,
+  by modifying PATH environment variable.
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Add script to PATH
+      shell: bash
+      run: echo "${{ github.action_path }}/bin" >> $GITHUB_PATH

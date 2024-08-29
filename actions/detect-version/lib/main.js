@@ -57,13 +57,14 @@ function prepareRepository(depth) {
 function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
+        const sanitizedRefName = utils.sanitizeVersionInput(currentRefName);
         const count = yield milib_1.git.countCommits(baseRef, 'HEAD');
         return {
             major: baseVersion.major,
             minor: baseVersion.minor,
             patch: baseVersion.patch,
-            suffix: `${count}-${currentRefName}`,
-            original: `${baseVersion.original}-${count}-${currentRefName}`,
+            suffix: `${count}-${sanitizedRefName}`,
+            original: `${baseVersion.original}-${count}-${sanitizedRefName}`,
             semver: true
         };
     });
@@ -75,7 +76,8 @@ function loadBranchVersions(targetBranch) {
         const runNumber = process.env.GITHUB_RUN_NUMBER;
         const currentSha = yield milib_1.git.resolveRef('HEAD');
         const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`;
-        const currentVersion = milib_1.version.parse(currentVersionStr);
+        const sanitizedRefName = utils.sanitizeVersionInput(currentVersionStr);
+        const currentVersion = milib_1.version.parse(sanitizedRefName);
         const isRelease = refType === 'branch' && refName === targetBranch;
         const isBranchHead = yield utils.isBranchHead();
         setOutputs({
@@ -101,28 +103,69 @@ function loadBranchVersions(targetBranch) {
         });
     });
 }
+function getSanitizedVersion(tag, knownVersions) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const originalVersion = knownVersions[tag];
+        if (originalVersion && originalVersion.original) {
+            const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original);
+            return milib_1.version.parse(sanitizedStr);
+        }
+        // Handle the case where version parsing fails or original is missing
+        return null;
+    });
+}
 function loadTagVersions(depth) {
     return __awaiter(this, void 0, void 0, function* () {
         yield prepareRepository(depth);
         const knownVersions = yield utils.getVersions();
-        const latestTag = utils.latestVersionTag(knownVersions);
-        const latestSha = yield milib_1.git.resolveRef(latestTag);
-        const latestVersion = knownVersions[latestTag];
-        const prevTag = yield milib_1.git.previousTag();
+        let latestTag = utils.latestVersionTag(knownVersions);
+        let latestSha = yield milib_1.git.resolveRef(latestTag);
+        let latestVersion = yield getSanitizedVersion(latestTag, knownVersions);
+        if (!latestVersion) {
+            throw new Error('Failed to parse latest version.');
+        }
+        if (latestTag.toLowerCase() === 'nightly') {
+            const sortedTags = utils.sortTagsBySemver(Object.keys(knownVersions));
+            const previousValidTag = sortedTags.find(tag => tag.toLowerCase() !== 'nightly');
+            if (previousValidTag) {
+                latestTag = previousValidTag;
+                latestVersion = knownVersions[previousValidTag];
+                latestSha = yield milib_1.git.resolveRef(previousValidTag);
+            }
+        }
+        let prevTag = yield milib_1.git.previousTag();
         const prevSha = yield milib_1.git.resolveRef(prevTag);
-        const prevVersion = knownVersions[prevTag];
+        let prevVersion = yield getSanitizedVersion(prevTag, knownVersions);
+        if (prevTag.toLowerCase() === 'nightly') {
+            // Adjust to use the latest valid semver version if previous tag is 'nightly'
+            prevVersion = latestVersion;
+            prevTag = latestTag;
+        }
+        if (!prevVersion) {
+            throw new Error('Failed to parse previous version.');
+        }
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
         let curVersion;
         try {
             curTag = yield milib_1.git.currentTag();
-            curVersion = knownVersions[curTag];
+            const potentialCurVersion = yield getSanitizedVersion(curTag, knownVersions);
+            if (!potentialCurVersion) {
+                throw new Error('Failed to parse current version.');
+            }
+            curVersion = potentialCurVersion; // Now we are sure curVersion is not null
+            if (curTag.toLowerCase() === 'nightly' && prevVersion) {
+                curVersion = yield genDevVersion(prevVersion, prevTag);
+            }
         }
         catch (error) {
             if (!(error instanceof Error)) {
                 throw error;
             }
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
+            if (!prevVersion) {
+                throw new Error('Previous version is required but not available.');
+            }
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }
         setOutputs({
