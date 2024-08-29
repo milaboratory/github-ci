@@ -8,8 +8,9 @@ set -o errexit
 : "${GCP_KMS_KEYRING}:=""}"
 : "${GCP_KMS_LOCATION:="europe-west3"}"
 : "${GCP_KMS_DIGEST_ALGORITHM:="sha256"}"
-: "${FILE_PATH:=""}"
-: "${FILE_SIG_PATH:=""}"
+
+file_path="${1:-"${FILE_PATH}"}"
+file_sig_path="${2:-"${FILE_SIG_PATH}"}"
 
 gcloud kms asymmetric-sign \
   --version ${GCP_KMS_KEY_VERSION} \
@@ -17,6 +18,5 @@ gcloud kms asymmetric-sign \
   --keyring ${GCP_KMS_KEYRING} \
   --location ${GCP_KMS_LOCATION} \
   --digest-algorithm ${GCP_KMS_DIGEST_ALGORITHM}\
-  --input-file "${FILE_PATH}" \
-  --signature-file "${FILE_SIG_PATH}"
-  
+  --input-file "${file_path}" \
+  --signature-file "${file_sig_path}"
