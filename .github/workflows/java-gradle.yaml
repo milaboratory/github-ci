@@ -1079,6 +1079,10 @@ on:
           KMS key name in GCP.
         required: false
 
+      BIN_REGISTRY_S3_BUCKET_URL:
+        description: |
+          Pl's bin registry S3 bucket url.
+        required: false
 
 jobs:
   init:
@@ -2095,6 +2099,7 @@ jobs:
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
           scope: ${{ inputs.node-scope }}
           always-auth: ${{ inputs.node-always-auth }}
+          pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}

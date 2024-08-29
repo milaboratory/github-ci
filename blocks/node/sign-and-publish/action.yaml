@@ -15,6 +15,11 @@ inputs:
       Name of artifact to work with. This artifact will be downloaded
       from GitHub, all its contents will be uploaded to S3.
     required: false
+
+  pl-bin-registry-upload-url:
+    description: |
+      Specifies the URL of Platforma's binary registry where the signed package will be uploaded.
+    required: false
   #
   # NodeJS Control
   #
@@ -227,6 +232,7 @@ runs:
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
         GCP_KMS_KEY_VERSION: ${{ inputs.gcloud-kms-key-version }}
         GCP_KMS_KEY_NAME: ${{ inputs.gcloud-kms-key-name }}
         GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
