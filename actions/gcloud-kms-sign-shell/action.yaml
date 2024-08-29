@@ -1,0 +1,16 @@
+name: Create a .sig with gcloud kms
+author: 'MiLaboratories'
+description: |
+  Create a .sig for a given file with the gcloud kms asymmetric-sign.
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        path: 'bin'
+
+    - name: Add script to PATH
+      shell: bash
+      run: echo "${GITHUB_WORKSPACE}/bin/gcloud-kms-sign" >> $GITHUB_PATH
