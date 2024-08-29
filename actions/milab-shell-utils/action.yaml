@@ -1,7 +1,9 @@
 name: MiLab various shell utilities
 author: 'MiLaboratories'
 description: |
-  Add to PATH various MiLaboratories shell utilities.
+  Brings scripts inside this action into workflow
+  and makes them available to be called by name,
+  by modifying PATH environment variable.
 
 runs:
   using: "composite"
