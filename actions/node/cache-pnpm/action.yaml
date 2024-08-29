@@ -26,7 +26,7 @@ runs:
   steps:
     - name: Get pnpm store path
       id: pnpm-store-path
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           STORE_PATH=$(pnpm store path)
