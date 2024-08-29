@@ -126,10 +126,10 @@ function loadTagVersions(depth) {
         yield prepareRepository(depth);
         const knownVersions = yield utils.getVersions();
         let latestTag = utils.latestVersionTag(knownVersions);
-        const latestSha = yield milib_1.git.resolveRef(latestTag);
+        let latestSha = yield milib_1.git.resolveRef(latestTag);
         let latestVersion = yield getSanitizedVersion(latestTag, knownVersions);
         if (!latestVersion) {
-            throw new Error("Failed to parse latest version.");
+            throw new Error('Failed to parse latest version.');
         }
         if (latestTag.toLowerCase() === 'nightly') {
             const sortedTags = utils.sortTagsBySemver(Object.keys(knownVersions));
@@ -137,6 +137,7 @@ function loadTagVersions(depth) {
             if (previousValidTag) {
                 latestTag = previousValidTag;
                 latestVersion = knownVersions[previousValidTag];
+                latestSha = yield milib_1.git.resolveRef(previousValidTag);
             }
         }
         let prevTag = yield milib_1.git.previousTag();
@@ -148,7 +149,7 @@ function loadTagVersions(depth) {
             prevTag = latestTag;
         }
         if (!prevVersion) {
-            throw new Error("Failed to parse previous version.");
+            throw new Error('Failed to parse previous version.');
         }
         const curSha = yield milib_1.git.resolveRef('HEAD');
         let curTag = '';
@@ -157,7 +158,7 @@ function loadTagVersions(depth) {
             curTag = yield milib_1.git.currentTag();
             const potentialCurVersion = yield getSanitizedVersion(curTag, knownVersions);
             if (!potentialCurVersion) {
-                throw new Error("Failed to parse current version.");
+                throw new Error('Failed to parse current version.');
             }
             curVersion = potentialCurVersion; // Now we are sure curVersion is not null
             if (curTag.toLowerCase() === 'nightly' && prevVersion) {
@@ -170,7 +171,7 @@ function loadTagVersions(depth) {
             }
             core.notice(`Current commit seems to have no tag. Version number will be generated.\n${error.message}`);
             if (!prevVersion) {
-                throw new Error("Previous version is required but not available.");
+                throw new Error('Previous version is required but not available.');
             }
             curVersion = yield genDevVersion(prevVersion, prevTag);
         }

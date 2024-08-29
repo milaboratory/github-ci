@@ -96,7 +96,7 @@ async function loadTagVersions(depth: number): Promise<void> {
   const knownVersions = await utils.getVersions()
 
   let latestTag = utils.latestVersionTag(knownVersions)
-  const latestSha = await git.resolveRef(latestTag)
+  let latestSha = await git.resolveRef(latestTag)
   let latestVersion = await getSanitizedVersion(latestTag, knownVersions)
 
   if (!latestVersion) {
@@ -111,6 +111,7 @@ async function loadTagVersions(depth: number): Promise<void> {
     if (previousValidTag) {
       latestTag = previousValidTag
       latestVersion = knownVersions[previousValidTag]
+      latestSha = await git.resolveRef(previousValidTag)
     }
   }
 
