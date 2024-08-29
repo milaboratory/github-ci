@@ -172,8 +172,8 @@ runs:
       with:
         version: ${{ inputs.gcloud-sdk-version }}
 
-    - name: Add gcloud-kms-sign to PATH
-      uses: milaboratory/github-ci/actions/gcloud-kms-sign-shell@v4
+    - name: Add MiLab shell utils to PATH
+      uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
     - id: artifact-path
       uses: milaboratory/github-ci/actions/shell@v4
