@@ -1079,6 +1079,10 @@ on:
           KMS key name in GCP.
         required: false
 
+      BIN_REGISTRY_S3_BUCKET_URL:
+        description: |
+          Pl's bin registry S3 bucket url.
+        required: false
 
 jobs:
   init:
