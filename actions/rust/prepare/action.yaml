@@ -1,0 +1,57 @@
+name: Prepare environment for building a Rust application
+author: 'MiLaboratories'
+description: |
+  Prepare environment: install specific version of Rust, restore cache for modules.
+
+inputs:
+  rust-toolchain-version:
+    description: |
+      Rust toolchain version to use.
+      Examples: 'stable', 'nightly', '1.42.0'
+    required: false
+    default: 'stable'
+
+  rust-flags:
+    description: |
+      Set the value of RUSTFLAGS (set to empty string to avoid overwriting existing flags)
+    required: false
+    default: ''
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  cache-hashfiles-search-path:
+    description: |
+      Hashfiles search path for Cargo.lock
+    required: false
+    default: '**/Cargo.lock'
+
+  cache-enabled-in-setup-rust-toolchain:
+    description: |
+      Set to true, if you'd like to enable caching in setup-go action.
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install Rust ${{ inputs.rust-toolchain-version }}
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust-toolchain-version }}
+        cache: ${{ inputs.cache-enabled-in-setup-rust-toolchain }}
+        rustflags: ${{ inputs.rust-flags }}
+
+    - name: Setup Cache for Rust project
+      uses: milaboratory/github-ci/actions/rust/cache@v4-beta
+      with:
+        cache-version: ${{ inputs.cache-version }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
