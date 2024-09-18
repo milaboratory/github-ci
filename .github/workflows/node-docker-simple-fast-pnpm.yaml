@@ -327,6 +327,7 @@ jobs:
         with:
           run: |
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
+            PNPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
       - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4-beta
@@ -337,7 +338,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-          pnpm-version: ${{ inputs.pnpm-version }}
+          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           registry-url: ${{ inputs.registry-url }}
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
