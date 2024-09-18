@@ -374,11 +374,12 @@ jobs:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
           PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
+          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           test-name: ${{ inputs.test-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
-          pnpm-version: ${{ inputs.pnpm-version }}
+          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
           registry-url: ${{ inputs.registry-url }}
           scope: ${{ inputs.scope }}
