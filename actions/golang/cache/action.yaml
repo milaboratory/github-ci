@@ -14,6 +14,13 @@ inputs:
     required: false
     default: 'v1'
 
+  cache-arch:
+    description: |
+      Parameter specifies the architecture of the runner
+      that the cache will be used with.
+    required: false
+    default: 'amd64'
+
   cache-dependency-hashfiles-path:
     description: |
       Returns a single hash for the set of files that matches the path pattern.
@@ -28,35 +35,34 @@ runs:
 
   steps:
     - name: Cache Golang modules on Linux
-      if: startsWith(runner.os, 'Linux')
+      if: runner.os == 'Linux'
       uses: actions/cache@v4
       with:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
+        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}
 
     - name: Cache Golang modules on macOS
-      if: startsWith(runner.os, 'macOS')
+      if: runner.os == 'macOS'
       uses: actions/cache@v4
       with:
         path: |
           ~/Library/Caches/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
+        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}
 
     - name: Cache Golang modules on Windows
-      if: startsWith(runner.os, 'Windows')
+      if: runner.os == 'Windows'
       uses: actions/cache@v4
       with:
         path: |
           ~\AppData\Local\go-build
           ~\go\pkg\mod
-        key: ${{ runner.os }}-cache-${{ inputs.cache-version }}-go-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
+        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-cache-go-${{ inputs.cache-version }}
-
+          ${{ runner.os }}-${{ inputs.cache-arch }}-cache-go-${{ inputs.cache-version }}

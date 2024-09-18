@@ -40,6 +40,6 @@ runs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-${{ inputs.cache-version }}-rust-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-rust-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.os }}-${{ inputs.cache-arch }}-cache-rust-${{ inputs.cache-version }}
