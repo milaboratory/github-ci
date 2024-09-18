@@ -164,6 +164,12 @@ on:
         type: string
         required: false
         default: 'eu-central-1'
+      aws-s3-turborepo-cache-bucket:
+        description: |
+          Name of the Turborepo Cache s3 bucket
+        type: string
+        required: false
+        default: 'milab-euce1-prod-data-s3-turborepo-cache'
       #
       # Platforma Docker settings
       #
@@ -329,8 +335,26 @@ jobs:
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
             PNPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
+            ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume || env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ inputs.aws-s3-turborepo-cache-bucket }}
 
       - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4-beta
+        env:
+          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
@@ -343,16 +367,6 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ inputs.aws-iam-role-to-assume || env.AWS_CI_IAM_ECR_SIMPLE_ROLE }}
-          aws-region: ${{ inputs.aws-region }}
-
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
 
       - id: test
         uses: milaboratory/github-ci-internal/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
