@@ -71,7 +71,7 @@ runs:
             jq <<<"${RES_JSON}"
           
             if ! jq --raw-output '.error' <<<"${RES_JSON}" |
-              grep -q -E 'npm package .* does not exist'; then
+              grep -q -E 'npm package .* does not exist|Not found'; then
           
               # When package is built for the first time, we get 'npm package <package name> does not exist'
               # error from GitHub. This error should be ignored. Any other error should lead to action fail.
