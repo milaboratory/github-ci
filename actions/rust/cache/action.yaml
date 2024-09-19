@@ -14,13 +14,6 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-arch:
-    description: |
-      Parameter specifies the architecture of the runner
-      that the cache will be used with.
-    required: false
-    default: 'amd64'
-
   cache-hashfiles-search-path:
     description: |
       Hashfiles search path for Cargo.lock
@@ -40,6 +33,6 @@ runs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-${{ inputs.cache-arch }}-cache-rust-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-arch }}-cache-rust-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}

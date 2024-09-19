@@ -369,7 +369,7 @@ jobs:
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - id: test
-        uses: milaboratory/github-ci-internal/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
@@ -393,6 +393,27 @@ jobs:
           pl-log-level: ${{ inputs.pl-log-level }}
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
+
+      - name: Search for npmrc_ci
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            NPMRC_CI="${GITHUB_WORKSPACE}/.npmrc_ci"
+            TARGET_NPMRC="${GITHUB_WORKSPACE}/.npmrc"
+            
+            if [ -f "${NPMRC_CI}" ];then
+              echo "Found npmrc_ci, rewriting .npmrc..."
+              cat "${NPMRC_CI}" > "${TARGET_NPMRC}"
+            else
+              echo "npmrc_ci not found, skipping..."
+            fi
+
+      - name: Checking for changesets on a pull_request
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: github.event_name == 'pull_request'
+        with:
+          run: |
+            changeset status --since=main
 
       - name: Create Release Pull Request and Publish npm package
         if: steps.context.outputs.is-release == 'true'

@@ -1,0 +1,96 @@
+name: Launch the Platforma container using Docker Compose
+author: 'MiLaboratories'
+description: |
+  Launch the Platforma container using Docker Compose.
+
+  Requirements:
+    - get authorization token for aws ecr (aws-actions/amazon-ecr-login)
+
+inputs:
+  pl-docker-registry:
+    description: |
+      Platforma docker registry.
+    required: false
+    default: '511903394050.dkr.ecr.eu-central-1.amazonaws.com/pl'
+  pl-docker-tag:
+    description: |
+      Platforma docker tag.
+    required: false
+    default: 'main'
+  pl-sleep-time:
+    description: |
+      The waiting period after the Platforma starts.
+    required: false
+    default: '10'
+  pl-test-assets-dir:
+    description: |
+      Platforma test assets directory;
+      this directory will be mounted inside
+      the container under the path `/storage/controllers/file/library`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'assets'
+  pl-log-dir:
+    description: |
+      Platforma logs directory on the agent;
+      this directory will be mounted inside
+      the container under the path. `pl-log-destination`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'log'
+  pl-log-destination:
+    description: |
+      Platforma log destination file inside the container.
+    required: false
+    default: '/storage/log/platforma.log'
+  pl-log-commit-summary:
+    description: |
+      Whether or not to log commit summary for the Platforma.
+    required: false
+    default: 'true'
+  pl-log-resource-data:
+    description: |
+      Whether or not to log resource data for the Platforma.
+    required: false
+    default: 'true'
+  pl-log-level:
+    description: |
+      Platforma log level
+    required: false
+    default: 'info'
+  pl-auth-enabled:
+    description: |
+      Whether or not to enable authentication in the Platforma.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Launch Platforma
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
+        PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
+        PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
+        PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+        PL_LOG_DESTINATION: ${{ inputs.pl-log-destination }}
+        PL_LOG_COMMIT_SUMMARY: ${{ inputs.pl-log-commit-summary }}
+        PL_LOG_RESOURCE_DATA: ${{ inputs.pl-log-resource-data }}
+        PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
+        PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
+      with:
+        dump-stdout: false
+        run: |
+          # Just in case if there are no test assets in the repository
+          mkdir -pv "${PL_TEST_ASSETS_DIR}"
+          mkdir -pv "${PL_LOG_DIR}"
+
+          docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+
+          echo "Wait for the Platforma to start"
+          sleep "${PL_SLEEP_TIME}"
