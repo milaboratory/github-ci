@@ -403,7 +403,7 @@ jobs:
         with:
           commit: 'chore: update versions'
           title: 'chore: update versions'
-          publish: pnpm -r publish --no-git-checks
+          publish: pnpm -r publish --no-git-checks --access public
 
     outputs:
       # Even constant outputs become initialized only after job start.
