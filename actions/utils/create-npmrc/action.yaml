@@ -1,12 +1,11 @@
 name: 'Create .npmrc File'
-description: 'Generates a .npmrc.'
+description: 'Generates a .npmrc file based on provided configuration'
 author: 'MiLaboratories'
 
 inputs:
   npmrcConfig:
     description: |
       JSON string with registry and scope settings. See example below.
-      
       {
         "registries": {
           "https://registry.npmjs.org/": {

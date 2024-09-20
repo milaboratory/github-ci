@@ -52,6 +52,11 @@ inputs:
     required: false
     default: 'false'
 
+  npmrc-config:
+    description: |
+      Generates a .npmrc file based on provided configuration.
+    required: false
+
 runs:
   using: "composite"
 
@@ -63,6 +68,12 @@ runs:
         registry-url: ${{ inputs.registry-url }}
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
+
+    - name: Re-Write .npmrc config
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      if: inputs.npmrc-config != ''
+      with:
+        npmrcConfig: ${{ inputs.npmrc-config }}
 
     - name: Set up cache for a NodeJS/Electron application
       uses: milaboratory/github-ci/actions/node/cache@v4-beta
