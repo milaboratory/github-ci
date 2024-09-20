@@ -11,12 +11,12 @@ inputs:
     required: true
   include-patterns:
     description: 'Include patterns for source files filtering.'
-    required:
-    default: false
+    required: false
+    default: 'false'
   exclude-patterns:
     description: 'Exclude patterns for source files filtering.'
-    required:
-    default: false
+    required: false
+    default: 'false'
   archive-name:
     description: 'Tha archive name.'
     required: false

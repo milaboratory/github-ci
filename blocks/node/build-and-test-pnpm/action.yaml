@@ -1,0 +1,127 @@
+name: Build and Test NodeJS PNPM application
+author: 'MiLaboratories'
+description: |
+  Prepare agent for building the NodeJS application.
+  Install NodeJS specific version, download package, create cache e.t.c
+
+inputs:
+  build-script-name:
+    description: |
+      Specify the name of the build script to be executed via npm.
+    required: false
+    default: 'build'
+
+  tests:
+    description: |
+      Whether or not to run tests after the build.
+    required: false
+    default: 'false'
+
+  test-script-name:
+    description: |
+      Specify the name of the test to be executed via npm.
+    required: false
+    default: 'test'
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'.
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  pnpm-version:
+    description: |
+      Version of pnpm to install
+    required: false
+    default: 'latest'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml.
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      Specify auth token for the npm private registry.
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a NodeJS application
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.cache-version }}
+        pnpm-version: ${{ inputs.pnpm-version }}
+        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
+
+    - name: Install NodeJS packages with pnpm
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          pnpm install --frozen-lockfile --prefer-offline
+
+    - name: Run build on (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        pnpm run -r ${{ inputs.build-script-name }}
+
+    - name: Run build on (macOS and Linux)
+      uses: milaboratory/github-ci/actions/shell@v4
+      if: runner.os == 'macOS' || runner.os == 'Linux'
+      with:
+        run: |
+          pnpm run -r ${{ inputs.build-script-name }}
+
+    - name: Run test on (Windows)
+      if: runner.os == 'Windows'
+        && inputs.tests == 'true'
+      shell: pwsh
+      run: |
+        pnpm run -r ${{ inputs.test-script-name }}
+
+    - name: Run test on (macOS and Linux)
+      uses: milaboratory/github-ci/actions/shell@v4
+      if: runner.os == 'macOS' || runner.os == 'Linux'
+        && inputs.tests == 'true'
+      with:
+        run: |
+          pnpm run -r ${{ inputs.test-script-name }}

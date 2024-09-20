@@ -6,7 +6,7 @@ description: |
 inputs:
   golang-version:
     description: |
-      Node version to use.
+      Go version to use.
       Examples: '1.19', '1.20'
     required: true
 

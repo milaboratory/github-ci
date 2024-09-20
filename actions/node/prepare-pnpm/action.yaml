@@ -20,6 +20,12 @@ inputs:
     required: false
     default: 'v1'
 
+  cache-enabled:
+    description: |
+      Enable npm github actions cache
+    required: false
+    default: 'true'
+
   pnpm-version:
     description: |
       Version of pnpm to install
@@ -51,6 +57,11 @@ inputs:
     required: false
     default: 'false'
 
+  npmrc-config:
+    description: |
+      Generates a .npmrc file based on provided configuration.
+    required: false
+
 runs:
   using: "composite"
 
@@ -63,6 +74,12 @@ runs:
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
 
+    - name: Re-Write .npmrc config
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
+      if: inputs.npmrc-config != ''
+      with:
+        npmrcConfig: ${{ inputs.npmrc-config }}
+
     - name: Install pnpm - ${{ inputs.pnpm-version }}
       uses: pnpm/action-setup@v4
       with:
@@ -70,6 +87,7 @@ runs:
 
     - name:  Set up cache for a NodeJS PNPM application
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
+      if: inputs.cache-enabled == 'true'
       with:
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}

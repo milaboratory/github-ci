@@ -1,0 +1,463 @@
+# This workflow will build and upload nodejs application on the github's npm registry.
+
+name: Build and Upload NodeJS PNPM Applications
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
+      #
+      # Checkout settings
+      #
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      #
+      # Environment settings
+      #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: '{}'
+
+      #
+      # NodeJS settings
+      #
+      node-version:
+        description: |
+          Node version to use
+        type: string
+        required: true
+
+      #
+      # Cache control
+      #
+      cache-version:
+        description: |
+          Simple hack, that allows to 'reset' cache for particular job.
+
+          Just change the value of this parameter and the next run will
+          not find build cache and will have to start from scratch.
+
+        type: string
+        required: false
+        default: 'v1'
+
+      hashfiles-search-path:
+        description: |
+          Hashfiles search path for pnpm-lock.yaml
+        type: string
+        required: false
+        default: 'pnpm-lock.yaml'
+
+      #
+      # PNPM settings
+      #
+      pnpm-version:
+        description: |
+          Version of pnpm to install
+        type: string
+        required: false
+        default: 'latest'
+
+      #
+      # Build control
+      #
+      build-script-name:
+        description: |
+          The name of a build script
+        type: string
+        required: true
+        default: 'build'
+      is-electron-application:
+        description: |
+          If 'true' enables cache for an Electron application,
+          if 'false', enables cache for a generic NodeJS application.
+        type: string
+        required: false
+        default: 'true'
+
+      #
+      # Test control
+      #
+      test:
+        description: |
+          Run tests
+        type: boolean
+        required: false
+        default: false
+      test-script-name:
+        description: |
+          The name of a test
+        type: string
+        required: false
+        default: 'test'
+
+      #
+      # NPM registry settings
+      #
+      registry-url:
+        description: |
+          The npm registry url to set up for auth
+          and publication of the node js package.
+        type: string
+        required: false
+        default: 'https://registry.npmjs.org'
+
+      scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: 'milaboratories'
+
+      always-auth:
+        description: |
+          Set always-auth in npmrc.
+        type: string
+        required: false
+        default: 'false'
+
+      #
+      # AWS ECR settings
+      #
+      aws-iam-role-to-assume:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
+        type: string
+        required: false
+      aws-region:
+        description: |
+          The AWS region
+        type: string
+        required: false
+        default: 'eu-central-1'
+      aws-s3-turborepo-cache-bucket:
+        description: |
+          Name of the Turborepo Cache s3 bucket
+        type: string
+        required: false
+        default: 'milab-euce1-prod-data-s3-turborepo-cache'
+      #
+      # Platforma Docker settings
+      #
+      pl-docker-tag:
+        description: |
+          Platforma docker tag.
+        type: string
+        required: false
+        default: 'main'
+      pl-test-assets-dir:
+        description: |
+          Platforma test assets directory;
+          this directory will be mounted inside
+          the container under the path `/storage/controllers/file/library`
+          The path must be relative to github.workspace
+          and will be appended to github.workspace within the docker compose action.
+        type: string
+        required: false
+        default: 'assets'
+      pl-log-dir:
+        description: |
+          Platforma logs directory on the agent;
+          this directory will be mounted inside
+          the container under the path. `pl-log-destination`
+          The path must be relative to github.workspace
+          and will be appended to github.workspace within the docker compose action.
+        type: string
+        required: false
+        default: 'log'
+      pl-log-commit-summary:
+        description: |
+          Whether or not to log commit summary for Platforma.
+        type: boolean
+        required: false
+        default: true
+      pl-log-resource-data:
+        description: |
+          Whether or not to log resource data for Platforma.
+        type: boolean
+        required: false
+        default: true
+      pl-log-level:
+        description: |
+          Platforma log level
+        type: string
+        required: false
+        default: 'info'
+      pl-auth-enabled:
+        description: |
+          Whether or not to enable authentication in the Platforma.
+        type: boolean
+        required: false
+        default: true
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: 'true'
+
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
+
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4
+
+    outputs:
+      is-release: ${{ steps.context.outputs.is-release }}
+      current-version: ${{ steps.context.outputs.current-version }}
+
+  build-test-publish:
+    name: unified (build test publish)
+    runs-on: ubuntu-latest
+
+    needs:
+      - init
+
+    permissions:
+      id-token: write
+      packages: write
+      contents: write
+      pull-requests: write
+      issues: read
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4
+
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - id: npm-pkg-metadata
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
+            PNPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
+            ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-iam-role-to-assume || env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache@v4
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ inputs.aws-s3-turborepo-cache-bucket }}
+
+      - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4
+        env:
+          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
+        with:
+          build-script-name: ${{ inputs.build-script-name }}
+          tests: 'false'
+          test-script-name: ${{ inputs.test-script-name }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
+        env:
+          PL_ADDRESS: "http://127.0.0.1:6345"
+          PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
+          PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
+          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
+        with:
+          test-name: ${{ inputs.test-script-name }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
+          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
+          pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
+          pl-docker-tag: ${{ inputs.pl-docker-tag }}
+          pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
+          pl-log-dir: ${{ inputs.pl-log-dir }}
+          pl-log-level: ${{ inputs.pl-log-level }}
+          pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
+          pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
+
+      - name: Search for npmrc_ci
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            NPMRC_CI="${GITHUB_WORKSPACE}/.npmrc_ci"
+            TARGET_NPMRC="${GITHUB_WORKSPACE}/.npmrc"
+            
+            if [ -f "${NPMRC_CI}" ];then
+              echo "Found npmrc_ci, rewriting .npmrc..."
+              cat "${NPMRC_CI}" > "${TARGET_NPMRC}"
+            else
+              echo "npmrc_ci not found, skipping..."
+            fi
+
+      - name: Checking for changesets on a pull_request
+        uses: milaboratory/github-ci/actions/shell@v4
+        if: github.event_name == 'pull_request'
+        with:
+          run: |
+            changeset status --since=main
+
+      - name: Create Release Pull Request and Publish npm package
+        if: steps.context.outputs.is-release == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
+        uses: changesets/action@v1
+        with:
+          commit: 'chore: update versions'
+          title: 'chore: update versions'
+          publish: pnpm -r publish --no-git-checks --access public
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+      started: 'true'
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always()
+    needs:
+      - init
+      - build-test-publish
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            release
+
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
+        env:
+          NPM_PKG_VERSION: ${{ needs.build-test-publish.outputs.npm-pkg-version }}
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          job-status: |
+            ${{ needs.build-test-publish.result }}
+          product-name: ${{ inputs.app-name }}
+          override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
+          override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          search-tags: ${{ steps.search-tags.outputs.result }}

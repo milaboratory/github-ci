@@ -1,0 +1,193 @@
+name: Run pnpm tests against the Platform running in docker on Linux
+author: 'MiLaboratories'
+description: |
+  Run npm tests against the Platform running in docker on Linux
+
+  Prepare agent for running tests for the Platform on Linux.
+  Install NodeJS specific version, cache dependencies.
+  Launch the Platforma container using Docker Compose
+
+inputs:
+  test-name:
+    description: |
+      Test command.
+    required: false
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+    required: false
+    default: 'v1'
+
+  pnpm-version:
+    description: |
+      Version of pnpm to install
+    required: false
+    default: 'latest'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml
+    required: false
+    default: 'pnpm-lock.yaml'
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      npm private registry auth token
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+
+  pl-docker-registry:
+    description: |
+      Platforma docker registry.
+    required: false
+
+  pl-docker-tag:
+    description: |
+      Platforma docker tag.
+    required: false
+
+  pl-test-assets-dir:
+    description: |
+      Platforma test assets directory;
+      this directory will be mounted inside
+      the container under the path `/storage/controllers/file/library`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'assets'
+
+  pl-log-dir:
+    description: |
+      Platforma logs directory on the agent;
+      this directory will be mounted inside
+      the container under the path. `pl-log-destination`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'log'
+
+  pl-log-commit-summary:
+    description: |
+      Whether or not to log commit summary for Platforma.
+    required: false
+    default: 'true'
+
+  pl-log-resource-data:
+    description: |
+      Whether or not to log resource data for Platforma.
+    required: false
+    default: 'true'
+
+  pl-log-level:
+    description: |
+      Platforma log level
+    required: false
+    default: 'info'
+
+  pl-auth-enabled:
+    description: |
+      Whether or not to enable authentication in the Platforma.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Prepare environment for building a NodeJS application
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.cache-version }}
+        pnpm-version: ${{ inputs.pnpm-version }}
+        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
+
+    - name: Install NodeJS packages with pnpm
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          pnpm install --frozen-lockfile --prefer-offline
+
+    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
+      with:
+        pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
+        pl-docker-registry: ${{ inputs.pl-docker-registry }}
+        pl-docker-tag: ${{ inputs.pl-docker-tag }}
+        pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
+        pl-log-dir: ${{ inputs.pl-log-dir }}
+        pl-log-level: ${{ inputs.pl-log-level }}
+        pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
+        pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
+
+    - name: Run test - ${{ inputs.test-name }}
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        run: |
+          pnpm run -r ${{ inputs.test-name }}
+
+    - name: Stop all running containers
+      uses: milaboratory/github-ci/actions/shell@v4
+      if: always()
+      with:
+        dump-stdout: false
+        run: |
+          docker stop $(docker ps -a -q)
+          sleep 10
+
+    - name: Check if we should upload logs
+      if: always()
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ -z "$(ls -A ${PL_LOG_DIR})" ]; then
+            ghwa_error "Tests report '${PL_LOG_DIR}' is empty, nothing to upload. It seems something broke platforma process."
+            exit 0
+          fi
+
+          ghwa_set_env "UPLOAD_LOGS" "true"
+
+    - name: Upload Platforma logs
+      uses: actions/upload-artifact@v4
+      if: always() && env.UPLOAD_LOGS == 'true'
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        name: pl-docker-logs
+        path: |
+          ${{ env.PL_LOG_DIR }}
