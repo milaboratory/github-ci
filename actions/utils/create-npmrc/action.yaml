@@ -1,0 +1,17 @@
+name: 'Create .npmrc File'
+description: 'Generates a .npmrc.'
+author: 'MiLaboratories'
+
+inputs:
+  npmrcConfig:
+    description: |
+      JSON string with registry and scope settings.
+
+    required: true
+outputs:
+  npmrcPath:
+    description: 'The path to the created .npmrc file.'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
