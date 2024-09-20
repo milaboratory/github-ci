@@ -80,7 +80,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -91,7 +91,7 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Install NodeJS packages with pnpm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
@@ -105,7 +105,7 @@ runs:
         pnpm run -r ${{ inputs.build-script-name }}
 
     - name: Run build on (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: runner.os == 'macOS' || runner.os == 'Linux'
       with:
         run: |
@@ -119,7 +119,7 @@ runs:
         pnpm run -r ${{ inputs.test-script-name }}
 
     - name: Run test on (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: runner.os == 'macOS' || runner.os == 'Linux'
         && inputs.tests == 'true'
       with:

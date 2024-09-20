@@ -75,7 +75,7 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Re-Write .npmrc config
-      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
@@ -86,7 +86,7 @@ runs:
         version: ${{ inputs.pnpm-version }}
 
     - name:  Set up cache for a NodeJS PNPM application
-      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       if: inputs.cache-enabled == 'true'
       with:
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}

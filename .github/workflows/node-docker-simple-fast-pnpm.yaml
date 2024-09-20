@@ -286,7 +286,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -308,9 +308,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -319,7 +319,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -329,7 +329,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
@@ -347,12 +347,12 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ inputs.aws-s3-turborepo-cache-bucket }}
 
-      - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4-beta
+      - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4
         env:
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
@@ -369,7 +369,7 @@ jobs:
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
@@ -395,7 +395,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Search for npmrc_ci
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPMRC_CI="${GITHUB_WORKSPACE}/.npmrc_ci"
@@ -409,7 +409,7 @@ jobs:
             fi
 
       - name: Checking for changesets on a pull_request
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         if: github.event_name == 'pull_request'
         with:
           run: |
@@ -444,12 +444,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.build-test-publish.outputs.npm-pkg-version }}
         with:
