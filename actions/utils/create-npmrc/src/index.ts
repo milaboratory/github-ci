@@ -19,7 +19,8 @@ async function run(): Promise<void> {
       Object.entries(scopes as Record<string, string>).forEach(([scope, tokenVar]) => {
         npmrcContent += `@${scope}:registry=${registryUrl}\n`;
         const registryURL = new URL(registryUrl);
-        npmrcContent += `//${registryURL.hostname}/${scope}/:_authToken=${process.env[tokenVar]}\n`;
+        npmrcContent += `//${registryURL.hostname}/${scope}/:_authToken=\${${tokenVar}}\n
+        `;
       });
     });
 
