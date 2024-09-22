@@ -7,18 +7,16 @@ inputs:
     description: |
       JSON string with registry and scope settings. See example below.
       {
-        "registries": {
-          "https://registry.npmjs.org/": {
-            "scope1": "TOKEN_FOR_NPMJS"
-          },
-          "https://custom.npm.registry.com/": {
-            "scope2": "SCOPE2_TOKEN",
-            "scope3": "SCOPE3_TOKEN"
-          },
-          "https://another.registry.com/": {
-            "scope4": "SCOPE4_TOKEN"
-          }
+      "registries": {
+        "https://registry.npmjs.org/": {
+          "scopes": ["scope1", "scope2"],
+          "tokenVar": "NPMJS_TOKEN"
+        },
+        "https://custom.npm.registry.com/": {
+          "scopes": ["scope3"],
+          "tokenVar": "NODE_AUTH_TOKEN"
         }
+       }
       }
     required: true
 outputs:

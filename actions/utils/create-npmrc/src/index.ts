@@ -2,10 +2,19 @@ import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
 
+interface NpmRegistryConfig {
+  scopes: string[];
+  tokenVar: string;
+}
+
+interface NpmConfig {
+  registries: Record<string, NpmRegistryConfig>;
+}
+
 async function run(): Promise<void> {
   try {
     const configInput = core.getInput('npmrcConfig');
-    const config = JSON.parse(configInput);
+    const config: NpmConfig = JSON.parse(configInput); // Now TypeScript knows the structure of `config`
 
     const workspacePath = process.env.GITHUB_WORKSPACE;
     if (!workspacePath) {
@@ -15,24 +24,24 @@ async function run(): Promise<void> {
     const npmrcPath = path.join(workspacePath, '.npmrc');
     let npmrcContent = '';
 
-    Object.entries(config.registries).forEach(([registryUrl, scopes]) => {
+    // Iterate over each registry in the configuration
+    for (const [registryUrl, { scopes, tokenVar }] of Object.entries(config.registries)) {
       const registryURL = new URL(registryUrl);
+      // always-auth and token settings for the registry
       npmrcContent += `//${registryURL.hostname}/:always-auth=true\n`;
-      Object.entries(scopes as Record<string, string>).forEach(([scope, tokenVar]) => {
+      npmrcContent += `//${registryURL.hostname}/:_authToken=\${${tokenVar}}\n`;
+
+      // Add registry setting for each scope
+      scopes.forEach((scope: string) => {
+        // Explicitly declare the type of 'scope'
         npmrcContent += `@${scope}:registry=${registryUrl}\n`;
-        npmrcContent += `//${registryURL.hostname}/${scope}/:_authToken=\${${tokenVar}}\n`;
       });
-    });
+    }
 
     fs.writeFileSync(npmrcPath, npmrcContent);
-
     core.setOutput('npmrcPath', npmrcPath);
   } catch (error) {
-    if (error instanceof Error) {
-      core.setFailed(error.message);
-    } else {
-      core.setFailed('Unknown error occurred');
-    }
+    core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred');
   }
 }
 
