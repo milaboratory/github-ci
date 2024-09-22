@@ -24972,12 +24972,11 @@ async function run() {
         const npmrcPath = path.join(workspacePath, '.npmrc');
         let npmrcContent = '';
         Object.entries(config.registries).forEach(([registryUrl, scopes]) => {
-            npmrcContent += `${registryUrl}:always-auth=true\n`;
+            const registryURL = new URL(registryUrl);
+            npmrcContent += `//${registryURL.hostname}/:always-auth=true\n`;
             Object.entries(scopes).forEach(([scope, tokenVar]) => {
                 npmrcContent += `@${scope}:registry=${registryUrl}\n`;
-                const registryURL = new URL(registryUrl);
-                npmrcContent += `//${registryURL.hostname}/${scope}/:_authToken=\${${tokenVar}}\n
-        `;
+                npmrcContent += `//${registryURL.hostname}/${scope}/:_authToken=\${${tokenVar}}\n`;
             });
         });
         fs.writeFileSync(npmrcPath, npmrcContent);
