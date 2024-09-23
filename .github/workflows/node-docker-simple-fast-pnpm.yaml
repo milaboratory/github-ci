@@ -140,7 +140,7 @@ on:
           Scope for authenticating against npm registries.
         type: string
         required: false
-        default: 'milaboratories'
+        default: '@milaboratories'
 
       always-auth:
         description: |
@@ -348,9 +348,6 @@ jobs:
           mask-password: 'true'
 
       - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
-        with:
-          storage-provider: 's3'
-          storage-path: ${{ inputs.aws-s3-turborepo-cache-bucket }}
 
       - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4-beta
         env:
@@ -393,27 +390,6 @@ jobs:
           pl-log-level: ${{ inputs.pl-log-level }}
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
-
-      - name: Search for npmrc_ci
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            NPMRC_CI="${GITHUB_WORKSPACE}/.npmrc_ci"
-            TARGET_NPMRC="${GITHUB_WORKSPACE}/.npmrc"
-            
-            if [ -f "${NPMRC_CI}" ];then
-              echo "Found npmrc_ci, rewriting .npmrc..."
-              cat "${NPMRC_CI}" > "${TARGET_NPMRC}"
-            else
-              echo "npmrc_ci not found, skipping..."
-            fi
-
-      - name: Checking for changesets on a pull_request
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: github.event_name == 'pull_request'
-        with:
-          run: |
-            changeset status --since=main
 
       - name: Create Release Pull Request and Publish npm package
         if: steps.context.outputs.is-release == 'true'
