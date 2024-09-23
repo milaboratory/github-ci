@@ -152,12 +152,6 @@ runs:
         pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      with:
-        dump-stdout: false
-        run: |
-          sleep 100000000
-
     - name: Run test - ${{ inputs.test-name }}
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
