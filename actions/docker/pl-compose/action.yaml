@@ -65,6 +65,16 @@ inputs:
       Whether or not to enable authentication in the Platforma.
     required: false
     default: 'true'
+  pl-data-create-bucket:
+    description: |
+      Try to automatically create buckets for storages if they not exist.
+    required: false
+    default: 'true'
+  pl-data-hardlink-mode:
+    description: |
+      Wether to use hardlinks when copying data between storages and within storage.
+    required: false
+    default: 'auto'
 
 runs:
   using: "composite"
@@ -83,6 +93,8 @@ runs:
         PL_LOG_RESOURCE_DATA: ${{ inputs.pl-log-resource-data }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
         PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
+        PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
+        PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
       with:
         dump-stdout: false
         run: |
