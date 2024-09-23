@@ -223,6 +223,15 @@ on:
         type: boolean
         required: false
         default: true
+      #
+      # Debug
+      #
+      interactive-debug:
+        description: |
+          Enable interactive debugging session
+        type: string
+        default: ''
+        required: false
 
       #
       # Notifications
@@ -364,6 +373,11 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Interactive debug session
+        uses: fawazahmed0/action-debug-vscode@main
+        if: always()
+          && inputs.interactive-debug == 'build'
 
       - id: test
         uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
