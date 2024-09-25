@@ -107,6 +107,12 @@ on:
         type: string
         required: false
         default: 'true'
+      turbo-build-concurrency:
+        description: |
+          Override turbo build concurrency limit the for task execution.
+          Must be an integer greater than or equal to 1 or a percentage value like 50%
+        type: string
+        required: false
 
       #
       # Test control
@@ -123,53 +129,31 @@ on:
         type: string
         required: false
         default: 'test'
+      turbo-test-concurrency:
+        description: |
+          Override turbo test concurrency limit the for task execution.
+          Must be an integer greater than or equal to 1 or a percentage value like 50%
+        type: string
+        required: false
 
       #
       # NPM registry settings
       #
-      registry-url:
+      npmrc-config:
         description: |
-          The npm registry url to set up for auth
-          and publication of the node js package.
+          Generates a .npmrc file based on provided configuration.
         type: string
-        required: false
-        default: 'https://registry.npmjs.org'
-
-      scope:
-        description: |
-          Scope for authenticating against npm registries.
-        type: string
-        required: false
-        default: '@milaboratories'
-
-      always-auth:
-        description: |
-          Set always-auth in npmrc.
-        type: string
-        required: false
-        default: 'false'
+        required: true
 
       #
       # AWS ECR settings
       #
-      aws-iam-role-to-assume:
-        description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        type: string
-        required: false
       aws-region:
         description: |
           The AWS region
         type: string
         required: false
         default: 'eu-central-1'
-      aws-s3-turborepo-cache-bucket:
-        description: |
-          Name of the Turborepo Cache s3 bucket
-        type: string
-        required: false
-        default: 'milab-euce1-prod-data-s3-turborepo-cache'
       #
       # Platforma Docker settings
       #
@@ -348,7 +332,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ inputs.aws-iam-role-to-assume || env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
@@ -360,24 +344,20 @@ jobs:
 
       - uses: milaboratory/github-ci-internal/blocks/node/build-and-test-pnpm@v4-beta
         env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
           test-script-name: ${{ inputs.test-script-name }}
+          turbo-build-concurrency: ${{ inputs.turbo-build-concurrency }}
+          turbo-test-concurrency: ${{ inputs.turbo-test-concurrency }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Interactive debug session
-        uses: fawazahmed0/action-debug-vscode@main
-        if: always()
-          && inputs.interactive-debug == 'build'
+          npmrc-config: ${{ inputs.npmrc-config }}
 
       - id: test
         uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
@@ -385,17 +365,17 @@ jobs:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
           PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
-          test-name: ${{ inputs.test-script-name }}
+          test-script-name: ${{ inputs.test-script-name }}
+          turbo-test-concurrency: ${{ inputs.turbo-test-concurrency }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npmrc-config: ${{ inputs.npmrc-config }}
           pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
           pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
           pl-docker-tag: ${{ inputs.pl-docker-tag }}
@@ -409,7 +389,8 @@ jobs:
         if: steps.context.outputs.is-release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
           commit: 'chore: update versions'

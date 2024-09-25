@@ -8,9 +8,15 @@ description: |
   Launch the Platforma container using Docker Compose
 
 inputs:
-  test-name:
+  test-script-name:
     description: |
       Test command.
+    required: false
+
+  turbo-test-concurrency:
+    description: |
+      Override turbo test concurrency limit the for task execution.
+      Must be an integer greater than or equal to 1 or a percentage value like 50%
     required: false
 
   node-version:
@@ -40,29 +46,10 @@ inputs:
     required: false
     default: 'pnpm-lock.yaml'
 
-  registry-url:
+  npmrc-config:
     description: |
-      The npm registry url to set up for auth
-      and publication of the node js package.
+      Generates a .npmrc file based on provided configuration.
     required: false
-    default: 'https://npm.pkg.github.com'
-
-  scope:
-    description: |
-      Scope for authenticating against npm registries.
-    required: false
-    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
-  npm-auth-token:
-    description: |
-      npm private registry auth token
-    required: false
-
-  always-auth:
-    description: |
-      Set always-auth in npmrc.
-    required: false
-    default: 'false'
 
   pl-docker-registry:
     description: |
@@ -129,14 +116,10 @@ runs:
         cache-version: ${{ inputs.cache-version }}
         pnpm-version: ${{ inputs.pnpm-version }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-        registry-url: ${{ inputs.registry-url }}
-        scope: ${{ inputs.scope }}
-        always-auth: ${{ inputs.always-auth }}
+        npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
@@ -152,11 +135,17 @@ runs:
         pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.turbo-test-concurrency != ''
+      with:
+        run: |
+          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency={{ inputs.turbo-test-concurrency }}"
+
     - name: Run test - ${{ inputs.test-name }}
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          pnpm run -r ${{ inputs.test-name }}
+          pnpm run -r ${{ inputs.test-script-name }} -- ${{ env.TURBO_TEST_CONCURRENCY }}
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta

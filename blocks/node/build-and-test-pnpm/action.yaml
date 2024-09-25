@@ -11,6 +11,12 @@ inputs:
     required: false
     default: 'build'
 
+  turbo-build-concurrency:
+    description: |
+      Override turbo build concurrency limit the for task execution.
+      Must be an integer greater than or equal to 1 or a percentage value like 50%
+    required: false
+
   tests:
     description: |
       Whether or not to run tests after the build.
@@ -22,6 +28,12 @@ inputs:
       Specify the name of the test to be executed via npm.
     required: false
     default: 'test'
+
+  turbo-test-concurrency:
+    description: |
+      Override turbo test concurrency limit the for task execution.
+      Must be an integer greater than or equal to 1 or a percentage value like 50%
+    required: false
 
   node-version:
     description: |
@@ -51,29 +63,10 @@ inputs:
     required: false
     default: '**/pnpm-lock.yaml'
 
-  registry-url:
+  npmrc-config:
     description: |
-      The npm registry url to set up for auth
-      and publication of the node js package.
+      Generates a .npmrc file based on provided configuration.
     required: false
-    default: 'https://npm.pkg.github.com'
-
-  scope:
-    description: |
-      Scope for authenticating against npm registries.
-    required: false
-    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
-  npm-auth-token:
-    description: |
-      Specify auth token for the npm private registry.
-    required: false
-
-  always-auth:
-    description: |
-      Set always-auth in npmrc.
-    required: false
-    default: 'false'
 
 runs:
   using: "composite"
@@ -86,14 +79,22 @@ runs:
         cache-version: ${{ inputs.cache-version }}
         pnpm-version: ${{ inputs.pnpm-version }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-        registry-url: ${{ inputs.registry-url }}
-        scope: ${{ inputs.scope }}
-        always-auth: ${{ inputs.always-auth }}
+        npmrc-config: ${{ inputs.npmrc-config }}
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.turbo-build-concurrency != ''
+      with:
+        run: |
+          ghwa_set_env TURBO_BUILD_CONCURRENCY "--concurrency=${{ inputs.turbo-build-concurrency }}"
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.turbo-test-concurrency != ''
+      with:
+        run: |
+          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency={{ inputs.turbo-test-concurrency }}"
 
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
@@ -102,21 +103,21 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        pnpm run -r ${{ inputs.build-script-name }}
+        pnpm run -r ${{ inputs.build-script-name }} -- $env:TURBO_BUILD_CONCURRENCY
 
     - name: Run build on (macOS and Linux)
       uses: milaboratory/github-ci/actions/shell@v4-beta
       if: runner.os == 'macOS' || runner.os == 'Linux'
       with:
         run: |
-          pnpm run -r ${{ inputs.build-script-name }}
+          pnpm run -r ${{ inputs.build-script-name }} -- ${{ env.TURBO_BUILD_CONCURRENCY }}
 
     - name: Run test on (Windows)
       if: runner.os == 'Windows'
         && inputs.tests == 'true'
       shell: pwsh
       run: |
-        pnpm run -r ${{ inputs.test-script-name }}
+        pnpm run -r ${{ inputs.test-script-name }} -- $env:TURBO_TEST_CONCURRENCY
 
     - name: Run test on (macOS and Linux)
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -124,4 +125,4 @@ runs:
         && inputs.tests == 'true'
       with:
         run: |
-          pnpm run -r ${{ inputs.test-script-name }}
+          pnpm run -r ${{ inputs.test-script-name }} -- ${{ env.TURBO_TEST_CONCURRENCY }}
