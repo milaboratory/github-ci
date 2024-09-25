@@ -91,7 +91,7 @@ runs:
       if: inputs.turbo-test-concurrency != ''
       with:
         run: |
-          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency={{ inputs.turbo-test-concurrency }}"
+          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency=${{ inputs.turbo-test-concurrency }}"
 
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4-beta
