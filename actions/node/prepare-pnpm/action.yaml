@@ -38,25 +38,6 @@ inputs:
     required: false
     default: '**/pnpm-lock.yaml'
 
-  registry-url:
-    description: |
-      The npm registry url to set up for auth
-      and publication of the node js package.
-    required: false
-    default: 'https://npm.pkg.github.com'
-
-  scope:
-    description: |
-      Scope for authenticating against npm registries.
-    required: false
-    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
-  always-auth:
-    description: |
-      Set always-auth in npmrc.
-    required: false
-    default: 'false'
-
   npmrc-config:
     description: |
       Generates a .npmrc file based on provided configuration.
@@ -70,9 +51,6 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        registry-url: ${{ inputs.registry-url }}
-        scope: ${{ inputs.scope }}
-        always-auth: ${{ inputs.always-auth }}
 
     - name: Re-Write .npmrc config
       uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta

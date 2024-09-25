@@ -23,11 +23,7 @@ async function run(): Promise<void> {
 
     core.setOutput('files', files.join('\n'));
   } catch (error) {
-    if (error instanceof Error) {
-      core.setFailed(error.message);
-    } else {
-      core.setFailed('Unknown error occurred');
-    }
+    core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred');
   }
 }
 
