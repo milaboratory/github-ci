@@ -155,7 +155,7 @@ runs:
            if [ -n "${_set_args}" ]; then
              set_args+=( "${_set_args}" )
            fi
-           done <<<"${PNPM_ARGS}
+           done <<<"${PNPM_ARGS}"
 
            pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
           fi
