@@ -54,7 +54,7 @@ services:
       - platforma-file-primary:/storage/controllers/data/primary
       - platforma-file-library:/storage/controllers/data/library
       - platforma-file-work:/storage/controllers/data/work
-      - platforma-runner-software:/storage/controllers/runner/software
+      - platforma-packages:/storage/controllers/packageLoader
       - platforma-db:/storage/rocksdb
       - platforma-log:/storage/log
       - platforma-license:/storage/license
@@ -67,7 +67,7 @@ volumes:
       type: none
       o: bind
       device: ${TMPDIR:-/tmp}
-  platforma-runner-software:
+  platforma-packages:
   platforma-file-work:
   platforma-file-primary:
   platforma-file-library:
