@@ -81,18 +81,6 @@ runs:
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
         npmrc-config: ${{ inputs.npmrc-config }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: inputs.turbo-build-concurrency != ''
-      with:
-        run: |
-          ghwa_set_env TURBO_BUILD_CONCURRENCY "--concurrency=${{ inputs.turbo-build-concurrency }}"
-
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: inputs.turbo-test-concurrency != ''
-      with:
-        run: |
-          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency=${{ inputs.turbo-test-concurrency }}"
-
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
@@ -103,21 +91,21 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        pnpm run -r ${{ inputs.build-script-name }} -- $env:TURBO_BUILD_CONCURRENCY
+        pnpm run -r ${{ inputs.build-script-name }}
 
     - name: Run build on (macOS and Linux)
       uses: milaboratory/github-ci/actions/shell@v4-beta
       if: runner.os == 'macOS' || runner.os == 'Linux'
       with:
         run: |
-          pnpm run -r ${{ inputs.build-script-name }} -- ${{ env.TURBO_BUILD_CONCURRENCY }}
+          pnpm run -r ${{ inputs.build-script-name }}
 
     - name: Run test on (Windows)
       if: runner.os == 'Windows'
         && inputs.tests == 'true'
       shell: pwsh
       run: |
-        pnpm run -r ${{ inputs.test-script-name }} -- $env:TURBO_TEST_CONCURRENCY
+        pnpm run -r ${{ inputs.test-script-name }}
 
     - name: Run test on (macOS and Linux)
       uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -125,4 +113,4 @@ runs:
         && inputs.tests == 'true'
       with:
         run: |
-          pnpm run -r ${{ inputs.test-script-name }} -- ${{ env.TURBO_TEST_CONCURRENCY }}
+          pnpm run -r ${{ inputs.test-script-name }}

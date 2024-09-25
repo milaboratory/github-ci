@@ -135,17 +135,11 @@ runs:
         pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: inputs.turbo-test-concurrency != ''
-      with:
-        run: |
-          ghwa_set_env TURBO_TEST_CONCURRENCY "--concurrency=${{ inputs.turbo-test-concurrency }}"
-
     - name: Run test - ${{ inputs.test-name }}
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          pnpm run -r ${{ inputs.test-script-name }} -- ${{ env.TURBO_TEST_CONCURRENCY }}
+          pnpm run -r ${{ inputs.test-script-name }}
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
