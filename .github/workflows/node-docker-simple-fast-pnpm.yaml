@@ -86,11 +86,36 @@ on:
       #
       pnpm-version:
         description: |
-          Version of pnpm to install
+          Version of pnpm to install.
         type: string
         required: false
         default: 'latest'
 
+      pnpm-recursive-build:
+        description: |
+          Run pnpm build with -r flag.
+        type: boolean
+        required: true
+
+      pnpm-recursive-tests:
+        description: |
+          Run pnpm tests with -r flag.
+        type: boolean
+        required: true
+
+      pnpm-build-args:
+        description: |
+          Additional pnpm build arguments to pass
+          for none --recursive pnpm invocations.
+        type: string
+        required: false
+
+      pnpm-tests-args:
+        description: |
+          Additional pnpm tests arguments to pass
+          for none --recursive pnpm invocations.
+        type: string
+        required: false
       #
       # Build control
       #
@@ -351,8 +376,10 @@ jobs:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
           test-script-name: ${{ inputs.test-script-name }}
-          turbo-build-concurrency: ${{ inputs.turbo-build-concurrency }}
-          turbo-test-concurrency: ${{ inputs.turbo-test-concurrency }}
+          pnpm-recursive-build: ${{ inputs.pnpm-recursive-build }}
+          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
+          pnpm-build-args: ${{ inputs.pnpm-build-args }}
+          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
@@ -370,7 +397,8 @@ jobs:
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           test-script-name: ${{ inputs.test-script-name }}
-          turbo-test-concurrency: ${{ inputs.turbo-test-concurrency }}
+          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
+          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}

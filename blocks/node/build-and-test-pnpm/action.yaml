@@ -11,12 +11,6 @@ inputs:
     required: false
     default: 'build'
 
-  turbo-build-concurrency:
-    description: |
-      Override turbo build concurrency limit the for task execution.
-      Must be an integer greater than or equal to 1 or a percentage value like 50%
-    required: false
-
   tests:
     description: |
       Whether or not to run tests after the build.
@@ -28,12 +22,6 @@ inputs:
       Specify the name of the test to be executed via npm.
     required: false
     default: 'test'
-
-  turbo-test-concurrency:
-    description: |
-      Override turbo test concurrency limit the for task execution.
-      Must be an integer greater than or equal to 1 or a percentage value like 50%
-    required: false
 
   node-version:
     description: |
@@ -53,9 +41,31 @@ inputs:
 
   pnpm-version:
     description: |
-      Version of pnpm to install
+      Version of pnpm to install.
     required: false
     default: 'latest'
+
+  pnpm-recursive-build:
+    description: |
+      Run pnpm build with -r flag.
+    required: true
+
+  pnpm-recursive-tests:
+    description: |
+      Run pnpm tests with -r flag.
+    required: true
+
+  pnpm-build-args:
+    description: |
+      Additional pnpm build arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
+
+  pnpm-tests-args:
+    description: |
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
 
   hashfiles-search-path:
     description: |
@@ -87,30 +97,43 @@ runs:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
-    - name: Run build on (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        pnpm run -r ${{ inputs.build-script-name }}
-
-    - name: Run build on (macOS and Linux)
+    - name: Run build - ${{ inputs.build-script-name }}
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: runner.os == 'macOS' || runner.os == 'Linux'
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-build }}
+        PNPM_ARGS: ${{ inputs.pnpm-build-args }}
       with:
         run: |
-          pnpm run -r ${{ inputs.build-script-name }}
+          if [ "${PNPM_R}" == "true" ];then
+            pnpm run -r ${{ inputs.build-script-name }}
+          else
+            set_args=()
+            while read -r _set_args; do
+            if [ -n "${_set_args}" ]; then
+              set_args+=( "${_set_args}" )
+            fi
+            done <<<"${PNPM_ARGS}
 
-    - name: Run test on (Windows)
-      if: runner.os == 'Windows'
-        && inputs.tests == 'true'
-      shell: pwsh
-      run: |
-        pnpm run -r ${{ inputs.test-script-name }}
+            pnpm run ${{ inputs.build-script-name }} "${set_args[@]}"
+          fi
 
-    - name: Run test on (macOS and Linux)
+    - name: Run test - ${{ inputs.test-script-name}}
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: runner.os == 'macOS' || runner.os == 'Linux'
-        && inputs.tests == 'true'
+      if: inputs.tests == 'true'
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
       with:
         run: |
-          pnpm run -r ${{ inputs.test-script-name }}
+          if [ "${PNPM_R}" == "true" ];then
+            pnpm run -r ${{ inputs.test-script-name }}
+          else
+            set_args=()
+            while read -r _set_args; do
+            if [ -n "${_set_args}" ]; then
+              set_args+=( "${_set_args}" )
+            fi
+            done <<<"${PNPM_ARGS}
+
+            pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+          fi

@@ -13,12 +13,6 @@ inputs:
       Test command.
     required: false
 
-  turbo-test-concurrency:
-    description: |
-      Override turbo test concurrency limit the for task execution.
-      Must be an integer greater than or equal to 1 or a percentage value like 50%
-    required: false
-
   node-version:
     description: |
       Node version to use.
@@ -36,9 +30,20 @@ inputs:
 
   pnpm-version:
     description: |
-      Version of pnpm to install
+      Version of pnpm to install.
     required: false
     default: 'latest'
+
+  pnpm-recursive-tests:
+    description: |
+      Run pnpm tests with -r flag.
+    required: true
+
+  pnpm-tests-args:
+    description: |
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
 
   hashfiles-search-path:
     description: |
@@ -135,11 +140,25 @@ runs:
         pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
-    - name: Run test - ${{ inputs.test-name }}
+    - name: Run test - ${{ inputs.test-script-name}}
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
       with:
         run: |
-          pnpm run -r ${{ inputs.test-script-name }}
+          if [ "${PNPM_R}" == "true" ];then
+           pnpm run -r ${{ inputs.test-script-name }}
+          else
+           set_args=()
+           while read -r _set_args; do
+           if [ -n "${_set_args}" ]; then
+             set_args+=( "${_set_args}" )
+           fi
+           done <<<"${PNPM_ARGS}
+
+           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+          fi
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
