@@ -4,11 +4,14 @@ author: 'MiLaboratories'
 
 inputs:
   patterns:
-    description: 'Glob patterns to search for files.'
+    description: |
+      Glob patterns to search for files.
+      More information about globbing options:
+      https://github.com/actions/toolkit/tree/main/packages/glob
     required: true
   follow-symbolic-links:
     description: 'Indicates whether to follow symbolic links.'
-    default: true
+    default: 'true'
 outputs:
   files:
     description: 'Newline-delimited string of matched file paths.'
