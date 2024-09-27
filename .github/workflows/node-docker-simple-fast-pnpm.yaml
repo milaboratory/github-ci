@@ -164,9 +164,9 @@ on:
       publish-to-public:
         description: |
           Whether or not the npm package should be published as public.
-        type: boolean
+        type: string
         required: false
-        default: false
+        default: 'false'
       #
       # AWS ECR settings
       #
@@ -411,7 +411,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Create Release Pull Request and Publish npm package (Public)
-        if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public
+        if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
