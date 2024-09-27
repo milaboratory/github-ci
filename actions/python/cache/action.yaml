@@ -30,29 +30,16 @@ runs:
   using: "composite"
 
   steps:
-    - name: Cache Python modules on Linux
-      uses: actions/cache@v4
-      if: runner.os == 'Linux'
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
-        restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
+    - name: Get pip cache dir
+      id: pip-cache
+      shell: bash
+      run: echo "dir=$(pip cache dir)" >> ${GITHUB_OUTPUT}
 
-    - name: Cache Python modules on macOS
+    - name: Cache Python modules
       uses: actions/cache@v4
-      if: runner.os == 'macOS'
       with:
-        path: ~/Library/Caches/pip
-        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
-        restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
-
-    - name: Cache Python modules on Windows
-      uses: actions/cache@v4
-      if: runner.os == 'Windows'
-      with:
-        path: ~\AppData\Local\pip\Cache
+        save-always: ${{ inputs.cache-save-always }}
+        path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
         restore-keys: |
           ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
