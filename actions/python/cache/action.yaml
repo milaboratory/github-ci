@@ -1,0 +1,58 @@
+name: Setup cache for a Python application
+author: 'MiLaboratories'
+description: |
+  Setup cache for a Python application
+
+inputs:
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  cache-hashfiles-search-path:
+    description: |
+      Hashfiles search path for requirements.txt
+    required: false
+    default: '**/requirements.txt'
+
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Cache Python modules on Linux
+      uses: actions/cache@v4
+      if: runner.os == 'Linux'
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
+
+    - name: Cache Python modules on macOS
+      uses: actions/cache@v4
+      if: runner.os == 'macOS'
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
+
+    - name: Cache Python modules on Windows
+      uses: actions/cache@v4
+      if: runner.os == 'Windows'
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-

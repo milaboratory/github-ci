@@ -20,9 +20,15 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-enabled:
+  cache-hashfiles-search-path:
     description: |
-      Enable npm github actions cache
+      Hashfiles search path for pnpm-lock.yaml
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
     required: false
     default: 'true'
 
@@ -31,12 +37,6 @@ inputs:
       Version of pnpm to install
     required: false
     default: 'latest'
-
-  hashfiles-search-path:
-    description: |
-      Hashfiles search path for pnpm-lock.yaml
-    required: false
-    default: '**/pnpm-lock.yaml'
 
   npmrc-config:
     description: |
@@ -65,7 +65,7 @@ runs:
 
     - name:  Set up cache for a NodeJS PNPM application
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
-      if: inputs.cache-enabled == 'true'
       with:
-        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
+        cache-save-always: ${{ inputs.cache-save-always }}

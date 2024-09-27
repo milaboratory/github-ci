@@ -74,7 +74,7 @@ on:
         required: false
         default: 'v1'
 
-      hashfiles-search-path:
+      cache-hashfiles-search-path:
         description: |
           Hashfiles search path for pnpm-lock.yaml
         type: string
@@ -382,7 +382,7 @@ jobs:
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
-          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
@@ -402,7 +402,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
-          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
           pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
           pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}

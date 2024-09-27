@@ -23,6 +23,12 @@ inputs:
     required: false
     default: '**/go.work.sum'
 
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
@@ -31,31 +37,34 @@ runs:
       if: runner.os == 'Linux'
       uses: actions/cache@v4
       with:
+        save-always: ${{ inputs.cache-save-always }}
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-
 
     - name: Cache Golang modules on macOS
       if: runner.os == 'macOS'
       uses: actions/cache@v4
       with:
+        save-always: ${{ inputs.cache-save-always }}
         path: |
           ~/Library/Caches/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-
 
     - name: Cache Golang modules on Windows
       if: runner.os == 'Windows'
       uses: actions/cache@v4
       with:
+        save-always: ${{ inputs.cache-save-always }}
         path: |
           ~\AppData\Local\go-build
           ~\go\pkg\mod
         key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}
+          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-

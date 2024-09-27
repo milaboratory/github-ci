@@ -39,6 +39,12 @@ inputs:
     required: false
     default: 'v1'
 
+  cache-hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml.
+    required: false
+    default: '**/pnpm-lock.yaml'
+
   pnpm-version:
     description: |
       Version of pnpm to install.
@@ -67,12 +73,6 @@ inputs:
       for none --recursive pnpm invocations.
     required: false
 
-  hashfiles-search-path:
-    description: |
-      Hashfiles search path for pnpm-lock.yaml.
-    required: false
-    default: '**/pnpm-lock.yaml'
-
   npmrc-config:
     description: |
       Generates a .npmrc file based on provided configuration.
@@ -88,7 +88,7 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         pnpm-version: ${{ inputs.pnpm-version }}
-        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
