@@ -412,7 +412,7 @@ jobs:
 
       - name: Create Release Pull Request and Publish npm package (Public)
         if: steps.context.outputs.is-release == 'true'
-          && inputs.publish-to-public == 'true'
+          && inputs.publish-to-public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -425,7 +425,7 @@ jobs:
 
       - name: Create Release Pull Request and Publish npm package
         if: steps.context.outputs.is-release == 'true'
-          && inputs.publish-to-public == 'false'
+          && !inputs.publish-to-public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
