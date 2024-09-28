@@ -383,6 +383,9 @@ jobs:
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
+      - name: Interactive debug session
+        uses: fawazahmed0/action-debug-vscode@main
+
       - id: test
         uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
         env:
