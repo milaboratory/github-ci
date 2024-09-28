@@ -29,6 +29,8 @@ services:
       - "PL_LICENSE_FILE=${PL_LICENSE_FILE:+/storage/license/${PL_LICENSE_FILE}}"
       # network settings
       - "PL_API_ADDR=0.0.0.0:${PL_API_PORT:-6345}"
+      - "PL_GRPC_TLS_ENABLED=${PL_GRPC_TLS_ENABLED:-false}"
+      - "PL_GRPC_TLS_AUTH_MODE=${PL_GRPC_TLS_AUTH_MODE:-}"
       # logging settings
       - "PL_LOG_LEVEL=${PL_LOG_LEVEL:-info}"
       - "PL_LOG_DESTINATION=${PL_LOG_DESTINATION:-stdout}"
