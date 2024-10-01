@@ -24964,6 +24964,7 @@ const path = __importStar(__nccwpck_require__(1017));
 async function run() {
     try {
         const configInput = core.getInput('npmrcConfig');
+        const append = core.getInput('append') === 'true';
         const config = JSON.parse(configInput); // Now TypeScript knows the structure of `config`
         const workspacePath = process.env.GITHUB_WORKSPACE;
         if (!workspacePath) {
@@ -24983,7 +24984,18 @@ async function run() {
                 npmrcContent += `@${scope}:registry=${registryUrl}\n`;
             });
         }
-        fs.writeFileSync(npmrcPath, npmrcContent);
+        // Write to the .npmrc file, appending if specified, overwriting otherwise
+        if (append) {
+            // Check if the existing file ends with a newline and append accordingly
+            const existingContent = fs.existsSync(npmrcPath) ? fs.readFileSync(npmrcPath, 'utf8') : '';
+            if (existingContent && !existingContent.endsWith('\n')) {
+                npmrcContent = '\n' + npmrcContent; // Prepend a newline if the existing content does not end with one
+            }
+            fs.appendFileSync(npmrcPath, npmrcContent);
+        }
+        else {
+            fs.writeFileSync(npmrcPath, npmrcContent);
+        }
         core.setOutput('npmrcPath', npmrcPath);
     }
     catch (error) {
