@@ -28,7 +28,7 @@ async function genDevVersion(
   baseRef: string
 ): Promise<version.versionInfo> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
-  const sanitizedRefName = utils.sanitizeVersionInput(currentRefName)
+  const sanitizedRefName = version.sanitize(currentRefName)
   const count = await git.countCommits(baseRef, 'HEAD')
 
   return {
@@ -48,9 +48,8 @@ async function loadBranchVersions(targetBranch: string): Promise<void> {
   const runNumber: string = process.env.GITHUB_RUN_NUMBER as string
   const currentSha: string = await git.resolveRef('HEAD')
   const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`
-  const sanitizedRefName = utils.sanitizeVersionInput(currentVersionStr)
 
-  const currentVersion = version.parse(sanitizedRefName)
+  const currentVersion = version.sanitize(currentVersionStr)
   const isRelease = refType === 'branch' && refName === targetBranch
   const isBranchHead = await utils.isBranchHead()
 
@@ -83,8 +82,7 @@ async function getSanitizedVersion(
 ): Promise<version.versionInfo | null> {
   const originalVersion = knownVersions[tag]
   if (originalVersion && originalVersion.original) {
-    const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original)
-    return version.parse(sanitizedStr)
+    return version.sanitize(originalVersion.original)
   }
   // Handle the case where version parsing fails or original is missing
   return null
