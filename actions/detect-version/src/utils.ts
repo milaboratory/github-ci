@@ -89,14 +89,6 @@ export function isLatestMajor(
   }
   return false
 }
-/**
- Check an input string and replace all characters that
- do not conform to semantic versioning (semver) criteria with the - character
- */
-export function sanitizeVersionInput(input: string): string {
-  const regex = /[^0-9A-Za-z.+-]/g
-  return input.replace(regex, '-')
-}
 
 /**
  Filter out tags that are not valid semantic versions
