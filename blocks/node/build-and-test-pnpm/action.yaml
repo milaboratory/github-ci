@@ -83,7 +83,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -92,13 +92,13 @@ runs:
         npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
     - name: Run build - ${{ inputs.build-script-name }}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-build }}
         PNPM_ARGS: ${{ inputs.pnpm-build-args }}
@@ -118,7 +118,7 @@ runs:
           fi
 
     - name: Run test - ${{ inputs.test-script-name}}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: inputs.tests == 'true'
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
