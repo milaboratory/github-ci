@@ -42,6 +42,12 @@ inputs:
     required: false
     default: 'false'
 
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
@@ -58,3 +64,4 @@ runs:
       with:
         cache-version: ${{ inputs.cache-version }}
         cache-dependency-hashfiles-path: ${{ inputs.cache-dependency-hashfiles-path }}
+        cache-save-always: ${{ inputs.cache-save-always }}

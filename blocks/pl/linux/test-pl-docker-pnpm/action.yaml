@@ -8,7 +8,7 @@ description: |
   Launch the Platforma container using Docker Compose
 
 inputs:
-  test-name:
+  test-script-name:
     description: |
       Test command.
     required: false
@@ -28,41 +28,33 @@ inputs:
     required: false
     default: 'v1'
 
-  pnpm-version:
-    description: |
-      Version of pnpm to install
-    required: false
-    default: 'latest'
-
-  hashfiles-search-path:
+  cache-hashfiles-search-path:
     description: |
       Hashfiles search path for pnpm-lock.yaml
     required: false
     default: 'pnpm-lock.yaml'
 
-  registry-url:
+  pnpm-version:
     description: |
-      The npm registry url to set up for auth
-      and publication of the node js package.
+      Version of pnpm to install.
     required: false
-    default: 'https://npm.pkg.github.com'
+    default: 'latest'
 
-  scope:
+  pnpm-recursive-tests:
     description: |
-      Scope for authenticating against npm registries.
-    required: false
-    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+      Run pnpm tests with -r flag.
+    required: true
 
-  npm-auth-token:
+  pnpm-tests-args:
     description: |
-      npm private registry auth token
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
     required: false
 
-  always-auth:
+  npmrc-config:
     description: |
-      Set always-auth in npmrc.
+      Generates a .npmrc file based on provided configuration.
     required: false
-    default: 'false'
 
   pl-docker-registry:
     description: |
@@ -127,16 +119,12 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         pnpm-version: ${{ inputs.pnpm-version }}
-        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-        registry-url: ${{ inputs.registry-url }}
-        scope: ${{ inputs.scope }}
-        always-auth: ${{ inputs.always-auth }}
+        npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
@@ -152,11 +140,25 @@ runs:
         pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
-    - name: Run test - ${{ inputs.test-name }}
+    - name: Run test - ${{ inputs.test-script-name}}
       uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
       with:
         run: |
-          pnpm run -r ${{ inputs.test-name }}
+          if [ "${PNPM_R}" == "true" ];then
+           pnpm run -r ${{ inputs.test-script-name }}
+          else
+           set_args=()
+           while read -r _set_args; do
+           if [ -n "${_set_args}" ]; then
+             set_args+=( "${_set_args}" )
+           fi
+           done <<<"${PNPM_ARGS}"
+
+           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+          fi
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4

@@ -1,7 +1,7 @@
-name: Setup cache for a Rust application
+name: Setup cache for a Python application
 author: 'MiLaboratories'
 description: |
-  Setup cache for a Rust application
+  Setup cache for a Python application
 
 inputs:
   cache-version:
@@ -16,9 +16,9 @@ inputs:
 
   cache-hashfiles-search-path:
     description: |
-      Hashfiles search path for Cargo.lock
+      Hashfiles search path for requirements.txt
     required: false
-    default: '**/Cargo.lock'
+    default: '**/requirements.txt'
 
   cache-save-always:
     description: |
@@ -30,16 +30,16 @@ runs:
   using: "composite"
 
   steps:
-    - name: Cache Rust Cargo modules
+    - name: Get pip cache dir
+      id: pip-cache
+      shell: bash
+      run: echo "dir=$(pip cache dir)" >> ${GITHUB_OUTPUT}
+
+    - name: Cache Python modules
       uses: actions/cache@v4
       with:
         save-always: ${{ inputs.cache-save-always }}
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}-
+          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-

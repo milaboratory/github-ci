@@ -27,13 +27,6 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-arch:
-    description: |
-      Parameter specifies the architecture of the runner
-      that the cache will be used with.
-    required: false
-    default: 'amd64'
-
   cache-hashfiles-search-path:
     description: |
       Hashfiles search path for Cargo.lock
@@ -45,6 +38,12 @@ inputs:
       Set to true, if you'd like to enable caching in setup-go action.
     required: false
     default: 'false'
+
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
+    required: false
+    default: 'true'
 
 runs:
   using: "composite"
@@ -61,5 +60,5 @@ runs:
       uses: milaboratory/github-ci/actions/rust/cache@v4
       with:
         cache-version: ${{ inputs.cache-version }}
-        cache-arch: ${{ inputs.cache-arch }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        cache-save-always: ${{ inputs.cache-save-always }}

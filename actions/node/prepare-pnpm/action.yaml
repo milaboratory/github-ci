@@ -20,9 +20,15 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-enabled:
+  cache-hashfiles-search-path:
     description: |
-      Enable npm github actions cache
+      Hashfiles search path for pnpm-lock.yaml
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+  cache-save-always:
+    description: |
+      Run the post step to save the cache even if another step before fails.
     required: false
     default: 'true'
 
@@ -31,31 +37,6 @@ inputs:
       Version of pnpm to install
     required: false
     default: 'latest'
-
-  hashfiles-search-path:
-    description: |
-      Hashfiles search path for pnpm-lock.yaml
-    required: false
-    default: '**/pnpm-lock.yaml'
-
-  registry-url:
-    description: |
-      The npm registry url to set up for auth
-      and publication of the node js package.
-    required: false
-    default: 'https://npm.pkg.github.com'
-
-  scope:
-    description: |
-      Scope for authenticating against npm registries.
-    required: false
-    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
-
-  always-auth:
-    description: |
-      Set always-auth in npmrc.
-    required: false
-    default: 'false'
 
   npmrc-config:
     description: |
@@ -70,9 +51,6 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        registry-url: ${{ inputs.registry-url }}
-        scope: ${{ inputs.scope }}
-        always-auth: ${{ inputs.always-auth }}
 
     - name: Re-Write .npmrc config
       uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
@@ -87,7 +65,7 @@ runs:
 
     - name:  Set up cache for a NodeJS PNPM application
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
-      if: inputs.cache-enabled == 'true'
       with:
-        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
+        cache-save-always: ${{ inputs.cache-save-always }}
