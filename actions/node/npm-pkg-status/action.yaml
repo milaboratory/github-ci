@@ -39,7 +39,7 @@ runs:
 
   steps:
     - name: Check NPM package status in a registry
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       id: npm-pkg-status
       env:
         NPM_PKG_NAME: ${{ inputs.npm-pkg-name }}
@@ -107,7 +107,7 @@ runs:
           ghwa_set_output exist "0"
 
     - id: set-status
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           echo "${{ fromJSON(steps.npm-pkg-status.outputs.data).exist }}"

@@ -301,7 +301,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -323,9 +323,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -334,7 +334,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -344,7 +344,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
@@ -362,9 +362,9 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache@v4
 
-      - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -384,7 +384,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
@@ -452,12 +452,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.build-test-publish.outputs.npm-pkg-version }}
         with:
