@@ -39,11 +39,11 @@ runs:
     - name: Install Python ${{ inputs.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: '${{ inputs.python-version }}
+        python-version: '${{ inputs.python-version }}'
 
     - name: Setup Cache for Python project
       uses: milaboratory/github-ci/actions/python/cache@v4-beta
       with:
-        cache-version: ${{ inputs.cache-version }}
-        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-        cache-save-always: ${{ inputs.cache-save-always }}
+        version: ${{ inputs.cache-version }}
+        hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        save-always: ${{ inputs.cache-save-always }}
