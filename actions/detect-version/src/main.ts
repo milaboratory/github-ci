@@ -92,6 +92,7 @@ async function loadTagVersions(depth: number): Promise<void> {
   await prepareRepository(depth)
 
   const knownVersions = await utils.getVersions()
+  throw Error('Break everything to check cache does not take place. Versions are: ' + JSON.stringify(knownVersions))
 
   let latestTag = utils.latestVersionTag(knownVersions)
   let latestSha = await git.resolveRef(latestTag)
