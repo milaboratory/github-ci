@@ -176,7 +176,7 @@ on:
       #
       # GCP sign control
       #
-      gcp-kms-login-enable:
+      gcp-login-enable:
         description: |
           Enables the creation of Google cloud credentials during the GitHub Action workflow.
         type: boolean
@@ -194,6 +194,8 @@ on:
         required: false
         default: "latest"
 
+      # We do not put version into secrets because it has very short value.
+      #  '1' in secrets may cause '1' to be replaced with '*' everywhere in github workflow logs
       gcp-kms-key-version:
         description: |
           Version of KMS key.
