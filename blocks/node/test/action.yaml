@@ -1,0 +1,131 @@
+name: Run a test for a Node project with npm
+author: 'MiLaboratories'
+description: |
+  Prepare agent for running a npm test for the NodeJS project.
+  Install NodeJS specific version, download package, create cache e.t.c
+
+inputs:
+  test-name:
+    description: |
+      Provide a name of a test to run via npm
+    required: true
+
+  build-script-name:
+    description: |
+      Name of script for application build
+    required: true
+    default: 'build'
+
+  build-before-run-test:
+    description: |
+      Run `build-command` before executing `test-name`.
+    required: false
+    default: 'false'
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for package-lock.json
+    required: false
+    default: '**/package-lock.json'
+
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'true'
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      npm private registry auth token
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+      - name: Prepare environment for running a NodeJS application tests
+        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+          is-electron-application: ${{ inputs.is-electron-application }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+
+      - name: Install NodeJS packages with npm
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        with:
+          run: |
+           npm ci
+
+      - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: inputs.build-before-run-test != 'false'
+          && (runner.os == 'macOS' || runner.os == 'Linux')
+        with:
+          run: |
+            npm run ${{ inputs.build-script-name}}
+
+      - name: Run build - ${{ inputs.build-script-name }} - (Windows)
+        if: inputs.build-before-run-test != 'false'
+          && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm run ${{ inputs.build-script-name }}
+
+      - name: Run test - ${{ inputs.test-name }} - (macOS and Linux)
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: runner.os == 'macOS' || runner.os == 'Linux'
+        env:
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        with:
+          run: |
+           npm run ${{ inputs.test-name }} --if-present
+
+      - name: Run test - ${{ inputs.test-name }} - (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        run: |
+          npm run ${{ inputs.test-name }} --if-present
