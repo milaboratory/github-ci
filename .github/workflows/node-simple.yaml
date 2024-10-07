@@ -607,7 +607,7 @@ jobs:
 
       - name: Configure GCP credentials
         uses: google-github-actions/auth@v2
-        if: inputs.gcp-kms-login-enable
+        if: inputs.gcp-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
@@ -617,14 +617,14 @@ jobs:
 
       - name: Set up GCloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        if: inputs.gcp-kms-login-enable
+        if: inputs.gcp-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
       - name: Add MiLab shell utils to PATH
-        if: inputs.gcp-kms-login-enable
+        if: inputs.gcp-login-enable
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - name: Publish npm package
