@@ -176,14 +176,14 @@ on:
       #
       # GCP sign control
       #
-      gcloud-kms-login-enable:
+      gcp-kms-login-enable:
         description: |
           Enables the creation of Google cloud credentials during the GitHub Action workflow.
         type: boolean
         required: false
         default: false
 
-      gcloud-sdk-version:
+      gcp-sdk-version:
         description: |
           Version or version constraint of the gcloud SDK to install. If
           unspecified, it will accept any installed version of the gcloud SDK. If
@@ -194,7 +194,14 @@ on:
         required: false
         default: "latest"
 
-      gcloud-kms-digest-algorithm:
+      gcp-kms-key-version:
+        description: |
+          Version of KMS key.
+        type: string
+        required: false
+        default: '1'
+
+      gcp-kms-digest-algorithm:
         description: |
           The algorithm to digest the input.
           Must be one of: sha256, sha384, sha512.
@@ -261,7 +268,6 @@ on:
         description: |
           Role to assume in AWS to assume during CI run.
         required: false
-
       AWS_ASSUME_REGION:
         description: |
           The AWS region for AWS role assumption
@@ -271,27 +277,18 @@ on:
         description: |
           Tha name of the GCP workload identity federation provider.
         required: false
-
       GCP_KMS_SERVICE_ACCOUNT:
         description: |
           The name of the GCP service account
         required: false
-
       GCP_KMS_LOCATION:
         description: |
           KMS key and keyring location
         required: false
-
       GCP_KMS_KEYRING:
         description: |
           KMS keyring name in Google Cloud Platform.
         required: false
-
-      GCP_KMS_KEY_VERSION:
-        description: |
-          Version of KMS key.
-        required: false
-
       GCP_KMS_KEY_NAME:
         description: |
           KMS key name in Google Cloud Platform.
@@ -637,11 +634,11 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
           PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
-          GCP_KMS_KEY_VERSION: ${{ secrets.GCP_KMS_KEY_VERSION }}
+          GCP_KMS_KEY_VERSION: ${{ inputs.gcp-kms-key-version }}
           GCP_KMS_KEY_NAME: ${{ secrets.GCP_KMS_KEY_NAME }}
           GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
           GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
-          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
+          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
         with:
           run: |
             if [ -z "${PUBLISH_SCRIPT}" ]; then

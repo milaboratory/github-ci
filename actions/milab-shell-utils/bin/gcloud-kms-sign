@@ -17,6 +17,6 @@ gcloud kms asymmetric-sign \
   --key ${GCP_KMS_KEY_NAME} \
   --keyring ${GCP_KMS_KEYRING} \
   --location ${GCP_KMS_LOCATION} \
-  --digest-algorithm ${GCP_KMS_DIGEST_ALGORITHM}\
+  --digest-algorithm ${GCP_KMS_DIGEST_ALGORITHM} \
   --input-file "${file_path}" \
   --signature-file "${file_sig_path}"
