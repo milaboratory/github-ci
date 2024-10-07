@@ -28,6 +28,7 @@ inputs:
       The number of commits of git history from current HEAD to fetch
     required: false
     default: '200'
+
   canonize:
     description: |
       Canonize version number to make it always look like regular semver: '<major>.<minor>.<patch>'.
