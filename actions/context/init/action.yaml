@@ -40,6 +40,8 @@ runs:
         fetch-depth: ${{ inputs.version-fetch-depth }}
         branch-versioning: ${{ inputs.branch-versioning }}
 
+    - uses: fawazahmed0/action-debug-vscode@main
+
     - uses: milaboratory/github-ci/actions/context/put@v4-beta
       with:
         key: "versions.json"
