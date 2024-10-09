@@ -114,32 +114,6 @@ runs:
             echo "${CURRENT_TAG}"
           fi
 
-    - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        OVERRIDE_VERSION: ${{ inputs.override-version }}
-        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
-      with:
-        run: |
-          if [ ! -z "${OVERRIDE_VERSION}" ];then
-            echo "${OVERRIDE_VERSION}"
-          else
-            echo "${CURRENT_VERSION}"
-          fi
-
-    - id: define-tag
-      uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        OVERRIDE_TAG: ${{ inputs.override-tag }}
-        CURRENT_TAG: ${{ steps.context.outputs.current-version-tag }}
-      with:
-        run: |
-          if [ ! -z "${OVERRIDE_TAG}" ];then
-            echo "${OVERRIDE_TAG}"
-          else
-            echo "${CURRENT_TAG}"
-          fi
-
     - id: job-status
       name: Merge job statuses
       uses: milaboratory/github-ci/actions/helpers/merge-status@v4
