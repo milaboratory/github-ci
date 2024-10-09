@@ -340,7 +340,7 @@ jobs:
             ghwa_set_output npm-pkg-name "${NPM_PKG_NAME}"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-merge-09-10-2024
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
@@ -422,7 +422,7 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
       - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v4-merge-09-10-2024
+        uses: milaboratory/github-ci/blocks/node/test@v4
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
