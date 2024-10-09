@@ -4,7 +4,7 @@ description: |
   Setup cache for a Python application
 
 inputs:
-  cache-version:
+  version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
 
@@ -14,13 +14,13 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-hashfiles-search-path:
+  hashfiles-search-path:
     description: |
       Hashfiles search path for requirements.txt
     required: false
     default: '**/requirements.txt'
 
-  cache-save-always:
+  save-always:
     description: |
       Run the post step to save the cache even if another step before fails.
     required: false
@@ -38,8 +38,8 @@ runs:
     - name: Cache Python modules
       uses: actions/cache@v4
       with:
-        save-always: ${{ inputs.cache-save-always }}
+        save-always: ${{ inputs.save-always }}
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.version }}-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.cache-version }}-
+          ${{ runner.os }}-${{ runner.arch }}-cache-pip-${{ inputs.version }}-

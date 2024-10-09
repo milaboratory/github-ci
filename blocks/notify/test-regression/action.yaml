@@ -71,6 +71,19 @@ runs:
             echo "${CURRENT_VERSION}"
           fi
 
+    - id: define-version
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OVERRIDE_VERSION: ${{ inputs.override-version }}
+        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_VERSION}" ];then
+            echo "${OVERRIDE_VERSION}"
+          else
+            echo "${CURRENT_VERSION}"
+          fi
+
     - id: json
       uses: milaboratory/github-ci/actions/shell@v4
       env:

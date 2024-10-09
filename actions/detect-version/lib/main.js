@@ -1,11 +1,7 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -57,7 +53,7 @@ function prepareRepository(depth) {
 function genDevVersion(baseVersion, baseRef) {
     return __awaiter(this, void 0, void 0, function* () {
         const currentRefName = process.env.GITHUB_REF_NAME;
-        const sanitizedRefName = utils.sanitizeVersionInput(currentRefName);
+        const sanitizedRefName = milib_1.version.sanitize(currentRefName);
         const count = yield milib_1.git.countCommits(baseRef, 'HEAD');
         return {
             major: baseVersion.major,
@@ -76,8 +72,7 @@ function loadBranchVersions(targetBranch) {
         const runNumber = process.env.GITHUB_RUN_NUMBER;
         const currentSha = yield milib_1.git.resolveRef('HEAD');
         const currentVersionStr = `${runNumber}-${currentSha.substring(0, 8)}`;
-        const sanitizedRefName = utils.sanitizeVersionInput(currentVersionStr);
-        const currentVersion = milib_1.version.parse(sanitizedRefName);
+        const currentVersion = milib_1.version.sanitize(currentVersionStr);
         const isRelease = refType === 'branch' && refName === targetBranch;
         const isBranchHead = yield utils.isBranchHead();
         setOutputs({
@@ -107,8 +102,7 @@ function getSanitizedVersion(tag, knownVersions) {
     return __awaiter(this, void 0, void 0, function* () {
         const originalVersion = knownVersions[tag];
         if (originalVersion && originalVersion.original) {
-            const sanitizedStr = utils.sanitizeVersionInput(originalVersion.original);
-            return milib_1.version.parse(sanitizedStr);
+            return milib_1.version.sanitize(originalVersion.original);
         }
         // Handle the case where version parsing fails or original is missing
         return null;
@@ -242,3 +236,4 @@ function run() {
     });
 }
 run();
+// loadTagVersions(200)
