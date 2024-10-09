@@ -1,11 +1,7 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -32,7 +28,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sortTagsBySemver = exports.sanitizeVersionInput = exports.isLatestMajor = exports.isBranchHead = exports.latestVersionTag = exports.getVersions = void 0;
+exports.sortTagsBySemver = exports.isLatestMajor = exports.isBranchHead = exports.latestVersionTag = exports.getVersions = void 0;
 const milib_1 = require("milib");
 const semver = __importStar(require("semver"));
 /**
@@ -110,15 +106,6 @@ function isLatestMajor(knownVersions, current) {
     return false;
 }
 exports.isLatestMajor = isLatestMajor;
-/**
- Check an input string and replace all characters that
- do not conform to semantic versioning (semver) criteria with the - character
- */
-function sanitizeVersionInput(input) {
-    const regex = /[^0-9A-Za-z.+-]/g;
-    return input.replace(regex, '-');
-}
-exports.sanitizeVersionInput = sanitizeVersionInput;
 /**
  Filter out tags that are not valid semantic versions
  Sort tags in descending order (newest first)
