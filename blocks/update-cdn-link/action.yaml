@@ -31,8 +31,8 @@ inputs:
 
        Example:
         'link/software/mixcr'
-
     required: true
+
   s3-bucket-key:
     description: |
        The name of a zero-byte object.
@@ -41,7 +41,6 @@ inputs:
 
        Example:
         'mixcr-develop.zip'
-
     required: true
 
   s3-region:
@@ -49,11 +48,26 @@ inputs:
       AWS region with target S3 bucket
     required: false
     default: 'eu-central-1'
+
   s3-bucket:
     description: |
       AWS S3 bucket name
       This bucket must be configurated as an s3 static website.
     required: true
+
+  cache-settings:
+    description: |
+      This is where you specify the caching behavior.
+      For instance, `max-age=3600, must-revalidate`` tells the browser (or other caches)
+      that the object can be cached for 3600 seconds (1 hour), and must be revalidated with
+      the origin server after it has been in the cache for that duration.
+
+      `no-cache`: Forces caches to submit the request to the origin server for validation before releasing a cached copy.
+      `no-store`: The cache should not store anything about the client request or server response.
+      `public`: Marks authenticated responses as cacheable.
+      `private`: The response is intended for a single user and must not be stored by a shared cache.
+    required: false
+    default: 'no-cache'
 
 
 runs:
@@ -72,4 +86,5 @@ runs:
         run: |
           aws s3api put-object --bucket ${{ inputs.s3-bucket }} \
           --key ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }} \
-          --website-redirect-location ${{ inputs.cdn-redirect-link }}
+          --website-redirect-location ${{ inputs.cdn-redirect-link }} \
+          --cache-control ${{ inputs.cache-settings }}
