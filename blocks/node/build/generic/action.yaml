@@ -70,6 +70,11 @@ inputs:
     required: false
     default: 'false'
 
+  npmrc-config:
+    description: |
+      Generates a .npmrc file based on provided configuration.
+    required: false
+
 runs:
   using: "composite"
 
@@ -84,6 +89,7 @@ runs:
         registry-url: ${{ inputs.registry-url }}
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
+        npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Update npm to latest available version
       uses: milaboratory/github-ci/actions/shell@v4
