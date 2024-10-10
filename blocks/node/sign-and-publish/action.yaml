@@ -23,11 +23,17 @@ inputs:
   #
   # NodeJS Control
   #
-  release-script-name:
+  publish-script-name:
     description: |
-      Specify the name of the release script to be executed via npm.
+      Run 'npm run <script>' instead of 'npm publish'
     required: false
-    default: 'release'
+    default: ""
+
+  publish-to-public:
+    description: |
+      Whether or not the npm package should be published as public.
+    required: false
+    default: 'false'
 
   execution-path:
     description: |
@@ -233,6 +239,8 @@ runs:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
+        PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
+        PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
         GCP_KMS_KEY_VERSION: ${{ inputs.gcloud-kms-key-version }}
         GCP_KMS_KEY_NAME: ${{ inputs.gcloud-kms-key-name }}
         GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
@@ -241,4 +249,12 @@ runs:
       with:
         run: |
           cd "${WORKING_DIRECTORY}"
-          npm run ${{ inputs.release-script-name }}
+          if [ -z "${PUBLISH_SCRIPT}" ]; then
+            if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+              npm publish --access public
+            else
+              npm publish
+            fi
+          else
+              npm run "${PUBLISH_SCRIPT}"
+          fi

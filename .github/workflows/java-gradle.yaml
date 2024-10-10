@@ -970,6 +970,20 @@ on:
         type: string
         required: false
         default: 'develop'
+
+      publish-script-name:
+        description: |
+          Run 'npm run <script>' instead of 'npm publish'
+        type: string
+        required: false
+        default: ""
+
+      publish-to-public:
+        description: |
+          Whether or not the npm package should be published as public.
+        type: boolean
+        required: false
+        default: false
       #
       # Notifications
       #
@@ -2106,6 +2120,8 @@ jobs:
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
           scope: ${{ inputs.node-scope }}
           always-auth: ${{ inputs.node-always-auth }}
+          publish-script-name: ${{ inputs.publish-script-name }}
+          publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
