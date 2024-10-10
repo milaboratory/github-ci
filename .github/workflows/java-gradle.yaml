@@ -964,7 +964,12 @@ on:
         required: false
         default: 'false'
 
-
+      release-branch-name:
+        description: |
+          Set the release branch name to activate publishing of the npm package for MiXCR.
+        type: string
+        required: false
+        default: 'develop'
       #
       # Notifications
       #
@@ -2088,6 +2093,8 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4
+        if: steps.context.outputs.is-release == 'true'
+          && github.ref_name == inputs.release-branch-name
         with:
           artifact-name: ${{ inputs.product-name-slug }}
           build-version: ${{ steps.context.outputs.current-version }}
@@ -2096,7 +2103,7 @@ jobs:
           node-cache-version: ${{ inputs.node-cache-version }}
           hashfiles-search-path: ${{ inputs.node-hashfiles-search-path }}
           registry-url: ${{ inputs.node-registry-url }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
           scope: ${{ inputs.node-scope }}
           always-auth: ${{ inputs.node-always-auth }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
