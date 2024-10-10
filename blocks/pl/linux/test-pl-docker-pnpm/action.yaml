@@ -193,3 +193,13 @@ runs:
         name: pl-docker-logs
         path: |
           ${{ env.PL_LOG_DIR }}
+
+    - name: Clean Platforma logs
+      if: always() && env.UPLOAD_LOGS == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          rm -rfv "${PL_LOG_DIR})"
