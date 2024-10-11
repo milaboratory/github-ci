@@ -420,7 +420,7 @@ jobs:
         with:
           commit: 'chore: update versions'
           title: 'chore: update versions'
-          publish: pnpm -r publish --access public
+          publish: pnpm -r publish --no-git-checks --access public
 
       - name: Create Release Pull Request and Publish npm package
         if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'false'
@@ -432,7 +432,7 @@ jobs:
         with:
           commit: 'chore: update versions'
           title: 'chore: update versions'
-          publish: pnpm -r publish
+          publish: pnpm -r publish --no-git-checks
 
     outputs:
       # Even constant outputs become initialized only after job start.
