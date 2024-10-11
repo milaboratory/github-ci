@@ -202,4 +202,4 @@ runs:
       with:
         dump-stdout: false
         run: |
-          rm -rfv "${PL_LOG_DIR}"
+          sudo rm -rfv "${PL_LOG_DIR}"
