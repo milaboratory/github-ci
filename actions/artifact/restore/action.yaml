@@ -55,13 +55,10 @@ runs:
         repository: ${{ inputs.repository }}
         run-id: ${{ inputs.run-id }}
 
-    - uses: fawazahmed0/action-debug-vscode@main
-      env:
-        ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
-
     - name: Extract tar
       shell: bash
       env:
+        ARTIFACT_NAME: ${{ inputs.name }}
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
       run: |
-        tar -x -f "${ARCHIVE_NAME}.tar"
+        tar -x -f "${ARTIFACT_NAME}/${ARCHIVE_NAME}.tar"
