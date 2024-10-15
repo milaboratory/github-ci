@@ -69,6 +69,8 @@ runs:
         run-id: ${{ inputs.run-id }}
         path: "artifacts-restore-5b3513f5"
 
+    - uses: fawazahmed0/action-debug-vscode@main
+
     - name: Extract tar
       shell: bash
       env:
