@@ -59,7 +59,6 @@ runs:
     - uses: fawazahmed0/action-debug-vscode@main
       env:
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
-        ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
 
     - name: Extract tar
       shell: bash
