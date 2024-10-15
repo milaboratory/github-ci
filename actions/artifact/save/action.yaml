@@ -71,13 +71,6 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4-beta
-      id: artifact-files
-      with:
-        patterns: ${{ inputs.path }}
-        exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
-        relative: true
-
     - name: Generate archive name
       id: archive-name
       shell: bash
@@ -87,8 +80,20 @@ runs:
         # We need unique archive name here to not overwrite any existing file in workdir.
         # We also need static name to simplify 'restore' action logic.
         # This name is an attempt to meet both criteria.
+        if [ -z "ARTIFACT_NAME" ];
+          echo "::error::Empty 'name' input. Specify artifact name" >&2
+          exit 1
+        fi
+
         archive_name="artifact-$( echo "${ARTIFACT_NAME}" | sha256sum | awk '{print $1}' )"
         echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
+
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+      id: artifact-files
+      with:
+        patterns: ${{ inputs.path }}
+        exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
+        relative: true
 
     - name: Create tar
       shell: bash
