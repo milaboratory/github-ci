@@ -77,15 +77,15 @@ runs:
       env:
         ARTIFACT_NAME: ${{ inputs.name }}
       run: |
-        # We need unique archive name here to not overwrite any existing file in workdir.
-        # We also need static name to simplify 'restore' action logic.
-        # This name is an attempt to meet both criteria.
         if [ -z "ARTIFACT_NAME" ]; then
-          echo "::error::Empty 'name' input. Specify artifact name" >&2
+          echo "::error::Empty 'name' input. Specify artifact name." >&2
           exit 1
         fi
 
-        archive_name="artifact-$( echo "${ARTIFACT_NAME}" | sha256sum | awk '{print $1}' )"
+        # We need unique archive name here to not overwrite any existing file in workdir.
+        # We also need static name to simplify 'restore' action logic.
+        # This name is an attempt to meet both criteria.
+        archive_name="artifact-5b3513f5"
         echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
 
     - uses: milaboratory/github-ci/actions/files/list@v4-beta

@@ -9,7 +9,14 @@ inputs:
   name:
     description: |
       Name of the artifact to download.
-    required: true
+      Optional. When empty, causes all artifacts to be downloaded.
+    required: false
+
+  pattern:
+    description: |
+      Pattern for artifacts to download.
+      Optional. Causes action to restore several artifacts, selected by their names.
+    required: false
 
   github-token:
     description: |
@@ -50,15 +57,17 @@ runs:
           exit 1
         fi
 
-        archive_name="artifact-$( echo "${ARTIFACT_NAME}" | sha256sum | awk '{print $1}' )"
+        archive_name="artifact-5b3513f5"
         echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
 
     - uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.name }}
+        pattern: ${{ inputs.pattern }}
         github-token: ${{ inputs.github-token }}
         repository: ${{ inputs.repository }}
         run-id: ${{ inputs.run-id }}
+        path: "artifacts-restore-5b3513f5"
 
     - name: Extract tar
       shell: bash
@@ -66,4 +75,10 @@ runs:
         ARTIFACT_NAME: ${{ inputs.name }}
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
       run: |
-        tar -x -f "${ARCHIVE_NAME}.tar"
+        find \
+          "./artifacts-restore-5b3513f5" \
+          -type f \
+          -name "${ARCHIVE_NAME}.tar" |
+          while read -r file; do
+            tar -x -f "${file}"
+          done
