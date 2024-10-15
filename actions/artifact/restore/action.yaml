@@ -86,7 +86,7 @@ runs:
         while read -r file; do
           at_least_one_found="true"
           tar -x -f "${file}"
-        done <(
+        done < <(
           find \
             "./artifacts-restore-5b3513f5" \
             -type f \
