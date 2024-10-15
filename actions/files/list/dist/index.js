@@ -27442,14 +27442,19 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
+const path_1 = __importDefault(__nccwpck_require__(1017));
 async function run() {
     try {
         const patterns = core.getInput('patterns', { required: true });
         const followSymbolicLinks = core.getInput('follow-symbolic-links').toUpperCase() !== 'FALSE';
         const excludeHiddenFiles = core.getInput('exclude-hidden-files').toUpperCase() !== 'FALSE';
+        const relative = core.getInput('relative').toUpperCase() !== 'FALSE';
         const globOptions = {
             followSymbolicLinks,
             excludeHiddenFiles,
@@ -27460,7 +27465,12 @@ async function run() {
         // Using async iterator to process paths one by one
         for await (const file of globber.globGenerator()) {
             console.log(`Processing file: ${file}`);
-            matchedPaths.push(file);
+            if (relative) {
+                matchedPaths.push(path_1.default.relative('.', file));
+            }
+            else {
+                matchedPaths.push(file);
+            }
         }
         console.log(`Found paths: ${matchedPaths.join(', ')}`);
         core.setOutput('paths', matchedPaths.join('\n'));

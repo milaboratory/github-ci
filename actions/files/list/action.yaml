@@ -10,6 +10,12 @@ inputs:
       https://github.com/actions/toolkit/tree/main/packages/glob
     required: true
 
+  relative:
+    description: |
+      Return relative paths instead of absolute
+    required: false
+    default: 'false'
+
   follow-symbolic-links:
     description: 'Indicates whether to follow symbolic links.'
     default: 'true'

@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as glob from '@actions/glob';
+import path from 'path';
 
 async function run(): Promise<void> {
   try {
@@ -8,6 +9,8 @@ async function run(): Promise<void> {
       core.getInput('follow-symbolic-links').toUpperCase() !== 'FALSE';
     const excludeHiddenFiles: boolean =
       core.getInput('exclude-hidden-files').toUpperCase() !== 'FALSE';
+    const relative: boolean =
+      core.getInput('relative').toUpperCase() !== 'FALSE';
 
     const globOptions: glob.GlobOptions = {
       followSymbolicLinks,
@@ -22,7 +25,11 @@ async function run(): Promise<void> {
     // Using async iterator to process paths one by one
     for await (const file of globber.globGenerator()) {
       console.log(`Processing file: ${file}`);
-      matchedPaths.push(file);
+      if (relative) {
+        matchedPaths.push(path.relative('.', file));
+      } else {
+        matchedPaths.push(file);
+      }
     }
 
     console.log(`Found paths: ${matchedPaths.join(', ')}`);
