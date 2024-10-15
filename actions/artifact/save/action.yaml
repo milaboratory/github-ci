@@ -76,6 +76,7 @@ runs:
       with:
         patterns: ${{ inputs.path }}
         exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
+        relative: true
 
     - name: Generate archive name
       id: archive-name

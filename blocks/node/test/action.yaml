@@ -5,9 +5,16 @@ description: |
   Install NodeJS specific version, download package, create cache e.t.c
 
 inputs:
+  package-version:
+    description: |
+      Set version number in 'package.json' file to given value.
+      Empty value disables version patching
+    required: false
+    default: ''
+
   test-name:
     description: |
-      Provide a name of a test to run via npm
+      Provide a name of the test script to run via npm
     required: true
 
   build-script-name:
@@ -18,7 +25,7 @@ inputs:
 
   build-before-run-test:
     description: |
-      Run `build-command` before executing `test-name`.
+      Run `build-script-name` before executing `test-name`.
     required: false
     default: 'false'
 
@@ -90,6 +97,12 @@ runs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
 
+      - name: Update npm to latest available version
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            npm i -g npm@latest
+
       - name: Install NodeJS packages with npm
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
@@ -97,6 +110,12 @@ runs:
         with:
           run: |
            npm ci
+
+      - name: Patch package version
+        uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+        if: inputs.package-version != ''
+        with:
+          version: ${{ inputs.package-version }}
 
       - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
         uses: milaboratory/github-ci/actions/shell@v4-beta
