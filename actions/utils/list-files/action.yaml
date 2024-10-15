@@ -9,9 +9,15 @@ inputs:
       More information about globbing options:
       https://github.com/actions/toolkit/tree/main/packages/glob
     required: true
+
   follow-symbolic-links:
     description: 'Indicates whether to follow symbolic links.'
     default: 'true'
+
+  exclude-hidden-files:
+    description: Do not include hidden files into the match, even if they are covered by <patterns>
+    default: 'false'
+
 outputs:
   files:
     description: 'Newline-delimited string of matched file paths.'

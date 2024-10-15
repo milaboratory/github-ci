@@ -27449,17 +27449,21 @@ async function run() {
     try {
         const patterns = core.getInput('patterns', { required: true });
         const followSymbolicLinks = core.getInput('follow-symbolic-links').toUpperCase() !== 'FALSE';
-        const globOptions = { followSymbolicLinks };
+        const excludeHiddenFiles = core.getInput('exclude-hidden-files').toUpperCase() !== 'FALSE';
+        const globOptions = {
+            followSymbolicLinks,
+            excludeHiddenFiles,
+        };
         const globber = await glob.create(patterns, globOptions);
-        // Initialize an array to collect files
-        const files = [];
-        // Using async iterator to process files one by one
+        // Initialize an array to collect paths
+        const matchedPaths = [];
+        // Using async iterator to process paths one by one
         for await (const file of globber.globGenerator()) {
             console.log(`Processing file: ${file}`);
-            files.push(file);
+            matchedPaths.push(file);
         }
-        console.log(`Found files: ${files.join(', ')}`);
-        core.setOutput('files', files.join('\n'));
+        console.log(`Found paths: ${matchedPaths.join(', ')}`);
+        core.setOutput('paths', matchedPaths.join('\n'));
     }
     catch (error) {
         core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred');
