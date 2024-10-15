@@ -40,7 +40,7 @@ inputs:
     required: true
     default: ''
 
-  app-path:
+  binary-path:
     description: |
       File to sign with jsign
     required: false
@@ -106,7 +106,7 @@ runs:
       id: pre-sign
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
-        APP_PATH: ${{ inputs.app-path }}
+        APP_PATH: ${{ inputs.binary-path }}
         GH_WORKSPACE: ${{ github.workspace }}
       shell: pwsh
       run: |
