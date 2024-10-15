@@ -82,17 +82,17 @@ runs:
           exit 1
         fi
 
-        at_least_one_found=false
+        at_least_one_found=""
         find \
           "./artifacts-restore-5b3513f5" \
           -type f \
           -name "${ARCHIVE_NAME}.tar" |
           while read -r file; do
-            at_least_one_found=true
+            at_least_one_found="true"
             tar -x -f "${file}"
           done
 
-        if ! ${at_least_one_found}; then
+        if [ -z "${at_least_one_found}" ]; then
           echo "::error::No artifacts were restored by the action. Only artifacts saved with 'artifact/save' action can be restored by 'artifact/restore'" >&2
           exit 1
         fi
