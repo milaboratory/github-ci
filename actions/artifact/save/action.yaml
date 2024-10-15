@@ -113,8 +113,3 @@ runs:
         include-hidden-files: ${{ inputs.include-hidden-files }}
 
         path: ${{ steps.archive-name.outputs.name }}.tar
-
-    - uses: fawazahmed0/action-debug-vscode@main
-      env:
-        ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
-        ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
