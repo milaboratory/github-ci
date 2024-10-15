@@ -112,3 +112,5 @@ runs:
         include-hidden-files: ${{ inputs.include-hidden-files }}
 
         path: ${{ steps.archive-name.outputs.name }}.tar
+
+    - uses: fawazahmed0/action-debug-vscode@main
