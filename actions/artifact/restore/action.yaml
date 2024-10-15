@@ -45,7 +45,7 @@ runs:
         # We need unique archive name here to not overwrite any existing file in workdir.
         # We also need static name to simplify 'restore' action logic.
         # This name is an attempt to meet both criteria.
-        if [ -z "ARTIFACT_NAME" ];
+        if [ -z "ARTIFACT_NAME" ]; then
           echo "::error::Empty 'name' input. Specify artifact name" >&2
           exit 1
         fi
