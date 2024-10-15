@@ -1,0 +1,80 @@
+name: CodeSign Binary on macOS
+author: "MiLaboratories"
+description: |
+  The CodeSign Binary Action is a GitHub Action designed to automate the process
+  of signing software binaries on macOS using the codesign utility.
+  This action ensures that the binary conforms to Apple's security requirements,
+  making it suitable for distribution or deployment on macOS systems.
+
+  Created based on https://github.com/ddev/signing_tools
+
+inputs:
+  binary-path:
+    description: |
+      List of paths (one per line) to the binary files that need to be signed.
+      Each line may be a globbing pattern
+    required: true
+
+  mac-cert-id:
+    description: |
+      The Apple's certificate id. e.g: '5MXXYYZZFF'
+    required: true
+
+  mac-cert-base64:
+    description: |
+      The base64-encoded p12 signing certificate.
+    required: true
+
+  mac-cert-passwd:
+    description: |
+      The password to decrypt the p12 signing certificate.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+      id: binaries-list
+      with:
+        patterns: ${{ inputs.binary-path }}
+        relative: true
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BINARIES: ${{ steps.binaries-list.outputs.paths }}
+        CERT_ID: ${{ inputs.mac-cert-id }}
+        CERT_BASE64: ${{ inputs.mac-cert-base64 }}
+        CERT_PWD: ${{ inputs.mac-cert-passwd }}
+        CERT_FILE: ${{ format('{0}.p12', inputs.mac-cert-id) }}
+      with:
+        dump-stdout: false
+        run: |
+          function cleanup {
+              if [ ! -z "${default_keychain:-}" ]; then
+                  security default-keychain -s "$default_keychain" && security list-keychains -s "$default_keychain"
+              fi
+              security delete-keychain buildagent || true
+          }
+          trap cleanup EXIT
+
+          echo "${CERT_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/${CERT_FILE}"
+
+          echo "Preparing keychain..."
+          security create-keychain -p "${CERT_PWD}" buildagent
+          security unlock-keychain -p "${CERT_PWD}" buildagent
+          default_keychain=$(security default-keychain | xargs)
+          security list-keychains -s buildagent && security default-keychain -s buildagent
+          security import ${CERT_FILE} -k buildagent -P "${CERT_PWD}" -T /usr/bin/codesign >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k "${CERT_PWD}" buildagent >/dev/null
+
+          while IFS= read -r BINARY_PATH; do
+            echo "Signing ${BINARY_PATH}"
+
+            # In case target is already signed, remove existing sig as it causes failure
+            codesign --remove-signature ${BINARY_PATH} || true
+            codesign --keychain buildagent -s "${CERT_ID}" --timestamp --options runtime ${BINARY_PATH}
+            codesign -vv -d ${BINARY_PATH}
+
+            echo "Signed ${BINARY_PATH} with ${CERT_ID}"
+          done <<< "${BINARIES}"

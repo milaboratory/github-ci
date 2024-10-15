@@ -1,0 +1,64 @@
+name: Notarize Binary on macOS
+author: "MiLaboratories"
+description: |
+  The Notarize Binary Action facilitates the automation of notarizing macOS binaries using Apple's notarytool.
+  This GitHub Action is crucial for developers who distribute their applications outside the Mac App Store,
+  as notarization scans the software for malicious content and certifies its safety, complying with macOS security policies
+
+  Created based on https://github.com/ddev/signing_tools
+
+inputs:
+  binary-path:
+    description: |
+      The path to the file or directory that needs to be notarized.
+    required: true
+
+  mac-api-key-base64:
+    description: |
+      The base64-encoded content of an API key file.
+    required: true
+
+  mac-api-key-id:
+    description: |
+      The Key ID found on App Store Connect for the API key file.
+    required: true
+
+  mac-api-key-issuer-id:
+    description: |
+      The Issuer ID found on App Store Connect for the API key file.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        BINARY_PATH: ${{ inputs.binary-path }}
+        API_KEY_BASE64: ${{ inputs.mac-api-key-base64 }}
+        API_KEY_ID: ${{ inputs.mac-api-key-id }}
+        API_KEY_ISSUER_ID: ${{ inputs.mac-api-key-issuer-id }}
+        API_KEY_FILE: ${{ format('AuthKey_{0}.p8', inputs.mac-api-key-id) }}
+      with:
+        dump-stdout: false
+        run: |
+          echo "${API_KEY_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/${API_KEY_FILE}"
+
+          /usr/bin/ditto -c -k ${BINARY_PATH} ${BINARY_PATH}.zip ;
+
+          # Submit the zipball and wait for response
+          xcrun notarytool submit -f json --key-id "${API_KEY_ID}" --issuer "${API_KEY_ISSUER_ID}" --key "${API_KEY_FILE}" --wait ${BINARY_PATH}.zip 2>&1 | tee /tmp/notarization_info.json
+
+          status=$(jq -r .status </tmp/notarization_info.json)
+          id=$(jq -r .id </tmp/notarization_info.json)
+
+          echo "status=${status} id=${id}"
+
+          xcrun notarytool log --key-id "${API_KEY_ID}" --issuer "${API_KEY_ISSUER_ID}" --key "${API_KEY_FILE}" "${id}" -f json >/tmp/notarization_log.json
+
+          issues=$(jq -r .issues </tmp/notarization_log.json)
+          if [ "$issues" != "null" ]; then
+              printf "There are issues with the notarization (${issues})\n"
+              printf "=== Log output === \n$(cat /tmp/notarization_log.json)\n"
+              exit 7;
+          fi;
