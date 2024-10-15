@@ -71,7 +71,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/utils/list-files@v4-beta
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: artifact-files
       with:
         patterns: ${{ inputs.path }}
