@@ -26,7 +26,7 @@ async function run(): Promise<void> {
     for await (const file of globber.globGenerator()) {
       console.log(`Processing file: ${file}`);
       if (relative) {
-        matchedPaths.push(path.relative('.', file));
+        matchedPaths.push(`.${path.sep}${path.relative('.', file)}`);
       } else {
         matchedPaths.push(file);
       }
