@@ -24,7 +24,6 @@ inputs:
         If github-token is specified, this is the repository that artifacts will be downloaded from.
         Optional. Default is ${{ github.repository }}
       required: false
-      default: ${{ github.repository }}
 
     run-id:
       description: |
@@ -32,7 +31,6 @@ inputs:
         If github-token is specified, this is the run that artifacts will be downloaded from.
         Optional. Default is ${{ github.run_id }}
       required: false
-      default: ${{ github.run_id }}
 
 runs:
   using: "composite"
