@@ -93,7 +93,7 @@ runs:
       shell: bash
       env:
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
-        ARTIFACT_PATHS: ${{ steps.artifact-files.paths }}
+        ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
       run: |
         # We need unique archive name here to not overwrite any existing file in workdir.
         # We also need static name to simplify 'restore' action logic.
@@ -114,3 +114,6 @@ runs:
         path: ${{ steps.archive-name.outputs.name }}.tar
 
     - uses: fawazahmed0/action-debug-vscode@main
+      env:
+        ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
+        ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
