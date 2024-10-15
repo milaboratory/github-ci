@@ -66,4 +66,4 @@ runs:
         ARTIFACT_NAME: ${{ inputs.name }}
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
       run: |
-        tar -x -f "${ARTIFACT_NAME}/${ARCHIVE_NAME}.tar"
+        tar -x -f "${ARCHIVE_NAME}.tar"
