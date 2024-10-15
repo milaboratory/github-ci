@@ -112,4 +112,5 @@ runs:
         overwrite: ${{ inputs.overwrite }}
         include-hidden-files: ${{ inputs.include-hidden-files }}
 
-        path: ${{ steps.archive-name.outputs.name }}.tar
+        path: |
+          ${{ steps.archive-name.outputs.name }}.tar
