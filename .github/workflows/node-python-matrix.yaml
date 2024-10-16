@@ -454,6 +454,7 @@ jobs:
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
         if: runner.os == 'macOS'
+          && inputs.sign-binaries != ''
         with:
           binary-path: ${{ inputs.sign-binaries }}
           mac-cert-id: ${{ secrets.MAC_SIGN_CERT_ID }}
@@ -462,6 +463,7 @@ jobs:
 
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
           binary-path: ${{ inputs.sign-binaries }}
