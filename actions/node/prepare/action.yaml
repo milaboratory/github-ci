@@ -39,6 +39,18 @@ inputs:
     required: false
     default: 'true'
 
+  update-npm:
+    description: |
+      Update npm util to the latest available version
+    required: false
+    default: 'false'
+
+  install-deps:
+    description: |
+      run 'npm ci' as part of preparation process
+    required: false
+    default: 'false'
+
   registry-url:
     description: |
       The npm registry url to set up for auth
@@ -89,3 +101,17 @@ runs:
         cache-version: ${{ inputs.cache-version }}
         cache-save-always: ${{ inputs.cache-save-always }}
         local-cache: 'on'
+
+    - name: Update npm to latest available version
+      if: inputs.update-npm == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          npm i -g npm@latest
+
+    - name: Install dependencies
+      if: inputs.install-deps == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          npm ci
