@@ -454,7 +454,7 @@ jobs:
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
         with:
-          binary-path: ${{ inputs.sign-binaries }}
+          binaries: ${{ inputs.sign-binaries }}
           mac-cert-id: ${{ secrets.MAC_SIGN_CERT_ID }}
           mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
           mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
@@ -607,7 +607,7 @@ jobs:
         uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
         if: runner.os == 'macOS'
         with:
-          binary-path: ${{ inputs.notarize-paths }}
+          paths: ${{ inputs.notarize-paths }}
           mac-api-key-base64: ${{ secrets.MAC_NOTR_API_KEY }}
           mac-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
           mac-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}

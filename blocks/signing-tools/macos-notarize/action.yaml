@@ -1,16 +1,19 @@
 name: Notarize Binary on macOS
 author: "MiLaboratories"
 description: |
-  The Notarize Binary Action facilitates the automation of notarizing macOS binaries using Apple's notarytool.
+  The Notarize Binary Action facilitates the automation of notarizing macOS artifacts using Apple's notarytool.
   This GitHub Action is crucial for developers who distribute their applications outside the Mac App Store,
   as notarization scans the software for malicious content and certifies its safety, complying with macOS security policies
 
   Created based on https://github.com/ddev/signing_tools
 
 inputs:
-  binary-path:
+  paths:
     description: |
-      The path to the file or directory that needs to be notarized.
+      List of paths or path globbing patterns, that should be notarized.
+      Each line is notarized as independent artifact: directories are
+      archived into .zip archive and notarized as whole following apple
+      notarization logic (2 levels nesting)
     required: true
 
   mac-api-key-base64:
@@ -32,9 +35,15 @@ runs:
   using: "composite"
 
   steps:
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+      id: artifacts-list
+      with:
+        patterns: ${{ inputs.paths }}
+        relative: true
+
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        BINARY_PATH: ${{ inputs.binary-path }}
+        ARTIFACTS: ${{ steps.artifacts-list.outputs.paths }}
         API_KEY_BASE64: ${{ inputs.mac-api-key-base64 }}
         API_KEY_ID: ${{ inputs.mac-api-key-id }}
         API_KEY_ISSUER_ID: ${{ inputs.mac-api-key-issuer-id }}
@@ -44,21 +53,37 @@ runs:
         run: |
           echo "${API_KEY_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/${API_KEY_FILE}"
 
-          /usr/bin/ditto -c -k ${BINARY_PATH} ${BINARY_PATH}.zip ;
+          while IFS= read -r ARTIFACT_PATH; do
 
-          # Submit the zipball and wait for response
-          xcrun notarytool submit -f json --key-id "${API_KEY_ID}" --issuer "${API_KEY_ISSUER_ID}" --key "${API_KEY_FILE}" --wait ${BINARY_PATH}.zip 2>&1 | tee /tmp/notarization_info.json
+            /usr/bin/ditto -c -k ${ARTIFACT_PATH} ${ARTIFACT_PATH}.zip ;
 
-          status=$(jq -r .status </tmp/notarization_info.json)
-          id=$(jq -r .id </tmp/notarization_info.json)
+            # Submit the zipball and wait for response
+            xcrun notarytool submit \
+              -f json \
+              --key-id "${API_KEY_ID}" \
+              --issuer "${API_KEY_ISSUER_ID}" \
+              --key "${API_KEY_FILE}" \
+              --wait \
+              ${ARTIFACT_PATH}.zip 2>&1 |
+              tee /tmp/notarization_info.json
 
-          echo "status=${status} id=${id}"
+            status=$(jq -r .status </tmp/notarization_info.json)
+            id=$(jq -r .id </tmp/notarization_info.json)
 
-          xcrun notarytool log --key-id "${API_KEY_ID}" --issuer "${API_KEY_ISSUER_ID}" --key "${API_KEY_FILE}" "${id}" -f json >/tmp/notarization_log.json
+            echo "status=${status} id=${id}"
 
-          issues=$(jq -r .issues </tmp/notarization_log.json)
-          if [ "$issues" != "null" ]; then
-              printf "There are issues with the notarization (${issues})\n"
-              printf "=== Log output === \n$(cat /tmp/notarization_log.json)\n"
-              exit 7;
-          fi;
+            xcrun notarytool log \
+              --key-id "${API_KEY_ID}" \
+              --issuer "${API_KEY_ISSUER_ID}" \
+              --key "${API_KEY_FILE}" \
+              "${id}" \
+              -f json >/tmp/notarization_log.json
+
+            issues=$(jq -r .issues </tmp/notarization_log.json)
+            if [ "$issues" != "null" ]; then
+                printf "There are issues with the notarization (${issues})\n"
+                printf "=== Log output === \n$(cat /tmp/notarization_log.json)\n"
+                exit 7;
+            fi;
+
+          done <<< "${ARTIFACTS}"

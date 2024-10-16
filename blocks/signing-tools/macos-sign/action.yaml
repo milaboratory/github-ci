@@ -9,10 +9,10 @@ description: |
   Created based on https://github.com/ddev/signing_tools
 
 inputs:
-  binary-path:
+  binaries:
     description: |
       List of paths (one per line) to the binary files that need to be signed.
-      Each line may be a globbing pattern
+      Each line may be a globbing pattern, that is expanded into list of lines.
     required: true
 
   mac-cert-id:
@@ -37,8 +37,9 @@ runs:
     - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: binaries-list
       with:
-        patterns: ${{ inputs.binary-path }}
+        patterns: ${{ inputs.binaries }}
         relative: true
+        match-directories: false
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
