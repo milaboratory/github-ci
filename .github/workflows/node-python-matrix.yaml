@@ -589,6 +589,7 @@ jobs:
     if: always()
       && needs.release.result == 'success'
       && needs.release.outputs.package-exists
+      && inputs.notarize-paths != ''
 
     needs:
       - release
