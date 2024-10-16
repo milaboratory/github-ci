@@ -93,6 +93,7 @@ runs:
       with:
         patterns: ${{ inputs.path }}
         exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
+        implicit-descendants: false
         relative: true
 
     - name: Create tar
