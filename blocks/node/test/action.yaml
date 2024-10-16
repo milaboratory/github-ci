@@ -1,5 +1,5 @@
 name: Run a test for a Node project with npm
-author: 'MiLaboratories'
+author: "MiLaboratories"
 description: |
   Prepare agent for running a npm test for the NodeJS project.
   Install NodeJS specific version, download package, create cache e.t.c
@@ -10,7 +10,7 @@ inputs:
       Set version number in 'package.json' file to given value.
       Empty value disables version patching
     required: false
-    default: ''
+    default: ""
 
   test-name:
     description: |
@@ -21,13 +21,13 @@ inputs:
     description: |
       Name of script for application build
     required: true
-    default: 'build'
+    default: "build"
 
   build-before-run-test:
     description: |
       Run `build-script-name` before executing `test-name`.
     required: false
-    default: 'false'
+    default: "false"
 
   node-version:
     description: |
@@ -43,27 +43,27 @@ inputs:
       not find build cache and will have to start from scratch.
 
     required: false
-    default: 'v1'
+    default: "v1"
 
   hashfiles-search-path:
     description: |
       Hashfiles search path for package-lock.json
     required: false
-    default: '**/package-lock.json'
+    default: "**/package-lock.json"
 
   is-electron-application:
     description: |
       If 'true' enables cache for an Electron application,
       if 'false', enables cache for a generic NodeJS application.
     required: false
-    default: 'true'
+    default: "true"
 
   registry-url:
     description: |
       The npm registry url to set up for auth
       and publication of the node js package.
     required: false
-    default: 'https://npm.pkg.github.com'
+    default: "https://npm.pkg.github.com"
 
   scope:
     description: |
@@ -80,7 +80,7 @@ inputs:
     description: |
       Set always-auth in npmrc.
     required: false
-    default: 'false'
+    default: "false"
 
   npmrc-config:
     description: |
@@ -91,66 +91,66 @@ runs:
   using: "composite"
 
   steps:
-      - name: Prepare environment for running a NodeJS application tests
-        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
-          is-electron-application: ${{ inputs.is-electron-application }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npmrc-config: ${{ inputs.npmrc-config }}
+    - name: Prepare environment for running a NodeJS application tests
+      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.cache-version }}
+        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        is-electron-application: ${{ inputs.is-electron-application }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
+        npmrc-config: ${{ inputs.npmrc-config }}
 
-      - name: Update npm to latest available version
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            npm i -g npm@latest
-
-      - name: Install NodeJS packages with npm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-        with:
-          run: |
-           npm ci
-
-      - name: Patch package version
-        uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
-        if: inputs.package-version != ''
-        with:
-          version: ${{ inputs.package-version }}
-
-      - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: inputs.build-before-run-test != 'false'
-          && (runner.os == 'macOS' || runner.os == 'Linux')
-        with:
-          run: |
-            npm run ${{ inputs.build-script-name}}
-
-      - name: Run build - ${{ inputs.build-script-name }} - (Windows)
-        if: inputs.build-before-run-test != 'false'
-          && runner.os == 'Windows'
-        shell: pwsh
+    - name: Update npm to latest available version
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
         run: |
-          npm run ${{ inputs.build-script-name }}
+          npm i -g npm@latest
 
-      - name: Run test - ${{ inputs.test-name }} - (macOS and Linux)
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: runner.os == 'macOS' || runner.os == 'Linux'
-        env:
-          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-        with:
-          run: |
-           npm run ${{ inputs.test-name }} --if-present
+    - name: Install NodeJS packages with npm
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          npm ci
 
-      - name: Run test - ${{ inputs.test-name }} - (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+    - name: Patch package version
+      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      if: inputs.package-version != ''
+      with:
+        version: ${{ inputs.package-version }}
+
+    - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.build-before-run-test != 'false'
+        && (runner.os == 'macOS' || runner.os == 'Linux')
+      with:
+        run: |
+          npm run ${{ inputs.build-script-name}}
+
+    - name: Run build - ${{ inputs.build-script-name }} - (Windows)
+      if: inputs.build-before-run-test != 'false'
+        && runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        npm run ${{ inputs.build-script-name }}
+
+    - name: Run test - ${{ inputs.test-name }} - (macOS and Linux)
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: runner.os == 'macOS' || runner.os == 'Linux'
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
         run: |
           npm run ${{ inputs.test-name }} --if-present
+
+    - name: Run test - ${{ inputs.test-name }} - (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      run: |
+        npm run ${{ inputs.test-name }} --if-present
