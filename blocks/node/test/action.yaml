@@ -93,6 +93,8 @@ runs:
   steps:
     - name: Prepare environment for running a NodeJS application tests
       uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -102,20 +104,8 @@ runs:
         scope: ${{ inputs.scope }}
         always-auth: ${{ inputs.always-auth }}
         npmrc-config: ${{ inputs.npmrc-config }}
-
-    - name: Update npm to latest available version
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      with:
-        run: |
-          npm i -g npm@latest
-
-    - name: Install NodeJS packages with npm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-      with:
-        run: |
-          npm ci
+        update-npm: true
+        install-deps: true
 
     - name: Patch package version
       uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
