@@ -393,6 +393,7 @@ jobs:
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
+
     outputs:
       is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
 
@@ -411,9 +412,6 @@ jobs:
       - init
 
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
-
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -446,7 +444,6 @@ jobs:
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
           interactive-debug: ${{ runner.os == 'Windows' }}
 
-          package-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
           build-before-run-test: true
           test-name: ${{ inputs.test-script-name }}
