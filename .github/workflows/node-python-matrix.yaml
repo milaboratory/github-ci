@@ -402,7 +402,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        includes: ${{ fromJSON(inputs.matrix) }}
+        include: ${{ fromJSON(inputs.matrix) }}
     permissions:
       packages: read
       contents: read
@@ -475,6 +475,11 @@ jobs:
           name: build-artifacts-${{ matrix.os }}-${{ matrix.arch }}
           path: ${{ inputs.build-artifacts }}
 
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: "true"
+
   notify-build:
     name: Notify build and test
     runs-on: ubuntu-latest
@@ -482,9 +487,11 @@ jobs:
     if: always()
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && needs.build-and-test.result != 'cancelled'
+      && needs.build-and-test.outputs.started == 'true'
+
     needs:
       - build-and-test
+
     steps:
       - id: search-tags
         if: always()
@@ -508,9 +515,11 @@ jobs:
     needs:
       - init
       - build-and-test
+
     if: always()
       && needs.init.outputs.is-release
-      && needs.build-and-test.result != 'failure'
+      && needs.build-and-test.result == 'success'
+
     steps:
       - shell: bash
         run: "true"
@@ -518,7 +527,9 @@ jobs:
   notify-release-review:
     name: Notify review required
     runs-on: ubuntu-latest
-    if: always() && needs.can-release.result == 'success'
+    if: always()
+      && needs.can-release.result == 'success'
+
     needs:
       - can-release
     steps:
@@ -569,14 +580,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix-json) }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix) }}
 
     if: always()
       && needs.release.result == 'success'
       && needs.release.outputs.package-exists
 
     needs:
-      - setup-matrix
       - release
 
     steps:
