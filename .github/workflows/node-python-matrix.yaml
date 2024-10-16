@@ -442,7 +442,7 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
-          interactive-debug: ${{ runner.os == 'Windows' }}
+          interactive-debug: ${{ runner.os == 'Linux' }}
 
           build-script-name: ${{ inputs.build-script-name }}
           build-before-run-test: true
