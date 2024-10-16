@@ -97,7 +97,7 @@ on:
         description: |
           Comma-separated list of github agents operating systems.
         type: string
-        required: true
+        required: false
         default: |
           ["ubuntu-latest"]
 
@@ -105,7 +105,7 @@ on:
         description: |
           Comma-separated list of operating systems architectures.
         type: string
-        required: true
+        required: false
         default: |
           ["amd64"]
 
