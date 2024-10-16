@@ -27449,16 +27449,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
 const path_1 = __importDefault(__nccwpck_require__(1017));
+function readInputBool(name) {
+    return core.getInput(name).toUpperCase() === 'TRUE';
+}
 async function run() {
     try {
         const patterns = core.getInput('patterns', { required: true });
-        const followSymbolicLinks = core.getInput('follow-symbolic-links').toUpperCase() !== 'FALSE';
-        const excludeHiddenFiles = core.getInput('exclude-hidden-files').toUpperCase() !== 'FALSE';
-        const relative = core.getInput('relative').toUpperCase() !== 'FALSE';
+        const followSymbolicLinks = readInputBool('follow-symbolic-links');
+        const excludeHiddenFiles = readInputBool('exclude-hidden-files');
+        const relative = readInputBool('relative');
+        const matchDirectories = readInputBool('match-directories');
+        const implicitDescendants = readInputBool('implicit-descendants');
         const globOptions = {
             followSymbolicLinks,
             excludeHiddenFiles,
-            implicitDescendants: false,
+            matchDirectories,
+            implicitDescendants,
         };
         const globber = await glob.create(patterns, globOptions);
         // Initialize an array to collect paths

@@ -2,20 +2,24 @@ import * as core from '@actions/core';
 import * as glob from '@actions/glob';
 import path from 'path';
 
+function readInputBool(name: string): boolean {
+  return core.getInput(name).toUpperCase() === 'TRUE';
+}
+
 async function run(): Promise<void> {
   try {
     const patterns: string = core.getInput('patterns', { required: true });
-    const followSymbolicLinks: boolean =
-      core.getInput('follow-symbolic-links').toUpperCase() !== 'FALSE';
-    const excludeHiddenFiles: boolean =
-      core.getInput('exclude-hidden-files').toUpperCase() !== 'FALSE';
-    const relative: boolean =
-      core.getInput('relative').toUpperCase() !== 'FALSE';
+    const followSymbolicLinks: boolean = readInputBool('follow-symbolic-links');
+    const excludeHiddenFiles: boolean = readInputBool('exclude-hidden-files');
+    const relative: boolean = readInputBool('relative');
+    const matchDirectories: boolean = readInputBool('match-directories');
+    const implicitDescendants: boolean = readInputBool('implicit-descendants');
 
     const globOptions: glob.GlobOptions = {
       followSymbolicLinks,
       excludeHiddenFiles,
-      implicitDescendants: false,
+      matchDirectories,
+      implicitDescendants,
     };
 
     const globber = await glob.create(patterns, globOptions);
