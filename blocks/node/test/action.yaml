@@ -87,6 +87,12 @@ inputs:
       Generates a .npmrc file based on provided configuration.
     required: false
 
+  interactive-debug:
+    description: |
+      Break execution and start interactive debugging session with server VSCode right on agent
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
@@ -112,6 +118,9 @@ runs:
       if: inputs.package-version != ''
       with:
         version: ${{ inputs.package-version }}
+
+    - uses: fawazahmed0/action-debug-vscode@main
+      if: inputs.interactive-debug == 'true'
 
     - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
       uses: milaboratory/github-ci/actions/shell@v4-beta

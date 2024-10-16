@@ -444,6 +444,7 @@ jobs:
           scope: ${{ inputs.scope }}
           always-auth: ${{ inputs.always-auth }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          interactive-debug: ${{ runner.os == 'Windows' }}
 
           package-version: ${{ steps.context.outputs.current-version }}
           build-script-name: ${{ inputs.build-script-name }}
