@@ -15,6 +15,7 @@ async function run(): Promise<void> {
     const globOptions: glob.GlobOptions = {
       followSymbolicLinks,
       excludeHiddenFiles,
+      implicitDescendants: false,
     };
 
     const globber = await glob.create(patterns, globOptions);

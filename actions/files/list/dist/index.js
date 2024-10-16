@@ -27458,6 +27458,7 @@ async function run() {
         const globOptions = {
             followSymbolicLinks,
             excludeHiddenFiles,
+            implicitDescendants: false,
         };
         const globber = await glob.create(patterns, globOptions);
         // Initialize an array to collect paths
