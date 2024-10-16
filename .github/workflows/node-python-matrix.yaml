@@ -83,6 +83,13 @@ on:
         required: false
         default: "v1"
 
+      cache-paths:
+        description: |
+          Additional paths to be cached after build
+        type: string
+        required: false
+        default: ""
+
       #
       # Matrix control
       #
@@ -164,6 +171,12 @@ on:
         required: false
         default: "false"
 
+      npmrc-config:
+        description: |
+          Generates a .npmrc file based on provided configuration.
+        type: string
+        required: false
+
       #
       # Codesign control
       #
@@ -240,7 +253,7 @@ on:
           Version of KMS key.
         type: string
         required: false
-        default: '1'
+        default: "1"
 
       gcp-kms-digest-algorithm:
         description: |
@@ -249,7 +262,6 @@ on:
         type: string
         required: false
         default: "sha256"
-
 
       #
       # Notifications
@@ -382,7 +394,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
     outputs:
-      is-release: ${{ steps.context.outputs.is-release }}
+      is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
 
   setup-matrix:
     name: :setup-matrix
@@ -453,6 +465,13 @@ jobs:
           python-version: ${{ inputs.python-version }}
           cache-version: ${{ inputs.cache-version }}
 
+      - name: Cache additional paths
+        uses: actions/cache@v4
+        if: inputs.cache-paths != ''
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
+
       - uses: milaboratory/github-ci/blocks/node/test@v4-beta
         with:
           node-version: ${{ inputs.node-version }}
@@ -467,6 +486,7 @@ jobs:
           build-script-name: ${{ inputs.build-script-name }}
           build-before-run-test: true
           test-name: ${{ inputs.test-script-name }}
+          npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
@@ -526,7 +546,7 @@ jobs:
       - init
       - build-and-test
     if: always()
-      && fromJSON(needs.init.outputs.is-release)
+      && needs.init.outputs.is-release
       && needs.build-and-test.result != 'failure'
     steps:
       - shell: bash
@@ -558,12 +578,27 @@ jobs:
     environment: release
 
     steps:
-      - shell: bash
-        run: "true"
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - id: npm-pkg-status
+        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
+        with:
+          package-json-path: "${{ github.workspace }}/package.json"
+          registry-url: ${{ inputs.registry-url }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
+      package-exists: ${{ steps.npm-pkg-status.outputs.exist != '0' }}
+      package-version: ${{ steps.npm-pkg-status.outputs.pkg-version }}
       started: "true"
 
   notarize:
@@ -575,6 +610,7 @@ jobs:
 
     if: always()
       && needs.release.result == 'success'
+      && needs.release.outputs.package-exists
 
     needs:
       - setup-matrix
@@ -607,8 +643,11 @@ jobs:
 
     if: always()
       && needs.release.result == 'success'
+      && needs.release.outputs.package-exists
+      && needs.init.outputs.is-release
 
     needs:
+      - init
       - release
 
     permissions:
@@ -617,9 +656,6 @@ jobs:
       contents: read
 
     steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
-
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -628,6 +664,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: false
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+          update-npm: true
+          install-deps: true
 
       - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
         with:
@@ -639,30 +688,10 @@ jobs:
         if: inputs.build-artifacts != ''
         with:
           pattern: build-artifacts-*
-      
-      - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
-
-            ghwa_set_output npm-pkg-name "${NPM_PKG_NAME}"
-            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-
-      - id: npm-pkg-status
-        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
-        with:
-          npm-pkg-name: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-name }}
-          npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
-          registry-url: ${{ inputs.registry-url }}
-          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         if: inputs.aws-login-enable
-          && steps.npm-pkg-status.outputs.exist == '0'
-          && steps.context.outputs.is-release == 'true'
         with:
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
           aws-region: ${{ secrets.AWS_ASSUME_REGION }}
@@ -670,8 +699,6 @@ jobs:
       - name: Configure GCP credentials
         uses: google-github-actions/auth@v2
         if: inputs.gcp-login-enable
-          && steps.npm-pkg-status.outputs.exist == '0'
-          && steps.context.outputs.is-release == 'true'
         with:
           workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
@@ -680,8 +707,6 @@ jobs:
       - name: Set up GCloud SDK
         uses: google-github-actions/setup-gcloud@v2
         if: inputs.gcp-login-enable
-          && steps.npm-pkg-status.outputs.exist == '0'
-          && steps.context.outputs.is-release == 'true'
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
@@ -690,8 +715,6 @@ jobs:
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - name: Publish npm package
-        if: steps.npm-pkg-status.outputs.exist == '0'
-          && steps.context.outputs.is-release == 'true'
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -716,11 +739,9 @@ jobs:
             fi
 
       - name: Create release with tag
-        if: steps.npm-pkg-status.outputs.exist == '0'
-          && steps.context.outputs.is-release == 'true'
         uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
         env:
-          NPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+          NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
@@ -732,7 +753,6 @@ jobs:
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
-      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       started: "true"
 
   notify-release:
@@ -755,7 +775,7 @@ jobs:
 
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
-          NPM_PKG_VERSION: ${{ needs.publish-to-npm.outputs.npm-pkg-version }}
+          NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
