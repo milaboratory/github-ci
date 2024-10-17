@@ -87,11 +87,18 @@ runs:
       run: |
         choco install jsign --version "${{ env.JSIGN_VERSION }}"
 
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+      id: binaries-list
+      with:
+        patterns: ${{ inputs.binaries }}
+        relative: true
+        match-directories: false
+
     - name: Prepare for siging
       id: pre-sign
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
-        APP_PATH: ${{ inputs.binary-path }}
+        BINARIES: ${{ steps.binaries-list.outputs.paths }}
         GH_WORKSPACE: ${{ github.workspace }}
       shell: pwsh
       run: |
@@ -99,33 +106,49 @@ runs:
         $DECODED_CODE_SIGN_CHAIN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ env.CODE_SIGN_CHAIN }}"))
         $DECODED_CODE_SIGN_CHAIN | Out-File -FilePath "$CODE_SIGN_CHAIN_PEM"
 
-        $FILE_PARENT_PATH = Split-Path -Path "${{ env.APP_PATH }}"
-        $FILE_RESOLVED_NAME = Split-Path -Path "${{ env.APP_PATH }}" -Leaf -Resolve
-        $FILE_RESOLVED_NAME_SANITIZED = $FILE_RESOLVED_NAME –replace “ “,”-”
+        $SANITIZED_FILE_PATHS = @()
 
-        if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
-          Rename-Item -Path "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "${{ env.GH_WORKSPACE }}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
-          $FILE_NAME = $FILE_RESOLVED_NAME_SANITIZED
-        } else {
-          $FILE_NAME = $FILE_RESOLVED_NAME
+        foreach ($FILE_PATH in $env:BINARIES -split "`n") {
+            $FILE_PATH = $FILE_PATH.Trim()
+
+            if (-not $FILE_PATH) {
+              continue
+            }
+
+            $FILE_PARENT_PATH = Split-Path -Path $FILE_PATH
+            $FILE_RESOLVED_NAME = Split-Path -Path $FILE_PATH -Leaf -Resolve
+            $FILE_RESOLVED_NAME_SANITIZED = $FILE_RESOLVED_NAME -replace " ", "-"
+
+            if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
+                Rename-Item -Path "${env:GH_WORKSPACE}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "${env:GH_WORKSPACE}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
+            }
+
+            $SANITIZED_FILE_PATHS += "$FILE_PARENT_PATH/$FILE_RESOLVED_NAME_SANITIZED"
         }
 
+        $SANITIZED_FILE_PATHS_STRING = $SANITIZED_FILE_PATHS -join "%0A" # %0A is interpreted as '\n' by GITHUB_OUTPUT
+
         echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
-        echo "file-parent-path=$FILE_PARENT_PATH" >> $env:GITHUB_OUTPUT
-        echo "file-name=$FILE_NAME" >> $env:GITHUB_OUTPUT
+        echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
 
     - name: Sign app with jsign
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
+        BINARIES: ${{ steps.pre-sign.outputs.binaries }}
+        CERT_FILE: ${{ steps.pre-sign.outputs.code-sign-chain-pem }}
       shell: pwsh
       run: |
-        jsign --storetype "${{ inputs.store-type }}" `
-          --storepass "${{ inputs.access-token }}" `
-          --keystore "${{ inputs.kms-keyring }}" `
-          --alias "${{ inputs.kms-keyname }}" `
-          --certfile "${{ steps.pre-sign.outputs.code-sign-chain-pem }}" `
-          --tsmode "${{ inputs.timestamping-mode }}" `
-          --tsaurl "${{ inputs.timestamping-url }}" `
-          "${{ steps.pre-sign.outputs.file-parent-path }}/${{ steps.pre-sign.outputs.file-name }}"
+        foreach ($BIN_PATH in $env:BINARIES -split "`n") {
+          echo "Signing $BIN_PATH..."
+
+          jsign --storetype "${{ inputs.store-type }}" `
+            --storepass "${{ inputs.access-token }}" `
+            --keystore "${{ inputs.kms-keyring }}" `
+            --alias "${{ inputs.kms-keyname }}" `
+            --certfile "$env:CERT_FILE" `
+            --tsmode "${{ inputs.timestamping-mode }}" `
+            --tsaurl "${{ inputs.timestamping-url }}" `
+            "$BIN_PATH"
+        }
 
 
