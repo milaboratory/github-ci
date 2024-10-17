@@ -111,5 +111,6 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       if: runner.os == 'macOS' || runner.os == 'Linux'
       with:
+        dump-stdout: false
         run: |
           npm run ${{ inputs.build-script-name }}

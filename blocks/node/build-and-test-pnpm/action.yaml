@@ -94,6 +94,7 @@ runs:
     - name: Install NodeJS packages with pnpm
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
+        dump-stdout: false
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
@@ -103,6 +104,7 @@ runs:
         PNPM_R: ${{ inputs.pnpm-recursive-build }}
         PNPM_ARGS: ${{ inputs.pnpm-build-args }}
       with:
+        dump-stdout: false
         run: |
           if [ "${PNPM_R}" == "true" ];then
             pnpm run -r ${{ inputs.build-script-name }}
@@ -124,6 +126,7 @@ runs:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
       with:
+        dump-stdout: false
         run: |
           if [ "${PNPM_R}" == "true" ];then
             pnpm run -r ${{ inputs.test-script-name }}

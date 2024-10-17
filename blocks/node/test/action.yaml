@@ -127,6 +127,7 @@ runs:
       if: inputs.build-before-run-test != 'false'
         && (runner.os == 'macOS' || runner.os == 'Linux')
       with:
+        dump-stdout: false
         run: |
           npm run ${{ inputs.build-script-name}}
 
@@ -143,6 +144,7 @@ runs:
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
+        dump-stdout: false
         run: |
           npm run ${{ inputs.test-name }} --if-present
 
