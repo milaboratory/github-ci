@@ -40,6 +40,7 @@ async function run(): Promise<void> {
     console.log(`Found paths: ${matchedPaths.join(', ')}`);
 
     core.setOutput('paths', matchedPaths.join('\n'));
+    core.setOutput('has-matches', matchedPaths.length > 0);
   } catch (error) {
     core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred');
   }
