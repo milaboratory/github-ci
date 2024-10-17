@@ -26,9 +26,9 @@ inputs:
         warn: Output a warning but do not fail the action
         error: Fail the action with an error message
         ignore: Do not output any warnings or errors, the action does not fail
-      Optional. Default is 'warn'
+      Optional. Default is 'error'
     required: false
-    default: "warn"
+    default: "error"
 
   retention-days:
     description: |
@@ -99,7 +99,7 @@ runs:
       with:
         patterns: ${{ inputs.path }}
         exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
-        implicit-descendants: false
+        implicit-descendants: true
         relative: true
 
     - name: Create tar
@@ -107,11 +107,13 @@ runs:
       env:
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
         ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
+        ARCHIVE_IS_EMPTY: ${{ steps.artifact-files.outputs.is-empty }}
         RUNNER_OS: ${{ runner.os }}
       run: |
-        # We need unique archive name here to not overwrite any existing file in workdir.
-        # We also need static name to simplify 'restore' action logic.
-        # This name is an attempt to meet both criteria.
+        if [ "${ARCHIVE_IS_EMPTY}" == "true" ]; then
+          // do not create archive to let actions/upload-artifact decide how to react on 'nothing found' case
+          return
+        fi
 
         if [ "${RUNNER_OS}" == "Windows" ]; then
           ARTIFACT_PATHS="${ARTIFACT_PATHS//\\/\\\\}" # escape windows delimiters to not confuse tar
