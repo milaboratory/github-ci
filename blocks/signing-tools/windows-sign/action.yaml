@@ -99,7 +99,7 @@ runs:
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
       shell: pwsh
       run: |
-        if ($env:BINARIES.Trim() == "") {
+        if ($env:BINARIES.Trim() -eq "") {
           echo "result=false" >> $env:GITHUB_OUTPUT
           Write-Error "::warning::List of binaries to sign for Windows is empty. Nothing matched the globbing patterns from <binaries> input." -ErrorAction SilentlyContinue
         } else {
