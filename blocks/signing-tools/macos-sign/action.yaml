@@ -59,6 +59,11 @@ runs:
           }
           trap cleanup EXIT
 
+          if [-z "${BINARIES}" ]; then
+            ghwa_error "List of binaries to sign is empty. Nothing matched the globbing patterns from <binaries> input."
+            exit 1
+          fi
+
           echo "${CERT_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/${CERT_FILE}"
 
           echo "Preparing keychain..."
