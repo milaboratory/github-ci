@@ -67,6 +67,12 @@ inputs:
     required: false
     default: "false"
 
+  interactive-debug:
+    description: |
+      Break execution and start interactive debugging session with server VSCode right on agent
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
@@ -111,6 +117,9 @@ runs:
         cat "${ARCHIVE_NAME}.files"
 
         tar -T "${ARCHIVE_NAME}.files" -n -c -f "${ARCHIVE_NAME}.tar"
+
+    - uses: fawazahmed0/action-debug-vscode@main
+      if: inputs.interactive-debug == 'true'
 
     - uses: actions/upload-artifact@v4
       with:

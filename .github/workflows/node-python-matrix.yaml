@@ -503,6 +503,7 @@ jobs:
         with:
           name: build-artifacts-${{ matrix.os }}-${{ matrix.arch }}
           path: ${{ inputs.build-artifacts }}
+          interactive-debug: ${{ runner.os == 'macOS' }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
