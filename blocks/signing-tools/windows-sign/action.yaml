@@ -83,19 +83,6 @@ runs:
   using: "composite"
 
   steps:
-    - name: Install Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: ${{ inputs.java-distribution }}
-        java-version: ${{ inputs.java-version }}
-
-    - name: Install ebourg/jsign
-      env:
-        JSIGN_VERSION: ${{ inputs.jsign-version }}
-      shell: pwsh
-      run: |
-        choco install jsign --version "${{ env.JSIGN_VERSION }}"
-
     - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: binaries-list
       with:
@@ -106,7 +93,7 @@ runs:
     # - uses: fawazahmed0/action-debug-vscode@main
     #   if: inputs.interactive-debug == 'true'
 
-    - name: Check we have files to sign
+    - name: Check there are files to sign
       id: should-sign
       env:
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
@@ -114,10 +101,25 @@ runs:
       run: |
         if ([string]::IsNullOrEmpty($env:VARIABLE_NAME.Trim())) {
           echo "result=false" >> $env:GITHUB_OUTPUT
-          echo "::warning::List of binaries to sign for Windows is empty. Nothing matched the globbing patterns from <binaries> input." >&2
+          Write-Error "::warning::List of binaries to sign for Windows is empty. Nothing matched the globbing patterns from <binaries> input." -ErrorAction SilentlyContinue
         } else {
           echo "result=true" >> $env:GITHUB_OUTPUT
         }
+
+    - name: Install Java
+      if: steps.should-sign.outputs.result == 'true'
+      uses: actions/setup-java@v4
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Install ebourg/jsign
+      if: steps.should-sign.outputs.result == 'true'
+      env:
+        JSIGN_VERSION: ${{ inputs.jsign-version }}
+      shell: pwsh
+      run: |
+        choco install jsign --version "${{ env.JSIGN_VERSION }}"
 
     - name: Prepare for siging
       id: pre-sign
