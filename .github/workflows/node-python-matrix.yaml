@@ -479,8 +479,8 @@ jobs:
           && inputs.sign-binaries != ''
           && inputs.gcp-login-enable
         with:
-          workload_identity_provider: $ {{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: $ {{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
           token_format: "access_token"
 
       - name: CodeSign binary on Windows
