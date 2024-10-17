@@ -45,9 +45,12 @@ inputs:
       Timestamping url, must be from the organization that issued code sign certificate
     required: true
 
-  binary-path:
+  binaries:
     description: |
-      File to sign with jsign
+      Files to sign with jsign. One per line
+      Each path can be a globbing pattern.
+      Only files are matched, implicit-descendants is disabled
+      (use /* or /** pattern ending to match all files inside directory)
     required: false
 
   code-sign-chain:
