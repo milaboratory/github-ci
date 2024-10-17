@@ -106,8 +106,22 @@ runs:
     # - uses: fawazahmed0/action-debug-vscode@main
     #   if: inputs.interactive-debug == 'true'
 
+    - name: Check we have files to sign
+      id: should-sign
+      env:
+        BINARIES: ${{ steps.binaries-list.outputs.paths }}
+      shell: pwsh
+      run: |
+        if ([string]::IsNullOrEmpty($env:VARIABLE_NAME.Trim())) {
+          echo "result=false" >> $env:GITHUB_OUTPUT
+          echo "::warning::List of binaries to sign for Windows is empty. Nothing matched the globbing patterns from <binaries> input." >&2
+        } else {
+          echo "result=true" >> $env:GITHUB_OUTPUT
+        }
+
     - name: Prepare for siging
       id: pre-sign
+      if: steps.should-sign.outputs.result == 'true'
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
@@ -144,6 +158,7 @@ runs:
         echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
 
     - name: Sign app with jsign
+      if: steps.should-sign.outputs.result == 'true'
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.pre-sign.outputs.binaries }}
