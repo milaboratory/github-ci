@@ -37,7 +37,7 @@ async function run(): Promise<void> {
       }
     }
 
-    console.log(`Found paths: ${matchedPaths.join(', ')}`);
+    console.log(`Found paths:\n\t${matchedPaths.join('\n\t')}`);
 
     core.setOutput('paths', matchedPaths.join('\n'));
     core.setOutput('has-matches', matchedPaths.length > 0);

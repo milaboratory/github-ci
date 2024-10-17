@@ -27479,7 +27479,7 @@ async function run() {
                 matchedPaths.push(file);
             }
         }
-        console.log(`Found paths: ${matchedPaths.join(', ')}`);
+        console.log(`Found paths:\n\t${matchedPaths.join('\n\t')}`);
         core.setOutput('paths', matchedPaths.join('\n'));
         core.setOutput('has-matches', matchedPaths.length > 0);
         core.setOutput('is-empty', matchedPaths.length === 0);
