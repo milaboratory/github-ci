@@ -101,10 +101,15 @@ runs:
       env:
         ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
         ARTIFACT_PATHS: ${{ steps.artifact-files.outputs.paths }}
+        RUNNER_OS: ${{ runner.os }}
       run: |
         # We need unique archive name here to not overwrite any existing file in workdir.
         # We also need static name to simplify 'restore' action logic.
         # This name is an attempt to meet both criteria.
+
+        if [ "${RUNNER_OS}" == "Windows" ]; then
+          ARTIFACT_PATHS="${ARTIFACT_PATHS//\\/\\\\}" # escape windows delimiters to not confuse tar
+        fi
 
         echo "${ARTIFACT_PATHS}" > "${ARCHIVE_NAME}.files"
         echo "Paths to be archived:"
