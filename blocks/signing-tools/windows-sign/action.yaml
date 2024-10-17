@@ -28,6 +28,12 @@ inputs:
     required: false
     default: '5.0'
 
+  store-type:
+    description: |
+      type of the store with certificate (the cloud service to use)
+    required: false
+    default: GOOGLECLOUD
+
   timestamping-mode:
     description: |
       Timestamping mode
@@ -38,7 +44,6 @@ inputs:
     description: |
       Timestamping url, must be from the organization that issued code sign certificate
     required: true
-    default: ''
 
   binary-path:
     description: |
@@ -50,32 +55,20 @@ inputs:
       base64-encoded code sign chain pem file for the Windows
     required: false
 
-  #
-  # GCP Control
-  #
-  gcloud-workload-identity-provider:
-    description: |
-      Tha name of the GCP workload identity federation provider
-    required: true
-    default: ''
-
-  gcloud-service-account:
-    description: |
-      The name of the GCP service account
-    required: true
-    default: ''
-
-  gcloud-kms-keyring:
+  kms-keyring:
     description: |
        KMS keyring name in GCP
     required: true
-    default: ''
 
-  gcloud-kms-keyname:
+  kms-keyname:
     description: |
       KMS key name in GCP
     required: true
-    default: ''
+
+  access-token:
+    description: |
+      Access token for certificate store
+    required: true
 
 runs:
   using: "composite"
@@ -86,14 +79,6 @@ runs:
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
-
-    -  name: Configure GCP credentials
-       id: gcp_auth
-       uses: google-github-actions/auth@v2
-       with:
-         workload_identity_provider: ${{ inputs.gcloud-workload-identity-provider }}
-         service_account: ${{ inputs.gcloud-service-account }}
-         token_format: 'access_token'
 
     - name: Install ebourg/jsign
       env:
@@ -134,10 +119,10 @@ runs:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
       shell: pwsh
       run: |
-        jsign --storetype GOOGLECLOUD `
-          --storepass "${{ steps.gcp_auth.outputs.access_token }}" `
-          --keystore "${{ inputs.gcloud-kms-keyring }}" `
-          --alias "${{ inputs.gcloud-kms-keyname }}" `
+        jsign --storetype "${{ inputs.store-type }}" `
+          --storepass "${{ inputs.access-token }}" `
+          --keystore "${{ inputs.kms-keyring }}" `
+          --alias "${{ inputs.kms-keyname }}" `
           --certfile "${{ steps.pre-sign.outputs.code-sign-chain-pem }}" `
           --tsmode "${{ inputs.timestamping-mode }}" `
           --tsaurl "${{ inputs.timestamping-url }}" `
