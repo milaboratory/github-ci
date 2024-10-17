@@ -472,16 +472,16 @@ jobs:
           mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
           mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
 
-      - name: Get GoogleCloud access token for CodeSign on Windows
-        uses: google-github-actions/auth@v2
-        id: gcp-auth
-        if: runner.os == 'Windows'
-          && inputs.sign-binaries != ''
-          && inputs.gcp-login-enable
-        with:
-          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
-          token_format: "access_token"
+      # - name: Get GoogleCloud access token for CodeSign on Windows
+      #   uses: google-github-actions/auth@v2
+      #   id: gcp-auth
+      #   if: runner.os == 'Windows'
+      #     && inputs.sign-binaries != ''
+      #     && inputs.gcp-login-enable
+      #   with:
+      #     workload_identity_provider: $ {{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+      #     service_account: $ {{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+      #     token_format: "access_token"
 
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
@@ -489,12 +489,13 @@ jobs:
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
           binaries: ${{ inputs.sign-binaries }}
-          timestamping-mode: ${{ inputs.gcp-timestamping-mode }}
-          timestamping-url: ${{ secrets.GCP_TIMESTAMPING_URL }}
-          code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
-          kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
-          kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
-          access-token: ${{ steps.gcp-auth.outputs.access_token }}
+          timestamping-mode: "a" # $ {{ inputs.gcp-timestamping-mode }}
+          timestamping-url: "a" # $ {{ secrets.GCP_TIMESTAMPING_URL }}
+          code-sign-chain: "a" # $ {{ secrets.WIN_SIGN_CERT }}
+          kms-keyring: "a" # $ {{ secrets.GCP_KMS_KEYRING }}
+          kms-keyname: "a" # $ {{ secrets.GCP_KMS_KEY_NAME }}
+          access-token: "a" # $ {{ steps.gcp-auth.outputs.access_token }}
+          interactive-debug: true
 
       - name: Saving build artifacts for publish step
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta

@@ -73,6 +73,12 @@ inputs:
       Access token for certificate store
     required: true
 
+  interactive-debug:
+    description: |
+      Break execution and start interactive debugging session with server VSCode right on agent
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
 
@@ -96,6 +102,9 @@ runs:
         patterns: ${{ inputs.binaries }}
         relative: true
         match-directories: false
+
+    - uses: fawazahmed0/action-debug-vscode@main
+      if: inputs.interactive-debug == 'true'
 
     - name: Prepare for siging
       id: pre-sign
