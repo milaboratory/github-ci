@@ -107,6 +107,9 @@ runs:
         # This name is an attempt to meet both criteria.
 
         echo "${ARTIFACT_PATHS}" > "${ARCHIVE_NAME}.files"
+        echo "Paths to be archived:"
+        cat "${ARCHIVE_NAME}.files"
+
         tar -T "${ARCHIVE_NAME}.files" -n -c -f "${ARCHIVE_NAME}.tar"
 
     - uses: actions/upload-artifact@v4
