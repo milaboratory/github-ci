@@ -27449,12 +27449,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
 const path_1 = __importDefault(__nccwpck_require__(1017));
+const fs_1 = __importDefault(__nccwpck_require__(7147));
 function readInputBool(name) {
     return core.getInput(name).toUpperCase() === 'TRUE';
 }
 async function run() {
     try {
         const patterns = core.getInput('patterns', { required: true });
+        const targetFile = core.getInput('target-file', { required: false });
         const followSymbolicLinks = readInputBool('follow-symbolic-links');
         const excludeHiddenFiles = readInputBool('exclude-hidden-files');
         const relative = readInputBool('relative');
@@ -27467,26 +27469,57 @@ async function run() {
             implicitDescendants,
         };
         const globber = await glob.create(patterns, globOptions);
-        // Initialize an array to collect paths
-        const matchedPaths = [];
-        // Using async iterator to process paths one by one
-        for await (const file of globber.globGenerator()) {
-            console.log(`Processing file: ${file}`);
-            if (relative) {
-                matchedPaths.push(`.${path_1.default.sep}${path_1.default.relative('.', file)}`);
-            }
-            else {
-                matchedPaths.push(file);
-            }
+        var lines;
+        if (targetFile !== "") {
+            console.log(`Found paths:\n`);
+            lines = await writeToFile(globber.globGenerator(), targetFile, relative);
+            core.setOutput('paths', '');
+            core.setOutput('file', targetFile);
         }
-        console.log(`Found paths:\n\t${matchedPaths.join('\n\t')}`);
-        core.setOutput('paths', matchedPaths.join('\n'));
-        core.setOutput('has-matches', matchedPaths.length > 0);
-        core.setOutput('is-empty', matchedPaths.length === 0);
+        else {
+            const matchedPaths = await writeToArray(globber.globGenerator(), relative);
+            lines = matchedPaths.length;
+            console.log(`Found paths:\n\t${matchedPaths.join('\n\t')}`);
+            core.setOutput('paths', matchedPaths.join('\n'));
+            core.setOutput('file', '');
+        }
+        core.setOutput('has-matches', lines > 0);
+        core.setOutput('is-empty', lines === 0);
     }
     catch (error) {
         core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred');
     }
+}
+function transformPath(p, relative) {
+    if (relative) {
+        return `.${path_1.default.sep}${path_1.default.relative('.', p)}`;
+    }
+    return p;
+}
+async function writeToFile(items, filePath, relative) {
+    const fileStream = fs_1.default.createWriteStream(filePath, { flags: 'a' });
+    var linesCount = 0;
+    try {
+        for await (const item of items) {
+            const p = transformPath(item, relative);
+            if (!fileStream.write(`${p}\n`)) {
+                await new Promise((resolve) => fileStream.once('drain', resolve));
+            }
+            linesCount++;
+            console.log(`\t${p}`);
+        }
+    }
+    finally {
+        fileStream.end();
+    }
+    return linesCount;
+}
+async function writeToArray(items, relative) {
+    const result = [];
+    for await (const item of items) {
+        result.push(transformPath(item, relative));
+    }
+    return result;
 }
 run();
 

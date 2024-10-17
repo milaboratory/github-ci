@@ -71,7 +71,7 @@ inputs:
     description: |
       Break execution and start interactive debugging session with server VSCode right on agent
     required: false
-    default: 'false'
+    default: "false"
 
 runs:
   using: "composite"

@@ -10,6 +10,14 @@ inputs:
       https://github.com/actions/toolkit/tree/main/packages/glob
     required: true
 
+  target-file:
+    description: |
+      Put the resulting list into file instead of setting the output.
+      Allows to prevent errors on large list sizes, like
+        'The template is not valid. System.InvalidOperationException: Maximum object size exceeded'
+    required: false
+    default: ''
+
   relative:
     description: |
       Return relative paths instead of absolute
