@@ -93,28 +93,15 @@ runs:
     # - uses: fawazahmed0/action-debug-vscode@main
     #   if: inputs.interactive-debug == 'true'
 
-    - name: Check there are files to sign
-      id: should-sign
-      env:
-        BINARIES: ${{ steps.binaries-list.outputs.paths }}
-      shell: pwsh
-      run: |
-        if ($env:BINARIES.Trim() -eq "") {
-          echo "result=false" >> $env:GITHUB_OUTPUT
-          Write-Error "::warning::List of binaries to sign for Windows is empty. Nothing matched the globbing patterns from <binaries> input." -ErrorAction SilentlyContinue
-        } else {
-          echo "result=true" >> $env:GITHUB_OUTPUT
-        }
-
     - name: Install Java
-      if: steps.should-sign.outputs.result == 'true'
+      if: steps.binaries-list.outputs.has-matches == 'true'
       uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
 
     - name: Install ebourg/jsign
-      if: steps.should-sign.outputs.result == 'true'
+      if: steps.binaries-list.outputs.has-matches == 'true'
       env:
         JSIGN_VERSION: ${{ inputs.jsign-version }}
       shell: pwsh
@@ -123,7 +110,7 @@ runs:
 
     - name: Prepare for siging
       id: pre-sign
-      if: steps.should-sign.outputs.result == 'true'
+      if: steps.binaries-list.outputs.has-matches == 'true'
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
@@ -160,7 +147,7 @@ runs:
         echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
 
     - name: Sign app with jsign
-      if: steps.should-sign.outputs.result == 'true'
+      if: steps.binaries-list.outputs.has-matches == 'true'
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.pre-sign.outputs.binaries }}
