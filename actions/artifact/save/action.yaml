@@ -99,7 +99,7 @@ runs:
       with:
         patterns: ${{ inputs.path }}
         exclude-hidden-files: ${{ ! fromJSON(inputs.include-hidden-files) }}
-        implicit-descendants: true
+        implicit-descendants: false
         relative: true
 
     - name: Create tar
@@ -123,7 +123,7 @@ runs:
         echo "Paths to be archived:"
         cat "${ARCHIVE_NAME}.files"
 
-        tar -T "${ARCHIVE_NAME}.files" -n -c -f "${ARCHIVE_NAME}.tar"
+        tar -T "${ARCHIVE_NAME}.files" -c -f "${ARCHIVE_NAME}.tar"
 
     - uses: fawazahmed0/action-debug-vscode@main
       if: inputs.interactive-debug == 'true'
