@@ -396,7 +396,7 @@ jobs:
         with:
           github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci-internal/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         with:
           build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -464,16 +464,6 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
-
-            ghwa_set_output npm-pkg-name "${NPM_PKG_NAME}"
-            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-
       - name: Prepare environment for running Golang
         uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
         with:
@@ -486,7 +476,7 @@ jobs:
         with:
           github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci-internal/blocks/node/test@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/test@v4-beta
         with:
           test-name: ${{ inputs.test-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -500,7 +490,7 @@ jobs:
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
-      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+      npm-pkg-version: ${{ needs.build.outputs.npm-pkg-version }}
       started: 'true'
 
   notify-test:
@@ -623,21 +613,10 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
-
-            ghwa_set_output npm-pkg-name "${NPM_PKG_NAME}"
-            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-
       - id: npm-pkg-status
         uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
         with:
-          npm-pkg-name: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-name }}
-          npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+          package-json-path: "${{ github.workspace }}/package.json"
           registry-url: ${{ inputs.registry-url }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -655,9 +634,9 @@ jobs:
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
-          github-token: ${{ senv.GH_CI_PAT || secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci-internal/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
@@ -727,7 +706,7 @@ jobs:
           && steps.context.outputs.is-release == 'true'
         uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
         env:
-          NPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+          NPM_PKG_VERSION: ${{ steps.npm-pkg-status.outputs.pkg-version }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
@@ -739,7 +718,7 @@ jobs:
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
-      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+      npm-pkg-version: ${{ steps.npm-pkg-status.outputs.pkg-version }}
       started: 'true'
 
   notify-release:
@@ -768,7 +747,7 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
 
           job-status: |
-            ${{ needs.create-release.result }}
+            ${{ needs.release.result }}
             ${{ needs.publish-to-npm.result }}
 
           product-name: ${{ inputs.app-name }}
