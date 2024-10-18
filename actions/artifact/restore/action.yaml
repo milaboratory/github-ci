@@ -1,0 +1,97 @@
+name: Restore artifact, saved with actions/artifact/save
+author: "MiLaboratories"
+description: |
+  Restore the artifact saved with actions/artifact/save. No path transforations are
+  performed: the contents of artifact are restored like the data was initially created
+  on current agent, keeping all permissions and paths (relative to current WD)
+
+inputs:
+  name:
+    description: |
+      Name of the artifact to download.
+      Optional. When empty, causes all artifacts to be downloaded.
+    required: false
+
+  pattern:
+    description: |
+      Pattern for artifacts to download.
+      Optional. Causes action to restore several artifacts, selected by their names.
+    required: false
+
+  github-token:
+    description: |
+      The GitHub token used to authenticate with the GitHub API.
+      This is required when downloading artifacts from a different repository or from a different workflow run.
+      Optional. If unspecified, the action will download artifacts from the current repo and the current workflow run.
+    required: false
+
+  repository:
+    description: |
+      The repository owner and the repository name joined together by "/".
+      If github-token is specified, this is the repository that artifacts will be downloaded from.
+      Optional. Default is {{ github.repository }}
+    required: false
+
+  run-id:
+    description: |
+      The id of the workflow run where the desired download artifact was uploaded from.
+      If github-token is specified, this is the run that artifacts will be downloaded from.
+      Optional. Default is {{ github.run_id }}
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Generate archive name
+      id: archive-name
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.name }}
+      run: |
+        # We need unique archive name here to not overwrite any existing file in workdir.
+        # We also need static name to simplify 'restore' action logic.
+        # This name is an attempt to meet both criteria.
+        if [ -z "ARTIFACT_NAME" ]; then
+          echo "::error::Empty 'name' input. Specify artifact name" >&2
+          exit 1
+        fi
+
+        archive_name="artifact-5b3513f5"
+        echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.name }}
+        pattern: ${{ inputs.pattern }}
+        github-token: ${{ inputs.github-token }}
+        repository: ${{ inputs.repository }}
+        run-id: ${{ inputs.run-id }}
+        path: "artifacts-restore-5b3513f5"
+
+    - name: Extract tar
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.name }}
+        ARCHIVE_NAME: ${{ steps.archive-name.outputs.name }}
+      run: |
+        if ! [ -d "./artifacts-restore-5b3513f5" ]; then
+          echo "::error::No artifacts were restored by the action. Is 'name'/'pattern' input correct?" >&2
+          exit 1
+        fi
+
+        at_least_one_found=""
+        while read -r file; do
+          at_least_one_found="true"
+          tar -x -f "${file}"
+        done < <(
+          find \
+            "./artifacts-restore-5b3513f5" \
+            -type f \
+            -name "${ARCHIVE_NAME}.tar"
+        )
+
+        if [ -z "${at_least_one_found}" ]; then
+          echo "::error::No artifacts were restored by the action. Only artifacts saved with 'artifact/save' action can be restored by 'artifact/restore'" >&2
+          exit 1
+        fi

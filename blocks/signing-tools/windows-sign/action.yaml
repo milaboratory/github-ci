@@ -1,0 +1,170 @@
+name: Sign application on Windows
+author: 'MiLaboratories'
+description: |
+  Sign Windows executable
+
+inputs:
+  #
+  # jsign control
+  #
+  java-version:
+    description: |
+      Version of JAVA to to launch ebourg/jsign.
+    required: false
+    default: '11'
+
+  java-distribution:
+    description: |
+      Java distribution to use.
+      Example: 'temurin', 'zulu', ...
+      See 'https://github.com/actions/setup-java#supported-distributions'
+      for complete list of supported distributions.
+    required: false
+    default: 'temurin'
+
+  jsign-version:
+    description: |
+      Version of jsign
+    required: false
+    default: '5.0'
+
+  store-type:
+    description: |
+      type of the store with certificate (the cloud service to use)
+    required: false
+    default: GOOGLECLOUD
+
+  timestamping-mode:
+    description: |
+      Timestamping mode
+    required: false
+    default: 'RFC3161'
+
+  timestamping-url:
+    description: |
+      Timestamping url, must be from the organization that issued code sign certificate
+    required: true
+
+  binaries:
+    description: |
+      Files to sign with jsign. One per line
+      Each path can be a globbing pattern.
+      Only files are matched, implicit-descendants is disabled
+      (use /* or /** pattern ending to match all files inside directory)
+    required: false
+
+  code-sign-chain:
+    description: |
+      base64-encoded code sign chain pem file for the Windows
+    required: false
+
+  kms-keyring:
+    description: |
+       KMS keyring name in GCP
+    required: true
+
+  kms-keyname:
+    description: |
+      KMS key name in GCP
+    required: true
+
+  access-token:
+    description: |
+      Access token for certificate store
+    required: true
+
+  # interactive-debug:
+  #   description: |
+  #     Break execution and start interactive debugging session with server VSCode right on agent
+  #   required: false
+  #   default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/files/list@v4
+      id: binaries-list
+      with:
+        patterns: ${{ inputs.binaries }}
+        relative: true
+        match-directories: false
+
+    # - uses: fawazahmed0/action-debug-vscode@main
+    #   if: inputs.interactive-debug == 'true'
+
+    - name: Install Java
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      uses: actions/setup-java@v4
+      with:
+        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Install ebourg/jsign
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      env:
+        JSIGN_VERSION: ${{ inputs.jsign-version }}
+      shell: pwsh
+      run: |
+        choco install jsign --version "${{ env.JSIGN_VERSION }}"
+
+    - name: Prepare for siging
+      id: pre-sign
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      env:
+        CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
+        BINARIES: ${{ steps.binaries-list.outputs.paths }}
+        GH_WORKSPACE: ${{ github.workspace }}
+      shell: pwsh
+      run: |
+        $CODE_SIGN_CHAIN_PEM="codesign-chain.pem"
+        $DECODED_CODE_SIGN_CHAIN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ env.CODE_SIGN_CHAIN }}"))
+        $DECODED_CODE_SIGN_CHAIN | Out-File -FilePath "$CODE_SIGN_CHAIN_PEM"
+
+        $SANITIZED_FILE_PATHS = @()
+
+        foreach ($FILE_PATH in $env:BINARIES -split "`n") {
+            $FILE_PATH = $FILE_PATH.Trim()
+
+            if (-not $FILE_PATH) {
+              continue
+            }
+
+            $FILE_PARENT_PATH = Split-Path -Path $FILE_PATH
+            $FILE_RESOLVED_NAME = Split-Path -Path $FILE_PATH -Leaf -Resolve
+            $FILE_RESOLVED_NAME_SANITIZED = $FILE_RESOLVED_NAME -replace " ", "-"
+
+            if ($FILE_RESOLVED_NAME_SANITIZED -ne $FILE_RESOLVED_NAME) {
+                Rename-Item -Path "${env:GH_WORKSPACE}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME" -NewName "${env:GH_WORKSPACE}\$FILE_PARENT_PATH\$FILE_RESOLVED_NAME_SANITIZED"
+            }
+
+            $SANITIZED_FILE_PATHS += "$FILE_PARENT_PATH/$FILE_RESOLVED_NAME_SANITIZED"
+        }
+
+        $SANITIZED_FILE_PATHS_STRING = $SANITIZED_FILE_PATHS -join "%0A" # %0A is interpreted as '\n' by GITHUB_OUTPUT
+
+        echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
+        echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
+
+    - name: Sign app with jsign
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      env:
+        CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
+        BINARIES: ${{ steps.pre-sign.outputs.binaries }}
+        CERT_FILE: ${{ steps.pre-sign.outputs.code-sign-chain-pem }}
+      shell: pwsh
+      run: |
+        foreach ($BIN_PATH in $env:BINARIES -split "`n") {
+          echo "Signing $BIN_PATH..."
+
+          jsign --storetype "${{ inputs.store-type }}" `
+            --storepass "${{ inputs.access-token }}" `
+            --keystore "${{ inputs.kms-keyring }}" `
+            --alias "${{ inputs.kms-keyname }}" `
+            --certfile "$env:CERT_FILE" `
+            --tsmode "${{ inputs.timestamping-mode }}" `
+            --tsaurl "${{ inputs.timestamping-url }}" `
+            "$BIN_PATH"
+        }
+
+

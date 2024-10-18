@@ -1,0 +1,49 @@
+name: 'File Globber'
+description: 'A GitHub Action to perform globbing operations to find files based on patterns.'
+author: 'MiLaboratories'
+
+inputs:
+  patterns:
+    description: |
+      Glob patterns to search for files.
+      More information about globbing options:
+      https://github.com/actions/toolkit/tree/main/packages/glob
+    required: true
+
+  target-file:
+    description: |
+      Put the resulting list into file instead of setting the output.
+      Allows to prevent errors on large list sizes, like
+        'The template is not valid. System.InvalidOperationException: Maximum object size exceeded'
+    required: false
+    default: ''
+
+  relative:
+    description: |
+      Return relative paths instead of absolute
+    required: false
+    default: 'false'
+
+  follow-symbolic-links:
+    description: 'Indicates whether to follow symbolic links.'
+    default: 'true'
+
+  exclude-hidden-files:
+    description: Do not include hidden files into the match, even if they are covered by <patterns>
+    default: 'false'
+
+  match-directories:
+    description: Match directories as well as files. When false, only files would be included into globbing result.
+    default: 'true'
+
+  implicit-descendants:
+    description: When matching a directory, extend the match to all its contents
+    default: 'false'
+
+outputs:
+  files:
+    description: 'Newline-delimited string of matched file paths.'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
