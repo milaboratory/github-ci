@@ -59,7 +59,7 @@ runs:
           }
           trap cleanup EXIT
 
-          if [-z "${BINARIES}" ]; then
+          if [ -z "${BINARIES}" ]; then
             ghwa_warning "List of binaries to sign for Mac OS X is empty. Nothing matched the globbing patterns from <binaries> input."
             exit 0
           fi
