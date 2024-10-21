@@ -116,7 +116,7 @@ runs:
         fi
 
         if [ "${RUNNER_OS}" == "Windows" ]; then
-          ARTIFACT_PATHS="${ARTIFACT_PATHS//\\/\\\\}" # escape windows delimiters to not confuse tar
+          ARTIFACT_PATHS="${ARTIFACT_PATHS//\\//}" # convert windows delimiters to not confuse tar
         fi
 
         echo "${ARTIFACT_PATHS}" > "${ARCHIVE_NAME}.files"
