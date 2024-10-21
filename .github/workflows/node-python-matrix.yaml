@@ -403,7 +403,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: ./actions/context/action.yaml
+        uses: actions/context/action.yaml
 
     outputs:
       is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
