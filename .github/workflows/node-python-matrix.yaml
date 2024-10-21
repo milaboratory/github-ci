@@ -403,7 +403,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: actions/context/action.yaml
+        uses: milaboratory/github-ci/actions/context/@v4-beta
 
     outputs:
       is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
