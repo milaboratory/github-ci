@@ -18,7 +18,7 @@ runs:
   steps:
     - name: Run tests
       id: tests
-      uses: milaboratory/github-ci/actions/shell@${{env.GITHUB_ACTION_REF}}
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         dump-stdout: false
         run: |
