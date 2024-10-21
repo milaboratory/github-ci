@@ -590,6 +590,19 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: false
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+          update-npm: false
+          install-deps: false
+
       - id: npm-pkg-status
         uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
         with:
