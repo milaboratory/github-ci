@@ -171,6 +171,12 @@ on:
         type: string
         required: false
         default: 'false'
+
+      npmrc-config:
+        description: |
+          Generates a .npmrc file based on provided configuration.
+        type: string
+        required: false  
       #
       # Release control
       #
@@ -180,68 +186,34 @@ on:
         type: string
         required: false
         default: ''
+
+      publish-to-public:
+        description: |
+          Whether or not the npm package should be published as public.
+        type: boolean
+        required: false
+        default: false
       #
       # AWS S3 Bucket registry control
       #
-      aws-publish-enable:
+      aws-login-enable:
         description: |
           Enables the creation of AWS credentials during the GitHub Action workflow.
         type: boolean
         required: false
         default: false
 
-      aws-iam-role-to-assume:
-        description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        type: string
-        required: false
-        default: 'arn:aws:iam::511903394050:role/milab-euce1-prod-github-oidc-role-pl-registry'
-
-      aws-region:
-        description: |
-          The AWS region
-        type: string
-        required: false
-        default: 'eu-central-1'
-
-      aws-s3-bucket:
-        description: |
-          S3 bucket name for uploading block
-        type: string
-        required: false
-        default: 'milab-euce1-prod-pkgs-s3-platforma-registry'
-
-      pl-bin-registry-upload-url:
-        description: |
-          Specifies the URL of Platforma's binary registry where the signed package will be uploaded.
-        type: string
-        required: false
-        default: 's3://milab-euce1-prod-pkgs-s3-platforma-registry/pub/?region=eu-central-1'
       #
       # GCP sign control
       #
-      gcloud-kms-sign-enable:
+      gcp-login-enable:
         description: |
-          Set it to 'true' if you want to sign and upload
-          an archive to Platforma's bin registry S3 bucket
+          Enables the creation of Google cloud credentials during the GitHub Action workflow.
         type: boolean
         required: false
         default: false
 
-      gcloud-kms-workload-identity-provider:
-        description: |
-          Tha name of the GCP workload identity federation provider.
-        type: string
-        required: false
-
-      gcloud-kms-service-account:
-        description: |
-          The name of the GCP service account
-        type: string
-        required: false
-
-      gcloud-sdk-version:
+      gcp-sdk-version:
         description: |
           Version or version constraint of the gcloud SDK to install. If
           unspecified, it will accept any installed version of the gcloud SDK. If
@@ -250,41 +222,24 @@ on:
           matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
         type: string
         required: false
-        default: 'latest'
+        default: "latest"
 
-      gcloud-kms-location:
+      # We do not put version into secrets because it has very short value.
+      #  '1' in secrets may cause '1' to be replaced with '*' everywhere in github workflow logs
+      gcp-kms-key-version:
         description: |
-          KMS key and keyring location
+          Version of KMS key.
         type: string
         required: false
-        default: 'europe-west3'
+        default: "1"
 
-      gcloud-kms-digest-algorithm:
+      gcp-kms-digest-algorithm:
         description: |
           The algorithm to digest the input.
           Must be one of: sha256, sha384, sha512.
         type: string
         required: false
-        default: 'sha256'
-
-      gcloud-kms-key-version:
-        description: |
-          Version of KMS key.
-        type: string
-        required: false
-        default: '1'
-
-      gcloud-kms-keyring:
-        description: |
-          KMS keyring name in GCP.
-        type: string
-        required: false
-
-      gcloud-kms-key-name:
-        description: |
-          KMS key name in GCP.
-        type: string
-        required: false
+        default: "sha256"
       #
       # Notifications
       #
@@ -338,6 +293,34 @@ on:
       TELEGRAM_API_TOKEN:
         description: |
           Telegram Bot API authorization token
+        required: false
+      AWS_ASSUME_ROLE:
+        description: |
+          Role to assume in AWS to assume during CI run.
+        required: false
+      AWS_ASSUME_REGION:
+        description: |
+          The AWS region for AWS role assumption
+        required: false
+      GCP_KMS_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+      GCP_KMS_SERVICE_ACCOUNT:
+        description: |
+          The name of the GCP service account
+        required: false
+      GCP_KMS_LOCATION:
+        description: |
+          KMS key and keyring location
+        required: false
+      GCP_KMS_KEYRING:
+        description: |
+          KMS keyring name in Google Cloud Platform.
+        required: false
+      GCP_KMS_KEY_NAME:
+        description: |
+          KMS key name in Google Cloud Platform.
         required: false
 
 jobs:
@@ -482,10 +465,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.node-cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npmrc-config: ${{ inputs.npmrc-config }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
@@ -618,7 +598,7 @@ jobs:
         with:
           package-json-path: "${{ github.workspace }}/package.json"
           registry-url: ${{ inputs.registry-url }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Prepare environment for running Golang
         uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
@@ -644,40 +624,37 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.node-cache-version }}
           is-electron-application: ${{ inputs.is-electron-application }}
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
-        if: inputs.aws-publish-enable
+        if: inputs.aws-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
-          role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
-          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
+          aws-region: ${{ secrets.AWS_ASSUME_REGION }}
 
       - name: Configure GCP credentials
         uses: google-github-actions/auth@v2
-        if: inputs.gcloud-kms-sign-enable
+        if: inputs.gcp-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
-          workload_identity_provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
-          service_account: ${{ inputs.gcloud-kms-service-account }}
-          token_format: 'access_token'
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          token_format: "access_token"
 
       - name: Set up GCloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        if: inputs.gcloud-kms-sign-enable
+        if: inputs.gcp-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
-          version: ${{ inputs.gcloud-sdk-version }}
+          version: ${{ inputs.gcp-sdk-version }}
 
       - name: Add MiLab shell utils to PATH
-        if: inputs.gcloud-kms-sign-enable
+        if: inputs.gcp-login-enable
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - name: Publish npm package
@@ -686,17 +663,22 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
-          PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
-          GCP_KMS_KEY_VERSION: ${{ inputs.gcloud-kms-key-version }}
-          GCP_KMS_KEY_NAME: ${{ inputs.gcloud-kms-key-name }}
-          GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
-          GCP_KMS_LOCATION: ${{ inputs.gcloud-kms-location }}
-          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
+          PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
+          GCP_KMS_KEY_VERSION: ${{ inputs.gcp-kms-key-version }}
+          GCP_KMS_KEY_NAME: ${{ secrets.GCP_KMS_KEY_NAME }}
+          GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
+          GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
+          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
         with:
           run: |
             if [ -z "${PUBLISH_SCRIPT}" ]; then
-              npm publish
+              if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+                npm publish --access public
+              else
+                npm publish
+              fi
             else
               npm run "${PUBLISH_SCRIPT}"
             fi
