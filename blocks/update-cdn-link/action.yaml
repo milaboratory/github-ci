@@ -82,9 +82,15 @@ runs:
 
     - name: Update website-redirect-location metadata in the file
       uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        S3_BUCKET: ${{ inputs.s3-bucket }}
+        S3_KEY: ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
+        REDIRECT_LINK: ${{ inputs.cdn-redirect-link }}
+        CACHE_SETTINGS: ${{ inputs.cache-settings }}
       with:
         run: |
-          aws s3api put-object --bucket ${{ inputs.s3-bucket }} \
-          --key ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }} \
-          --website-redirect-location ${{ inputs.cdn-redirect-link }} \
-          --cache-control ${{ inputs.cache-settings }}
+          aws s3api put-object \
+            --bucket "${S3_BUCKET}" \
+            --key "${S3_KEY}" \
+            --website-redirect-location "${REDIRECT_LINK}" \
+            --cache-control "${CACHE_SETTINGS}"
