@@ -408,6 +408,11 @@ jobs:
         uses: tj-actions/changed-files@v45
         with:
           since_last_remote_commit: true
+          files_ignore: |
+            .npmrc
+
+      - run: |
+          git status      
 
       - name: Get GitHub App User ID
         if: steps.changed-files.outputs.any_changed == 'true'
