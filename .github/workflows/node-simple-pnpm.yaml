@@ -383,7 +383,7 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            changeset version
+            pnpm dlx changeset version
 
       - name: Get changed files
         if: github.event_name == 'push'
