@@ -330,9 +330,17 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
+      - name: Generate Zen Artisan Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.GH_ZEN_APP_ID }}
+          private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - id: npm-pkg-metadata
@@ -393,18 +401,32 @@ jobs:
         with:
           since_last_remote_commit: true
 
+      - name: List all changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            for file in ${ALL_CHANGED_FILES}; do
+              echo "$file was changed"
+            done
+
       - name: Commit changed files to main
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git checkout main
-          git add .
-          git commit -m "Commit changed files to main"
-          git push
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            git config --local user.email "action@github.com"
+            git config --local user.name "Github Actions Zen Artisan of Integration"
+            git checkout main
+            git add .
+            git commit -m "Commit changed files to main"
+            git push
 
       - name: Publish npm package
         if: github.ref_name == 'main'
+          && steps.changed-files.outputs.any_changed == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
