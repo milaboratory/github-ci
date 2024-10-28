@@ -193,3 +193,24 @@ runs:
         name: pl-docker-logs
         path: |
           ${{ env.PL_LOG_DIR }}
+
+    - name: Clean Platforma logs
+      if: always() && env.UPLOAD_LOGS == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          sudo rm -rfv "${PL_LOG_DIR}"
+
+    - name: Restore assets ownership
+      if: always()
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          user-name=$(whoami)
+          sudo chown -R "${user-name}:${user-name}" "${PL_ASSETS_DIR}"
