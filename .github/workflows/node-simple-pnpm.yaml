@@ -365,13 +365,11 @@ jobs:
             ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
 
       - uses: aws-actions/configure-aws-credentials@v4
-        if: 1  >2
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
-        if: 1 > 2
         uses: aws-actions/amazon-ecr-login@v2
         with:
           mask-password: 'true'
@@ -397,9 +395,36 @@ jobs:
           pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
+      - id: test
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        if: inputs.test
+        env:
+          PL_ADDRESS: "http://127.0.0.1:6345"
+          PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
+          PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
+          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
+        with:
+          test-script-name: ${{ inputs.test-script-name }}
+          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
+          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+          pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
+          pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
+          pl-docker-tag: ${{ inputs.pl-docker-tag }}
+          pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
+          pl-log-dir: ${{ inputs.pl-log-dir }}
+          pl-log-level: ${{ inputs.pl-log-level }}
+          pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
+          pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
+
       - name: Run changeset version
         if: github.event_name == 'push'
-
           && github.ref_name == 'main'
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
@@ -423,29 +448,36 @@ jobs:
             echo "$file was changed"
           done
 
-      - run: |
-          git status
-
       - name: Get GitHub App User ID
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: steps.changed-files.outputs.files_changed == 'true'
         id: get-user-id
-        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          run: |
+            USER_ID=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
+            ghwa_set_output user-id "${USER_ID}"
 
       - name: Commit changed files to main
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: steps.changed-files.outputs.files_changed == 'true'
-        run: |
-          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
-          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
-          git checkout main
-          git add .
-          git commit -m "Auto-generated changes"
-          git push
+        env:
+          USER_ID: ${{ fromJSON(steps.get-user-id.outputs.data).user-id }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        with:
+          run: |
+            git config --global user.name "${APP_SLUG}[bot]"
+            git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>""
+            git checkout main
+            git add .
+            git commit -m "Auto-generated changes"
+            git push
 
       - name: Publish npm package
         if: github.ref_name == 'main'
           && steps.changed-files.outputs.files_changed == 'false'
+          && inputs.publish-to-public == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -453,6 +485,18 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm -r publish --no-git-checks
+
+      - name: Publish npm package (public)
+        if: github.ref_name == 'main'
+          && steps.changed-files.outputs.files_changed == 'false'
+          && inputs.publish-to-public == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
+        uses: changesets/action@v1
+        with:
+          publish: pnpm -r publish --no-git-checks --access public
 
     outputs:
       # Even constant outputs become initialized only after job start.
