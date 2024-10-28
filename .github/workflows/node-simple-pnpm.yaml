@@ -230,15 +230,19 @@ on:
         required: false
         default: true
       #
-      # Debug
+      # Changed files
       #
-      interactive-debug:
+      changed-files-list:
         description: |
-          Enable interactive debugging session
+          File/Directory names to check for uncommited changes.
         type: string
-        default: ''
         required: false
-
+      match-gitignore-files:
+        description: |
+          Indicates whether to match files in `.gitignore`'
+        type: boolean
+        required: false
+        default: false
       #
       # Notifications
       #
@@ -395,6 +399,7 @@ jobs:
 
       - name: Run changeset version
         if: github.event_name == 'push'
+
           && github.ref_name == 'main'
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
@@ -405,13 +410,14 @@ jobs:
         if: github.event_name == 'push'
           && github.ref_name == 'main'
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
         with:
-          since_last_remote_commit: true
+          files: ${{ inputs.changed-files-list }}
+          match-gitignore-files: ${{ inputs.match-gitignore-files }}
 
       - name: List all changed files
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
         run: |
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
@@ -421,14 +427,14 @@ jobs:
           git status
 
       - name: Get GitHub App User ID
-        if: steps.changed-files.outputs.any_changed == 'true'
+        if: steps.changed-files.outputs.files_changed == 'true'
         id: get-user-id
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Commit changed files to main
-        if: steps.changed-files.outputs.any_changed == 'true'
+        if: steps.changed-files.outputs.files_changed == 'true'
         run: |
           git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
           git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
@@ -439,7 +445,7 @@ jobs:
 
       - name: Publish npm package
         if: github.ref_name == 'main'
-          && steps.changed-files.outputs.any_changed == 'false'
+          && steps.changed-files.outputs.files_changed == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
