@@ -449,21 +449,17 @@ jobs:
           done
 
       - name: Get GitHub App User ID
-        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: steps.changed-files.outputs.files_changed == 'true'
         id: get-user-id
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        with:
-          run: |
-            USER_ID=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
-            ghwa_set_output user-id "${USER_ID}"
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
       - name: Commit changed files to main
         uses: milaboratory/github-ci/actions/shell@v4-beta
         if: steps.changed-files.outputs.files_changed == 'true'
         env:
-          USER_ID: ${{ fromJSON(steps.get-user-id.outputs.data).user-id }}
+          USER_ID: ${{ steps.get-user-id.outputs.user-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         with:
           run: |
