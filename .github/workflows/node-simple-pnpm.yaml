@@ -464,7 +464,7 @@ jobs:
         with:
           run: |
             git config --global user.name "${APP_SLUG}[bot]"
-            git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>""
+            git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>"
             git checkout main
             git add .
             git commit -m "Auto-generated changes"
