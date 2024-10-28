@@ -212,5 +212,5 @@ runs:
       with:
         dump-stdout: false
         run: |
-          user-name=$(whoami)
-          sudo chown -R "${user-name}:${user-name}" "${PL_ASSETS_DIR}"
+          user_name="$(whoami)"
+          sudo chown -R "${user_name}:${user_name}" "${PL_ASSETS_DIR}"
