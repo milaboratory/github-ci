@@ -1,0 +1,39 @@
+name: TurboRepo Remote Cache Server
+author: 'MiLaboratories'
+description: |
+  Runs a TurboRepo remote cache server based on ducktors/turborepo-remote-cache
+  No Vercel account access tokens needed.
+  See forked action  mike-ainsel/turborepo-remote-cache-gh-action
+
+inputs:
+  storage-provider:
+    description: "Possible values are s3, google-cloud-storage, or azure-blob-storage. Local storage is technically supported but is useless."
+    required: true
+  storage-path:
+    description: "The name of s3, google-cloud-storage, or azure-blob-storage bucket."
+    required: true
+  team-id:
+    description: "Sets the TURBO_TEAM env variable, which controls the directory where cache entries will be saved."
+    required: false
+    default: "ci"
+  host:
+    description: "Used to set the TURBO_API env variable."
+    required: false
+    default: "0.0.0.0"
+  port:
+    description: "Sets the port the server will listen on, and is added to the end of the TURBO_API env variable."
+    required: false
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Cache for Turbo
+      uses: mike-ainsel/turborepo-remote-cache-gh-action@2
+      with:
+        storage-provider: ${{ inputs.storage-provider }}
+        storage-path: ${{ inputs.storage-path }}
+        team-id: ${{ inputs.team-id }}
+        host: ${{ inputs.host }}
+        port: ${{ inputs.port }}

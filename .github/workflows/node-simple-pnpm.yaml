@@ -374,7 +374,10 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
 
       - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
         env:
