@@ -69,10 +69,10 @@ runs:
         files-separator: ${{ inputs.files-separator }}
         separator: ${{ inputs.separator }}
         match-gitignore-files: ${{ inputs.match-gitignore-files }}
-        read-gitignore: {{ inputs.read-gitignore }}
-        fail-if-changed: {{ inputs.fail-if-changed }}
-        fail-if-unchanged: {{ inputs.fail-if-unchanged }}
-        fail-message: {{ inputs.fail-message }}
-        safe_output: {{ inputs.safe_output }}
-        path: {{ inputs.path }}
-        quotepath: {{ inputs.quotepath }}
+        read-gitignore: ${{ inputs.read-gitignore }}
+        fail-if-changed: ${{ inputs.fail-if-changed }}
+        fail-if-unchanged: ${{ inputs.fail-if-unchanged }}
+        fail-message: ${{ inputs.fail-message }}
+        safe_output: ${{ inputs.safe_output }}
+        path: ${{ inputs.path }}
+        quotepath: ${{ inputs.quotepath }}
