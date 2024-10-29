@@ -393,7 +393,7 @@ jobs:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
           run: |
-             pnpm changeset status --since="origin/${BRANCH_NAME}"
+            pnpm changeset status --since="origin/${BRANCH_NAME}"
 
   build-test-publish:
     name: unified (build test publish)
