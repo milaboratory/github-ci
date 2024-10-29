@@ -368,6 +368,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'          
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
