@@ -385,6 +385,7 @@ jobs:
 
       - id: test
         uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
           PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}

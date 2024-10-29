@@ -380,11 +380,11 @@ jobs:
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
-      - name: Install Changesets CLI Tool
+      - name: Install NodeJS packages with pnpm
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
-            pnpm install @changesets/cli
+            pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check for Changesets
         uses: milaboratory/github-ci/actions/shell@v4-beta
