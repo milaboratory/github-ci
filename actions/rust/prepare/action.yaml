@@ -39,12 +39,6 @@ inputs:
     required: false
     default: 'false'
 
-  cache-save-always:
-    description: |
-      Run the post step to save the cache even if another step before fails.
-    required: false
-    default: 'true'
-
 runs:
   using: "composite"
 
@@ -61,4 +55,3 @@ runs:
       with:
         cache-version: ${{ inputs.cache-version }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-        cache-save-always: ${{ inputs.cache-save-always }}

@@ -26,12 +26,6 @@ inputs:
     required: false
     default: '**/pnpm-lock.yaml'
 
-  cache-save-always:
-    description: |
-      Run the post step to save the cache even if another step before fails.
-    required: false
-    default: 'true'
-
   pnpm-version:
     description: |
       Version of pnpm to install
@@ -68,4 +62,3 @@ runs:
       with:
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
-        cache-save-always: ${{ inputs.cache-save-always }}

@@ -243,6 +243,12 @@ on:
         type: boolean
         required: false
         default: false
+      changeset-default-branch:
+        description:
+          Specify the default branch for changesets to run checks against.
+        type: string
+        required: false
+        default: 'main'
       #
       # Notifications
       #
@@ -319,12 +325,82 @@ jobs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
 
-  build-test-publish:
-    name: unified (build test)
+  metadata:
+    name: get run metadata
     runs-on: ubuntu-latest
 
     needs:
       - init
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - id: npm-pkg-metadata
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
+            PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
+            ghwa_set_output pnpm-version "${PNPM_VERSION}"
+
+    outputs:
+      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+      pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
+
+  check:
+    name: check for changesets
+    runs-on: ubuntu-latest
+
+    needs:
+      - metadata
+
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        env:
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - name: Install Changesets CLI Tool
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            pnpm install @changesets/cli
+
+      - name: Check for Changesets
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          BRANCH_NAME: ${{ inputs.changeset-default-branch }}
+        with:
+          run: |
+             changeset status --since="${BRANCH_NAME}"
+
+  build-test-publish:
+    name: unified (build test publish)
+    runs-on: ubuntu-latest
+
+    needs:
+      - check
+      - metadata
 
     permissions:
       id-token: write
@@ -353,16 +429,6 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
-
-      - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
-            PNPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
-            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-            ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -383,7 +449,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
@@ -395,7 +461,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - id: test
@@ -407,14 +473,14 @@ jobs:
           PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
           test-script-name: ${{ inputs.test-script-name }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
-          pnpm-version: ${{ env.PNPM_PKG_VERSION || inputs.pnpm-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
           pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
@@ -500,7 +566,6 @@ jobs:
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
-      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       started: 'true'
 
   notify-release:
@@ -510,6 +575,8 @@ jobs:
     if: always()
     needs:
       - init
+      - metadata
+      - check
       - build-test-publish
 
     steps:
@@ -522,12 +589,13 @@ jobs:
 
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
-          NPM_PKG_VERSION: ${{ needs.build-test-publish.outputs.npm-pkg-version }}
+          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           job-status: |
             ${{ needs.build-test-publish.result }}
+            ${{ needs.check.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}

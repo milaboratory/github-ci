@@ -22,7 +22,7 @@ inputs:
   append:
     description: 'Whether to append to .npmrc instead of overwriting.'
     required: false
-    default: 'true'
+    default: 'false'
 outputs:
   npmrcPath:
     description: 'The path to the created .npmrc file.'

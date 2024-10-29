@@ -26,12 +26,6 @@ inputs:
     required: false
     default: '**/requirements.txt'
 
-  cache-save-always:
-    description: |
-      Run the post step to save the cache even if another step before fails.
-    required: false
-    default: 'true'
-
 runs:
   using: "composite"
 
@@ -46,4 +40,3 @@ runs:
       with:
         version: ${{ inputs.cache-version }}
         hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-        save-always: ${{ inputs.cache-save-always }}
