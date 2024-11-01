@@ -17,6 +17,6 @@ runs:
 
   steps:
     - name: Install R ${{ inputs.r-version }}
-      uses: r-lib/actions/setup-r@d1a6cbabea8dd
+      uses: r-lib/actions/setup-r@d1a6cbabea8dd2f137598ba2a70ae37ac82d7941
       with:
         r-version: '${{ inputs.python-version }}'
