@@ -433,10 +433,10 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+      - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
         with:
           r-version: ${{ inputs.r-version }}
-          cache-version: ${{ inputs.cache-version }}
+          # cache-version: ${{ inputs.cache-version }}
 
       - name: Cache additional paths
         uses: actions/cache@v4
@@ -696,10 +696,10 @@ jobs:
           update-npm: true
           install-deps: true
 
-      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+      - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
         with:
           r-version: ${{ inputs.r-version }}
-          cache-version: ${{ inputs.cache-version }}
+          # cache-version: ${{ inputs.cache-version }}
 
       - uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
         id: build-artifacts

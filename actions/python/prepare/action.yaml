@@ -6,7 +6,7 @@ description: |
 inputs:
   python-version:
     description: |
-      Go version to use.
+      Python version to use.
       Examples: '3.11', '3.12'
     required: true
 
