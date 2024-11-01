@@ -65,7 +65,7 @@ on:
         description: |
           R version to use: i.e. '4.3.1'
         type: string
-        required: true
+        required: false
 
       #
       # Cache control
@@ -434,6 +434,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
+        if: ${{ inputs.r-version != "" }}
         with:
           r-version: ${{ inputs.r-version }}
           # cache-version: ${{ inputs.cache-version }}
@@ -697,6 +698,7 @@ jobs:
           install-deps: true
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
+        if: ${{ inputs.r-version != "" }}
         with:
           r-version: ${{ inputs.r-version }}
           # cache-version: ${{ inputs.cache-version }}
