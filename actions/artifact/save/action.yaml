@@ -112,7 +112,7 @@ runs:
       run: |
         if [ "${ARCHIVE_IS_EMPTY}" == "true" ]; then
           # do not create archive to let actions/upload-artifact decide how to react on 'nothing found' case
-          return
+          exit 0
         fi
 
         if [ "${RUNNER_OS}" == "Windows" ]; then
