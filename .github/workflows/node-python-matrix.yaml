@@ -1,6 +1,4 @@
-# This workflow will build and test pframes component (core, nodejs, wasm)
-
-name: Build and Test PFrames component
+name: Build and Test portable Python executable bundle
 
 on:
   workflow_call:
@@ -566,7 +564,7 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-          message: new version of pframes is ready for release.
+          message: new version of Python 3 is ready for release.
           product-name: ${{ inputs.app-name }}
 
   release:
