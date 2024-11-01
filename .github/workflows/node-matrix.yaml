@@ -68,6 +68,15 @@ on:
         required: false
 
       #
+      # Python settings
+      #
+      python-version:
+        description: |
+          Python version to use: i.e. '3.12.7'
+        type: string
+        required: false
+
+      #
       # Cache control
       #
       cache-version:
@@ -432,6 +441,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
+      
+      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+        if: inputs.python-version != ''
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache-version: ${{ inputs.cache-version }}
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
         if: inputs.r-version != ''
@@ -696,6 +711,12 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
           update-npm: true
           install-deps: true
+
+      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+        if: inputs.python-version != ''
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache-version: ${{ inputs.cache-version }}
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
         if: inputs.r-version != ''
