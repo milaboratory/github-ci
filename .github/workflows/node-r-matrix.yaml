@@ -1,0 +1,808 @@
+name: Build and Test portable R executable bundle
+
+on:
+  workflow_call:
+    inputs:
+      #
+      # Common settings
+      #
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
+      #
+      # Checkout settings
+      #
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ""
+
+      #
+      # Environment settings
+      #
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: "{}"
+
+      #
+      # Node settings
+      #
+      node-version:
+        description: |
+          Node version to use
+        type: string
+        required: true
+
+      #
+      # R settings
+      #
+      r-version:
+        description: |
+          R version to use: i.e. '4.3.1'
+        type: string
+        required: true
+
+      #
+      # Cache control
+      #
+      cache-version:
+        description: |
+          Simple hack, that allows to 'reset' cache for particular job.
+
+          Just change the value of this parameter and the next run will
+          not find build cache and will have to start from scratch.
+
+        type: string
+        required: false
+        default: "v1"
+
+      cache-paths:
+        description: |
+          Additional paths to be cached after build
+        type: string
+        required: false
+        default: ""
+
+      #
+      # Matrix control
+      #
+      matrix:
+        description: |
+          List of agents to run CI jobs: [ {"os": "ubuntu-latest", "arch": "amd64"}, ... ]
+        type: string
+        required: false
+        default: |
+          [ 
+            {"os":"windows-latest", "arch":"amd64"},
+
+            {"os":"ubuntu-22.04",   "arch":"amd64"},
+            {"os":"ubuntu-arm64",   "arch":"arm64"},
+
+            {"os":"macos-13",       "arch":"amd64"},
+            {"os":"macos-14",       "arch":"arm64"}
+          ]
+
+      #
+      # Build control
+      #
+      build-script-name:
+        description: |
+          The name of a build script
+        type: string
+        required: true
+        default: "build"
+
+      build-artifacts:
+        description: |
+          List of paths to collect as build artifacts after 'build' step.
+          Supports globbing (**/my-file.bin, **/*.bin).
+        type: string
+        required: false
+        default: ""
+
+      #
+      # Test control
+      #
+      test:
+        description: |
+          Run unit tests
+        type: boolean
+        required: false
+        default: false
+
+      test-script-name:
+        description: |
+          The name of npm test script
+          e.g. 'test:e2e', 'test:main' etc.
+        type: string
+        required: false
+        default: "test"
+
+      #
+      # NPM registry settings
+      #
+
+      registry-url:
+        description: |
+          The npm registry url to set up for auth
+          and publication of the node js package.
+        type: string
+        required: false
+        default: "https://npm.pkg.github.com"
+
+      scope:
+        description: |
+          Scope for authenticating against npm registries.
+        type: string
+        required: false
+        default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+      always-auth:
+        description: |
+          Set always-auth in npmrc.
+        type: string
+        required: false
+        default: "false"
+
+      npmrc-config:
+        description: |
+          Generates a .npmrc file based on provided configuration.
+        type: string
+        required: false
+
+      #
+      # Codesign control
+      #
+
+      sign-binaries:
+        description: |
+          List of globbing patterns that match files to be signed after build step.
+          When built, the selected files will be signed with methods appropriate for current operating system.
+        type: string
+        required: false
+        default: ""
+
+      notarize-paths:
+        description: |
+          List of globbing patterns that match files and directories to be notarized.
+          Matched files would be notarized for releases.
+        type: string
+        required: false
+        default: ""
+
+      #
+      # Distribution control
+      #
+
+      publish-script-name:
+        description: |
+          Run 'npm run <script>' instead of 'npm publish'
+        type: string
+        required: false
+        default: ""
+
+      publish-to-public:
+        description: |
+          Whether or not the npm package should be published as public.
+        type: boolean
+        required: false
+        default: false
+
+      #
+      # AWS S3 Bucket registry control
+      #
+      aws-login-enable:
+        description: |
+          Enables the creation of AWS credentials during the GitHub Action workflow.
+        type: boolean
+        required: false
+        default: false
+
+      #
+      # GCP sign control
+      #
+      gcp-login-enable:
+        description: |
+          Enables the creation of Google cloud credentials during the GitHub Action workflow.
+        type: boolean
+        required: false
+        default: false
+
+      gcp-sdk-version:
+        description: |
+          Version or version constraint of the gcloud SDK to install. If
+          unspecified, it will accept any installed version of the gcloud SDK. If
+          set to "latest", it will download the latest available SDK. If set to a
+          version constraint, it will download the latest available version that
+          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+        type: string
+        required: false
+        default: "latest"
+
+      gcp-timestamping-mode:
+        description: |
+          Timestamping mode to use when working with certificates and signatures
+          (i.e. when signing the code)
+        type: string
+        required: false
+
+      # We do not put version into secrets because it has very short value.
+      #  '1' in secrets may cause '1' to be replaced with '*' everywhere in github workflow logs
+      gcp-kms-key-version:
+        description: |
+          Version of KMS key.
+        type: string
+        required: false
+        default: "1"
+
+      gcp-kms-digest-algorithm:
+        description: |
+          The algorithm to digest the input.
+          Must be one of: sha256, sha384, sha512.
+        type: string
+        required: false
+        default: "sha256"
+
+      #
+      # Notifications
+      #
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-build:
+        description: |
+          Enable notifications about build status (build ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about build status (both success and failed)
+           - 'failure-only' - send notification about failed builds, don't notify on success
+           - 'success-only' - send notification about success builds, don't notify on failures
+           - 'false' - don't send notifications about build results at all.
+        required: false
+        type: string
+        default: "true"
+
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: "true"
+
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+        required: false
+
+      MAC_SIGN_CERT_ID:
+        description: |
+          The Apple's certificate id. e.g: '5MXXYYZZFF'
+        required: false
+      MAC_SIGN_CERT:
+        description: |
+          base64-encoded p12 signing certificate file for the macOS
+          (more info here https://www.electron.build/code-signing)
+        required: false
+      MAC_SIGN_CERT_PWD:
+        description: |
+          password to decrypt the p12 signing certificate for the macOS
+        required: false
+
+      MAC_NOTR_API_KEY:
+        description: |
+          base64-encoded content of an API key file
+        required: false
+      MAC_NOTR_API_KEY_ID:
+        description: |
+          Key ID found on App Store Connect for the API key file
+        required: false
+      MAC_NOTR_API_KEY_ISSUER_ID:
+        description: |
+          Issuer ID found on App Store Connect for the API key file
+        required: false
+
+      WIN_SIGN_CERT:
+        description: |
+          base64-encoded p12 certificate file for the Windows
+          (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
+        required: false
+      WIN_SIGN_CERT_PWD:
+        description: |
+          password to decrypt the p12 signing certificate for the Windows
+        required: false
+
+      AWS_ASSUME_ROLE:
+        description: |
+          Role to assume in AWS to assume during CI run.
+        required: false
+      AWS_ASSUME_REGION:
+        description: |
+          The AWS region for AWS role assumption
+        required: false
+
+      GCP_TIMESTAMPING_URL:
+        description: |
+          Timestamping URL of certificate issuer.
+        required: false
+      GCP_KMS_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+      GCP_KMS_SERVICE_ACCOUNT:
+        description: |
+          The name of the GCP service account
+        required: false
+      GCP_KMS_LOCATION:
+        description: |
+          KMS key and keyring location
+        required: false
+      GCP_KMS_KEYRING:
+        description: |
+          KMS keyring name in Google Cloud Platform.
+        required: false
+      GCP_KMS_KEY_NAME:
+        description: |
+          KMS key name in Google Cloud Platform.
+        required: false
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-latest
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+    outputs:
+      is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
+
+  build-and-test:
+    name: :build-and-test
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix) }}
+
+    permissions:
+      id-token: write
+      packages: read
+      contents: read
+
+    needs:
+      - init
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+        with:
+          r-version: ${{ inputs.r-version }}
+          cache-version: ${{ inputs.cache-version }}
+
+      - name: Cache additional paths
+        uses: actions/cache@v4
+        if: inputs.cache-paths != ''
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
+
+      - name: Load MiLaboratories custom CLI tools
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+
+      - uses: milaboratory/github-ci/blocks/node/test@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: false
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+
+          build-script-name: ${{ inputs.build-script-name }}
+          build-before-run-test: true
+          test-name: ${{ inputs.test-script-name }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - name: CodeSign binary on macOS
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
+        if: runner.os == 'macOS'
+          && inputs.sign-binaries != ''
+        with:
+          binaries: ${{ inputs.sign-binaries }}
+          mac-cert-id: ${{ secrets.MAC_SIGN_CERT_ID }}
+          mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
+          mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+
+      - name: Get GoogleCloud access token for CodeSign on Windows
+        uses: google-github-actions/auth@v2
+        id: gcp-auth
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+          && inputs.gcp-login-enable
+        with:
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          token_format: "access_token"
+
+      - name: CodeSign binary on Windows
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
+        with:
+          binaries: ${{ inputs.sign-binaries }}
+          timestamping-mode: ${{ inputs.gcp-timestamping-mode }}
+          timestamping-url: ${{ secrets.GCP_TIMESTAMPING_URL }}
+          code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
+          kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
+          kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
+          access-token: ${{ steps.gcp-auth.outputs.access_token }}
+
+      - name: Saving build artifacts for publish step
+        uses: milaboratory/github-ci/actions/artifact/save@v4-beta
+        id: build-artifacts
+        if: inputs.build-artifacts != ''
+        with:
+          name: build-artifacts-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ inputs.build-artifacts }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: "true"
+
+  notify-build:
+    name: Notify build and test
+    runs-on: ubuntu-latest
+
+    if: always()
+      && inputs.notify-telegram
+      && inputs.notify-build != 'false'
+      && needs.build-and-test.outputs.started == 'true'
+
+    needs:
+      - build-and-test
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            build
+
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          build-status: |
+            ${{ needs.build-and-test.result }}
+          product-name: ${{ inputs.app-name }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  can-release:
+    name: Can release
+    runs-on: ubuntu-latest
+    needs:
+      - init
+      - build-and-test
+
+    if: always()
+      && needs.init.outputs.is-release
+      && needs.build-and-test.result == 'success'
+
+    steps:
+      - shell: bash
+        run: "true"
+
+  notify-release-review:
+    name: Notify review required
+    runs-on: ubuntu-latest
+    if: always()
+      && needs.can-release.result == 'success'
+
+    needs:
+      - can-release
+    steps:
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          message: new version of R is ready for release.
+          product-name: ${{ inputs.app-name }}
+
+  release:
+    name: Confirm release
+    runs-on: ubuntu-latest
+
+    needs:
+      - can-release
+
+    if: always() && needs.can-release.result == 'success'
+
+    environment: release
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: false
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+          update-npm: false
+          install-deps: false
+
+      - id: npm-pkg-status
+        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
+        with:
+          package-json-path: "${{ github.workspace }}/package.json"
+          registry-url: ${{ inputs.registry-url }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      package-exists: ${{ steps.npm-pkg-status.outputs.exist != '0' }}
+      package-version: ${{ steps.npm-pkg-status.outputs.pkg-version }}
+      started: "true"
+
+  notarize:
+    name: Notarize
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix) }}
+
+    if: always()
+      && needs.release.result == 'success'
+      && needs.release.outputs.package-exists
+      && inputs.notarize-paths != ''
+
+    needs:
+      - release
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
+        id: build-artifacts
+        if: inputs.build-artifacts != ''
+        with:
+          pattern: build-artifacts-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Notarize binary on macOS
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
+        if: runner.os == 'macOS'
+        with:
+          paths: ${{ inputs.notarize-paths }}
+          mac-api-key-base64: ${{ secrets.MAC_NOTR_API_KEY }}
+          mac-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
+          mac-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
+
+  publish-to-npm:
+    name: npm publish
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.release.result == 'success'
+      && needs.release.outputs.package-exists
+      && needs.init.outputs.is-release
+
+    needs:
+      - init
+      - release
+
+    permissions:
+      id-token: write
+      packages: read
+      contents: write
+
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          is-electron-application: false
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          always-auth: ${{ inputs.always-auth }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+          update-npm: true
+          install-deps: true
+
+      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+        with:
+          r-version: ${{ inputs.r-version }}
+          cache-version: ${{ inputs.cache-version }}
+
+      - uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
+        id: build-artifacts
+        if: inputs.build-artifacts != ''
+        with:
+          pattern: build-artifacts-*
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        if: inputs.aws-login-enable
+        with:
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
+          aws-region: ${{ secrets.AWS_ASSUME_REGION }}
+
+      - name: Configure GCP credentials
+        uses: google-github-actions/auth@v2
+        if: inputs.gcp-login-enable
+        with:
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          token_format: "access_token"
+
+      - name: Set up GCloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        if: inputs.gcp-login-enable
+        with:
+          version: ${{ inputs.gcp-sdk-version }}
+
+      - name: Load MiLaboratories custom CLI tools
+        if: inputs.gcp-login-enable
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+
+      - name: Publish npm package
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
+          PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
+          PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
+          GCP_KMS_KEY_VERSION: ${{ inputs.gcp-kms-key-version }}
+          GCP_KMS_KEY_NAME: ${{ secrets.GCP_KMS_KEY_NAME }}
+          GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
+          GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
+          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
+        with:
+          run: |
+            if [ -z "${PUBLISH_SCRIPT}" ]; then
+              if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+                npm publish --access public
+              else
+                npm publish
+              fi
+            else
+              npm run "${PUBLISH_SCRIPT}"
+            fi
+
+      - name: Create release with tag
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        env:
+          NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: "true"
+
+  notify-release:
+    name: notify release
+    runs-on: ubuntu-latest
+
+    if: always()
+      && needs.release.result == 'success'
+    needs:
+      - release
+      - publish-to-npm
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            release
+
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+        env:
+          NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          job-status: |
+            ${{ needs.release.result }}
+            ${{ needs.publish-to-npm.result }}
+
+          product-name: ${{ inputs.app-name }}
+          override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
+          override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
