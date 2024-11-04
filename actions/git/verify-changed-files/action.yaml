@@ -16,6 +16,38 @@ inputs:
     description: 'Output string separator.'
     required: false
     default: " "
+  match-gitignore-files:
+    description: 'Indicates whether to match files in `.gitignore`'
+    default: "false"
+    required: true
+  read-gitignore:
+    description: 'Indicates whether to read `.gitignore`. The `.gitignore` file will be ignored if set to `false`. Overrides `match-gitignore-files`'
+    default: "false"
+    required: true
+  fail-if-changed:
+    description: 'Indicates whether to fail if files have changed.'
+    default: "false"
+    required: false
+  fail-if-unchanged:
+    description: 'Indicates whether to fail if no files have changed.'
+    default: "false"
+    required: false
+  fail-message:
+    description: 'Message to display when `fail-if-changed` or `fail-if-unchanged` is set to `true`.'
+    default: ""
+    required: false
+  safe_output:
+    description: "Apply sanitization to output filenames before being set as output."
+    required: false
+    default: "true"
+  path:
+    description: "Relative path under GITHUB_WORKSPACE to the repository"
+    required: false
+    default: '.'
+  quotepath:
+    description: "Use non-ASCII characters to match files and output the filenames completely verbatim by setting this to `false`"
+    default: "true"
+    required: false
 
 outputs:
   files_changed:
@@ -31,8 +63,16 @@ runs:
   steps:
     - name: Changed Files
       id: verify-changed-files
-      uses: tj-actions/verify-changed-files@eb6d385c0e52fb28e2f6b70e15c835cb3cbfff17
+      uses: tj-actions/verify-changed-files@6ed7632824d235029086612d4330d659005af687
       with:
         files: ${{ inputs.files }}
         files-separator: ${{ inputs.files-separator }}
         separator: ${{ inputs.separator }}
+        match-gitignore-files: ${{ inputs.match-gitignore-files }}
+        read-gitignore: ${{ inputs.read-gitignore }}
+        fail-if-changed: ${{ inputs.fail-if-changed }}
+        fail-if-unchanged: ${{ inputs.fail-if-unchanged }}
+        fail-message: ${{ inputs.fail-message }}
+        safe_output: ${{ inputs.safe_output }}
+        path: ${{ inputs.path }}
+        quotepath: ${{ inputs.quotepath }}

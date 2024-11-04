@@ -69,7 +69,13 @@ runs:
 
             status=$(jq -r .status </tmp/notarization_info.json)
             id=$(jq -r .id </tmp/notarization_info.json)
-
+            
+            if [ -z "${id}" ]; then
+              echo "Unexpected notarization tool response: empty notarization task ID"
+              cat /tmp/notarization_info.json
+              exit 1
+            fi
+            
             echo "status=${status} id=${id}"
 
             xcrun notarytool log \

@@ -1,0 +1,22 @@
+name: Prepare environment for building a R application
+author: 'MiLaboratories'
+description: |
+  Prepare environment: install specific version of R, restore cache and so on.
+
+inputs:
+  r-version:
+    description: |
+      R version to use.
+      Use special value 'release' for latest available release
+      Examples: '4.3.1'. 
+    required: false
+    default: 'release'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install R ${{ inputs.r-version }}
+      uses: r-lib/actions/setup-r@d1a6cbabea8dd2f137598ba2a70ae37ac82d7941
+      with:
+        r-version: '${{ inputs.python-version }}'

@@ -203,3 +203,14 @@ runs:
         dump-stdout: false
         run: |
           sudo rm -rfv "${PL_LOG_DIR}"
+
+    - name: Restore assets ownership
+      if: always()
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          user_name="$(whoami)"
+          sudo chown -R "${user_name}:${user_name}" "${PL_ASSETS_DIR}"

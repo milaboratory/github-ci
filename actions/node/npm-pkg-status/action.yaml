@@ -54,6 +54,7 @@ runs:
 
   steps:
     - name: Read package name and version
+      if: inputs.package-json-path != '0'
       uses: milaboratory/github-ci/actions/shell@v4
       id: package
       env:

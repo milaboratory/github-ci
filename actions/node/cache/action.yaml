@@ -19,12 +19,6 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-save-always:
-    description: |
-      Run the post step to save the cache even if another step before fails.
-    required: false
-    default: 'true'
-
   is-electron-application:
     description: |
       If 'true' enables cache for an Electron application,
@@ -46,7 +40,6 @@ runs:
       uses: actions/cache@v4
       if: inputs.is-electron-application == 'true'
       with:
-        save-always: ${{ inputs.cache-save-always }}
         path: |
           ~/.cache/electron/
           ~/Library/Caches/electron/
@@ -59,7 +52,6 @@ runs:
       if: inputs.local-cache == 'on' && inputs.is-electron-application == 'true'
       uses: actions/cache@v4
       with:
-        save-always: ${{ inputs.cache-save-always }}
         path: node_modules
         key: ${{ runner.os }}-${{ runner.arch }}-cache-${{ inputs.cache-version }}-node_modules-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |
@@ -74,7 +66,6 @@ runs:
       uses: actions/cache@v4
       if: inputs.is-electron-application == 'false'
       with:
-        save-always: ${{ inputs.cache-save-always }}
         path: ${{ steps.npm-cache-dir.outputs.dir }}
         key: ${{ runner.os }}-${{ runner.arch }}-cache-${{ inputs.cache-version }}-genericnodejs-${{ hashFiles(inputs.hashfiles-search-path) }}
         restore-keys: |

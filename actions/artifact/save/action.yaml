@@ -111,8 +111,8 @@ runs:
         RUNNER_OS: ${{ runner.os }}
       run: |
         if [ "${ARCHIVE_IS_EMPTY}" == "true" ]; then
-          // do not create archive to let actions/upload-artifact decide how to react on 'nothing found' case
-          return
+          # do not create archive to let actions/upload-artifact decide how to react on 'nothing found' case
+          exit 0
         fi
 
         if [ "${RUNNER_OS}" == "Windows" ]; then

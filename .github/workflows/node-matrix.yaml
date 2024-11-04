@@ -1,4 +1,4 @@
-name: Build and Test portable Python executable bundle
+name: Build and Test portable R executable bundle
 
 on:
   workflow_call:
@@ -59,13 +59,22 @@ on:
         required: true
 
       #
+      # R settings
+      #
+      r-version:
+        description: |
+          R version to use: i.e. '4.3.1'
+        type: string
+        required: false
+
+      #
       # Python settings
       #
       python-version:
         description: |
-          Python version to use: i.e. '3.12'
+          Python version to use: i.e. '3.12.7'
         type: string
-        required: true
+        required: false
 
       #
       # Cache control
@@ -432,11 +441,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
-
+      
       - uses: milaboratory/github-ci/actions/python/prepare@v4
+        if: inputs.python-version != ''
         with:
           python-version: ${{ inputs.python-version }}
           cache-version: ${{ inputs.cache-version }}
+
+      - uses: milaboratory/github-ci/actions/r/prepare@v4
+        if: inputs.r-version != ''
+        with:
+          r-version: ${{ inputs.r-version }}
+          # cache-version: ${{ inputs.cache-version }}
 
       - name: Cache additional paths
         uses: actions/cache@v4
@@ -444,6 +460,9 @@ jobs:
         with:
           path: ${{ inputs.cache-paths }}
           key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
+
+      - name: Load MiLaboratories custom CLI tools
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
       - uses: milaboratory/github-ci/blocks/node/test@v4
         with:
@@ -564,7 +583,7 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-          message: new version of Python 3 is ready for release.
+          message: new version of R is ready for release.
           product-name: ${{ inputs.app-name }}
 
   release:
@@ -694,9 +713,16 @@ jobs:
           install-deps: true
 
       - uses: milaboratory/github-ci/actions/python/prepare@v4
+        if: inputs.python-version != ''
         with:
           python-version: ${{ inputs.python-version }}
           cache-version: ${{ inputs.cache-version }}
+
+      - uses: milaboratory/github-ci/actions/r/prepare@v4
+        if: inputs.r-version != ''
+        with:
+          r-version: ${{ inputs.r-version }}
+          # cache-version: ${{ inputs.cache-version }}
 
       - uses: milaboratory/github-ci/actions/artifact/restore@v4
         id: build-artifacts
@@ -725,7 +751,7 @@ jobs:
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
-      - name: Add MiLab shell utils to PATH
+      - name: Load MiLaboratories custom CLI tools
         if: inputs.gcp-login-enable
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 

@@ -20,12 +20,6 @@ inputs:
     required: false
     default: 'v1'
 
-  cache-save-always:
-    description: |
-      Run the post step to save the cache even if another step before fails.
-    required: false
-    default: 'true'
-
   hashfiles-search-path:
     description: |
       Hashfiles search path for package-lock.json
@@ -99,7 +93,6 @@ runs:
         is-electron-application: ${{ inputs.is-electron-application }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
-        cache-save-always: ${{ inputs.cache-save-always }}
         local-cache: 'on'
 
     - name: Update npm to latest available version
