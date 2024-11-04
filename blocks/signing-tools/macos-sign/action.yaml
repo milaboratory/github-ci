@@ -34,14 +34,14 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+    - uses: milaboratory/github-ci/actions/files/list@v4
       id: binaries-list
       with:
         patterns: ${{ inputs.binaries }}
         relative: true
         match-directories: false
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/shell@v4
       env:
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
         CERT_ID: ${{ inputs.mac-cert-id }}

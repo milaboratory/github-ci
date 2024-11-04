@@ -80,7 +80,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
@@ -96,7 +96,7 @@ runs:
         install-deps: true
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
       if: inputs.build-version != ''
       with:
         version: ${{ inputs.build-version }}
@@ -108,7 +108,7 @@ runs:
         npm run ${{ inputs.build-script-name }}
 
     - name: Run build on (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: runner.os == 'macOS' || runner.os == 'Linux'
       with:
         dump-stdout: false
