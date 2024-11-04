@@ -31,8 +31,8 @@ inputs:
 
        Example:
         'link/software/mixcr'
-
     required: true
+
   s3-bucket-key:
     description: |
        The name of a zero-byte object.
@@ -41,7 +41,6 @@ inputs:
 
        Example:
         'mixcr-develop.zip'
-
     required: true
 
   s3-region:
@@ -54,7 +53,6 @@ inputs:
       AWS S3 bucket name
       This bucket must be configurated as an s3 static website.
     required: true
-
 
 runs:
   using: "composite"
@@ -78,3 +76,4 @@ runs:
             --bucket "${S3_BUCKET}" \
             --key "${S3_KEY}" \
             --website-redirect-location "${REDIRECT_LINK}"
+            
