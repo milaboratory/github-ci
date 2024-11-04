@@ -441,7 +441,31 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - name: Run changeset version
+        if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request'
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            pnpm run version-packages
+
+      - name: Get changed files
+        if: github.event_name == 'push'
+          && github.ref_name == 'main'
+        id: changed-files
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
+        with:
+          files: ${{ inputs.changed-files-list }}
+          match-gitignore-files: ${{ inputs.match-gitignore-files }}
+
+      - name: List all changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
