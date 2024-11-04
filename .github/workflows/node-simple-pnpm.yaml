@@ -517,31 +517,6 @@ jobs:
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
-      - name: Run changeset version
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            pnpm run version-packages
-
-      - name: Get changed files
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
-        id: changed-files
-        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
-        with:
-          files: ${{ inputs.changed-files-list }}
-          match-gitignore-files: ${{ inputs.match-gitignore-files }}
-
-      - name: List all changed files
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
-        run: |
-          for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
-          done
-
       - name: Get GitHub App User ID
         if: steps.changed-files.outputs.files_changed == 'true'
         id: get-user-id
