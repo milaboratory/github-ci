@@ -98,7 +98,7 @@ runs:
 
   steps:
     - name: Prepare environment for running a NodeJS application tests
-      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
@@ -114,7 +114,7 @@ runs:
         install-deps: true
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
       if: inputs.package-version != ''
       with:
         version: ${{ inputs.package-version }}
@@ -123,7 +123,7 @@ runs:
     #   if: inputs.interactive-debug == 'true'
 
     - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: inputs.build-before-run-test != 'false'
         && (runner.os == 'macOS' || runner.os == 'Linux')
       with:
@@ -139,7 +139,7 @@ runs:
         npm run ${{ inputs.build-script-name }}
 
     - name: Run test - ${{ inputs.test-name }} - (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: runner.os == 'macOS' || runner.os == 'Linux'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
