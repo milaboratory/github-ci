@@ -92,6 +92,7 @@ runs:
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
+        working-directory: ${{ inputs.working-directory }}
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
