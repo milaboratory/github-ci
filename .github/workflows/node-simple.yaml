@@ -22,6 +22,13 @@ on:
         type: string
         required: true
 
+      runs-on:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        default: 'ubuntu-latest'
+        required: true
+
       #
       # Checkout settings
       #
@@ -307,7 +314,7 @@ on:
 jobs:
   init:
     name: Init
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     steps:
       - id: context
@@ -319,7 +326,7 @@ jobs:
 
   build:
     name: :build
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     permissions:
       packages: read
@@ -368,7 +375,7 @@ jobs:
 
   notify-build:
     name: Notify build
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: always()
       && inputs.notify-telegram
@@ -401,7 +408,7 @@ jobs:
 
   test:
     name: :test
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: inputs.test
     permissions:
@@ -454,7 +461,7 @@ jobs:
 
   notify-test:
     name: notify test
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: always()
       && inputs.notify-telegram
@@ -490,7 +497,7 @@ jobs:
 
   can-release:
     name: Can release
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     needs:
       - init
@@ -508,7 +515,7 @@ jobs:
 
   notify-release-review:
     name: Notify review required
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: always() && needs.can-release.result == 'success'
 
@@ -526,7 +533,7 @@ jobs:
 
   release:
     name: Confirm release
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     needs:
       - can-release
@@ -546,7 +553,7 @@ jobs:
 
   publish-to-npm:
     name: publish
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: always()
       && needs.release.result == 'success'
@@ -686,7 +693,7 @@ jobs:
 
   notify-release:
     name: notify release
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     if: always()
       && needs.release.result == 'success'
