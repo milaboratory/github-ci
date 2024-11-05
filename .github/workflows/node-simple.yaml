@@ -60,6 +60,14 @@ on:
         type: string
         required: true
 
+      node-execution-path:
+        description: |
+          Specify the path where to execute all node scripts (npm and so on).
+          Allows to run workflow inside given directory instead of repository root.
+        type: string
+        required: false
+        default: '/'
+
       #
       # Cache control
       #
@@ -344,6 +352,7 @@ jobs:
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
+          working-directory: ${{ inputs.node-execution-path }}
           build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -426,6 +435,7 @@ jobs:
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
+          working-directory: ${{ inputs.node-execution-path }}
           test-name: ${{ inputs.test-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -586,6 +596,7 @@ jobs:
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
+          working-directory: ${{ inputs.node-execution-path }}
           build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
