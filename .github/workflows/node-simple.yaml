@@ -102,7 +102,7 @@ on:
         description: |
           The name of a build script
         type: string
-        required: true
+        required: false
         default: "build"
 
       is-electron-application:
