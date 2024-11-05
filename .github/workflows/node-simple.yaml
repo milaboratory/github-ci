@@ -73,7 +73,7 @@ on:
           Allows to run workflow inside given directory instead of repository root.
         type: string
         required: false
-        default: '/'
+        default: ''
 
       #
       # Cache control
