@@ -27,7 +27,7 @@ on:
           Application name slug (part of release file name)
         type: string
         default: 'ubuntu-latest'
-        required: true
+        required: false
 
       #
       # Checkout settings
