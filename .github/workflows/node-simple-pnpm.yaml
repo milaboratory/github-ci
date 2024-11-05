@@ -368,7 +368,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
-          fetch-depth: '0'          
+          fetch-depth: '0'
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
@@ -441,12 +441,58 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
 
-      - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        env:
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - name: Install NodeJS packages with pnpm
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
+        with:
+          dump-stdout: false
+          run: |
+            pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run changeset version
+        if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request'
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            pnpm run version-packages
+
+      - name: Get changed files
+        if: github.event_name == 'push'
+          && github.ref_name == 'main'
+        id: changed-files
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
+        with:
+          files: ${{ inputs.changed-files-list }}
+          match-gitignore-files: ${{ inputs.match-gitignore-files }}
+
+      - name: List all changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Run build
+        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -465,7 +511,8 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
-      - id: test
+      - name: Run tests
+        id: test
         uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
         if: inputs.test
         env:
@@ -492,31 +539,6 @@ jobs:
           pl-log-level: ${{ inputs.pl-log-level }}
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
-
-      - name: Run changeset version
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        with:
-          run: |
-            pnpm run version-packages
-
-      - name: Get changed files
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
-        id: changed-files
-        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4-beta
-        with:
-          files: ${{ inputs.changed-files-list }}
-          match-gitignore-files: ${{ inputs.match-gitignore-files }}
-
-      - name: List all changed files
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
-        run: |
-          for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
-          done
 
       - name: Get GitHub App User ID
         if: steps.changed-files.outputs.files_changed == 'true'
