@@ -33,7 +33,7 @@ on:
           'recursive' - checkout submodules recursive
         type: string
         required: false
-        default: ''
+        default: ""
 
       #
       # Environment settings
@@ -49,7 +49,7 @@ on:
           This input's envs have lower priority compared than secrets.env
         type: string
         required: false
-        default: '{}'
+        default: "{}"
 
       #
       # NodeJS settings
@@ -72,14 +72,14 @@ on:
 
         type: string
         required: false
-        default: 'v1'
+        default: "v1"
 
       cache-hashfiles-search-path:
         description: |
           Hashfiles search path for pnpm-lock.yaml
         type: string
         required: false
-        default: 'pnpm-lock.yaml'
+        default: "pnpm-lock.yaml"
 
       #
       # PNPM settings
@@ -89,7 +89,7 @@ on:
           Version of pnpm to install.
         type: string
         required: false
-        default: 'latest'
+        default: "latest"
 
       pnpm-recursive-build:
         description: |
@@ -124,14 +124,14 @@ on:
           The name of a build script
         type: string
         required: true
-        default: 'build'
+        default: "build"
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
           if 'false', enables cache for a generic NodeJS application.
         type: string
         required: false
-        default: 'true'
+        default: "true"
 
       #
       # Test control
@@ -147,7 +147,7 @@ on:
           The name of a test
         type: string
         required: false
-        default: 'test'
+        default: "test"
 
       #
       # NPM registry settings
@@ -166,7 +166,7 @@ on:
           Whether or not the npm package should be published as public.
         type: string
         required: false
-        default: 'false'
+        default: "false"
       #
       # AWS ECR settings
       #
@@ -182,7 +182,7 @@ on:
           The AWS region
         type: string
         required: false
-        default: 'eu-central-1'
+        default: "eu-central-1"
 
       #
       # GCP sign control
@@ -212,7 +212,7 @@ on:
           Version of KMS key.
         type: string
         required: false
-        default: '1'
+        default: "1"
 
       gcp-kms-digest-algorithm:
         description: |
@@ -222,7 +222,6 @@ on:
         required: false
         default: "sha256"
 
-
       #
       # Platforma Docker settings
       #
@@ -231,7 +230,7 @@ on:
           Platforma docker tag.
         type: string
         required: false
-        default: 'main'
+        default: "main"
       pl-test-assets-dir:
         description: |
           Platforma test assets directory;
@@ -241,7 +240,7 @@ on:
           and will be appended to github.workspace within the docker compose action.
         type: string
         required: false
-        default: 'assets'
+        default: "assets"
       pl-log-dir:
         description: |
           Platforma logs directory on the agent;
@@ -251,7 +250,7 @@ on:
           and will be appended to github.workspace within the docker compose action.
         type: string
         required: false
-        default: 'log'
+        default: "log"
       pl-log-commit-summary:
         description: |
           Whether or not to log commit summary for Platforma.
@@ -269,7 +268,7 @@ on:
           Platforma log level
         type: string
         required: false
-        default: 'info'
+        default: "info"
       pl-auth-enabled:
         description: |
           Whether or not to enable authentication in the Platforma.
@@ -283,7 +282,7 @@ on:
         description: |
           Enable interactive debugging session
         type: string
-        default: ''
+        default: ""
         required: false
 
       #
@@ -306,7 +305,7 @@ on:
            - 'false' - don't send notifications about build results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
       notify-tests:
         description: |
@@ -318,7 +317,7 @@ on:
            - 'false' - don't send notifications about tests results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
     secrets:
       env:
@@ -361,7 +360,6 @@ on:
         description: |
           KMS key name in Google Cloud Platform.
         required: false
-
 
       TELEGRAM_NOTIFICATION_TARGET:
         description: |
@@ -422,7 +420,6 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Add MiLab shell utils to PATH
-        if: inputs.gcp-login-enable
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - id: npm-pkg-metadata
@@ -444,7 +441,7 @@ jobs:
         if: inputs.aws-login-enable
         uses: aws-actions/amazon-ecr-login@v2
         with:
-          mask-password: 'true'
+          mask-password: "true"
 
       - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
 
@@ -455,7 +452,7 @@ jobs:
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
-          tests: 'false'
+          tests: "false"
           test-script-name: ${{ inputs.test-script-name }}
           pnpm-recursive-build: ${{ inputs.pnpm-recursive-build }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
@@ -517,8 +514,8 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          commit: 'chore: update versions'
-          title: 'chore: update versions'
+          commit: "chore: update versions"
+          title: "chore: update versions"
           publish: pnpm -r publish --no-git-checks --access public
 
       - name: Create Release Pull Request and Publish npm package
@@ -534,15 +531,15 @@ jobs:
           GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
         uses: changesets/action@v1
         with:
-          commit: 'chore: update versions'
-          title: 'chore: update versions'
+          commit: "chore: update versions"
+          title: "chore: update versions"
           publish: pnpm -r publish --no-git-checks
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
-      started: 'true'
+      started: "true"
 
   notify-release:
     name: notify release
