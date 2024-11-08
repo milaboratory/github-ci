@@ -421,6 +421,10 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - name: Add MiLab shell utils to PATH
+        if: inputs.gcp-login-enable
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+
       - id: npm-pkg-metadata
         uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
@@ -504,10 +508,6 @@ jobs:
         if: inputs.gcp-login-enable
         with:
           version: ${{ inputs.gcp-sdk-version }}
-
-      - name: Add MiLab shell utils to PATH
-        if: inputs.gcp-login-enable
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - name: Create Release Pull Request and Publish npm package (Public)
         if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'true'
