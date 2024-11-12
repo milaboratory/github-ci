@@ -75,6 +75,11 @@ runs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "${CERT_PWD}" buildagent >/dev/null
 
           while IFS= read -r BINARY_PATH; do
+            if ! file "${BINARY_PATH}" | grep -q 'Mach-O'; then
+              echo "File '${BINARY_PATH}' matched the sign pattern but appears to be not a binary file (no 'Mach-O' in file report)"
+              continue
+            fi
+
             echo "Signing ${BINARY_PATH}"
 
             # In case target is already signed, remove existing sig as it causes failure
