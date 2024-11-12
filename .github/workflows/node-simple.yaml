@@ -187,6 +187,14 @@ on:
         required: false
         default: false
 
+      aws-login-duration:
+        description: |
+          Maximum time AWS credentials will be valid until expiration.
+          Defaults to 1 hour.
+        type: number
+        required: false
+        default: 3600
+
       #
       # GCP sign control
       #
@@ -614,12 +622,13 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4 tag
         if: inputs.aws-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
+          role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ secrets.AWS_ASSUME_REGION }}
 
       - name: Configure GCP credentials
