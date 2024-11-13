@@ -8,7 +8,6 @@ if [ -z "${BINARIES}" ]; then
     exit 0
 fi
 
-
 if [ "${CERT_ID}" != "-" ]; then
     echo "Preparing keychain..."
 
@@ -31,7 +30,7 @@ if [ "${CERT_ID}" != "-" ]; then
 fi
 
 codesign_args=(
-    --keychain buildagent 
+    --keychain buildagent
     --sign "${CERT_ID}"
     --timestamp
     --options runtime
@@ -63,12 +62,16 @@ while IFS= read -r BINARY_PATH; do
 
     echo "Signing ${BINARY_PATH}"
 
-    set -x
     # In case target is already signed, remove existing sig as it causes failure
-    codesign --remove-signature ${BINARY_PATH} || true
-    codesign "${codesign_args[@]}" "${BINARY_PATH}"
-    codesign --verify --verbose --display --entitlements - "${BINARY_PATH}"
-    set +x
+    (
+        set -x
+        codesign --remove-signature ${BINARY_PATH} || true
+        codesign "${codesign_args[@]}" "${BINARY_PATH}"
+        codesign --verify --verbose --display "${BINARY_PATH}"
+    )
+    if [ -n "${ENTITLEMENTS}" ]; then
+        codesign --display --entitlements - "${BINARY_PATH}"
+    fi
 
     echo "Signed '${BINARY_PATH}' with '${CERT_ID}'"
 done <<<"${BINARIES}"
