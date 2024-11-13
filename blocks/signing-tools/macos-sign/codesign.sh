@@ -17,9 +17,10 @@ function cleanup {
 trap cleanup EXIT
 
 if [ "${CERT_ID}" != "-" ]; then
+    echo "Preparing keychain..."
+
     echo "${CERT_BASE64}" | base64 -d >"${GITHUB_WORKSPACE}/${CERT_FILE}"
 
-    echo "Preparing keychain..."
     security create-keychain -p "${CERT_PWD}" buildagent
     security unlock-keychain -p "${CERT_PWD}" buildagent
     default_keychain=$(security default-keychain | xargs)
@@ -36,6 +37,8 @@ codesign_args=(
 )
 
 if [ -n "${ENTITLEMENTS}" ]; then
+    echo "Generating .plist file with custom entitlements..."
+
     cat >entitlements.plist <<EndOfEnts
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -59,10 +62,12 @@ while IFS= read -r BINARY_PATH; do
 
     echo "Signing ${BINARY_PATH}"
 
+    set -x
     # In case target is already signed, remove existing sig as it causes failure
     codesign --remove-signature ${BINARY_PATH} || true
     codesign "${codesign_args[@]}" "${BINARY_PATH}"
     codesign --verify --verbose --display "${BINARY_PATH}"
+    set +x
 
     echo "Signed '${BINARY_PATH}' with '${CERT_ID}'"
 done <<<"${BINARIES}"
