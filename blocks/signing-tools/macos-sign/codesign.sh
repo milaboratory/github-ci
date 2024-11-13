@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -o errexit
-set -o errunset
+set -o nounset
 
 if [ -z "${BINARIES}" ]; then
     echo "::warning::List of binaries to sign for Mac OS X is empty. Nothing matched the globbing patterns from 'binaries' input." >&2
