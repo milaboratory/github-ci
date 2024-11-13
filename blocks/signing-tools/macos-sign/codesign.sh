@@ -16,15 +16,17 @@ function cleanup {
 }
 trap cleanup EXIT
 
-echo "${CERT_BASE64}" | base64 -d >"${GITHUB_WORKSPACE}/${CERT_FILE}"
+if [ "${CERT_ID}" != "-" ]; then
+    echo "${CERT_BASE64}" | base64 -d >"${GITHUB_WORKSPACE}/${CERT_FILE}"
 
-echo "Preparing keychain..."
-security create-keychain -p "${CERT_PWD}" buildagent
-security unlock-keychain -p "${CERT_PWD}" buildagent
-default_keychain=$(security default-keychain | xargs)
-security list-keychains -s buildagent && security default-keychain -s buildagent
-security import ${CERT_FILE} -k buildagent -P "${CERT_PWD}" -T /usr/bin/codesign >/dev/null
-security set-key-partition-list -S apple-tool:,apple: -s -k "${CERT_PWD}" buildagent >/dev/null
+    echo "Preparing keychain..."
+    security create-keychain -p "${CERT_PWD}" buildagent
+    security unlock-keychain -p "${CERT_PWD}" buildagent
+    default_keychain=$(security default-keychain | xargs)
+    security list-keychains -s buildagent && security default-keychain -s buildagent
+    security import ${CERT_FILE} -k buildagent -P "${CERT_PWD}" -T /usr/bin/codesign >/dev/null
+    security set-key-partition-list -S apple-tool:,apple: -s -k "${CERT_PWD}" buildagent >/dev/null
+fi
 
 codesign_args=(
     --keychain buildagent 
