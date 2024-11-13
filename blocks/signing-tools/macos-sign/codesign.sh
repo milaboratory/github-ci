@@ -66,7 +66,7 @@ while IFS= read -r BINARY_PATH; do
     # In case target is already signed, remove existing sig as it causes failure
     codesign --remove-signature ${BINARY_PATH} || true
     codesign "${codesign_args[@]}" "${BINARY_PATH}"
-    codesign --verify --verbose --display "${BINARY_PATH}"
+    codesign --verify --verbose --display --entitlements - "${BINARY_PATH}"
     set +x
 
     echo "Signed '${BINARY_PATH}' with '${CERT_ID}'"
