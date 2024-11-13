@@ -8,16 +8,17 @@ if [ -z "${BINARIES}" ]; then
     exit 0
 fi
 
-function cleanup {
-    if [ ! -z "${default_keychain:-}" ]; then
-        security default-keychain -s "$default_keychain" && security list-keychains -s "$default_keychain"
-    fi
-    security delete-keychain buildagent || true
-}
-trap cleanup EXIT
 
 if [ "${CERT_ID}" != "-" ]; then
     echo "Preparing keychain..."
+
+    function cleanup {
+        if [ ! -z "${default_keychain:-}" ]; then
+            security default-keychain -s "$default_keychain" && security list-keychains -s "$default_keychain"
+        fi
+        security delete-keychain buildagent || true
+    }
+    trap cleanup EXIT
 
     echo "${CERT_BASE64}" | base64 -d >"${GITHUB_WORKSPACE}/${CERT_FILE}"
 
