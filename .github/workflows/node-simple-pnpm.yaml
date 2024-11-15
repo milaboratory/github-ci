@@ -22,6 +22,12 @@ on:
         type: string
         required: true
 
+      gha-runner-label:
+        description: |
+          The label for github actions hosted runner
+        type: string
+        default: 'ubuntu-latest'
+
       #
       # Checkout settings
       #
@@ -397,7 +403,7 @@ jobs:
 
   build-test-publish:
     name: unified (build test publish)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
 
     needs:
       - check
