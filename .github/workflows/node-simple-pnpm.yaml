@@ -1,5 +1,3 @@
-# This workflow will build and upload nodejs application on the github's npm registry.
-
 name: Build and Upload NodeJS PNPM Applications
 
 on:

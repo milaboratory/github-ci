@@ -95,12 +95,6 @@ inputs:
       Generates a .npmrc file based on provided configuration.
     required: false
 
-  # interactive-debug:
-  #   description: |
-  #     Break execution and start interactive debugging session with server VSCode right on agent
-  #   required: false
-  #   default: 'false'
-
 runs:
   using: "composite"
 
@@ -129,13 +123,17 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         version: ${{ inputs.package-version }}
 
-    # - uses: fawazahmed0/action-debug-vscode@main
-    #   if: inputs.interactive-debug == 'true'
+    - name: Install NodeJS packages with npm
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          npm ci
 
     - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
       if: inputs.build-before-run-test != 'false'
         && runner.os != 'Windows'
-
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -144,7 +142,6 @@ runs:
     - name: Run build - ${{ inputs.build-script-name }} - (Windows)
       if: inputs.build-before-run-test != 'false'
         && runner.os == 'Windows'
-
       shell: pwsh
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -154,7 +151,6 @@ runs:
       if: runner.os != 'Windows'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -164,7 +160,6 @@ runs:
       if: runner.os == 'Windows'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-
       shell: pwsh
       working-directory: ${{ inputs.working-directory }}
       run: |
