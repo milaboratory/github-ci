@@ -47,7 +47,7 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Re-Write .npmrc config
-      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
@@ -58,7 +58,7 @@ runs:
         version: ${{ inputs.pnpm-version }}
 
     - name:  Set up cache for a NodeJS PNPM application
-      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       with:
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}

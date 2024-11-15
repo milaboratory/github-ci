@@ -115,7 +115,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
@@ -124,12 +124,12 @@ runs:
         npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
-    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
+    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
       with:
         pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
@@ -141,7 +141,7 @@ runs:
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
@@ -161,7 +161,7 @@ runs:
           fi
 
     - name: Stop all running containers
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: always()
       with:
         dump-stdout: false
@@ -171,7 +171,7 @@ runs:
 
     - name: Check if we should upload logs
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
       with:
@@ -196,7 +196,7 @@ runs:
 
     - name: Clean Platforma logs
       if: always() && env.UPLOAD_LOGS == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
       with:
@@ -206,7 +206,7 @@ runs:
 
     - name: Restore assets ownership
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
       with:
