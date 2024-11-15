@@ -76,4 +76,3 @@ runs:
             --bucket "${S3_BUCKET}" \
             --key "${S3_KEY}" \
             --website-redirect-location "${REDIRECT_LINK}"
-            

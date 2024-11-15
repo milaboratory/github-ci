@@ -204,6 +204,17 @@ on:
         required: false
         default: ""
 
+      mac-sign-entitlements:
+        description: |
+          Additional entitlements to be embedded into binaries signature.
+          The contents of <dict> tag inside .plist file, like:
+            <key>com.apple.security.cs.disable-library-validation</key>
+            <true/>
+
+        type: string
+        required: false
+        default: ""
+
       #
       # Distribution control
       #
@@ -485,6 +496,7 @@ jobs:
           && inputs.sign-binaries != ''
         with:
           binaries: ${{ inputs.sign-binaries }}
+          entitlements: ${{ inputs.mac-sign-entitlements }}
           mac-cert-id: ${{ secrets.MAC_SIGN_CERT_ID }}
           mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
           mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}

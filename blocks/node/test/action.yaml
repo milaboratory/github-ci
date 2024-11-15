@@ -5,6 +5,14 @@ description: |
   Install NodeJS specific version, download package, create cache e.t.c
 
 inputs:
+  working-directory:
+    description: |
+      Change the working directory before running the action.
+      Allows to run npm script from subdirectory instead of
+      repository root.
+    required: false
+    default: ""
+
   package-version:
     description: |
       Set version number in 'package.json' file to given value.
@@ -87,12 +95,6 @@ inputs:
       Generates a .npmrc file based on provided configuration.
     required: false
 
-  # interactive-debug:
-  #   description: |
-  #     Break execution and start interactive debugging session with server VSCode right on agent
-  #   required: false
-  #   default: 'false'
-
 runs:
   using: "composite"
 
@@ -102,6 +104,7 @@ runs:
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
+        working-directory: ${{ inputs.working-directory }}
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
@@ -117,41 +120,47 @@ runs:
       uses: milaboratory/github-ci/actions/node/patch-version@v4
       if: inputs.package-version != ''
       with:
+        working-directory: ${{ inputs.working-directory }}
         version: ${{ inputs.package-version }}
 
-    # - uses: fawazahmed0/action-debug-vscode@main
-    #   if: inputs.interactive-debug == 'true'
+    - name: Install NodeJS packages with npm
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      with:
+        run: |
+          npm ci
 
     - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4
       if: inputs.build-before-run-test != 'false'
-        && (runner.os == 'macOS' || runner.os == 'Linux')
-      with:
-        dump-stdout: false
-        run: |
-          npm run ${{ inputs.build-script-name}}
+        && runner.os != 'Windows'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        npm run ${{ inputs.build-script-name}}
 
     - name: Run build - ${{ inputs.build-script-name }} - (Windows)
       if: inputs.build-before-run-test != 'false'
         && runner.os == 'Windows'
       shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
       run: |
         npm run ${{ inputs.build-script-name }}
 
     - name: Run test - ${{ inputs.test-name }} - (macOS and Linux)
-      uses: milaboratory/github-ci/actions/shell@v4
-      if: runner.os == 'macOS' || runner.os == 'Linux'
+      if: runner.os != 'Windows'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-      with:
-        dump-stdout: false
-        run: |
-          npm run ${{ inputs.test-name }} --if-present
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        npm run ${{ inputs.test-name }} --if-present
 
     - name: Run test - ${{ inputs.test-name }} - (Windows)
       if: runner.os == 'Windows'
-      shell: pwsh
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
       run: |
         npm run ${{ inputs.test-name }} --if-present

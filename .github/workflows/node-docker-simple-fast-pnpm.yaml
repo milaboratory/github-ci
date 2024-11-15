@@ -33,7 +33,7 @@ on:
           'recursive' - checkout submodules recursive
         type: string
         required: false
-        default: ''
+        default: ""
 
       #
       # Environment settings
@@ -49,7 +49,7 @@ on:
           This input's envs have lower priority compared than secrets.env
         type: string
         required: false
-        default: '{}'
+        default: "{}"
 
       #
       # NodeJS settings
@@ -72,14 +72,14 @@ on:
 
         type: string
         required: false
-        default: 'v1'
+        default: "v1"
 
       cache-hashfiles-search-path:
         description: |
           Hashfiles search path for pnpm-lock.yaml
         type: string
         required: false
-        default: 'pnpm-lock.yaml'
+        default: "pnpm-lock.yaml"
 
       #
       # PNPM settings
@@ -89,7 +89,7 @@ on:
           Version of pnpm to install.
         type: string
         required: false
-        default: 'latest'
+        default: "latest"
 
       pnpm-recursive-build:
         description: |
@@ -124,14 +124,14 @@ on:
           The name of a build script
         type: string
         required: true
-        default: 'build'
+        default: "build"
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
           if 'false', enables cache for a generic NodeJS application.
         type: string
         required: false
-        default: 'true'
+        default: "true"
 
       #
       # Test control
@@ -147,7 +147,7 @@ on:
           The name of a test
         type: string
         required: false
-        default: 'test'
+        default: "test"
 
       #
       # NPM registry settings
@@ -166,16 +166,62 @@ on:
           Whether or not the npm package should be published as public.
         type: string
         required: false
-        default: 'false'
+        default: "false"
       #
       # AWS ECR settings
       #
+      aws-login-enable:
+        description: |
+          Enables the creation of AWS credentials during the GitHub Action workflow.
+        type: boolean
+        required: false
+        default: true
+
       aws-region:
         description: |
           The AWS region
         type: string
         required: false
-        default: 'eu-central-1'
+        default: "eu-central-1"
+
+      #
+      # GCP sign control
+      #
+      gcp-login-enable:
+        description: |
+          Enables the creation of Google cloud credentials during the GitHub Action workflow.
+        type: boolean
+        required: false
+        default: false
+
+      gcp-sdk-version:
+        description: |
+          Version or version constraint of the gcloud SDK to install. If
+          unspecified, it will accept any installed version of the gcloud SDK. If
+          set to "latest", it will download the latest available SDK. If set to a
+          version constraint, it will download the latest available version that
+          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+        type: string
+        required: false
+        default: "latest"
+
+      # We do not put version into secrets because it has very short value.
+      #  '1' in secrets may cause '1' to be replaced with '*' everywhere in github workflow logs
+      gcp-kms-key-version:
+        description: |
+          Version of KMS key.
+        type: string
+        required: false
+        default: "1"
+
+      gcp-kms-digest-algorithm:
+        description: |
+          The algorithm to digest the input.
+          Must be one of: sha256, sha384, sha512.
+        type: string
+        required: false
+        default: "sha256"
+
       #
       # Platforma Docker settings
       #
@@ -184,7 +230,7 @@ on:
           Platforma docker tag.
         type: string
         required: false
-        default: 'main'
+        default: "main"
       pl-test-assets-dir:
         description: |
           Platforma test assets directory;
@@ -194,7 +240,7 @@ on:
           and will be appended to github.workspace within the docker compose action.
         type: string
         required: false
-        default: 'assets'
+        default: "assets"
       pl-log-dir:
         description: |
           Platforma logs directory on the agent;
@@ -204,7 +250,7 @@ on:
           and will be appended to github.workspace within the docker compose action.
         type: string
         required: false
-        default: 'log'
+        default: "log"
       pl-log-commit-summary:
         description: |
           Whether or not to log commit summary for Platforma.
@@ -222,7 +268,7 @@ on:
           Platforma log level
         type: string
         required: false
-        default: 'info'
+        default: "info"
       pl-auth-enabled:
         description: |
           Whether or not to enable authentication in the Platforma.
@@ -236,7 +282,7 @@ on:
         description: |
           Enable interactive debugging session
         type: string
-        default: ''
+        default: ""
         required: false
 
       #
@@ -259,7 +305,7 @@ on:
            - 'false' - don't send notifications about build results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
       notify-tests:
         description: |
@@ -271,7 +317,7 @@ on:
            - 'false' - don't send notifications about tests results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
     secrets:
       env:
@@ -283,6 +329,36 @@ on:
 
           This input's envs are merged with inputs.env
           This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      AWS_ASSUME_ROLE:
+        description: |
+          Role to assume in AWS to assume during CI run.
+        required: false
+      AWS_ASSUME_REGION:
+        description: |
+          The AWS region for AWS role assumption
+        required: false
+
+      GCP_KMS_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+      GCP_KMS_SERVICE_ACCOUNT:
+        description: |
+          The name of the GCP service account
+        required: false
+      GCP_KMS_LOCATION:
+        description: |
+          KMS key and keyring location
+        required: false
+      GCP_KMS_KEYRING:
+        description: |
+          KMS keyring name in Google Cloud Platform.
+        required: false
+      GCP_KMS_KEY_NAME:
+        description: |
+          KMS key name in Google Cloud Platform.
         required: false
 
       TELEGRAM_NOTIFICATION_TARGET:
@@ -343,6 +419,9 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
+      - name: Add MiLab shell utils to PATH
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
+
       - id: npm-pkg-metadata
         uses: milaboratory/github-ci/actions/shell@v4
         with:
@@ -353,14 +432,16 @@ jobs:
             ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
 
       - uses: aws-actions/configure-aws-credentials@v4
+        if: inputs.aws-login-enable
         with:
-          role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
-          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE || env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          aws-region: ${{ secrets.AWS_ASSUME_REGION || inputs.aws-region }}
 
       - id: login-ecr
+        if: inputs.aws-login-enable
         uses: aws-actions/amazon-ecr-login@v2
         with:
-          mask-password: 'true'
+          mask-password: "true"
 
       - uses: milaboratory/github-ci/actions/turborepo/cache@v4
 
@@ -371,7 +452,7 @@ jobs:
           PNPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-pkg-version }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
-          tests: 'false'
+          tests: "false"
           test-script-name: ${{ inputs.test-script-name }}
           pnpm-recursive-build: ${{ inputs.pnpm-recursive-build }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
@@ -411,6 +492,20 @@ jobs:
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
+      - name: Configure GCP credentials
+        uses: google-github-actions/auth@v2
+        if: inputs.gcp-login-enable
+        with:
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          token_format: "access_token"
+
+      - name: Set up GCloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        if: inputs.gcp-login-enable
+        with:
+          version: ${{ inputs.gcp-sdk-version }}
+
       - name: Create Release Pull Request and Publish npm package (Public)
         if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'true'
         env:
@@ -419,8 +514,8 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          commit: 'chore: update versions'
-          title: 'chore: update versions'
+          commit: "chore: update versions"
+          title: "chore: update versions"
           publish: pnpm -r publish --no-git-checks --access public
 
       - name: Create Release Pull Request and Publish npm package
@@ -429,17 +524,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
+          GCP_KMS_KEY_VERSION: ${{ inputs.gcp-kms-key-version }}
+          GCP_KMS_KEY_NAME: ${{ secrets.GCP_KMS_KEY_NAME }}
+          GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
+          GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
+          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
         uses: changesets/action@v1
         with:
-          commit: 'chore: update versions'
-          title: 'chore: update versions'
+          commit: "chore: update versions"
+          title: "chore: update versions"
           publish: pnpm -r publish --no-git-checks
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
-      started: 'true'
+      started: "true"
 
   notify-release:
     name: notify release

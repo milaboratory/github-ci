@@ -39,6 +39,14 @@ inputs:
     required: false
     default: 'false'
 
+  working-directory:
+    description: |
+      Change the working directory before running the action.
+      Allows to run npm script from subdirectory instead of
+      repository root.
+    required: false
+    default: ""
+
   install-deps:
     description: |
       run 'npm ci' as part of preparation process
@@ -97,14 +105,14 @@ runs:
 
     - name: Update npm to latest available version
       if: inputs.update-npm == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
-      with:
-        run: |
-          npm i -g npm@latest
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        npm i -g npm@latest
 
     - name: Install dependencies
       if: inputs.install-deps == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
-      with:
-        run: |
-          npm ci
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        npm ci
