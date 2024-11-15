@@ -522,7 +522,7 @@ jobs:
 
   notify-release-review:
     name: Notify review required
-    runs-on: ${{ inputs.gha-runner-label }}
+    runs-on: ubuntu-latest
 
     if: always() && needs.can-release.result == 'success'
 
