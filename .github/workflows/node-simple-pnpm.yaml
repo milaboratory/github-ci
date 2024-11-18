@@ -436,7 +436,6 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
