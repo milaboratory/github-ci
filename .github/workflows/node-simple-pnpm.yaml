@@ -488,11 +488,14 @@ jobs:
         uses: milaboratory/github-ci/actions/git/changed-files@v4
         with:
           files_ignore: ${{ inputs.changed-files-list }}
+          since_last_remote_commit: true
 
       - name: List all changed files
         env:
+          ANY_MODIFIED_FILES: ${{ steps.changed-files.outputs.any_modified }}
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
+          echo "Any modified files: ${ANY_MODIFIED_FILES}"
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
           done
