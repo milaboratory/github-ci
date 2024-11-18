@@ -485,17 +485,15 @@ jobs:
         if: github.event_name == 'push'
           && github.ref_name == 'main'
         id: changed-files
-        uses: milaboratory/github-ci/actions/git/changed-files@v4
+        uses: milaboratory/github-ci/actions/git/verify-changed-files@v4
         with:
-          files_ignore: ${{ inputs.changed-files-list }}
-          since_last_remote_commit: true
+          files: ${{ inputs.changed-files-list }}
+          match-gitignore-files: ${{ inputs.match-gitignore-files }}
 
       - name: List all changed files
         env:
-          ANY_MODIFIED_FILES: ${{ steps.changed-files.outputs.any_modified }}
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.changed_files }}
         run: |
-          echo "Any modified files: ${ANY_MODIFIED_FILES}"
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
           done
@@ -550,7 +548,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Get GitHub App User ID
-        if: steps.changed-files.outputs.any_modified == 'true'
+        if: steps.changed-files.outputs.files_changed == 'true'
         id: get-user-id
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -558,7 +556,7 @@ jobs:
 
       - name: Commit changed files to main
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: steps.changed-files.outputs.any_modified == 'true'
+        if: steps.changed-files.outputs.files_changed == 'true'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
@@ -573,7 +571,7 @@ jobs:
 
       - name: Publish npm package
         if: github.ref_name == 'main'
-          && steps.changed-files.outputs.any_modified == 'false'
+          && steps.changed-files.outputs.files_changed == 'false'
           && inputs.publish-to-public == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -585,7 +583,7 @@ jobs:
 
       - name: Publish npm package (public)
         if: github.ref_name == 'main'
-          && steps.changed-files.outputs.any_modified == 'false'
+          && steps.changed-files.outputs.files_changed == 'false'
           && inputs.publish-to-public == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
