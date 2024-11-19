@@ -487,18 +487,18 @@ jobs:
         id: check-changes
         shell: bash
         run: |
-          # Check for unstaged changes
-          UNSTAGED=$(git diff --diff-filter=ACMUXTR --name-only)
-          # Check for uncommitted changes in the staging area
-          STAGED=$(git diff --diff-filter=ACMUXTR --name-only --cached)
+          # Check for tracked files
+          TRACKED_FILES=$(git diff --diff-filter=ACMUXTR --name-only)
+          # Check for unstaged deleted files
+          UNSTAGED_DELETED_FILES=$(git ls-files --deleted)
 
-          if [ -n "${UNSTAGED}" ] || [ -n "${STAGED}" ]; then
+          if [ -n "${TRACKED_FILES}" ] || [ -n "${UNSTAGED_DELETED_FILES}" ]; then
             echo "Local changes detected (unstaged or staged but not committed)."
             echo "has-changes=1" >> $GITHUB_OUTPUT
-            echo "Unstaged changes:"
-            echo "${UNSTAGED}"
-            echo "Staged changes:"
-            echo "${STAGED}"
+            echo "Tracked files:"
+            echo "${TRACKED_FILES}"
+            echo "Unstaged deleted files:"
+            echo "${UNSTAGED_DELETED_FILES}"
           else
             echo "No local changes detected."
             echo "has-changes=0" >> $GITHUB_OUTPUT
