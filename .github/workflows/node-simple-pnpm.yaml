@@ -490,6 +490,7 @@ jobs:
           CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | wc -l)
           if [ "$CHANGES" -gt 0 ]; then
             echo "Found uncommitted changes."
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }}
             echo "has-changes=1" >> $GITHUB_OUTPUT
           else
             echo "No changes found."
