@@ -481,19 +481,26 @@ jobs:
           run: |
             pnpm run version-packages
 
-      - name: Get changed files
+      - name: Get changed files staged and unstaged
         if: github.event_name == 'push'
           && github.ref_name == 'main'
         id: check-changes
         shell: bash
         run: |
-          CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | wc -l)
-          if [ "$CHANGES" -gt 0 ]; then
-            echo "Found uncommitted changes."
-            git diff --name-only ${{ github.event.before }} ${{ github.event.after }}
+          # Check for unstaged changes
+          UNSTAGED=$(git diff --name-only)
+          # Check for uncommitted changes in the staging area
+          STAGED=$(git diff --name-only --cached)
+
+          if [ -n "${UNSTAGED}" ] || [ -n "${STAGED}" ]; then
+            echo "Local changes detected (unstaged or staged but not committed)."
             echo "has-changes=1" >> $GITHUB_OUTPUT
+            echo "Unstaged changes:"
+            echo "${UNSTAGED}"
+            echo "Staged changes:"
+            echo "${STAGED}"
           else
-            echo "No changes found."
+            echo "No local changes detected."
             echo "has-changes=0" >> $GITHUB_OUTPUT
           fi
 
