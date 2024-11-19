@@ -31,6 +31,11 @@ on:
       #
       # Checkout settings
       #
+      changed-files-list:
+        description: |
+          File/Directory names to check for uncommited changes.
+        type: string
+        required: false
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -40,7 +45,6 @@ on:
         type: string
         required: false
         default: ''
-
       #
       # Environment settings
       #
