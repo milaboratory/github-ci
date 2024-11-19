@@ -522,7 +522,7 @@ jobs:
 
   notify-release-review:
     name: Notify review required
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
 
     if: always() && needs.can-release.result == 'success'
 
@@ -622,7 +622,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4 tag
         if: inputs.aws-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'

@@ -54,6 +54,8 @@ runs:
         CERT_BASE64: ${{ inputs.mac-cert-base64 }}
         CERT_PWD: ${{ inputs.mac-cert-passwd }}
         CERT_FILE: ${{ format('{0}.p12', inputs.mac-cert-id) }}
+
         ACTION_SCRIPT_PATH: ${{ github.action_path }}/codesign.sh
+
       shell: bash
       run: "${ACTION_SCRIPT_PATH}"
