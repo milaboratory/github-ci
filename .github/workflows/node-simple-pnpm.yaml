@@ -488,9 +488,9 @@ jobs:
         shell: bash
         run: |
           # Check for unstaged changes
-          UNSTAGED=$(git diff --name-only)
+          UNSTAGED=$(git diff --diff-filter=ACMUXTR --name-only)
           # Check for uncommitted changes in the staging area
-          STAGED=$(git diff --name-only --cached)
+          STAGED=$(git diff --diff-filter=ACMUXTR --name-only --cached)
 
           if [ -n "${UNSTAGED}" ] || [ -n "${STAGED}" ]; then
             echo "Local changes detected (unstaged or staged but not committed)."
