@@ -489,14 +489,18 @@ jobs:
         run: |
           # Check for tracked files
           TRACKED_FILES=$(git diff --diff-filter=ACMUXTR --name-only)
+          # Check for untracked files
+          UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
           # Check for unstaged deleted files
           UNSTAGED_DELETED_FILES=$(git ls-files --deleted)
 
-          if [ -n "${TRACKED_FILES}" ] || [ -n "${UNSTAGED_DELETED_FILES}" ]; then
-            echo "Local changes detected (unstaged or staged but not committed)."
+          if [ -n "${TRACKED_FILES}" ] || [ -n "${UNTRACKED_FILES}" ] || [ -n "${UNSTAGED_DELETED_FILES}" ]; then
+            echo "Local changes detected but not committed."
             echo "has-changes=1" >> $GITHUB_OUTPUT
             echo "Tracked files:"
             echo "${TRACKED_FILES}"
+            echo "Untracked files:"
+            echo "${UNTRACKED_FILES}"
             echo "Unstaged deleted files:"
             echo "${UNSTAGED_DELETED_FILES}"
           else
