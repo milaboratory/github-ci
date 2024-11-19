@@ -238,17 +238,6 @@ on:
       #
       # Changed files
       #
-      changed-files-list:
-        description: |
-          File/Directory names to check for uncommited changes.
-        type: string
-        required: false
-      match-gitignore-files:
-        description: |
-          Indicates whether to match files in `.gitignore`'
-        type: boolean
-        required: false
-        default: false
       changeset-default-branch:
         description:
           Specify the default branch for changesets to run checks against.
