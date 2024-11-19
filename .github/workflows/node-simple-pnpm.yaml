@@ -436,6 +436,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: '0'
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -479,6 +480,21 @@ jobs:
         with:
           run: |
             pnpm run version-packages
+
+      - name: Get changed files
+        if: github.event_name == 'push'
+          && github.ref_name == 'main'
+        id: check-changes
+        shell: bash
+        run: |
+          CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | wc -l)
+          if [ "$CHANGES" -gt 0 ]; then
+            echo "Found uncommitted changes."
+            echo "has-changes=1" >> $GITHUB_OUTPUT
+          else
+            echo "No changes found."
+            echo "has-changes=0" >> $GITHUB_OUTPUT
+          fi
 
       - name: Run build
         uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
@@ -530,8 +546,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Get GitHub App User ID
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
+        if: steps.check-changes.outputs.has-changes == '1'
         id: get-user-id
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -539,8 +554,7 @@ jobs:
 
       - name: Commit changed files to main
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: github.event_name == 'push'
-          && github.ref_name == 'main'
+        if: steps.check-changes.outputs.has-changes == '1'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
@@ -555,6 +569,7 @@ jobs:
 
       - name: Publish npm package
         if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -566,6 +581,7 @@ jobs:
 
       - name: Publish npm package (public)
         if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
