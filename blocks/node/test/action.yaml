@@ -135,7 +135,6 @@ runs:
     - name: Run build - ${{ inputs.build-script-name }} - (macOS and Linux)
       if: inputs.build-before-run-test != 'false'
         && runner.os != 'Windows'
-
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -144,7 +143,6 @@ runs:
     - name: Run build - ${{ inputs.build-script-name }} - (Windows)
       if: inputs.build-before-run-test != 'false'
         && runner.os == 'Windows'
-
       shell: pwsh
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -154,7 +152,6 @@ runs:
       if: runner.os != 'Windows'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -164,7 +161,6 @@ runs:
       if: runner.os == 'Windows'
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-
       shell: pwsh
       working-directory: ${{ inputs.working-directory }}
       run: |
