@@ -22,7 +22,7 @@ services:
         max-file: "4"
     environment:
       # dump platforma's configuration to stdout
-      - "PL_DUMP_CONFIG_BEFORE_RUN=true"
+      - "PL_DUMP_CONFIG_BEFORE_RUN=${PL_DUMP_CONFIG_BEFORE_RUN:-false}"
       # license settings
       - "MI_LICENSE=${MI_LICENSE:-}"
       - "PL_LICENSE=${PL_LICENSE:-}"
