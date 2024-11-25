@@ -87,6 +87,13 @@ on:
         required: false
         default: 'pnpm-lock.yaml'
 
+      team-id:
+        description: |
+          The Team ID to use. This controls the directory where turbo cache entries will be saved
+        type: string
+        required: false
+        default: 'ci'   
+
       #
       # PNPM settings
       #
@@ -441,6 +448,7 @@ jobs:
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
