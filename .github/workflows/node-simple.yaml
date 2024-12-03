@@ -349,7 +349,7 @@ jobs:
           dump-stdout: false
           run: |
             sudo apt-get update && \
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
@@ -439,7 +439,7 @@ jobs:
           dump-stdout: false
           run: |
             sudo apt-get update && \
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
@@ -596,7 +596,7 @@ jobs:
           dump-stdout: false
           run: |
             sudo apt-get update && \
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
