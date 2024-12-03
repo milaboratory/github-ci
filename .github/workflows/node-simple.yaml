@@ -343,6 +343,14 @@ jobs:
       - init
 
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        if: inputs.gha-runner-label == 'dev-assets'
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -425,6 +433,14 @@ jobs:
       - build
 
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        if: inputs.gha-runner-label == 'dev-assets'
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+
       - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
@@ -574,6 +590,14 @@ jobs:
       contents: write
 
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        if: inputs.gha-runner-label == 'dev-assets'
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli
+
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
 
