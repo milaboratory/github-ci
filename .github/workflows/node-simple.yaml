@@ -577,6 +577,7 @@ jobs:
   publish-to-npm:
     name: publish
     runs-on: ${{ inputs.gha-runner-label }}
+    timeout-minutes: 4320
 
     if: always()
       && needs.release.result == 'success'
