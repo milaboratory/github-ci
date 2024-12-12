@@ -92,7 +92,7 @@ on:
           The Team ID to use. This controls the directory where turbo cache entries will be saved
         type: string
         required: false
-        default: 'ci'   
+        default: 'ci'
 
       #
       # PNPM settings
@@ -138,6 +138,7 @@ on:
         type: string
         required: true
         default: 'build'
+
       is-electron-application:
         description: |
           If 'true' enables cache for an Electron application,
@@ -155,6 +156,7 @@ on:
         type: boolean
         required: false
         default: false
+
       test-script-name:
         description: |
           The name of a test
@@ -180,9 +182,21 @@ on:
         type: string
         required: false
         default: 'false'
-      #
-      # AWS ECR settings
-      #
+
+      create-tag:
+        description: |
+          Create a tag after publishing the package.
+        type: string
+        required: false
+        default: 'false'
+
+      package-path:
+        description: |
+          Relative path to the package.json with package version.
+        type: string
+        required: false
+        default: '.'
+
       aws-region:
         description: |
           The AWS region
@@ -198,6 +212,7 @@ on:
         type: string
         required: false
         default: 'main'
+
       pl-test-assets-dir:
         description: |
           Platforma test assets directory;
@@ -208,6 +223,7 @@ on:
         type: string
         required: false
         default: 'assets'
+
       pl-log-dir:
         description: |
           Platforma logs directory on the agent;
@@ -218,24 +234,28 @@ on:
         type: string
         required: false
         default: 'log'
+
       pl-log-commit-summary:
         description: |
           Whether or not to log commit summary for Platforma.
         type: boolean
         required: false
         default: true
+
       pl-log-resource-data:
         description: |
           Whether or not to log resource data for Platforma.
         type: boolean
         required: false
         default: true
+
       pl-log-level:
         description: |
           Platforma log level
         type: string
         required: false
         default: 'info'
+
       pl-auth-enabled:
         description: |
           Whether or not to enable authentication in the Platforma.
@@ -340,9 +360,11 @@ jobs:
 
       - id: npm-pkg-metadata
         uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PACKAGE_PATH: ${{ inputs.package-path }}
         with:
           run: |
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
+            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
             PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
             ghwa_set_output pnpm-version "${PNPM_VERSION}"
@@ -599,6 +621,21 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm -r publish --no-git-checks --access public
+
+      - name: Create release with tag
+        if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
+          && inputs.create-tag == 'true'
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        env:
+          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
 
     outputs:
       # Even constant outputs become initialized only after job start.
