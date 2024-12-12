@@ -634,6 +634,7 @@ jobs:
           name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           commit: ${{ github.sha }}
+          skipIfReleaseExists: true
           draft: false
           prerelease: false
 
