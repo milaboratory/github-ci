@@ -228,7 +228,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pip install -r requirements.txt
+            pip install pip==24.0 &&  pip install -r requirements.txt
 
       - uses: milaboratory/github-ci/actions/shell@v4
         with:
