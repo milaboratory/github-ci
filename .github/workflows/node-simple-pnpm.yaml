@@ -341,7 +341,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -359,7 +359,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -382,9 +382,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -395,7 +395,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -406,13 +406,13 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check for Changesets
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
@@ -436,9 +436,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -473,7 +473,7 @@ jobs:
           team-id: ${{ inputs.team-id }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -484,7 +484,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -528,7 +528,7 @@ jobs:
           fi
 
       - name: Run build
-        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -549,7 +549,7 @@ jobs:
 
       - name: Run tests
         id: test
-        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
@@ -584,7 +584,7 @@ jobs:
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
       - name: Commit changed files to main
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         if: steps.check-changes.outputs.has-changes == '1'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
@@ -626,7 +626,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.create-tag == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -657,12 +657,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
