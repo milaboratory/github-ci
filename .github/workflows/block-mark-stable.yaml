@@ -71,15 +71,6 @@ on:
         required: false
         default: 'pnpm-lock.yaml'
       #
-      # PNPM settings
-      #
-      pnpm-version:
-        description: |
-          Version of pnpm to install.
-        type: string
-        required: false
-        default: 'latest'
-      #
       # NPM registry settings
       #
       npmrc-config:
@@ -174,7 +165,7 @@ jobs:
         with:
           run: |
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${BLOCK_PATH}/package.json" | jq --raw-output '.version')"
-            PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/${BLOCK_PATH}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+            PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
             ghwa_set_output pnpm-version "${PNPM_VERSION}"
 
