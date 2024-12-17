@@ -74,7 +74,7 @@ on:
           Node version to use.
           Examples: '1.19', '1.20'
         type: string
-        required: true
+        required: false
 
       golang-cache-hashfiles-path:
         description: |
