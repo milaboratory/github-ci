@@ -67,6 +67,26 @@ on:
         required: true
 
       #
+      # Golang settings
+      #
+      golang-version:
+        description: |
+          Node version to use.
+          Examples: '1.19', '1.20'
+        type: string
+        required: true
+
+      golang-cache-hashfiles-path:
+        description: |
+          Returns a single hash for the set of files that matches the path pattern.
+          You can provide a single path pattern or multiple path patterns separated by commas.
+          The path is relative to the GITHUB_WORKSPACE directory
+          and can only include files inside of the GITHUB_WORKSPACE.
+        type: string
+        required: false
+        default: '**/go.sum'
+
+      #
       # Cache control
       #
       cache-version:
@@ -471,6 +491,14 @@ jobs:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
+
+      - name: Prepare environment for Golang when requested
+        if: inputs.golang-version != ''
+        uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+        with:
+          golang-version: ${{ inputs.golang-version }}
+          cache-version: ${{ inputs.cache-version }}
+          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
