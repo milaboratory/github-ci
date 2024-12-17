@@ -20,6 +20,11 @@ inputs:
     description: |
       Specifies the URL of Platforma's binary registry where the signed package will be uploaded.
     required: false
+
+  is-release:
+    description: |
+      Indicates whether the current run is intended for a release.
+    required: false
   #
   # NodeJS Control
   #
@@ -246,14 +251,23 @@ runs:
         GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
         GCP_KMS_LOCATION: ${{ inputs.gcloud-kms-location }}
         GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
+        IS_RELEASE: ${{ inputs.is-release }}
       with:
         run: |
           cd "${WORKING_DIRECTORY}"
           if [ -z "${PUBLISH_SCRIPT}" ]; then
             if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
-              npm publish --access public
+              if [ "${IS_RELEASE}" == "true" ];then
+                npm publish --access public
+              else
+                npm publish --tag beta --access public
+              fi
             else
-              npm publish
+              if [ "${IS_RELEASE}" == "true" ];then
+                npm publish
+              else
+                npm publish --tag beta
+              fi
             fi
           else
               npm run "${PUBLISH_SCRIPT}"

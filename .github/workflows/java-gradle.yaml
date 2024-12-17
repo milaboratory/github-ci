@@ -2109,6 +2109,7 @@ jobs:
       - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4
         if: github.ref_name == inputs.release-branch-name
         with:
+          is-release: ${{ steps.context.outputs.is-release }}
           artifact-name: ${{ inputs.product-name-slug }}
           build-version: ${{ steps.context.outputs.current-version }}
           execution-path: ${{ inputs.node-execution-path }}
