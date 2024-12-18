@@ -169,7 +169,7 @@ runs:
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       with:
         dump-stdout: false
         run: |
@@ -177,7 +177,7 @@ runs:
           sleep 10
 
     - name: Check if we should upload logs
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
@@ -193,7 +193,7 @@ runs:
 
     - name: Upload Platforma logs
       uses: actions/upload-artifact@v4
-      if: always() && env.UPLOAD_LOGS == 'true' && inputs.pl-start-service != 'false'
+      if: always() && env.UPLOAD_LOGS == 'true'
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
       with:
@@ -202,7 +202,7 @@ runs:
           ${{ env.PL_LOG_DIR }}
 
     - name: Clean Platforma logs
-      if: always() && env.UPLOAD_LOGS == 'true' && inputs.pl-start-service != 'false'
+      if: always() && env.UPLOAD_LOGS == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
