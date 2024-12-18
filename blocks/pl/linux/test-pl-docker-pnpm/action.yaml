@@ -212,7 +212,7 @@ runs:
           sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
