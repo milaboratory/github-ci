@@ -144,10 +144,11 @@ jobs:
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4
-        
+
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
+
   metadata:
     name: get run metadata
     runs-on: ubuntu-latest
