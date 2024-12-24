@@ -145,6 +145,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4
         
+        
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
@@ -208,7 +209,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
-          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
