@@ -36,7 +36,7 @@ runs:
         python-version: '${{ inputs.python-version }}'
 
     - name: Setup Cache for Python project
-      uses: milaboratory/github-ci/actions/python/cache@v4-beta
+      uses: milaboratory/github-ci/actions/python/cache@v4
       with:
         version: ${{ inputs.cache-version }}
         hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
