@@ -56,6 +56,12 @@ inputs:
       Generates a .npmrc file based on provided configuration.
     required: false
 
+  pl-start-service:
+    description: |
+      Start Platforma Backend service before tests
+    required: false
+    default: 'true'
+
   pl-docker-registry:
     description: |
       Platforma docker registry.
@@ -130,6 +136,7 @@ runs:
           pnpm install --frozen-lockfile --prefer-offline
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
+      if: inputs.pl-start-service != 'false'
       with:
         pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
@@ -162,7 +169,7 @@ runs:
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       with:
         dump-stdout: false
         run: |
@@ -170,7 +177,7 @@ runs:
           sleep 10
 
     - name: Check if we should upload logs
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
@@ -205,7 +212,7 @@ runs:
           sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
-      if: always()
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
