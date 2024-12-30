@@ -240,6 +240,14 @@ on:
         type: string
         required: false
         default: 'eu-central-1'
+
+      aws-login-duration:
+        description: |
+          Maximum time AWS credentials will be valid until expiration.
+          Defaults to 1 hour.
+        type: number
+        required: false
+        default: 3600
       #
       # Platforma Docker settings
       #
@@ -493,6 +501,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
@@ -590,6 +599,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
 
       - id: login-ecr
