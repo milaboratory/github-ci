@@ -166,7 +166,24 @@ on:
         type: string
         required: false
         default: 'true'
+      #
+      # Build pre-calculated control
+      #
+      pre-calculated:
+        description:
+          Flag to indicate whether individual subtasks are pre-calculated on isolated nodes
+          to enable parallel builds within a monorepo workflow. Set to true to activate pre-calculation.
+        type: boolean
+        required: false
+        default: false
 
+      pre-calculated-task-list:
+        description:
+          JSON-formatted string listing of the specific subtasks that have been pre-calculated.
+          This list is used to manage and track the execution of parallel builds in the monorepo.
+        type: string
+        required: false
+        default: '[]'
       #
       # Test control
       #
@@ -365,11 +382,9 @@ jobs:
   init:
     name: Init
     runs-on: ubuntu-latest
-
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
-
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
@@ -377,7 +392,6 @@ jobs:
   metadata:
     name: get run metadata
     runs-on: ubuntu-latest
-
     needs:
       - init
     steps:
@@ -403,10 +417,8 @@ jobs:
   check:
     name: check for changesets
     runs-on: ubuntu-latest
-
     needs:
       - metadata
-
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
@@ -446,14 +458,106 @@ jobs:
           run: |
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
-  build-test-publish:
-    name: unified (build test publish)
+  pre-calculated-build:
+    name: pre-build
     runs-on: ${{ inputs.gha-runner-label }}
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.pre-calculated-task-list) }}
     needs:
       - check
       - metadata
+    if: inputs.pre-calculated && inputs.pre-calculated-task-list != '[]'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
 
+      - name: Generate Zen Artisan Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_ZEN_APP_ID }}
+          private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        env:
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - name: Install NodeJS packages with pnpm
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
+        with:
+          dump-stdout: false
+          run: |
+            pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run build for - ${{ matrix.step }}
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PRE_CALCULATED_STEP: ${{ matrix.step }}
+        with:
+          dump-stdout: false
+          run: |
+            pnpm run --filter="${PRE_CALCULATED_STEP}"
+
+    outputs:
+      status: 'completed'
+
+  build-decision-maker:
+    runs-on: ubuntu-latest
+    needs:
+      - check
+      - metadata
+      - pre-calculated-build
+    if: always()
+    outputs:
+      proceed: ${{ (needs.pre-calculated-build.result == 'success' || needs.pre-calculated-build.result == 'skipped') && 'true' || 'false' }}
+    steps:
+      - run: echo "Decision based on pre-calculated-build status."
+
+  build-test-publish:
+    name: unified (build test publish)
+    runs-on: ${{ inputs.gha-runner-label }}
+    needs:
+      - metadata
+      - build-decision-maker
+    if: ${{ needs.build-decision-maker.outputs.proceed == 'true' }}
     permissions:
       id-token: write
       packages: write
@@ -682,14 +786,12 @@ jobs:
   notify-release:
     name: notify release
     runs-on: ubuntu-latest
-
     if: always()
     needs:
       - init
       - metadata
       - check
       - build-test-publish
-
     steps:
       - id: search-tags
         if: always()
