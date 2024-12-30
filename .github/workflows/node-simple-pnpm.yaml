@@ -543,7 +543,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm run --filter="${PRE_CALCULATED_STEP}"
+            pnpm run build --filter="${PRE_CALCULATED_STEP}"
 
     outputs:
       status: 'completed'
