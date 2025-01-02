@@ -536,9 +536,6 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Interactive debug session
-        uses: fawazahmed0/action-debug-vscode@main      
-
       - name: Run build for - ${{ matrix.step }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
