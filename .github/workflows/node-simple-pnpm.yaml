@@ -556,24 +556,9 @@ jobs:
       - pre-calculated-build
     if: always()
     outputs:
-      proceed: ${{ steps.decision.outputs.should-proceed }}
+      proceed: ${{ needs.pre-calculated-build.result != 'failure' }}
     steps:
-      - name: Determine to proceed or not
-        id: decision
-        env:
-          RESULT: ${{ needs.pre-calculated-build.result }}
-        run: |
-          if [[ "${RESULT}" == "success" || "${RESULT}" == "skipped" ]]; then
-            echo "should-proceed=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "should-proceed=0" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check output
-        env:
-          RESULT: ${{ steps.decision.outputs.should-proceed }}
-        run:
-          echo "${RESULT}"
+      - run: echo "Result ${{ needs.pre-calculated-build.result != 'failure' }}"
 
   build-test-publish:
     name: unified (build test publish)
@@ -581,7 +566,7 @@ jobs:
     needs:
       - metadata
       - build-decision-maker
-    if: ${{ needs.build-decision-maker.outputs.proceed == '1' }}
+    if: ${{ needs.build-decision-maker.outputs.proceed }}
     permissions:
       id-token: write
       packages: write
