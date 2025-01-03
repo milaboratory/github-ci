@@ -558,7 +558,9 @@ jobs:
     outputs:
       proceed: ${{ needs.pre-calculated-build.result != 'failure' }}
     steps:
-      - run: echo "Result ${{ needs.pre-calculated-build.result != 'failure' }}"
+      - name: Check pre-calculated-build result
+        run: |
+          echo "Result of pre-calculated-build: ${{ needs.pre-calculated-build.result }}"
 
   build-test-publish:
     name: unified (build test publish)
