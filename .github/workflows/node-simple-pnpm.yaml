@@ -568,7 +568,7 @@ jobs:
     needs:
       - metadata
       - build-decision-maker
-    if: ${{ needs.build-decision-maker.outputs.proceed }}
+    if: ${{ needs.build-decision-maker.outputs.proceed == 'true' }}
     permissions:
       id-token: write
       packages: write
