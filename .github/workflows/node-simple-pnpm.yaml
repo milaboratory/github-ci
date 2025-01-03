@@ -563,7 +563,7 @@ jobs:
         env:
           RESULT: ${{ needs.pre-calculated-build.result }}
         run: |
-          if [ "${RESULT}" == "success" || "${RESULT}" == "skipped" ]; then
+          if [[ "${RESULT}" == "success" || "${RESULT}" == "skipped" ]]; then
             echo "should-proceed=true" >> $GITHUB_ENV
           else
             echo "should-proceed=false" >> $GITHUB_ENV
