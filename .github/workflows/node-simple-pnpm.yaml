@@ -556,7 +556,7 @@ jobs:
       - pre-calculated-build
     if: always()
     outputs:
-      proceed: ${{ needs.pre-calculated-build.result != 'failure' }}
+      proceed: ${{ (needs.pre-calculated-build.result != 'failure') && 'true' || 'false' }}
     steps:
       - name: Check pre-calculated-build result
         run: |
