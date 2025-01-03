@@ -564,9 +564,9 @@ jobs:
           RESULT: ${{ needs.pre-calculated-build.result }}
         run: |
           if [[ "${RESULT}" == "success" || "${RESULT}" == "skipped" ]]; then
-            echo "should-proceed=true" >> $GITHUB_OUTPUT
+            echo "should-proceed=1" >> "$GITHUB_OUTPUT"
           else
-            echo "should-proceed=false" >> $GITHUB_OUTPUT
+            echo "should-proceed=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check output
@@ -581,7 +581,7 @@ jobs:
     needs:
       - metadata
       - build-decision-maker
-    if: ${{ needs.build-decision-maker.outputs.proceed == 'true' }}
+    if: ${{ needs.build-decision-maker.outputs.proceed == '1' }}
     permissions:
       id-token: write
       packages: write
