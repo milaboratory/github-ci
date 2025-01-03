@@ -569,6 +569,12 @@ jobs:
             echo "should-proceed=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check output
+        env:
+          RESULT: ${{ steps.decision.outputs.should-proceed }}
+        run:
+          echo "${RESULT}"
+
   build-test-publish:
     name: unified (build test publish)
     runs-on: ${{ inputs.gha-runner-label }}
