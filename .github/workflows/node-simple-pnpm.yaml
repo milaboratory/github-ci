@@ -556,7 +556,7 @@ jobs:
       - pre-calculated-build
     if: always()
     outputs:
-      proceed: ${{ (needs.pre-calculated-build.result == 'success' || needs.pre-calculated-build.result == 'skipped') && 'true' || 'false' }}
+      proceed: ${{ needs.pre-calculated-build.result == 'success' || needs.pre-calculated-build.result == 'skipped' }}
     steps:
       - run: |
           echo "Decision based on pre-calculated-build status: ${{ needs.pre-calculated-build.result }}"
@@ -567,7 +567,7 @@ jobs:
     needs:
       - metadata
       - build-decision-maker
-    if: ${{ needs.build-decision-maker.outputs.proceed == 'true' }}
+    if: ${{ needs.build-decision-maker.outputs.proceed }}
     permissions:
       id-token: write
       packages: write
