@@ -558,7 +558,8 @@ jobs:
     outputs:
       proceed: ${{ (needs.pre-calculated-build.result == 'success' || needs.pre-calculated-build.result == 'skipped') && 'true' || 'false' }}
     steps:
-      - run: echo "Decision based on pre-calculated-build status."
+      - run: |
+          echo "Decision based on pre-calculated-build status: ${{ needs.pre-calculated-build.result }}"
 
   build-test-publish:
     name: unified (build test publish)
