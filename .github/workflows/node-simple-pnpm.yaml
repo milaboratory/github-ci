@@ -554,7 +554,9 @@ jobs:
       - check
       - metadata
       - pre-calculated-build
-    if: ${{ needs.pre-calculated-build.result != 'failure' }}
+    if: |
+      needs.pre-calculated-build.result == 'success' ||
+      needs.pre-calculated-build.result == 'skipped'
     permissions:
       id-token: write
       packages: write
