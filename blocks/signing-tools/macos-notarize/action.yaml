@@ -53,43 +53,57 @@ runs:
         run: |
           echo "${API_KEY_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/${API_KEY_FILE}"
 
+          #
+          # Create temporary directory and put all data into it:
+          # ditto cannot work with several files when creating archive
+          #
+          archive_dir="notarize-$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9')"
+          mkdir "${archive_dir}"
+
           while IFS= read -r ARTIFACT_PATH; do
-
-            /usr/bin/ditto -c -k ${ARTIFACT_PATH} ${ARTIFACT_PATH}.zip ;
-
-            # Submit the zipball and wait for response
-            xcrun notarytool submit \
-              -f json \
-              --key-id "${API_KEY_ID}" \
-              --issuer "${API_KEY_ISSUER_ID}" \
-              --key "${API_KEY_FILE}" \
-              --wait \
-              ${ARTIFACT_PATH}.zip 2>&1 |
-              tee /tmp/notarization_info.json
-
-            status=$(jq -r .status </tmp/notarization_info.json)
-            id=$(jq -r .id </tmp/notarization_info.json)
-
-            if [ -z "${id}" ]; then
-              echo "Unexpected notarization tool response: empty notarization task ID"
-              cat /tmp/notarization_info.json
-              exit 1
-            fi
-
-            echo "status=${status} id=${id}"
-
-            xcrun notarytool log \
-              --key-id "${API_KEY_ID}" \
-              --issuer "${API_KEY_ISSUER_ID}" \
-              --key "${API_KEY_FILE}" \
-              "${id}" \
-              -f json >/tmp/notarization_log.json
-
-            issues=$(jq -r .issues </tmp/notarization_log.json)
-            if [ "$issues" != "null" ]; then
-                printf "There are issues with the notarization (${issues})\n"
-                printf "=== Log output === \n$(cat /tmp/notarization_log.json)\n"
-                exit 7;
-            fi;
-
+            path_no_slashes=$(sed 's,/*$,,' <<< "${ARTIFACT_PATH}")
+            rsync -a "${path_no_slashes}" "./${archive_dir}/"
           done <<< "${ARTIFACTS}"
+
+          #
+          # Create archive with all data to be notarized
+          #
+          archive_name="${archive_dir}.zip"
+          /usr/bin/ditto -c -k "${archive_dir}" "${archive_name}" ;
+
+          #
+          # Submit the zipball and wait for response
+          #
+          xcrun notarytool submit \
+            -f json \
+            --key-id "${API_KEY_ID}" \
+            --issuer "${API_KEY_ISSUER_ID}" \
+            --key "${API_KEY_FILE}" \
+            --wait \
+            "${archive_name}" 2>&1 |
+            tee /tmp/notarization_info.json
+
+          status=$(jq -r .status </tmp/notarization_info.json)
+          id=$(jq -r .id </tmp/notarization_info.json)
+
+          if [ -z "${id}" ]; then
+            echo "Unexpected notarization tool response: empty notarization task ID"
+            cat /tmp/notarization_info.json
+            exit 1
+          fi
+
+          echo "status=${status} id=${id}"
+
+          xcrun notarytool log \
+            --key-id "${API_KEY_ID}" \
+            --issuer "${API_KEY_ISSUER_ID}" \
+            --key "${API_KEY_FILE}" \
+            "${id}" \
+            -f json >/tmp/notarization_log.json
+
+          issues=$(jq -r .issues </tmp/notarization_log.json)
+          if [ "$issues" != "null" ]; then
+              printf "There are issues with the notarization (${issues})\n"
+              printf "=== Log output === \n$(cat /tmp/notarization_log.json)\n"
+              exit 7;
+          fi;
