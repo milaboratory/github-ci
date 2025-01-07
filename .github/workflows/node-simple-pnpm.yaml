@@ -795,6 +795,7 @@ jobs:
       - metadata
       - check
       - build-test-publish
+      - pre-calculated-build
     steps:
       - id: search-tags
         if: always()
@@ -810,6 +811,7 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           job-status: |
+            ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
             ${{ needs.check.result }}
           product-name: ${{ inputs.app-name }}
