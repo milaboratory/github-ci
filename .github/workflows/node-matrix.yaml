@@ -685,7 +685,7 @@ jobs:
 
   publish-to-npm:
     name: npm publish
-    runs-on: ubuntu-xlarge-latest
+    runs-on: ubuntu-xlarge-amd64
 
     if: always()
       && needs.release.result == 'success'
