@@ -752,7 +752,7 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          publish: changeset publish
+          publish: pnpm run changeset publish
 
       - name: Publish npm package (public)
         id: publish-to-public
@@ -765,7 +765,7 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          publish: changeset publish --access public
+          publish: pnpm run changeset publish --access public
 
       - name: Create release with tag
         if: github.ref_name == 'main'
