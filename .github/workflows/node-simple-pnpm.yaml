@@ -641,6 +641,13 @@ jobs:
           run: |
             pnpm run changeset status --output changes.json
 
+      - name: Check Branch Divergence
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            git fetch origin main
+            git merge-base HEAD main         
+
       - name: Parse changeset json output
         id: changeset-status
         uses: milaboratory/github-ci/actions/shell@v4
