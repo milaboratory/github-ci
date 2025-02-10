@@ -635,36 +635,6 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline 
 
-      - name: Run changeset status
-        uses:  milaboratory/github-ci/actions/shell@v4
-        with:
-          run: |
-            pnpm run changeset status --since origin/main --output changes.json        
-
-      - name: Parse changeset json output
-        id: changeset-status
-        uses: milaboratory/github-ci/actions/shell@v4
-        with:
-          run: |
-            # Reading JSON from a file (assuming the JSON output is saved as changes.json)
-            json_file="changes.json"
-
-            # Check if the file exists
-            if [[ ! -f "$json_file" ]]; then
-                echo "JSON file not found"
-                exit 1
-            fi
-
-            # Parse JSON and format the message
-            changes=$(jq -r '.releases[] | "Package: \(.name) - \(.newVersion)"' $json_file)
-
-            if [[ -z "$changes" ]]; then
-                echo "No changes found."
-                exit 0
-            fi
-
-            echo "$changes"
-
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
         uses: milaboratory/github-ci/actions/shell@v4
@@ -772,6 +742,7 @@ jobs:
             git push
 
       - name: Publish npm package
+        id: publish-to-private
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'false'
@@ -784,6 +755,7 @@ jobs:
           publish: pnpm -r publish --no-git-checks
 
       - name: Publish npm package (public)
+        id: publish-to-public
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'true'
@@ -815,7 +787,8 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-      changeset-status: ${{ steps.changeset-status.outputs.stdout }}
+      publish-to-private-json: ${{ steps.publish-to-private.outputs.publishedPackages }}
+      publish-to-public-json: ${{ steps.publish-to-public.outputs.publishedPackages }}
 
   notify-release:
     name: notify release
@@ -835,6 +808,46 @@ jobs:
           input: |
             release
 
+      - name: Parse changeset json output
+        id: changeset-published-pkgs
+        uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          JSON_PRIV: ${{ needs.build-test-publish.outputs.publish-to-private-json }}
+          JSON_PUB: ${{ needs.build-test-publish.outputs.publish-to-public-json }}
+        with:
+          run: |
+            # Function to parse JSON and output formatted changes
+            function parse_json {
+              local json_input="$1"  # Get JSON string as input
+              echo "$json_input" | jq -r '.[] | "Package: \(.name) - \(.version)"'
+            }
+
+            # Check and parse JSON_PRIV if not empty
+            if [[ -n "$JSON_PRIV" ]]; then
+                changes=$(parse_json "$JSON_PRIV")
+                if [[ -z "$changes" ]]; then
+                    echo "No changes found in private data."
+                else
+                    echo "$changes"
+                fi
+            fi
+
+            # Check and parse JSON_PUB if not empty
+            if [[ -n "$JSON_PUB" ]]; then
+                changes=$(parse_json "$JSON_PUB")
+                if [[ -z "$changes" ]]; then
+                    echo "No changes found in public data."
+                else
+                    echo "$changes"
+                fi
+            fi
+            
+            # Exit the script if no data to process
+            if [[ -z "$JSON_PRIV" && -z "$JSON_PUB" ]]; then
+                echo "No JSON data provided."
+                exit 0
+            fi
+           
       - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
@@ -850,5 +863,5 @@ jobs:
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
           additional-info: |
-            ${{ needs.build-test-publish.outputs.changeset-status }}
-
+            The following packages have been updated:
+            ${{ steps.changeset-published-pkgs.outputs.stdout }}
