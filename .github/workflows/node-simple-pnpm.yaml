@@ -783,6 +783,17 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Parse changeset json output
+        uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          IF_PUB: ${{ steps.publish-to-private.outputs.published }}
+          IF_PRIV: ${{ steps.publish-to-public.outputs.published }}
+          JSON_PRIV: ${{ steps.publish-to-private.outputs.publishedPackages }}
+          JSON_PUB: ${{ steps.publish-to-public.outputs.publishedPackages }}
+        with:
+          run: |
+            echo "Sample output"
+          
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
