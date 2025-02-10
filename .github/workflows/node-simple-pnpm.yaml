@@ -633,19 +633,13 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Fetch main branch for changeset
-        uses: milaboratory/github-ci/actions/shell@v4
-        with:
-          run: |
-            git fetch origin main   
+            pnpm install --frozen-lockfile --prefer-offline 
 
       - name: Run changeset status
         uses:  milaboratory/github-ci/actions/shell@v4
         with:
           run: |
-            pnpm run changeset status --output changes.json        
+            pnpm run changeset status --since origin/main --output changes.json        
 
       - name: Parse changeset json output
         id: changeset-status
