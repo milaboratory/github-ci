@@ -752,7 +752,7 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          publish: pnpm -r publish --no-git-checks
+          publish: changeset publish
 
       - name: Publish npm package (public)
         id: publish-to-public
@@ -765,7 +765,7 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
-          publish: pnpm -r publish --no-git-checks --access public
+          publish: changeset publish --access public
 
       - name: Create release with tag
         if: github.ref_name == 'main'
@@ -782,17 +782,6 @@ jobs:
           skipIfReleaseExists: true
           draft: false
           prerelease: false
-
-      - name: Parse changeset json output
-        uses: milaboratory/github-ci/actions/shell@v4
-        env:
-          IF_PUB: ${{ steps.publish-to-private.outputs.published }}
-          IF_PRIV: ${{ steps.publish-to-public.outputs.published }}
-          JSON_PRIV: ${{ steps.publish-to-private.outputs.publishedPackages }}
-          JSON_PUB: ${{ steps.publish-to-public.outputs.publishedPackages }}
-        with:
-          run: |
-            echo "Sample output"
           
     outputs:
       # Even constant outputs become initialized only after job start.
