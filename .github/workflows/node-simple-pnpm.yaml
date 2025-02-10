@@ -635,6 +635,36 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Run changeset status
+        uses:  milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            pnpm run changeset status --output changes.json
+
+      - name: Parse changeset json output
+        id: changeset-status
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            # Reading JSON from a file (assuming the JSON output is saved as changes.json)
+            json_file="changes.json"
+
+            # Check if the file exists
+            if [[ ! -f "$json_file" ]]; then
+                echo "JSON file not found"
+                exit 1
+            fi
+
+            # Parse JSON and format the message
+            changes=$(jq -r '.releases[] | "Package: \(.name) - \(.newVersion)"' $json_file)
+
+            if [[ -z "$changes" ]]; then
+                echo "No changes found."
+                exit 0
+            fi
+
+            echo "$changes"
+
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
         uses: milaboratory/github-ci/actions/shell@v4
@@ -785,6 +815,7 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
+      changeset-status: ${{ steps.changeset-status.outputs.stdout }}
 
   notify-release:
     name: notify release
@@ -818,3 +849,6 @@ jobs:
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
+          additional-info: |
+            ${{ needs.build-test-publish.outputs.changeset-status }}
+
