@@ -635,12 +635,11 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Check Branch Divergence
+      - name: Fetch main branch for changeset
         uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
-            git fetch origin main
-            git merge-base HEAD main     
+            git fetch origin main   
 
       - name: Run changeset status
         uses:  milaboratory/github-ci/actions/shell@v4
