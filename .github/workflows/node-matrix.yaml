@@ -452,6 +452,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
+
+      - name: Create /etc/lsb-release
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: runner.os == 'Linux'
+        with:
+          dump-stdout: false
+          run: |
+            echo "DISTRIB_RELEASE=18.04" | sudo tee -a /etc/lsb-release
       
       - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
         if: inputs.python-version != ''
