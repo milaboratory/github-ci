@@ -461,6 +461,7 @@ jobs:
           run: |
             sudo dnf -y install python3.12 python3.12-pip
             python3 -m pip install --user pipx
+            python3 -m pipx ensurepath
       
       - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
         if: 1 > 2
