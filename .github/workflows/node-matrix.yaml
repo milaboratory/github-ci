@@ -459,6 +459,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
+            sudo dnf -y install gcc openssl-devel bzip2-devel libffi-devel zlib-devel wget make
             sudo dnf -y install python3.12 python3.12-pip
             python3 -m pip install --user pipx
             #python3 -m pipx ensurepath
