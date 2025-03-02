@@ -459,7 +459,8 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            sudo dnf -y install python3.12
+            sudo dnf -y install python3.12 python3.12-pip
+            python3 -m pip install --user pipx
       
       - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
         if: 1 > 2
