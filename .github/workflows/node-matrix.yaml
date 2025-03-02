@@ -453,16 +453,17 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Create /etc/lsb-release
+      - name: Install python3.12 on rockylinux
         uses: milaboratory/github-ci/actions/shell@v4-beta
         if: runner.os == 'Linux'
         with:
           dump-stdout: false
           run: |
-            echo "DISTRIB_RELEASE=18.04" | sudo tee -a /etc/lsb-release
+            sudo dnf install python3.12
       
       - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
-        if: inputs.python-version != ''
+        if: 1 > 2
+        #inputs.python-version != ''
         with:
           python-version: ${{ inputs.python-version }}
           cache-version: ${{ inputs.cache-version }}
