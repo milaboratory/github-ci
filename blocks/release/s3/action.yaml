@@ -324,8 +324,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          export AWS_CLI_LOCAL=$(which aws)
-          "${AWS_CLI_LOCAL}" s3 cp --recursive \
+          aws s3 cp --recursive \
           ${{ steps.artifact-path.outputs.stdout }}/ \
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
