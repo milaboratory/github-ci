@@ -503,20 +503,22 @@ jobs:
       - name: Load MiLaboratories custom CLI tools
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
-      - uses: milaboratory/github-ci/blocks/node/test@v4-beta
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          is-electron-application: false
-          registry-url: ${{ inputs.registry-url }}
-          scope: ${{ inputs.scope }}
-          always-auth: ${{ inputs.always-auth }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: fawazahmed0/action-debug-vscode@main
 
-          build-script-name: ${{ inputs.build-script-name }}
-          build-before-run-test: true
-          test-name: ${{ inputs.test-script-name }}
-          npmrc-config: ${{ inputs.npmrc-config }}
+      # - uses: milaboratory/github-ci/blocks/node/test@v4-beta
+      #   with:
+      #     node-version: ${{ inputs.node-version }}
+      #     cache-version: ${{ inputs.cache-version }}
+      #     is-electron-application: false
+      #     registry-url: ${{ inputs.registry-url }}
+      #     scope: ${{ inputs.scope }}
+      #     always-auth: ${{ inputs.always-auth }}
+      #     npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+
+      #     build-script-name: ${{ inputs.build-script-name }}
+      #     build-before-run-test: true
+      #     test-name: ${{ inputs.test-script-name }}
+      #     npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
