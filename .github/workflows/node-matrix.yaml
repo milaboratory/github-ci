@@ -459,18 +459,9 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            sudo dnf -y install gcc openssl-devel bzip2-devel libffi-devel zlib-devel wget make
-            sudo dnf -y install python3.12 python3.12-pip
             python3 -m pip install --user pipx
-            #python3 -m pipx ensurepath
+            python3 -m pipx ensurepath
             echo "$HOME/.local/bin" >> $GITHUB_PATH
-      
-      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
-        if: 1 > 2
-        #inputs.python-version != ''
-        with:
-          python-version: ${{ inputs.python-version }}
-          cache-version: ${{ inputs.cache-version }}
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
         if: inputs.r-version != ''

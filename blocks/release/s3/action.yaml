@@ -364,7 +364,7 @@ runs:
 
               file_infos+=("{\"path\": \"${full_path}\", \"file_size\": \"${file_size}\", \"sha256\": \"${sha256}\", \"type\": \"${file_type}\", \"arch\": \"${OS_ARCH}\", \"os\": \"${OS_NAME}\" }")
               file_paths+=("$full_path")
-          done < <(find . -mindepth 1 -type f,l,p)
+          done < <(find . -mindepth 1 \( -type f -o -type l -o -type p \))
 
           json_array_infos=$(printf '%s\n' "${file_infos[@]}" | jq -s '.')
           array_paths=$(printf '%s\n' "${file_paths[@]}")
