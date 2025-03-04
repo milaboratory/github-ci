@@ -964,7 +964,26 @@ on:
         required: false
         default: 'false'
 
+      release-branch-name:
+        description: |
+          Set the release branch name to activate publishing of the npm package for MiXCR.
+        type: string
+        required: false
+        default: 'develop'
 
+      publish-script-name:
+        description: |
+          Run 'npm run <script>' instead of 'npm publish'
+        type: string
+        required: false
+        default: ""
+
+      publish-to-public:
+        description: |
+          Whether or not the npm package should be published as public.
+        type: boolean
+        required: false
+        default: false
       #
       # Notifications
       #
@@ -2088,7 +2107,9 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4
+        if: github.ref_name == inputs.release-branch-name
         with:
+          is-release: ${{ steps.context.outputs.is-release }}
           artifact-name: ${{ inputs.product-name-slug }}
           build-version: ${{ steps.context.outputs.current-version }}
           execution-path: ${{ inputs.node-execution-path }}
@@ -2096,9 +2117,11 @@ jobs:
           node-cache-version: ${{ inputs.node-cache-version }}
           hashfiles-search-path: ${{ inputs.node-hashfiles-search-path }}
           registry-url: ${{ inputs.node-registry-url }}
-          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
           scope: ${{ inputs.node-scope }}
           always-auth: ${{ inputs.node-always-auth }}
+          publish-script-name: ${{ inputs.publish-script-name }}
+          publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
           gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
