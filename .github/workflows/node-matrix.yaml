@@ -421,7 +421,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ fromJSON(steps.context.outputs.is-release) }}
@@ -444,7 +444,7 @@ jobs:
       - init
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -454,7 +454,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Install python3.12 on rockylinux
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         if: runner.os == 'Linux'
         with:
           dump-stdout: false
@@ -463,7 +463,7 @@ jobs:
             python3 -m pipx ensurepath
             echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
+      - uses: milaboratory/github-ci/actions/r/prepare@v4
         if: inputs.r-version != ''
         with:
           r-version: ${{ inputs.r-version }}
@@ -477,9 +477,9 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
 
       - name: Load MiLaboratories custom CLI tools
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
-      - uses: milaboratory/github-ci/blocks/node/test@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/test@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -495,7 +495,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: CodeSign binary on macOS
-        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
         with:
@@ -519,7 +519,7 @@ jobs:
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
+        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4
         with:
           binaries: ${{ inputs.sign-binaries }}
           timestamping-mode: ${{ inputs.gcp-timestamping-mode }}
@@ -530,7 +530,7 @@ jobs:
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
       - name: Saving build artifacts for publish step
-        uses: milaboratory/github-ci/actions/artifact/save@v4-beta
+        uses: milaboratory/github-ci/actions/artifact/save@v4
         id: build-artifacts
         if: inputs.build-artifacts != ''
         with:
@@ -557,12 +557,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -595,7 +595,7 @@ jobs:
     needs:
       - can-release
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -614,7 +614,7 @@ jobs:
     environment: release
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -624,7 +624,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -637,7 +637,7 @@ jobs:
           install-deps: false
 
       - id: npm-pkg-status
-        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
+        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4
         with:
           package-json-path: "${{ github.workspace }}/package.json"
           registry-url: ${{ inputs.registry-url }}
@@ -667,19 +667,19 @@ jobs:
       - release
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
+      - uses: milaboratory/github-ci/actions/artifact/restore@v4
         id: build-artifacts
         if: inputs.build-artifacts != ''
         with:
           pattern: build-artifacts-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Notarize binary on macOS
-        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4
         if: runner.os == 'macOS'
         with:
           paths: ${{ inputs.notarize-paths }}
@@ -706,7 +706,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -716,7 +716,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare@v4
         with:
           node-version: ${{ inputs.node-version }}
           cache-version: ${{ inputs.cache-version }}
@@ -728,19 +728,19 @@ jobs:
           update-npm: true
           install-deps: true
 
-      - uses: milaboratory/github-ci/actions/python/prepare@v4-beta
+      - uses: milaboratory/github-ci/actions/python/prepare@v4
         if: inputs.python-version != ''
         with:
           python-version: ${{ inputs.python-version }}
           cache-version: ${{ inputs.cache-version }}
 
-      - uses: milaboratory/github-ci/actions/r/prepare@v4-beta
+      - uses: milaboratory/github-ci/actions/r/prepare@v4
         if: inputs.r-version != ''
         with:
           r-version: ${{ inputs.r-version }}
           # cache-version: ${{ inputs.cache-version }}
 
-      - uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
+      - uses: milaboratory/github-ci/actions/artifact/restore@v4
         id: build-artifacts
         if: inputs.build-artifacts != ''
         with:
@@ -769,10 +769,10 @@ jobs:
 
       - name: Load MiLaboratories custom CLI tools
         if: inputs.gcp-login-enable
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
       - name: Publish npm package
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
@@ -796,7 +796,7 @@ jobs:
             fi
 
       - name: Create release with tag
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
         env:
           NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
         with:
@@ -825,12 +825,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.release.outputs.package-version }}
         with:
