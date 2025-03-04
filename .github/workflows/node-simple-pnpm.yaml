@@ -742,6 +742,7 @@ jobs:
             git push
 
       - name: Publish npm package
+        id: publish-to-private
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'false'
@@ -754,6 +755,7 @@ jobs:
           publish: pnpm -r publish --no-git-checks
 
       - name: Publish npm package (public)
+        id: publish-to-public
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'true'

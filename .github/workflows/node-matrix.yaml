@@ -452,12 +452,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
-      
-      - uses: milaboratory/github-ci/actions/python/prepare@v4
-        if: inputs.python-version != ''
+
+      - name: Install python3.12 on rockylinux
+        uses: milaboratory/github-ci/actions/shell@v4
+        if: runner.os == 'Linux'
         with:
-          python-version: ${{ inputs.python-version }}
-          cache-version: ${{ inputs.cache-version }}
+          dump-stdout: false
+          run: |
+            python3 -m pip install --user pipx
+            python3 -m pipx ensurepath
+            echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - uses: milaboratory/github-ci/actions/r/prepare@v4
         if: inputs.r-version != ''
@@ -685,7 +689,7 @@ jobs:
 
   publish-to-npm:
     name: npm publish
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-xlarge-amd64
 
     if: always()
       && needs.release.result == 'success'

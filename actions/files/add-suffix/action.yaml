@@ -68,7 +68,7 @@ runs:
             fi
 
             if [ -d "${input_path}" ]; then
-              find "${input_path}" -mindepth 1 -and -type f,l,p
+              find "${input_path}" -mindepth 1 \( -type f -o -type l -o -type p \)
             else
               echo "${input_path}"
             fi
