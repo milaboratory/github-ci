@@ -489,7 +489,7 @@ jobs:
 
       - name: Configure ccache
         if: inputs.enable-ccache
-        uses: milaboratory/github-ci/actions/ccache@v4-beta
+        uses: milaboratory/github-ci/actions/ccache@r-ci-tricks
         with:
           options: ${{ inputs.ccache-options }}
 
