@@ -17,6 +17,13 @@ inputs:
     required: false
     default: ''
 
+  rust-components:
+    description: |
+      Comma-separated list of components to be additionally installed.
+      e.g. clippy, rustfmt
+    required: false
+    default: ""
+
   cache-version:
     description: |
       Simple hack, that allows to 'reset' cache for particular job.
@@ -39,13 +46,6 @@ inputs:
     required: false
     default: 'false'
 
-  rust-components:
-    description: |
-      Comma-separated list of components to be additionally installed.
-      e.g. clippy, rustfmt
-    required: false
-    default: ""
-
 runs:
   using: "composite"
 
@@ -56,7 +56,7 @@ runs:
         toolchain: ${{ inputs.rust-toolchain-version }}
         cache: ${{ inputs.cache-enabled-in-setup-rust-toolchain }}
         rustflags: ${{ inputs.rust-flags }}
-        components: ${{ inputs.components }}
+        components: ${{ inputs.rust-components }}
 
     - name: Setup Cache for Rust project
       uses: milaboratory/github-ci/actions/rust/cache@v4-beta
