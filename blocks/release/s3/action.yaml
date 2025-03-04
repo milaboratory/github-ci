@@ -359,7 +359,7 @@ runs:
               if [ "${RUNNER_OS}" == "Windows" ];then
                 sha256=$(sha256sum "$trimmed_file_path" | awk '{ print $1 }')
               else
-                sha256=$(shasum -a 256 "$trimmed_file_path" | awk '{ print $1 }')
+                sha256=$(sha256sum "$trimmed_file_path" | awk '{ print $1 }')
               fi
 
               file_infos+=("{\"path\": \"${full_path}\", \"file_size\": \"${file_size}\", \"sha256\": \"${sha256}\", \"type\": \"${file_type}\", \"arch\": \"${OS_ARCH}\", \"os\": \"${OS_NAME}\" }")
