@@ -75,10 +75,12 @@ runs:
     # which is not available on Rocky Linux.
     # Let action to support Rocky Linux by installing ccache manually.
     - name: Install ccache
-      if: startsWith(env.ImageOS, 'rocky')
       shell: bash
       run: |
-        sudo dnf install -y ccache
+        if [[ "$ImageOS" == rocky* ]]; then
+          echo "Installing ccache for Rocky Linux"
+          sudo dnf install -y ccache
+        fi
 
     - name: Enable ccache
       uses: hendrikmuhs/ccache-action@v1.2
