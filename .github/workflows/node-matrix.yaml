@@ -503,6 +503,10 @@ jobs:
       - name: Load MiLaboratories custom CLI tools
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
+      - name: hack binaries to trick plugin
+        shell: bash
+        run: |
+          ln -s /usr/bin/dnf /usr/bin/apt-get
       - uses: fawazahmed0/action-debug-vscode@main
 
       # - uses: milaboratory/github-ci/blocks/node/test@v4-beta
