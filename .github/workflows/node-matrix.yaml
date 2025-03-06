@@ -97,6 +97,24 @@ on:
         required: false
         default: ""
 
+      enable-ccache:
+        description: |
+          Enable ccache for the build
+        type: boolean
+        required: false
+        default: true
+
+      ccache-options:
+        description: |
+          Additional options to pass to ccache --set-config.
+          One per line. Example:
+            hash_dir=false
+            max_size=10.0G
+            sloppiness=time_macros,include_file_mtime,include_file_ctime
+        type: string
+        required: false
+        default: ""
+
       #
       # Matrix control
       #
@@ -468,6 +486,12 @@ jobs:
         with:
           r-version: ${{ inputs.r-version }}
           # cache-version: ${{ inputs.cache-version }}
+
+      - name: Configure ccache
+        if: inputs.enable-ccache
+        uses: milaboratory/github-ci/actions/ccache@v4-beta
+        with:
+          options: ${{ inputs.ccache-options }}
 
       - name: Cache additional paths
         uses: actions/cache@v4
