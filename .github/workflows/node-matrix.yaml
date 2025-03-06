@@ -506,7 +506,7 @@ jobs:
       - name: hack binaries to trick plugin
         shell: bash
         run: |
-          ln -s /usr/bin/dnf /usr/bin/apt-get
+          sudo ln -s /usr/bin/dnf /usr/bin/apt-get
       - uses: fawazahmed0/action-debug-vscode@main
 
       # - uses: milaboratory/github-ci/blocks/node/test@v4-beta
