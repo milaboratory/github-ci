@@ -471,9 +471,9 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Install python3.12 on rockylinux
+      - name: Install pipx rockylinux
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && inputs.python-version != ''
         with:
           dump-stdout: false
           run: |
