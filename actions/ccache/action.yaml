@@ -71,6 +71,17 @@ runs:
   using: "composite"
 
   steps:
+    # The hendrikmuhs/ccache-action tries to install ccache automatically with apt-get,
+    # which is not available on Rocky Linux.
+    # Let action to support Rocky Linux by installing ccache manually.
+    - name: Install ccache
+      shell: bash
+      run: |
+        if [[ "$ImageOS" == rocky* ]]; then
+          echo "Installing ccache for Rocky Linux"
+          sudo dnf install -y ccache
+        fi
+
     - name: Enable ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
