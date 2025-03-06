@@ -26,7 +26,7 @@ inputs:
     description: |
       Version of jsign
     required: false
-    default: '5.0'
+    default: '6.0'
 
   store-type:
     description: |
@@ -44,6 +44,7 @@ inputs:
     description: |
       Timestamping url, must be from the organization that issued code sign certificate
     required: true
+    default: 'http://timestamp.globalsign.com/tsa/r6advanced1'
 
   binaries:
     description: |
