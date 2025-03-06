@@ -522,8 +522,6 @@ jobs:
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
           binaries: ${{ inputs.sign-binaries }}
-          timestamping-mode: ${{ inputs.gcp-timestamping-mode }}
-          timestamping-url: ${{ secrets.GCP_TIMESTAMPING_URL }}
           code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
           kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}

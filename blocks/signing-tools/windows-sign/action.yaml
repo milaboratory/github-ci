@@ -43,7 +43,7 @@ inputs:
   timestamping-url:
     description: |
       Timestamping url, must be from the organization that issued code sign certificate
-    required: true
+    required: false
     default: 'http://timestamp.globalsign.com/tsa/r6advanced1'
 
   binaries:
