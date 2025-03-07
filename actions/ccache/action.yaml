@@ -24,9 +24,10 @@ inputs:
 
   restore-keys:
     description: "An ordered list of keys to use for restoring the cache if no cache hit occurred for key"
-    default: |
+    default: |+
       ${{ runner.os }}-${{ runner.arch }}
       ${{ runner.os }}
+      
     required: false
 
   restore:
