@@ -19,15 +19,14 @@ inputs:
   #
   key:
     description: "An additional key for the cache"
-    default: 'ccache-${{ runner.os }}-${{ runner.arch }}-'
+    default: '${{ runner.os }}-${{ runner.arch }}'
     required: false
 
   restore-keys:
     description: "An ordered list of keys to use for restoring the cache if no cache hit occurred for key"
     default: |
-      ccache-${{ runner.os }}-${{ runner.arch }}-
-      ccache-${{ runner.os }}-
-      ccache-
+      ${{ runner.os }}-${{ runner.arch }}
+      ${{ runner.os }}
     required: false
 
   restore:
