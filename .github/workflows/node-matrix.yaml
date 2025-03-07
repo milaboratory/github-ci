@@ -97,6 +97,23 @@ on:
         required: false
         default: ""
 
+      enable-ccache:
+        description: |
+          Enable ccache for the build
+        type: boolean
+        required: false
+        default: true
+
+      ccache-options:
+        description: |
+          Additional options to pass to ccache --set-config.
+          One per line. Example:
+            hash_dir=false
+            max_size=10.0G
+            sloppiness=time_macros,include_file_mtime,include_file_ctime
+        type: string
+        required: false
+        default: ""
       #
       # Matrix control
       #
@@ -453,9 +470,9 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - name: Install python3.12 on rockylinux
+      - name: Install pipx rockylinux
         uses: milaboratory/github-ci/actions/shell@v4
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && inputs.python-version != ''
         with:
           dump-stdout: false
           run: |
@@ -468,6 +485,12 @@ jobs:
         with:
           r-version: ${{ inputs.r-version }}
           # cache-version: ${{ inputs.cache-version }}
+
+      - name: Configure ccache
+        if: inputs.enable-ccache
+        uses: milaboratory/github-ci/actions/ccache@v4
+        with:
+          options: ${{ inputs.ccache-options }}
 
       - name: Cache additional paths
         uses: actions/cache@v4
