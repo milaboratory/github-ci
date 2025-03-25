@@ -30,7 +30,7 @@ runs:
 
   steps:
     - name: Cache for Turbo
-      uses: mike-ainsel/turborepo-remote-cache-gh-action@v2
+      uses: mike-ainsel/turborepo-remote-cache-gh-action@v2-beta
       with:
         storage-provider: ${{ inputs.storage-provider }}
         storage-path: ${{ inputs.storage-path }}
