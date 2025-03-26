@@ -178,10 +178,10 @@ runs:
         version: ${{ inputs.gcloud-sdk-version }}
 
     - name: Add MiLab shell utils to PATH
-      uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+      uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
     - id: artifact-path
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
       with:
@@ -194,7 +194,7 @@ runs:
         path: ${{ steps.artifact-path.outputs.stdout }}
 
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.node-cache-version }}
@@ -205,13 +205,13 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Update npm to latest available version
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           npm i -g npm@latest
 
     - name: Install NodeJS packages with npm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
@@ -222,13 +222,13 @@ runs:
           npm ci
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
       with:
         package_json: ${{ format('{0}/{1}/package.json', github.workspace, inputs.execution-path) }}
         version: ${{ inputs.build-version }}
 
     - name: Run release - ${{ inputs.release-script-name }}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}

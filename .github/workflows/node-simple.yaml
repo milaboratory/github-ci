@@ -325,7 +325,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -351,7 +351,7 @@ jobs:
             sudo apt-get update && \
             DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -361,7 +361,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
@@ -370,7 +370,7 @@ jobs:
             ghwa_set_output npm-pkg-name "${NPM_PKG_NAME}"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
@@ -403,12 +403,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             build
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/build@v4
         env:
           NPM_PKG_VERSION: ${{ needs.build.outputs.npm-pkg-version }}
         with:
@@ -441,7 +441,7 @@ jobs:
             sudo apt-get update && \
             DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -451,7 +451,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
@@ -461,7 +461,7 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
       - id: test
-        uses: milaboratory/github-ci/blocks/node/test@v4-beta
+        uses: milaboratory/github-ci/blocks/node/test@v4
         env:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         with:
@@ -497,13 +497,13 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             unit
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         env:
           NPM_PKG_VERSION: ${{ needs.test.outputs.npm-pkg-version }}
         with:
@@ -546,7 +546,7 @@ jobs:
       - can-release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -600,9 +600,9 @@ jobs:
             DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential git jq awscli wget unzip
 
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -612,7 +612,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
@@ -622,14 +622,14 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
       - id: npm-pkg-status
-        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-beta
+        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4
         with:
           npm-pkg-name: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-name }}
           npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
           registry-url: ${{ inputs.registry-url }}
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-beta
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         env:
@@ -676,7 +676,7 @@ jobs:
 
       - name: Add MiLab shell utils to PATH
         if: inputs.gcp-login-enable
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
       - name: Publish npm package
         if: steps.npm-pkg-status.outputs.exist == '0'
@@ -707,7 +707,7 @@ jobs:
       - name: Create release with tag
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
         env:
           NPM_PKG_VERSION: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
         with:
@@ -737,12 +737,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.publish-to-npm.outputs.npm-pkg-version }}
         with:
