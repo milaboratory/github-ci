@@ -600,19 +600,13 @@ jobs:
         with:
           mask-password: 'true'
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
-        with:
-          storage-provider: 's3'
-          storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
-          team-id: ${{ inputs.team-id }}
-
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
         uses: milaboratory/github-ci/actions/golang/prepare@v4
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
-          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
+          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }} 
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
@@ -624,6 +618,12 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
 
       - name: Install NodeJS packages with pnpm
         uses: milaboratory/github-ci/actions/shell@v4
