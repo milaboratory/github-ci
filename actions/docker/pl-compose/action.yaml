@@ -95,6 +95,7 @@ runs:
         PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
         PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
         PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
+        PL_WORKSPACE: ${{ format('{0}', github.workspace) }}
       with:
         dump-stdout: false
         run: |
