@@ -60,6 +60,7 @@ services:
       - platforma-db:/storage/rocksdb
       - platforma-log:/storage/log
       - platforma-license:/storage/license
+      - platforma-workspace:${PL_WORKSPACE}
     restart: always
 
 volumes:
@@ -91,3 +92,9 @@ volumes:
       type: none
       o: bind
       device: ${PL_LICENSE_DIR:-}
+  platforma-workspace:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_WORKSPACE}
