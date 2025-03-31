@@ -606,7 +606,7 @@ jobs:
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
-          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }} 
+          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
@@ -633,7 +633,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm install --frozen-lockfile --prefer-offline 
+            pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
@@ -719,6 +719,26 @@ jobs:
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
+      - name: Run build (before publish)
+        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+        with:
+          build-script-name: ${{ inputs.build-script-name }}
+          tests: 'false'
+          test-script-name: ${{ inputs.test-script-name }}
+          pnpm-recursive-build: ${{ inputs.pnpm-recursive-build }}
+          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
+          pnpm-build-args: ${{ inputs.pnpm-build-args }}
+          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
         id: get-user-id
@@ -782,7 +802,7 @@ jobs:
           skipIfReleaseExists: true
           draft: false
           prerelease: false
-          
+
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
