@@ -28,7 +28,7 @@ runs:
   steps:
     - name: Prefix lines
       id: prefix
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         INPUT_TEXT: ${{ inputs.input }}
         PREFIX_TEXT: ${{ inputs.prefix }}
