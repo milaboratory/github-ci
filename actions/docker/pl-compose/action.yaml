@@ -81,7 +81,7 @@ runs:
 
   steps:
     - name: Launch Platforma
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}

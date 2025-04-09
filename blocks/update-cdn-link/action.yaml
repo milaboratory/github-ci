@@ -31,8 +31,8 @@ inputs:
 
        Example:
         'link/software/mixcr'
-
     required: true
+
   s3-bucket-key:
     description: |
        The name of a zero-byte object.
@@ -41,7 +41,6 @@ inputs:
 
        Example:
         'mixcr-develop.zip'
-
     required: true
 
   s3-region:
@@ -55,7 +54,6 @@ inputs:
       This bucket must be configurated as an s3 static website.
     required: true
 
-
 runs:
   using: "composite"
 
@@ -67,7 +65,7 @@ runs:
         aws-region: ${{ inputs.s3-region }}
 
     - name: Update website-redirect-location metadata in the file
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         S3_BUCKET: ${{ inputs.s3-bucket }}
         S3_KEY: ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}
