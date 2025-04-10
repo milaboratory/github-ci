@@ -725,7 +725,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Run build (before publish)
-        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
