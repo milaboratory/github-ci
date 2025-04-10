@@ -427,6 +427,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - metadata
+    if: github.ref_name == 'main' || github.event_name == 'merge_group'
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4
@@ -559,6 +560,10 @@ jobs:
       (
         needs.pre-calculated-build.result == 'success' ||
         needs.pre-calculated-build.result == 'skipped'
+      ) &&
+      (
+        needs.check.result == 'success' ||
+        needs.check.result == 'skipped'
       )
     permissions:
       id-token: write
