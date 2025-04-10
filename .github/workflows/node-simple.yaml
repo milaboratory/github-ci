@@ -31,6 +31,13 @@ on:
       #
       # Checkout settings
       #
+      checkout-lfs:
+        description: |
+          Enable git lfs when checking-out the repository
+        type: string
+        required: false
+        default: "false"
+
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -358,6 +365,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
@@ -448,6 +456,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
@@ -609,6 +618,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
