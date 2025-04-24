@@ -201,6 +201,13 @@ on:
         required: false
         default: 'test'
 
+      test-skip-dry-run:
+        description: |
+          Skip test dry run step
+        type: string
+        required: false
+        default: 'false'
+
       #
       # NPM registry settings
       #
@@ -707,6 +714,7 @@ jobs:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
           test-script-name: ${{ inputs.test-script-name }}
+          test-skip-dry-run: ${{ inputs.test-skip-dry-run }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           node-version: ${{ inputs.node-version }}
