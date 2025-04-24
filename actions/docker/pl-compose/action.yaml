@@ -80,8 +80,18 @@ runs:
   using: "composite"
 
   steps:
+    - name: Install docker compose
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          mkdir -p ~/.docker/cli-plugins/
+          curl -SL https://github.com/docker/compose/releases/download/v2.35.1/docker-compose-linux-x86_64 \
+            -o ~/.docker/cli-plugins/docker-compose
+          chmod +x ~/.docker/cli-plugins/docker-compose
+          docker compose version
+
     - name: Launch Platforma
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
@@ -103,8 +113,6 @@ runs:
           mkdir -pv "${PL_TEST_ASSETS_DIR}"
           mkdir -pv "${PL_LOG_DIR}"
 
-          docker help
-          docker compose help
           docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
 
           echo "Wait for the Platforma to start"
