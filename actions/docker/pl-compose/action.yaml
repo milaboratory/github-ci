@@ -103,6 +103,8 @@ runs:
           mkdir -pv "${PL_TEST_ASSETS_DIR}"
           mkdir -pv "${PL_LOG_DIR}"
 
+          docker help
+          docker compose help
           docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
 
           echo "Wait for the Platforma to start"
