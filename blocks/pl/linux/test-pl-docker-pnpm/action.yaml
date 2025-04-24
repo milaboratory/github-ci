@@ -135,6 +135,17 @@ runs:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
+    - name: Run turbo tests dry-run
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        run: |
+          pnpx turbo run test --dry-run=json > ./test-dry-run.json
+          RUN_TESTS=$(jq 'all(.tasks[]; select(.task == "test") | .cache.status == "HIT")' ./test-dry-run.json)
+          if [ "${RUN_TESTS}" == "true" ]; then
+            echo "Tests are cached, skipping"
+            exit 0
+          fi
+
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
       if: inputs.pl-start-service != 'false'
       with:
