@@ -80,38 +80,28 @@ runs:
   using: "composite"
 
   steps:
-    - name: Check and Install Docker Compose
+    - name: Install Docker Compose
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          if ! command -v docker compose &> /dev/null; then
-            echo "Docker Compose not found. Installing..."
+          echo "Installing Docker Compose..."
+          ARCH=$(uname -m)
+          DOCKER_ARCH=""
 
-            ARCH=$(uname -m)
-            DOCKER_ARCH=""
-
-            if [ "$ARCH" = "x86_64" ]; then
-              DOCKER_ARCH="x86_64"
-            elif [ "$ARCH" = "aarch64" ]; then
-              DOCKER_ARCH="aarch64"
-            else
-              echo "Unsupported architecture: $ARCH"
-              exit 1
-            fi
-
-            DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-            mkdir -p $DOCKER_CONFIG/cli-plugins
-            curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${DOCKER_ARCH}" -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
-            chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
-
-            if ! docker compose version; then
-              echo "Docker Compose installation failed"
-              exit 1
-            fi
+          if [ "$ARCH" = "x86_64" ]; then
+            DOCKER_ARCH="x86_64"
+          elif [ "$ARCH" = "aarch64" ]; then
+            DOCKER_ARCH="aarch64"
           else
-            echo "Docker Compose is already installed"
-            docker compose version
+            echo "Unsupported architecture: $ARCH"
+            exit 1
           fi
+
+          DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+          mkdir -p $DOCKER_CONFIG/cli-plugins
+          curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${DOCKER_ARCH}" -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
+          chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
+          docker compose version
 
     - name: Launch Platforma
       uses: milaboratory/github-ci/actions/shell@v4-beta
