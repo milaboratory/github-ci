@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
         
     outputs:
@@ -160,7 +160,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           BLOCK_PATH: ${{ inputs.block-path }}
         with:
@@ -183,7 +183,7 @@ jobs:
       id-token: write
       contents: write  
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -203,7 +203,7 @@ jobs:
           mask-password: 'true'    
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -214,13 +214,13 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Mark package as stable
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           BLOCK_PATH: ${{ inputs.block-path }}
         with:
@@ -239,12 +239,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
         with:
           input: |
             mark-as-stable
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
