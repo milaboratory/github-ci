@@ -80,15 +80,43 @@ runs:
   using: "composite"
 
   steps:
-    - name: Install docker compose
+    - name: Check and Install Docker Compose
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          mkdir -p ~/.docker/cli-plugins/
-          curl -SL https://github.com/docker/compose/releases/download/v2.35.1/docker-compose-linux-x86_64 \
-            -o ~/.docker/cli-plugins/docker-compose
-          chmod +x ~/.docker/cli-plugins/docker-compose
-          docker compose version
+          # Check if docker compose is already installed
+          if ! command -v docker compose &> /dev/null; then
+            echo "Docker Compose not found. Installing..."
+
+            ARCH=$(uname -m)
+            case ${ARCH} in
+              x86_64)
+                DOCKER_ARCH="x86_64"
+                ;;
+              aarch64)
+                DOCKER_ARCH="aarch64"
+                ;;
+                echo "Unsupported architecture: ${ARCH}"
+                exit 1
+                ;;
+            esac
+
+            # Install Docker Compose
+            DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+            mkdir -p $DOCKER_CONFIG/cli-plugins
+            curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${DOCKER_ARCH} \
+              -o $DOCKER_CONFIG/cli-plugins/docker-compose
+            chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+
+            # Verify installation
+            docker compose version || {
+              echo "Docker Compose installation failed"
+              exit 1
+            }
+          else
+            echo "Docker Compose is already installed"
+            docker compose version
+          fi
 
     - name: Launch Platforma
       uses: milaboratory/github-ci/actions/shell@v4-beta
