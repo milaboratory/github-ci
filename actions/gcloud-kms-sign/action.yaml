@@ -84,7 +84,7 @@ runs:
         version: ${{ inputs.gcloud-sdk-version }}
 
     - name: Create sig file
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         FILE_PATH: ${{ inputs.file-path }}
       with:
