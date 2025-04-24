@@ -140,14 +140,15 @@ runs:
       with:
         run: |
           pnpx turbo run test --dry-run=json > ./test-dry-run.json
-          RUN_TESTS=$(jq 'all(.tasks[]; select(.task == "test") | .cache.status == "HIT")' ./test-dry-run.json)
-          if [ "${RUN_TESTS}" == "true" ]; then
+          SKIP_TESTS=$(jq 'all(.tasks[]; select(.task == "test") | .cache.status == "HIT")' ./test-dry-run.json)
+          if [ "${SKIP_TESTS}" == "true" ]; then
             echo "Tests are cached, skipping"
+            ghwa_set_env "SKIP_TESTS" "true"
             exit 0
           fi
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
-      if: inputs.pl-start-service != 'false'
+      if: inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
       with:
         pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
@@ -159,6 +160,7 @@ runs:
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
+      if: env.SKIP_TESTS != 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
@@ -180,7 +182,7 @@ runs:
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always() && inputs.pl-start-service != 'false'
+      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
       with:
         dump-stdout: false
         run: |
@@ -188,7 +190,7 @@ runs:
           sleep 10
 
     - name: Check if we should upload logs
-      if: always() && inputs.pl-start-service != 'false'
+      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
@@ -223,7 +225,7 @@ runs:
           sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
-      if: always() && inputs.pl-start-service != 'false'
+      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
