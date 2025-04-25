@@ -518,6 +518,9 @@ jobs:
           test-name: ${{ inputs.test-script-name }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
+      - name: Interactive debug session
+        uses: fawazahmed0/action-debug-vscode@main
+
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4
         if: runner.os == 'macOS'
