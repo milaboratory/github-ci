@@ -13,39 +13,6 @@ inputs:
       Test command.
     required: false
 
-  test-skip-dry-run:
-    description: |
-      Skip test dry run step
-    required: false
-    default: 'false'
-
-  node-version:
-    description: |
-      Node version to use.
-      Examples: '16.x', '14.x'
-    required: true
-
-  cache-version:
-    description: |
-      Simple hack, that allows to 'reset' cache for particular job.
-
-      Just change the value of this parameter and the next run will
-      not find build cache and will have to start from scratch.
-    required: false
-    default: 'v1'
-
-  cache-hashfiles-search-path:
-    description: |
-      Hashfiles search path for pnpm-lock.yaml
-    required: false
-    default: 'pnpm-lock.yaml'
-
-  pnpm-version:
-    description: |
-      Version of pnpm to install.
-    required: false
-    default: 'latest'
-
   pnpm-recursive-tests:
     description: |
       Run pnpm tests with -r flag.
@@ -126,39 +93,8 @@ runs:
   using: "composite"
 
   steps:
-    - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        cache-version: ${{ inputs.cache-version }}
-        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-        pnpm-version: ${{ inputs.pnpm-version }}
-        npmrc-config: ${{ inputs.npmrc-config }}
-
-    - name: Install NodeJS packages with pnpm
-      uses: milaboratory/github-ci/actions/shell@v4
-      with:
-        run: |
-          pnpm install --frozen-lockfile --prefer-offline
-
-    - name: Run turbo tests dry-run
-      if: inputs.test-skip-dry-run != 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
-      with:
-        run: |
-          pnpx turbo run test --dry-run=json --cache=remote:rw > ./test-dry-run.json
-          SKIP_TESTS=$(jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")' ./test-dry-run.json)
-          STATS=$(jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)' ./test-dry-run.json)
-          echo "Stats: ${STATS}"
-          echo "Skip tests: ${SKIP_TESTS}"
-          if [ "${SKIP_TESTS}" == "true" ]; then
-            echo "Tests are cached, skipping"
-            ghwa_set_env "SKIP_TESTS" "${SKIP_TESTS}"
-            exit 0
-          fi
-
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
-      if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      if: inputs.pl-start-service != 'false'
       with:
         pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
@@ -170,8 +106,8 @@ runs:
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
-      if: env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true'
       uses: milaboratory/github-ci/actions/shell@v4
+      if: inputs.pl-start-service != 'false'
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
@@ -192,7 +128,7 @@ runs:
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      if: always() && inputs.pl-start-service != 'false'
       with:
         dump-stdout: false
         run: |
@@ -200,7 +136,7 @@ runs:
           sleep 10
 
     - name: Check if we should upload logs
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
@@ -235,7 +171,7 @@ runs:
           sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      if: always() && inputs.pl-start-service != 'false'
       uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}

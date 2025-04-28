@@ -1,0 +1,93 @@
+name: Build and Test NodeJS PNPM application
+author: 'MiLaboratories'
+description: |
+  Prepare agent for building the NodeJS application.
+  Install NodeJS specific version, download package, create cache e.t.c
+
+inputs:
+  build-script-name:
+    description: |
+      Specify the name of the build script to be executed via npm.
+    required: false
+    default: 'build'
+
+  tests:
+    description: |
+      Whether or not to run tests after the build.
+    required: false
+    default: 'false'
+
+  test-script-name:
+    description: |
+      Specify the name of the test to be executed via npm.
+    required: false
+    default: 'test'
+
+  pnpm-recursive-build:
+    description: |
+      Run pnpm build with -r flag.
+    required: true
+
+  pnpm-recursive-tests:
+    description: |
+      Run pnpm tests with -r flag.
+    required: true
+
+  pnpm-build-args:
+    description: |
+      Additional pnpm build arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
+
+  pnpm-tests-args:
+    description: |
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Run build - ${{ inputs.build-script-name }}
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-build }}
+        PNPM_ARGS: ${{ inputs.pnpm-build-args }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${PNPM_R}" == "true" ];then
+            pnpm run -r ${{ inputs.build-script-name }}
+          else
+            set_args=()
+            while read -r _set_args; do
+            if [ -n "${_set_args}" ]; then
+              set_args+=( "${_set_args}" )
+            fi
+            done <<<"${PNPM_ARGS}"
+
+            pnpm run ${{ inputs.build-script-name }} "${set_args[@]}"
+          fi
+
+    - name: Run test - ${{ inputs.test-script-name}}
+      uses: milaboratory/github-ci/actions/shell@v4
+      if: inputs.tests == 'true'
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ "${PNPM_R}" == "true" ];then
+            pnpm run -r ${{ inputs.test-script-name }}
+          else
+            set_args=()
+            while read -r _set_args; do
+            if [ -n "${_set_args}" ]; then
+              set_args+=( "${_set_args}" )
+            fi
+            done <<<"${PNPM_ARGS}"
+
+            pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+          fi

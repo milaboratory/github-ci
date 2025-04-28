@@ -682,7 +682,7 @@ jobs:
           fi
 
       - name: Run build
-        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -695,15 +695,10 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-build-args: ${{ inputs.pnpm-build-args }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
-          npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Run tests
         id: test
-        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
@@ -717,11 +712,6 @@ jobs:
           test-skip-dry-run: ${{ inputs.test-skip-dry-run }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
-          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-          npmrc-config: ${{ inputs.npmrc-config }}
           pl-start-service: ${{ inputs.pl-start-for-tests }}
           pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
           pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
@@ -733,7 +723,7 @@ jobs:
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Run build (before publish)
-        uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -746,11 +736,6 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-build-args: ${{ inputs.pnpm-build-args }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
-          npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
