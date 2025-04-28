@@ -146,7 +146,7 @@ runs:
       uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
-          pnpx turbo run test --dry-run=json > ./test-dry-run.json
+          pnpx turbo run test --dry-run=json --cache=remote:rw > ./test-dry-run.json
           SKIP_TESTS=$(jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")' ./test-dry-run.json)
           STATS=$(jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)' ./test-dry-run.json)
           echo "Stats: ${STATS}"
