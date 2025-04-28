@@ -1,0 +1,182 @@
+name: Run pnpm tests against the Platform running in docker on Linux
+author: 'MiLaboratories'
+description: |
+  Run npm tests against the Platform running in docker on Linux
+
+  Prepare agent for running tests for the Platform on Linux.
+  Install NodeJS specific version, cache dependencies.
+  Launch the Platforma container using Docker Compose
+
+inputs:
+  test-script-name:
+    description: |
+      Test command.
+    required: false
+
+  pnpm-recursive-tests:
+    description: |
+      Run pnpm tests with -r flag.
+    required: true
+
+  pnpm-tests-args:
+    description: |
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
+
+  npmrc-config:
+    description: |
+      Generates a .npmrc file based on provided configuration.
+    required: false
+
+  pl-start-service:
+    description: |
+      Start Platforma Backend service before tests
+    required: false
+    default: 'true'
+
+  pl-docker-registry:
+    description: |
+      Platforma docker registry.
+    required: false
+
+  pl-docker-tag:
+    description: |
+      Platforma docker tag.
+    required: false
+
+  pl-test-assets-dir:
+    description: |
+      Platforma test assets directory;
+      this directory will be mounted inside
+      the container under the path `/storage/controllers/file/library`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'assets'
+
+  pl-log-dir:
+    description: |
+      Platforma logs directory on the agent;
+      this directory will be mounted inside
+      the container under the path. `pl-log-destination`
+      The path must be relative to github.workspace
+      and will be appended to github.workspace within the docker compose action.
+    required: false
+    default: 'log'
+
+  pl-log-commit-summary:
+    description: |
+      Whether or not to log commit summary for Platforma.
+    required: false
+    default: 'true'
+
+  pl-log-resource-data:
+    description: |
+      Whether or not to log resource data for Platforma.
+    required: false
+    default: 'true'
+
+  pl-log-level:
+    description: |
+      Platforma log level
+    required: false
+    default: 'info'
+
+  pl-auth-enabled:
+    description: |
+      Whether or not to enable authentication in the Platforma.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
+      if: inputs.pl-start-service != 'false'
+      with:
+        pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
+        pl-docker-registry: ${{ inputs.pl-docker-registry }}
+        pl-docker-tag: ${{ inputs.pl-docker-tag }}
+        pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
+        pl-log-dir: ${{ inputs.pl-log-dir }}
+        pl-log-level: ${{ inputs.pl-log-level }}
+        pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
+        pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
+
+    - name: Run test - ${{ inputs.test-script-name}}
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.pl-start-service != 'false'
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
+      with:
+        run: |
+          if [ "${PNPM_R}" == "true" ];then
+           pnpm run -r ${{ inputs.test-script-name }}
+          else
+           set_args=()
+           while read -r _set_args; do
+           if [ -n "${_set_args}" ]; then
+             set_args+=( "${_set_args}" )
+           fi
+           done <<<"${PNPM_ARGS}"
+
+           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+          fi
+
+    - name: Stop all running containers
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: always() && inputs.pl-start-service != 'false'
+      with:
+        dump-stdout: false
+        run: |
+          docker stop $(docker ps -a -q)
+          sleep 10
+
+    - name: Check if we should upload logs
+      if: always() && inputs.pl-start-service != 'false'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          if [ -z "$(ls -A ${PL_LOG_DIR})" ]; then
+            ghwa_error "Tests report '${PL_LOG_DIR}' is empty, nothing to upload. It seems something broke platforma process."
+            exit 0
+          fi
+
+          ghwa_set_env "UPLOAD_LOGS" "true"
+
+    - name: Upload Platforma logs
+      uses: actions/upload-artifact@v4
+      if: always() && env.UPLOAD_LOGS == 'true'
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        name: pl-docker-logs
+        path: |
+          ${{ env.PL_LOG_DIR }}
+
+    - name: Clean Platforma logs
+      if: always() && env.UPLOAD_LOGS == 'true'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          sudo rm -rfv "${PL_LOG_DIR}"
+
+    - name: Restore assets ownership
+      if: always() && inputs.pl-start-service != 'false'
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
+      with:
+        dump-stdout: false
+        run: |
+          user_name="$(whoami)"
+          sudo chown -R "${user_name}:${user_name}" "${PL_ASSETS_DIR}"
