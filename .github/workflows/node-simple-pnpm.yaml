@@ -709,7 +709,6 @@ jobs:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
           test-script-name: ${{ inputs.test-script-name }}
-          test-skip-dry-run: ${{ inputs.test-skip-dry-run }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           pl-start-service: ${{ inputs.pl-start-for-tests }}
