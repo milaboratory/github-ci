@@ -13,6 +13,11 @@ inputs:
       Test command.
     required: false
 
+  test-dry-run-script-name:
+    description: |
+      Test command to run for dry-run.
+    required: false
+
   pnpm-recursive-tests:
     description: |
       Run pnpm tests with -r flag.
@@ -95,12 +100,12 @@ runs:
     - name: Run turbo tests dry-run
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        TEST_DRY_RUN: ${{ inputs.test-dry-run-script-name }}
       with:
         run: |
-          pnpx turbo run test --affected --dry=json > ./test-dry-run.json
-          SKIP_TESTS=$(jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")' ./test-dry-run.json)
-          STATS=$(jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)' ./test-dry-run.json)
+          "${TEST_DRY_RUN}" > ./test-dry-run.json
+          SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")')
+          STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
           echo "Stats: ${STATS}"
           echo "Skip tests: ${SKIP_TESTS}"
           if [ "${SKIP_TESTS}" == "true" ]; then
