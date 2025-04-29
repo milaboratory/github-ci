@@ -103,7 +103,7 @@ runs:
         TEST_DRY_RUN: ${{ inputs.test-dry-run-script-name }}
       with:
         run: |
-          "${TEST_DRY_RUN}" > ./test-dry-run.json
+          pnpm run "${TEST_DRY_RUN}" > ./test-dry-run.json
           SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")')
           STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
           echo "Stats: ${STATS}"
