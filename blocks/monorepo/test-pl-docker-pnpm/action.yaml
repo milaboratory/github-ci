@@ -104,8 +104,10 @@ runs:
       with:
         run: |
           pnpm run "${TEST_DRY_RUN}" > ./test-dry-run.json
-          SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all(.cache.status == "HIT")')
+          SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all((.cache.status == "HIT") or (.cache.status == "MISS" and .command == "<NONEXISTENT>"))')
           STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
+          STATS_FULL=$(tail -n +5 ./test-dry-run.json | jq -r '.tasks | map(select(.task == "test")) | sort_by(.cache.status) | .[] | "\(.package): \(.cache.status)"')
+          echo "Stats full: ${STATS_FULL}"
           echo "Stats: ${STATS}"
           echo "Skip tests: ${SKIP_TESTS}"
           if [ "${SKIP_TESTS}" == "true" ]; then
