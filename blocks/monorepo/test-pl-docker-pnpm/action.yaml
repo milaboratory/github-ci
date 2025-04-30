@@ -18,6 +18,12 @@ inputs:
       Test command to run for dry-run.
     required: false
 
+  test-skip-dry-run:
+    description: |
+      Skip test dry run step
+    required: false
+    default: 'false'
+
   pnpm-recursive-tests:
     description: |
       Run pnpm tests with -r flag.
@@ -99,6 +105,7 @@ runs:
   steps:
     - name: Run turbo tests dry-run
       uses: milaboratory/github-ci/actions/shell@v4-beta
+      if: inputs.test-skip-dry-run != 'true'
       env:
         TEST_DRY_RUN: ${{ inputs.test-dry-run-script-name }}
       with:
@@ -117,7 +124,7 @@ runs:
           fi
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
-      if: inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
+      if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
         pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
@@ -130,7 +137,7 @@ runs:
 
     - name: Run test - ${{ inputs.test-script-name}}
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
+      if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
@@ -151,7 +158,7 @@ runs:
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
+      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
         dump-stdout: false
         run: |
@@ -159,7 +166,7 @@ runs:
           sleep 10
 
     - name: Check if we should upload logs
-      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
+      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
@@ -194,7 +201,7 @@ runs:
           sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
-      if: always() && inputs.pl-start-service != 'false' && env.SKIP_TESTS != 'true'
+      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}

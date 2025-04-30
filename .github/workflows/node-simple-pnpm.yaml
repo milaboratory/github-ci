@@ -208,6 +208,12 @@ on:
         required: false
         default: 'test:dry-run'
 
+      test-skip-dry-run:
+        description: |
+          Skip test dry-run step
+        type: string
+        required: false
+        default: 'false'
       #
       # NPM registry settings
       #
@@ -710,6 +716,7 @@ jobs:
         with:
           test-script-name: ${{ inputs.test-script-name }}
           test-dry-run-script-name: ${{ inputs.test-dry-run-script-name }}
+          test-skip-dry-run: ${{ inputs.test-skip-dry-run }}
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           pl-start-service: ${{ inputs.pl-start-for-tests }}
