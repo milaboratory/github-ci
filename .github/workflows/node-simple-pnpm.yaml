@@ -445,12 +445,17 @@ jobs:
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
   check-review:
-    name: check review required
+    name: check review
     runs-on: ubuntu-latest
     if: inputs.require-review && github.event_name == 'pull_request'
     needs:
       - metadata
     steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'
+
       - uses: milaboratory/github-ci/actions/shell@v4
         id: to-review-files-count
         env:
