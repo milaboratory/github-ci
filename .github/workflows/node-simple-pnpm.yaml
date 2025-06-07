@@ -330,12 +330,21 @@ on:
       #
       # Changed files
       #
+
       changeset-default-branch:
         description:
           Specify the default branch for changesets to run checks against.
         type: string
         required: false
         default: 'main'
+
+      require-review:
+        description: |
+          Whether or not to require a review for the PR.
+        type: boolean
+        required: false
+        default: false
+
       #
       # Notifications
       #
@@ -435,7 +444,58 @@ jobs:
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
-  check:
+  check-review:
+    name: check review required
+    runs-on: ubuntu-latest
+    if: inputs.require-review && github.event_name == 'pull_request'
+    needs:
+      - metadata
+    steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        id: to-review-files-count
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ inputs.changeset-default-branch }}
+        with:
+          dump-stdout: false
+          run: |
+            # If not in a PR context, exit with 0
+            if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+              echo "Not a PR workflow run, skipping review check"
+              exit 0
+            fi
+
+            # This lists all changed files between the current commit and main branch
+            # and counts number of files that are not package.json, pnpm-lock.yaml, or changeset files.
+            # The count is then printed to stdout, i.e. '0' or '15'.
+            count=$(
+              git diff --name-only "origin/${BASE_BRANCH}...HEAD" | \
+                grep --invert-match --extended-regexp --count '^(.*/package\.json|\.changeset/.*\.md|pnpm-lock\.yaml)$'
+            )
+
+            # If the count is 0, exit with 0
+            if [ "${count}" -eq 0 ]; then
+              echo "No changes to review, skipping review check"
+              exit 0
+            fi
+
+            # Get the number of approvals for the current PR
+            approvals=$(
+              gh pr view "${{ github.event.pull_request.number }}" \
+                --json reviews \
+                --jq '.reviews | map(select(.state == "APPROVED")) | length'
+            )
+
+            # If there are no approvals, exit with error
+            if [ "${approvals}" -eq 0 ]; then
+              echo "PR requires at least one approval"
+              exit 1
+            fi
+
+            echo "PR has ${approvals} approval(s)"
+            exit 0
+
+  check-changesets:
     name: check for changesets
     runs-on: ubuntu-latest
     needs:
@@ -488,7 +548,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.pre-calculated-task-list) }}
     needs:
-      - check
+      - check-changesets
       - metadata
     if: inputs.pre-calculated && inputs.pre-calculated-task-list != '[]'
     permissions:
@@ -565,7 +625,7 @@ jobs:
     name: unified (build test publish)
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
-      - check
+      - check-changesets
       - metadata
       - pre-calculated-build
     if: >
@@ -820,7 +880,7 @@ jobs:
     needs:
       - init
       - metadata
-      - check
+      - check-changesets
       - build-test-publish
       - pre-calculated-build
     steps:
