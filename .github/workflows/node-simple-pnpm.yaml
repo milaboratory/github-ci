@@ -493,7 +493,7 @@ jobs:
 
             # If there are no approvals, exit with error
             if [ "${approvals}" -eq 0 ]; then
-              echo "PR requires at least one approval"
+              ghwa_error "PR requires at least one approval"
               exit 1
             fi
 
