@@ -1,3 +1,10 @@
-import { PlViteStdNode } from '@milaboratories/platforma-build-configs/vite';
+import { defineConfig } from 'vitest/config'
 
-export default PlViteStdNode();
+export default defineConfig({
+  test: {
+    globals: true,
+    watch: false,
+    include: ['**/*.test.ts'],
+    exclude: ['node_modules/**'],
+  },
+})
