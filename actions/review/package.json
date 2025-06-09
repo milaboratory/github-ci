@@ -1,0 +1,28 @@
+{
+  "name": "@milaboratories/github-ci-actions-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Action for checking PR review requirements",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "vite build",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest",
+    "release": "npm run build && npm run format && npm run lint",
+    "all": "npm run release && npm test"
+  },
+  "dependencies": {
+    "@actions/core": "catalog:",
+    "@actions/github": "catalog:",
+    "@milaboratories/github-ci-actions-milib": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "@rollup/plugin-node-resolve": "catalog:",
+    "@milaboratories/platforma-build-configs": "workspace:*"
+  }
+} 

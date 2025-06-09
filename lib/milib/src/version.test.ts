@@ -1,5 +1,5 @@
-import { expect, test } from "@jest/globals";
-import * as version from "../lib/version";
+import { expect, test } from "vitest";
+import * as version from "./version";
 
 /*
  * versions for tests
