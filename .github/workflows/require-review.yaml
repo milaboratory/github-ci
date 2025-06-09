@@ -1,0 +1,36 @@
+name: Require Review
+
+on:
+  workflow_call:
+    inputs:
+      main-branch:
+        description: |
+          Specify the default branch for changesets to run checks against.
+        type: string
+        required: false
+        default: 'main'
+
+      skip-review-for:
+        description: |
+          List of regex patterns to ignore when checking if review is required.
+        type: string
+        required: false
+        default: |
+          (/|^)package\.json$
+          ^.changeset/.*\.md$
+          ^pnpm-lock.yaml$
+
+jobs:
+  check-review:
+    name: check review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - uses: milaboratory/github-ci/actions/review@monorepo-js
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          baseBranch: ${{ inputs.main-branch }}
+          ignore: ${{ inputs.skip-review-for }}
