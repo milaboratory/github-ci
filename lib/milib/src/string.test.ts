@@ -1,5 +1,5 @@
-import { expect, test } from "@jest/globals";
-import { countOccurrences } from "../lib/string";
+import { expect, test } from "vitest";
+import { countOccurrences } from "./string";
 
 /*
  * countOccurrences tests
