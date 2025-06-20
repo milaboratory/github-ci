@@ -1,0 +1,16 @@
+name: 'Review Requirement Check'
+description: 'Checks if PR has required approvals and verifies changed files against ignore patterns'
+inputs:
+  token:
+    description: 'GitHub token to use for API calls'
+    required: true
+  baseBranch:
+    description: 'Base branch to compare with'
+    required: true
+  ignore:
+    description: 'Newline-separated list of glob patterns to ignore'
+    required: false
+    default: ''
+runs:
+  using: 'node20'
+  main: 'lib/index.js'
