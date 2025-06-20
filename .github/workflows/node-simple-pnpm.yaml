@@ -444,62 +444,6 @@ jobs:
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
-  check-review:
-    name: check review
-    runs-on: ubuntu-latest
-    if: inputs.require-review && github.event_name == 'pull_request'
-    needs:
-      - metadata
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: ${{ inputs.checkout-submodules }}
-          fetch-depth: '0'
-
-      - uses: milaboratory/github-ci/actions/shell@v4
-        id: to-review-files-count
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BASE_BRANCH: ${{ inputs.changeset-default-branch }}
-        with:
-          dump-stdout: false
-          run: |
-            # If not in a PR context, exit with 0
-            if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
-              echo "Not a PR workflow run, skipping review check"
-              exit 0
-            fi
-
-            # This lists all changed files between the current commit and main branch
-            # and counts number of files that are not package.json, pnpm-lock.yaml, or changeset files.
-            # The count is then printed to stdout, i.e. '0' or '15'.
-            count=$(
-              git diff --name-only "origin/${BASE_BRANCH}...HEAD" | \
-                grep --invert-match --extended-regexp --count '^(.*/package\.json|\.changeset/.*\.md|pnpm-lock\.yaml)$'
-            )
-
-            # If the count is 0, exit with 0
-            if [ "${count}" -eq 0 ]; then
-              echo "No changes to review, skipping review check"
-              exit 0
-            fi
-
-            # Get the number of approvals for the current PR
-            approvals=$(
-              gh pr view "${{ github.event.pull_request.number }}" \
-                --json reviews \
-                --jq '.reviews | map(select(.state == "APPROVED")) | length'
-            )
-
-            # If there are no approvals, exit with error
-            if [ "${approvals}" -eq 0 ]; then
-              ghwa_error "PR requires at least one approval"
-              exit 1
-            fi
-
-            echo "PR has ${approvals} approval(s)"
-            exit 0
-
   check-changesets:
     name: check for changesets
     runs-on: ubuntu-latest

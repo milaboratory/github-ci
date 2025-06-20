@@ -269,3 +269,21 @@ export async function ensureHistorySize(
     refSpec: ref,
   });
 }
+
+/**
+ * Get list of files that have changed between current state and specified base branch.
+ * @param refSpec: string diff ref spec: <branch>, <branch1>..<branch2>, ...
+ * @returns Array of changed file paths
+ */
+export async function getChangedFiles(refSpec: string): Promise<string[]> {
+  const cmd: string[] = ["diff", "--name-only", refSpec];
+  
+  const diffResult = await git(...cmd);
+  const filesStr = diffResult.stdout.trim();
+  
+  if (!filesStr) {
+    return [];
+  }
+  
+  return filesStr.split("\n");
+}
