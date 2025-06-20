@@ -136,25 +136,24 @@ runs:
         pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
-      with:
-        run: |
-          if [ "${PNPM_R}" == "true" ];then
-           pnpm run -r ${{ inputs.test-script-name }}
-          else
-           set_args=()
-           while read -r _set_args; do
-           if [ -n "${_set_args}" ]; then
-             set_args+=( "${_set_args}" )
-           fi
-           done <<<"${PNPM_ARGS}"
-
-           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+      shell: bash
+      run: |
+        if [ "${PNPM_R}" == "true" ];then
+          pnpm run -r ${{ inputs.test-script-name }}
+        else
+          set_args=()
+          while read -r _set_args; do
+          if [ -n "${_set_args}" ]; then
+            set_args+=( "${_set_args}" )
           fi
+          done <<<"${PNPM_ARGS}"
+
+          pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+        fi
 
     - name: Stop all running containers
       uses: milaboratory/github-ci/actions/shell@v4-beta

@@ -50,44 +50,40 @@ runs:
 
   steps:
     - name: Run build - ${{ inputs.build-script-name }}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-build }}
         PNPM_ARGS: ${{ inputs.pnpm-build-args }}
-      with:
-        dump-stdout: false
-        run: |
-          if [ "${PNPM_R}" == "true" ];then
-            pnpm run -r ${{ inputs.build-script-name }}
-          else
-            set_args=()
-            while read -r _set_args; do
-            if [ -n "${_set_args}" ]; then
-              set_args+=( "${_set_args}" )
-            fi
-            done <<<"${PNPM_ARGS}"
-
-            pnpm run ${{ inputs.build-script-name }} "${set_args[@]}"
+      shell: bash
+      run: |
+        if [ "${PNPM_R}" == "true" ];then
+          pnpm run -r ${{ inputs.build-script-name }}
+        else
+          set_args=()
+          while read -r _set_args; do
+          if [ -n "${_set_args}" ]; then
+            set_args+=( "${_set_args}" )
           fi
+          done <<<"${PNPM_ARGS}"
+
+          pnpm run ${{ inputs.build-script-name }} "${set_args[@]}"
+        fi
 
     - name: Run test - ${{ inputs.test-script-name}}
-      uses: milaboratory/github-ci/actions/shell@v4-beta
       if: inputs.tests == 'true'
       env:
         PNPM_R: ${{ inputs.pnpm-recursive-tests }}
         PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
-      with:
-        dump-stdout: false
-        run: |
-          if [ "${PNPM_R}" == "true" ];then
-            pnpm run -r ${{ inputs.test-script-name }}
-          else
-            set_args=()
-            while read -r _set_args; do
-            if [ -n "${_set_args}" ]; then
-              set_args+=( "${_set_args}" )
-            fi
-            done <<<"${PNPM_ARGS}"
-
-            pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+      shell: bash
+      run: |
+        if [ "${PNPM_R}" == "true" ];then
+          pnpm run -r ${{ inputs.test-script-name }}
+        else
+          set_args=()
+          while read -r _set_args; do
+          if [ -n "${_set_args}" ]; then
+            set_args+=( "${_set_args}" )
           fi
+          done <<<"${PNPM_ARGS}"
+
+          pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+        fi
