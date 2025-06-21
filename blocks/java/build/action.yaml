@@ -156,7 +156,7 @@ runs:
 
     - name: Prepare env for Java application build
       if: inputs.java-version != ''
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
@@ -165,7 +165,7 @@ runs:
       if:  inputs.data-cache-paths != ''
         && inputs.data-cache-key != ''
 
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: ${{ inputs.data-cache-key }}
         path: ${{ inputs.data-cache-paths }}
@@ -223,7 +223,7 @@ runs:
 
     - name: Save build artifacts
       if: steps.artifact-paths.outputs.result != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifact-paths.outputs.result }}
