@@ -223,7 +223,7 @@ runs:
 
     - name: Save build artifacts
       if: steps.artifact-paths.outputs.result != ''
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifact-paths.outputs.result }}

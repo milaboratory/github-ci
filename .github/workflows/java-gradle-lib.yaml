@@ -268,7 +268,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -310,7 +310,7 @@ jobs:
           abs-root: .
           paths: ${{ inputs.release-files }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         name: Save release files
         if: inputs.release-files != ''
         with:
@@ -376,7 +376,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -475,7 +475,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v2
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: 'release-files'
           path: 'release-files'
@@ -534,7 +534,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
