@@ -94,20 +94,22 @@ runs:
             options+=( --atomic )
           fi
 
-          if [ "${HELM_CHART_DEBUG}" == "true" ];th en
+          if [ "${HELM_CHART_DEBUG}" == "true" ];then
             options+=( --debug )
           fi
 
           if [ -n "${HELM_CHART_VALUES_FILE}" ];then
-            options+=( --values ${HELM_CHART_VALUES_FILE} )
+            options+=( --values "${HELM_CHART_VALUES_FILE}" )
           fi
 
           set_values=()
-          while read -r _set_values; do
-            if [ -n "${_set_values}" ]; then
-              set_values+=( --set "${_set_values}" )
-            fi
-          done <<<"${HELM_CHART_VALUES}"
+          if [ -n "${HELM_CHART_VALUES}" ]; then
+            while IFS= read -r _set_values; do
+              if [ -n "${_set_values}" ]; then
+                set_values+=( --set "${_set_values}" )
+              fi
+            done <<<"${HELM_CHART_VALUES}"
+          fi
 
           if [ "${HELM_CHART_NAME}" == "platforma" ];then
             helm upgrade --install "${HELM_RELEASE_NAME}" \

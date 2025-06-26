@@ -151,7 +151,7 @@ on:
           Kubernetes namespace name
         type: string
         required: false
-        default: ''
+        default: 'dev-gke'
 
       env:
           description: |
@@ -229,7 +229,7 @@ jobs:
           PL_VERSION: ${{ inputs.pl-version }}
         with:
           run: |
-            PL_SAN_VERSION="$(echo "${PL_VERSION}" | sed 's:[^0-9]::g')-${GITHUB_RUN_ID}"
+            PL_SAN_VERSION="${PL_VERSION}-${GITHUB_RUN_ID}"
 
             ghwa_set_env HELM_RELEASE_NAME "${HELM_RELEASE_NAME}-${PL_SAN_VERSION}"
             ghwa_set_env NAMESPACE "${NAMESPACE}"
