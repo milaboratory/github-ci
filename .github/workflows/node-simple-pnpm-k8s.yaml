@@ -31,6 +31,27 @@ on:
         required: false
         default: 'latest'
 
+      pl-test-storage-id:
+        description:
+          Platforma test assets storage id.
+        type: string
+        required: false
+        default: 'test-assets'
+
+      pl-test-user:
+        description: |
+          PLatforma test username.
+        type: string
+        required: false
+        default: 'testuser1'
+
+      pl-test-password:
+        description: |
+          Password for the Platforma's test user.
+        type: string
+        required: false
+        default: 'testpassword1'
+
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -282,7 +303,7 @@ jobs:
       - id: test
         uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4-beta
         with:
-          pl-api-addr: ${{ inputs.pl-api-addr || format('{0}-{1}.{2}.{3}', env.HELM_RELEASE_NAME, 'platforma', env.NAMESPACE, 'svc.cluster.local') }}
+          pl-api-addr: ${{ inputs.pl-api-addr || format('{0}.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
           pl-api-port: ${{ inputs.pl-api-port }}
           pl-api-request-timeout: ${{ inputs.pl-api-request-timeout }}
           pl-test-storage-id: ${{ inputs.pl-test-storage-id }}
