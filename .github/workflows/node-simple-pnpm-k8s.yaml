@@ -153,6 +153,38 @@ on:
         required: false
         default: ''
 
+      env:
+          description: |
+            custom environment variables to set for all jobs in workflow
+            as JSON-encoded map:
+              { "MY_VAR_1": "awesome value",
+                "VARIABLE_2": "not so awesome :)" }
+
+            This input's envs are merged with secrets.env
+            This input's envs have lower priority compared than secrets.env
+          type: string
+          required: false
+          default: '{}'   
+
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
 jobs:
   run-tests:
     name: Run tests
