@@ -10,24 +10,29 @@ on:
         required: true
         default: 'main'
 
-      test-script-name:
+      pnpm-build-command:
         description: |
-          Test command.
+          Command to build the application.
         type: string
         required: false
+        default: 'build'
 
-      pnpm-recursive-tests:
+      pnpm-test-command:
         description: |
-          Run pnpm tests with -r flag.
-        type: boolean
-        required: true
-
-      pnpm-tests-args:
-        description: |
-          Additional pnpm tests arguments to pass
-          for none --recursive pnpm invocations.
+          Command to test the application.
         type: string
         required: false
+        default: 'test'
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
 
       node-version:
         description: |
@@ -154,6 +159,12 @@ jobs:
       with:
         version: ${{ inputs.helm-version }}
 
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: ${{ inputs.checkout-submodules }}
+        fetch-depth: '0'
+
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
@@ -219,11 +230,9 @@ jobs:
         pl-test-storage-id: ${{ inputs.pl-test-storage-id }}
         pl-test-user: ${{ inputs.pl-test-user }}
         pl-test-password: ${{ inputs.pl-test-password }}
-        test-script-name: ${{ inputs.test-script-name }}
-        pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
-        pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+        pnpm-build-command: ${{ inputs.pnpm-build-command }}
+        pnpm-test-command: ${{ inputs.pnpm-test-command }}
         pnpm-version: ${{ inputs.pnpm-version }}
-        pnpm-test-list: ${{ inputs.pnpm-test-list }}
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}

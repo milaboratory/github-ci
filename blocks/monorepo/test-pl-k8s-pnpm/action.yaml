@@ -41,10 +41,15 @@ inputs:
     required: false
     default: 'testpassword1'
 
-  test-script-name:
+  pnpm-build-command:
     description: |
-      Test command.
-      Execute a test or set of tests.
+      Command to build the application.
+    required: false
+    default: 'build'
+
+  pnpm-test-command:
+    description: |
+      Command to test the application.
     required: false
     default: 'test'
 
@@ -117,27 +122,18 @@ runs:
         run: |
           pnpm install --frozen-lockfile --prefer-offline
 
-    - name: Run test - ${{ inputs.test-script-name}}
+    - name: Run build
+      shell: bash
+      run: |
+        pnpm build ${{ inputs.pnpm-build-command }}
+
+    - name: Run test
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
-        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
         PL_ADDRESS: ${{ format('http://{0}:{1}?request-timeout={2}', inputs.pl-api-addr, inputs.pl-api-port, inputs.pl-api-request-timeout) }}
         PL_TEST_STORAGE_ID: ${{ inputs.pl-test-storage-id }}
         PL_TEST_USER: ${{ inputs.pl-test-user }}
         PL_TEST_PASSWORD: ${{ inputs.pl-test-password }}
-        PNPM_TEST_LIST: ${{ inputs.pnpm-test-list }}
       shell: bash
       run: |
-        if [ "${PNPM_R}" == "true" ];then
-          pnpm run -r ${{ inputs.test-script-name }}
-        else
-          set_args=()
-          while read -r _set_args; do
-          if [ -n "${_set_args}" ]; then
-            set_args+=( "${_set_args}" )
-          fi
-          done <<<"${PNPM_ARGS}"
-
-          pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
-        fi
+        pnpm test ${{ inputs.pnpm-test-command }}
