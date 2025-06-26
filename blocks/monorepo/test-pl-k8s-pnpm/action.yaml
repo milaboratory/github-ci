@@ -128,7 +128,6 @@ runs:
         pnpm build ${{ inputs.pnpm-build-command }}
 
     - name: Run test
-      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         PL_ADDRESS: ${{ format('http://{0}:{1}?request-timeout={2}', inputs.pl-api-addr, inputs.pl-api-port, inputs.pl-api-request-timeout) }}
         PL_TEST_STORAGE_ID: ${{ inputs.pl-test-storage-id }}
