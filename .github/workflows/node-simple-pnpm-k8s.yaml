@@ -289,10 +289,10 @@ jobs:
             app.persistentVolume.work.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/work"
             app.persistentVolume.softwareloader.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/softwareloader"
             app.persistentVolume.nfsShareVolume.mountPath="/mnt/platforma-data/instance"
-            app.coreConfig.projectId="${{ env.GCLOUD_CI_GKE_PROJECT_ID }}"
-            app.coreConfig.region="${{ env.GCLOUD_CI_GKE_REGION }}"
-            app.coreConfig.network="${{ env.GCLOUD_CI_GKE_NETWORK }}"
-            app.coreConfig.subnetwork="${{ env.GCLOUD_CI_GKE_SUBNETWORK }}"
+            app.coreConfig.batch.projectId="${{ env.GCLOUD_CI_GKE_PROJECT_ID }}"
+            app.coreConfig.batch.region="${{ env.GCLOUD_CI_GKE_REGION }}"
+            app.coreConfig.batch.network="${{ env.GCLOUD_CI_GKE_NETWORK }}"
+            app.coreConfig.batch.subnetwork="${{ env.GCLOUD_CI_GKE_SUBNETWORK }}"
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
