@@ -238,6 +238,7 @@ jobs:
 
       - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
         with:
+          helm-release-name: ${{ env.HELM_RELEASE_NAME }}
           helm-chart-name: ${{ inputs.helm-chart-name }}
           helm-chart-registry: ${{ inputs.helm-chart-registry }}
           helm-chart-values-file: ${{ inputs.helm-chart-values-file }}
