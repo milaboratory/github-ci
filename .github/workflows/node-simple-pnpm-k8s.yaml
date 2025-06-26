@@ -52,6 +52,14 @@ on:
         required: false
         default: 'testpassword1'
 
+      pl-api-request-timeout:
+        description: |
+          Platforma API request timeout.
+          Set this value in seconds.
+        type: string
+        required: false
+        default: '3000'  
+
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
