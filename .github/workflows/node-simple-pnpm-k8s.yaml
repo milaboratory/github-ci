@@ -303,7 +303,7 @@ jobs:
               --timeout "${{ inputs.helm-chart-wait-timeout }}" \
               --namespace "${{ env.NAMESPACE }}"
 
-      - uses: milaboratory/github-ci/actions/gke/prefix-delete@v4-beta
+      - uses: milaboratory/github-ci/actions/gcp/prefix-delete@v4-beta
         if: always()
         with:
           gcs-bucket-name: ${{ env.GCP_DATA_BUCKET_NAME }}
