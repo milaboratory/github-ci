@@ -24,6 +24,13 @@ on:
         required: false
         default: 'test'
 
+      pnpm-version:
+        description: |
+          Version of pnpm to install.
+        type: string
+        required: false
+        default: 'latest'
+
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -33,6 +40,13 @@ on:
         type: string
         required: false
         default: ''
+
+      package-path:
+        description: |
+          Relative path to the package.json with package version.
+        type: string
+        required: false
+        default: '.'
 
       node-version:
         description: |
@@ -159,11 +173,20 @@ jobs:
       with:
         version: ${{ inputs.helm-version }}
 
-
     - uses: actions/checkout@v4
       with:
         submodules: ${{ inputs.checkout-submodules }}
         fetch-depth: '0'
+
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PACKAGE_PATH: ${{ inputs.package-path }}
+      with:
+        run: |
+          NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
+          PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+          ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
+          ghwa_set_output pnpm-version "${PNPM_VERSION}
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
@@ -232,7 +255,7 @@ jobs:
         pl-test-password: ${{ inputs.pl-test-password }}
         pnpm-build-command: ${{ inputs.pnpm-build-command }}
         pnpm-test-command: ${{ inputs.pnpm-test-command }}
-        pnpm-version: ${{ inputs.pnpm-version }}
+        pnpm-version: ${{ env.PNPM_VERSION }}
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.cache-version }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
