@@ -220,7 +220,7 @@ jobs:
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
             PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-            ghwa_set_output pnpm-version "${PNPM_VERSION}
+            ghwa_set_output pnpm-version "${PNPM_VERSION}"
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
