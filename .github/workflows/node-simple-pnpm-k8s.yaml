@@ -264,7 +264,7 @@ jobs:
         with:
           run: |
             start_time=$(date +%s)
-            until kubectl get pods --namespace "${HELM_NAMESPACE}" -l "app.kubernetes.io/name=${HELM_RELEASE_NAME}-platforma" -o json |
+            until kubectl get pods --namespace "${HELM_NAMESPACE}" -l "app.kubernetes.io/instance=${HELM_RELEASE_NAME}" -o json |
               jq -e '.items[] | select(.status.phase == "Running" and (any(.status.conditions[]; .type == "Ready" and .status == "True")))' >/dev/null
             do
               current_time=$(date +%s)
