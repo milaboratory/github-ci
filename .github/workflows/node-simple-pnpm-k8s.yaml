@@ -58,7 +58,14 @@ on:
           Set this value in seconds.
         type: string
         required: false
-        default: '3000'  
+        default: '3000'
+
+      pl-api-port:
+        description: |
+          Platforma API port.
+        type: string
+        required: false
+        default: '6345'
 
       checkout-submodules:
         description: |
