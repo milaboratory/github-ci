@@ -121,14 +121,14 @@ on:
           the release as successful. It will wait for as long as --timeout
         type: boolean
         required: false
-        default: 'true'
+        default: true
 
       helm-chart-debug:
         description: |
           Enable verbose output (debug)
         type: boolean
         required: false
-        default: 'false'
+        default: false
 
       helm-chart-wait-timeout:
         description: |
