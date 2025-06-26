@@ -29,12 +29,30 @@ on:
         type: string
         required: false
 
+      node-version:
+        description: |
+          Node version to use
+        type: string
+        required: true
+
+       npmrc-config:
+        description: |
+          Generates a .npmrc file based on provided configuration.
+        type: string
+        required: true
+
       kubectl-version:
         description: |
           Kubectl version
         type: string
         required: false
         default: '1.32.6'
+
+      gha-runner-label:
+        description: |
+          The label for github actions hosted runner
+        type: string
+        default: 'ubuntu-latest'
 
       helm-version:
         description: |
@@ -104,7 +122,7 @@ on:
       helm-chart-values:
         description: |
           A list of override values,
-          they are passed with --set flag for each value. 
+          they are passed with --set flag for each value.
         type: string
         required: false
         default: ''
@@ -119,7 +137,7 @@ on:
 jobs:
   run-tests:
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     permissions:
       id-token: write
     steps:
@@ -134,15 +152,7 @@ jobs:
 
     - uses: azure/setup-helm@v4
       with:
-        version: ${{ inputs.helm-version }} 
-
-    - uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: ${{ env.GCLOUD_CI_GKE_WORKLOAD_IDENTITY_PROVIDER }}
-        service_account: ${{ env.GCLOUD_CI_GKE_SERVICE_ACCOUNT }}
-        token_format: 'access_token'
-
-    - uses: google-github-actions/setup-gcloud@v2
+        version: ${{ inputs.helm-version }}
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
@@ -157,7 +167,7 @@ jobs:
           ghwa_set_env NAMESPACE "${NAMESPACE}"
           ghwa_set_env PL_VERSION "${PL_VERSION}"
           ghwa_set_env PL_SAN_VERSION "${PL_SAN_VERSION}"
-        
+
     - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
       with:
         helm-chart-name: ${{ inputs.helm-chart-name }}
@@ -198,7 +208,7 @@ jobs:
 
             echo "Waiting for pod to be running and ready..."
             sleep 1
-          done    
+          done
 
     - id: test
       uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4-beta
