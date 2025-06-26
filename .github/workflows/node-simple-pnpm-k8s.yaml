@@ -164,7 +164,7 @@ on:
             This input's envs have lower priority compared than secrets.env
           type: string
           required: false
-          default: '{}'   
+          default: '{}'
 
     secrets:
       env:
@@ -204,6 +204,8 @@ jobs:
       - uses: azure/setup-helm@v4
         with:
           version: ${{ inputs.helm-version }}
+
+      - uses: google-github-actions/setup-gcloud@v2
 
       - uses: actions/checkout@v4
         with:
