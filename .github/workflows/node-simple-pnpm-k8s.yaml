@@ -309,5 +309,5 @@ jobs:
       - uses: milaboratory/github-ci/actions/gcp/prefix-delete@v4-beta
         if: always()
         with:
-          gcs-bucket-name: ${{ env.GCP_DATA_BUCKET_NAME }}
+          gcs-bucket-name: ${{ env.GCLOUD_CI_GKE_BUCKET_NAME }}
           gcs-prefix-name: ${{ format('{0}-{1}', env.PL_SAN_VERSION, 'platforma-ci-primary/') }}
