@@ -32,8 +32,6 @@ runs:
           echo "Deleting all objects under prefix: gs://${BUCKET_NAME}/${PREFIX}"
           
           # Delete all objects under the prefix using gsutil
-          # The -r flag recursively deletes all objects under the prefix
-          # The -q flag makes it quiet (suppresses output)
-          gsutil -m rm -r -q "gs://${BUCKET_NAME}/${PREFIX}"
+          gsutil -m rm -r "gs://${BUCKET_NAME}/${PREFIX}"
           
           echo "Successfully deleted all objects under the prefix ${PREFIX}"
