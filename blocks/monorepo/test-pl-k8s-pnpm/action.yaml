@@ -1,0 +1,143 @@
+name: Build and Test NodeJS PNPM application
+author: 'MiLaboratories'
+description: |
+  Prepare agent for building the NodeJS application.
+  Install NodeJS specific version, download package, create cache e.t.c
+
+inputs:
+  pl-api-addr:
+    description: |
+      Platforma API address.
+    required: false
+
+  pl-api-port:
+    description: |
+      Platforma API port.
+    required: false
+    default: '6345'
+
+  pl-api-request-timeout:
+    description: |
+      Platforma API request timeout.
+      Set this value in seconds.
+    required: false
+    default: '3000'
+
+  pl-test-storage-id:
+    description:
+      Platforma test assets storage id.
+    required: false
+    default: 'test-assets'
+
+  pl-test-user:
+    description: |
+      PLatforma test username.
+    required: false
+    default: 'testuser1'
+
+  pl-test-password:
+    description: |
+      Password for the Platforma's test user.
+    required: false
+    default: 'testpassword1'
+
+  test-script-name:
+    description: |
+      Test command.
+      Execute a test or set of tests.
+    required: false
+    default: 'test'
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '16.x', '14.x'.
+    required: true
+
+  cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  cache-hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml.
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+  pnpm-version:
+    description: |
+      Version of pnpm to install.
+    required: false
+    default: 'latest'
+
+  pnpm-recursive-tests:
+    description: |
+      Run pnpm tests with -r flag.
+    required: true
+
+  pnpm-tests-args:
+    description: |
+      Additional pnpm tests arguments to pass
+      for none --recursive pnpm invocations.
+    required: false
+
+  pnpm-test-list:
+    description: |
+      JSON-formatted string listing of the specific tests to run.
+    required: false
+    default: '[]'
+
+  npmrc-config:
+    description: |
+      Generates a .npmrc file based on provided configuration.
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare environment for building a NodeJS application
+      uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.cache-version }}
+        pnpm-version: ${{ inputs.pnpm-version }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        npmrc-config: ${{ inputs.npmrc-config }}
+
+    - name: Install NodeJS packages with pnpm
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      with:
+        dump-stdout: false
+        run: |
+          pnpm install --frozen-lockfile --prefer-offline
+
+    - name: Run test - ${{ inputs.test-script-name}}
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PNPM_R: ${{ inputs.pnpm-recursive-tests }}
+        PNPM_ARGS: ${{ inputs.pnpm-tests-args }}
+        PL_ADDRESS: ${{ format('http://{0}:{1}?request-timeout={2}', inputs.pl-api-addr, inputs.pl-api-port, inputs.pl-api-request-timeout) }}
+        PL_TEST_STORAGE_ID: ${{ inputs.pl-test-storage-id }}
+        PL_TEST_USER: ${{ inputs.pl-test-user }}
+        PL_TEST_PASSWORD: ${{ inputs.pl-test-password }}
+        PNPM_TEST_LIST: ${{ inputs.pnpm-test-list }}
+      shell: bash
+      run: |
+        if [ "${PNPM_R}" == "true" ];then
+          pnpm run -r ${{ inputs.test-script-name }}
+        else
+          set_args=()
+          while read -r _set_args; do
+          if [ -n "${_set_args}" ]; then
+            set_args+=( "${_set_args}" )
+          fi
+          done <<<"${PNPM_ARGS}"
+
+          pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
+        fi

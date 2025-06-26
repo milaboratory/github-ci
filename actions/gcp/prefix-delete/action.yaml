@@ -1,0 +1,39 @@
+name: Delete objects under a prefix in a Google Cloud Storage bucket
+author: 'MiLaboratories'
+description: |
+  Delete all objects under a given prefix from a given Google Cloud Storage bucket.
+
+inputs:
+  gcs-bucket-name:
+    description: |
+      Google Cloud Storage bucket name.
+    required: false
+  gcs-prefix-name:
+    description: |
+      Prefix name to delete all objects under on the `gcs-bucket-name`.
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Delete objects under a prefix
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+       BUCKET_NAME: ${{ inputs.gcs-bucket-name }}
+       PREFIX: ${{ inputs.gcs-prefix-name }}
+      with:
+        run: |
+          # Ensure the prefix ends with a '/'
+          if [[ "${PREFIX}" != */ ]]; then
+            PREFIX="${PREFIX}/"
+          fi
+          
+          echo "Deleting all objects under prefix: gs://${BUCKET_NAME}/${PREFIX}"
+          
+          # Delete all objects under the prefix using gsutil
+          # The -r flag recursively deletes all objects under the prefix
+          # The -q flag makes it quiet (suppresses output)
+          gsutil -m rm -r -q "gs://${BUCKET_NAME}/${PREFIX}*"
+          
+          echo "Successfully deleted all objects under the prefix ${PREFIX}"
