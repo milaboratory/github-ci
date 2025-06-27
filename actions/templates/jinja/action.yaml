@@ -92,7 +92,7 @@ runs:
   using: "composite"
   steps:
     - name: Detect template path
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       id: tpl-path
       env:
         TEMPLATE: ${{ inputs.template }}
@@ -116,7 +116,7 @@ runs:
           echo "${temp_tpl_path}"
 
     - name: Detect data path
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       id: data-path
       env:
         DATA: ${{ inputs.data }}
@@ -140,7 +140,7 @@ runs:
           echo "${temp_data_path}"
 
     - name: Detect output path
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       id: out-path
       env:
         OUTPUT_FILE: ${{ inputs.out-file }}
@@ -153,7 +153,7 @@ runs:
 
           mktemp ./XXXXXXXXXXX
 
-    - uses: milaboratory/github-ci/actions/templates/jinja/wrapper@v4-db-1
+    - uses: milaboratory/github-ci/actions/templates/jinja/wrapper@v4
       with:
         template: ${{ steps.tpl-path.outputs.stdout }}
         output_file: ${{ steps.out-path.outputs.stdout }}
@@ -162,7 +162,7 @@ runs:
         data_file: ${{ steps.data-path.outputs.stdout }}
         data_format: ${{ inputs.data-format }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4-db-1
+    - uses: milaboratory/github-ci/actions/shell@v4
       id: result
       if: inputs.dump-output
       env:

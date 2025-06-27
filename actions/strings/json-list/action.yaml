@@ -26,7 +26,7 @@ runs:
   steps:
     - name: Convert to JSON array
       id: json
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         INPUT_LINES: ${{ inputs.input }}
 

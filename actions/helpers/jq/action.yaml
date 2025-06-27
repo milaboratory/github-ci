@@ -25,7 +25,7 @@ runs:
 
   steps:
     - id: jq
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         INPUT_FILE: ${{ inputs.file }}
         JQ_SELECT: ${{ inputs.select }}

@@ -88,7 +88,7 @@ runs:
 
   steps:
     - name: Install Docker Compose
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           echo "Installing Docker Compose..."

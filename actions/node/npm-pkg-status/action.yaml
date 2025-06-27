@@ -55,7 +55,7 @@ runs:
   steps:
     - name: Read package name and version
       if: inputs.package-json-path != '0'
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       id: package
       env:
         NPM_PKG_NAME: ${{ inputs.npm-pkg-name }}
@@ -83,7 +83,7 @@ runs:
           ghwa_set_output version "${NPM_PKG_VERSION}"
 
     - name: Check NPM package status in a registry
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       id: npm-pkg-status
       env:
         NPM_PKG_NAME: ${{ fromJSON(steps.package.outputs.data).name }}
@@ -151,7 +151,7 @@ runs:
           ghwa_set_output exist "0"
 
     - id: set-status
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           echo "${{ fromJSON(steps.npm-pkg-status.outputs.data).exist }}"

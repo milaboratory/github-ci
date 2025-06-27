@@ -106,7 +106,7 @@ runs:
   using: composite
   steps:
     - id: job-id
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         CACHE_KEY: ${{ inputs.job-id }}
       with:

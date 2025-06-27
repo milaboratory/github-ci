@@ -39,9 +39,9 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-db-1
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v4-db-1
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4
       id: message
       with:
         data: |
@@ -75,7 +75,7 @@ runs:
           ) ]
           Tags: #{{- github["event"]["repository"]["name"] | replace("-", "_") | replace(".", "_") -}} {%- if search_tags | length > 0 %}{% for i in search_tags  %} #{{ i | replace("-", "_") | replace("/", "_") }} {% endfor %}{%- endif %}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-db-1
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

@@ -13,7 +13,7 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         GITHUB_CONTEXT: ${{ toJSON(github) }}
       with:

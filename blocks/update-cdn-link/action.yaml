@@ -65,7 +65,7 @@ runs:
         aws-region: ${{ inputs.s3-region }}
 
     - name: Update website-redirect-location metadata in the file
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         S3_BUCKET: ${{ inputs.s3-bucket }}
         S3_KEY: ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}

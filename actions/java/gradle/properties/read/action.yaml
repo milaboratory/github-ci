@@ -67,7 +67,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-db-1
+    - uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
       with:
         build-root-directory: ${{ inputs.project-dir }}
         gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
