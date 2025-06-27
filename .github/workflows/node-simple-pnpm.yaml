@@ -825,6 +825,14 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Debug with SSH
+        if: ${{ inputs.debug-ssh-on-failure && failure() }}
+        uses: owenthereal/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+          upterm-server: ${{ inputs.debug-ssh-upterm-server }}
+          wait-timeout-minutes: 5
+
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
@@ -862,21 +870,3 @@ jobs:
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
-
-  debug-ssh:
-    name: Debug with SSH
-    runs-on: ubuntu-latest
-    needs:
-      - init
-      - metadata
-      - check
-      - pre-calculated-build
-      - build-test-publish
-    if: ${{ inputs.debug-ssh-on-failure && failure() }}
-    steps:
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v1
-        with:
-          limit-access-to-actor: true
-          upterm-server: ${{ inputs.debug-ssh-upterm-server }}
-          wait-timeout-minutes: 5
