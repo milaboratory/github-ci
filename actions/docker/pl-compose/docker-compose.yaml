@@ -75,6 +75,11 @@ volumes:
       o: bind
       device: ${PL_TEST_ASSETS_DIR}
   platforma-db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_DB_DIR}
   platforma-log:
     driver: local
     driver_opts:
