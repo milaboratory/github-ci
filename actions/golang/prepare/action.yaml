@@ -60,7 +60,7 @@ runs:
         cache: ${{ inputs.cache-enabled-in-setup-go }}
 
     - name: Setup Cache for Golang project
-      uses: milaboratory/github-ci/actions/golang/cache@v4
+      uses: milaboratory/github-ci/actions/golang/cache@v4-db-1
       with:
         cache-version: ${{ inputs.cache-version }}
         cache-dependency-hashfiles-path: ${{ inputs.cache-dependency-hashfiles-path }}

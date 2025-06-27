@@ -38,14 +38,14 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-db-1
 
-    - uses: milaboratory/github-ci/actions/strings/json-list@v4
+    - uses: milaboratory/github-ci/actions/strings/json-list@v4-db-1
       id: reviewers
       with:
         input: ${{ inputs.reviewers }}
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v4
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4-db-1
       id: message
       with:
         data: |
@@ -77,7 +77,7 @@ runs:
               {{ product["additional_info"] }}
             {%- endif %}
 
-    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4
+    - uses: milaboratory/github-ci/actions/notify/telegram/send@v4-db-1
       with:
         to: ${{ inputs.telegram-target }}
         token: ${{ inputs.telegram-token }}

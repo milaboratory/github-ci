@@ -36,7 +36,7 @@ runs:
         path: ${{ github.action_path }}/../ctx
 
     - id: create_key
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
         CTX_KEY: ${{ inputs.key }}

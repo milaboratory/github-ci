@@ -52,7 +52,7 @@ runs:
 
   steps:
     - id: needs_update
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         FORCE_UPDATE: ${{ inputs.force-update }}
         CTX_PATH: ${{ github.action_path }}/../ctx
@@ -81,7 +81,7 @@ runs:
 
     - id: value
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
 
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx

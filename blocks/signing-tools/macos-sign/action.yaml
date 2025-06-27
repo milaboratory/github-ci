@@ -39,7 +39,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4
+    - uses: milaboratory/github-ci/actions/files/list@v4-db-1
       id: binaries-list
       with:
         patterns: ${{ inputs.binaries }}

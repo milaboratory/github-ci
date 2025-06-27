@@ -30,17 +30,17 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/context/create@v4
+    - uses: milaboratory/github-ci/actions/context/create@v4-db-1
 
     - uses: actions/checkout@v4
     - id: versions
-      uses: milaboratory/github-ci/actions/detect-version@v4
+      uses: milaboratory/github-ci/actions/detect-version@v4-db-1
       with:
         canonize: ${{ inputs.version-canonize }}
         fetch-depth: ${{ inputs.version-fetch-depth }}
         branch-versioning: ${{ inputs.branch-versioning }}
 
-    - uses: milaboratory/github-ci/actions/context/put@v4
+    - uses: milaboratory/github-ci/actions/context/put@v4-db-1
       with:
         key: "versions.json"
         value: ${{ toJSON( steps.versions.outputs ) }}

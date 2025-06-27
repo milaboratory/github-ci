@@ -79,10 +79,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-db-1
 
     - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         OVERRIDE_VERSION: ${{ inputs.override-version }}
         CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
@@ -96,12 +96,12 @@ runs:
 
     - id: tests-status
       name: Merge test statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-db-1
       with:
         statuses: ${{ inputs.tests-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         SEARCH_TAGS: ${{ inputs.search-tags }}
       with:
@@ -116,7 +116,7 @@ runs:
         && !( steps.tests-status.outputs.status != 'success'
            && inputs.notification-mode == 'success-only' )
 
-      uses: milaboratory/github-ci/actions/notify/telegram/tests@v4
+      uses: milaboratory/github-ci/actions/notify/telegram/tests@v4-db-1
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}

@@ -330,7 +330,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-db-1
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -348,7 +348,7 @@ jobs:
       - init
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-db-1
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -358,7 +358,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-db-1
         with:
           run: |
             NPM_PKG_NAME="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.name')"
@@ -368,18 +368,18 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
 
       - name: Prepare environment for running Golang
-        uses: milaboratory/github-ci/actions/golang/prepare@v4
+        uses: milaboratory/github-ci/actions/golang/prepare@v4-db-1
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.golang-cache-version }}
           cache-dependency-path: ${{ inputs.golang-cache-dependency-path }}
           cache-dependency-hashfiles-path: ${{ inputs.golang-cache-dependency-hashfiles-path }}
 
-      - uses: milaboratory/github-ci/actions/git/auth@v4
+      - uses: milaboratory/github-ci/actions/git/auth@v4-db-1
         with:
           github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-db-1
         with:
           build-script-name: ${{ inputs.build-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -408,12 +408,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-db-1
         with:
           input: |
             build
 
-      - uses: milaboratory/github-ci/blocks/notify/build@v4
+      - uses: milaboratory/github-ci/blocks/notify/build@v4-db-1
         env:
           NPM_PKG_VERSION: ${{ needs.build.outputs.npm-pkg-version }}
         with:
@@ -438,7 +438,7 @@ jobs:
       - build
 
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-db-1
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -448,18 +448,18 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Prepare environment for running Golang
-        uses: milaboratory/github-ci/actions/golang/prepare@v4
+        uses: milaboratory/github-ci/actions/golang/prepare@v4-db-1
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.golang-cache-version }}
           cache-dependency-path: ${{ inputs.golang-cache-dependency-path }}
           cache-dependency-hashfiles-path: ${{ inputs.golang-cache-dependency-hashfiles-path }}
 
-      - uses: milaboratory/github-ci/actions/git/auth@v4
+      - uses: milaboratory/github-ci/actions/git/auth@v4-db-1
         with:
           github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci/blocks/node/test@v4
+      - uses: milaboratory/github-ci/blocks/node/test@v4-db-1
         with:
           test-name: ${{ inputs.test-script-name }}
           node-version: ${{ inputs.node-version }}
@@ -488,13 +488,13 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-db-1
         with:
           input: |
             test
             unit
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-db-1
         env:
           NPM_PKG_VERSION: ${{ needs.test.outputs.npm-pkg-version }}
         with:
@@ -537,7 +537,7 @@ jobs:
       - can-release
 
     steps:
-      - uses: milaboratory/github-ci/blocks/notify/review-required@v4
+      - uses: milaboratory/github-ci/blocks/notify/review-required@v4-db-1
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
@@ -582,9 +582,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-db-1
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-db-1
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -594,14 +594,14 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-status
-        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4
+        uses: milaboratory/github-ci/actions/node/npm-pkg-status@v4-db-1
         with:
           package-json-path: "${{ github.workspace }}/package.json"
           registry-url: ${{ inputs.registry-url }}
           npm-auth-token: ${{ env.NPMJS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Prepare environment for running Golang
-        uses: milaboratory/github-ci/actions/golang/prepare@v4
+        uses: milaboratory/github-ci/actions/golang/prepare@v4-db-1
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
@@ -610,13 +610,13 @@ jobs:
           cache-dependency-path: ${{ inputs.golang-cache-dependency-path }}
           cache-dependency-hashfiles-path: ${{ inputs.golang-cache-dependency-hashfiles-path }}
 
-      - uses: milaboratory/github-ci/actions/git/auth@v4
+      - uses: milaboratory/github-ci/actions/git/auth@v4-db-1
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
           github-token: ${{ env.GH_CI_PAT || secrets.GITHUB_TOKEN }}
 
-      - uses: milaboratory/github-ci/blocks/node/build/generic@v4
+      - uses: milaboratory/github-ci/blocks/node/build/generic@v4-db-1
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
         with:
@@ -655,12 +655,12 @@ jobs:
 
       - name: Add MiLab shell utils to PATH
         if: inputs.gcp-login-enable
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-db-1
 
       - name: Publish npm package
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-db-1
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
@@ -686,7 +686,7 @@ jobs:
       - name: Create release with tag
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-db-1
         env:
           NPM_PKG_VERSION: ${{ steps.npm-pkg-status.outputs.pkg-version }}
         with:
@@ -716,12 +716,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-db-1
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-db-1
         env:
           NPM_PKG_VERSION: ${{ needs.publish-to-npm.outputs.npm-pkg-version }}
         with:

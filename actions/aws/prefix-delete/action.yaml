@@ -18,7 +18,7 @@ runs:
 
   steps:
     - name: Delete objects under a prefix
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
        BUCKET_NAME: ${{ inputs.s3-bucket-name }}
        PREFIX: ${{ inputs.s3-prefix-name }}

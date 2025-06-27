@@ -18,7 +18,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: milaboratory/github-ci/actions/shell@v4
+    - uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         GH_URL_REWRITE: ${{ inputs.github-url-rewrite }}

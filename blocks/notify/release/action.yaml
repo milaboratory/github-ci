@@ -86,10 +86,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-db-1
 
     - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         OVERRIDE_VERSION: ${{ inputs.override-version }}
         CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
@@ -102,7 +102,7 @@ runs:
           fi
 
     - id: define-tag
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         OVERRIDE_TAG: ${{ inputs.override-tag }}
         CURRENT_TAG: ${{ steps.context.outputs.current-version-tag }}
@@ -116,12 +116,12 @@ runs:
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-db-1
       with:
         statuses: ${{ inputs.job-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-db-1
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
@@ -137,7 +137,7 @@ runs:
 
     - name: Report 'release failed' to Telegram
       if: steps.job-status.outputs.status != 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/release-failed@v4
+      uses: milaboratory/github-ci/actions/notify/telegram/release-failed@v4-db-1
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -151,7 +151,7 @@ runs:
 
     - name: Report 'new release' to Telegram
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v4
+      uses: milaboratory/github-ci/actions/notify/telegram/release-ready@v4-db-1
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
