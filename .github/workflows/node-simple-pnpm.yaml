@@ -289,17 +289,6 @@ on:
         required: false
         default: 'assets'
 
-      pl-log-dir:
-        description: |
-          Platforma logs directory on the agent;
-          this directory will be mounted inside
-          the container under the path. `pl-log-destination`
-          The path must be relative to github.workspace
-          and will be appended to github.workspace within the docker compose action.
-        type: string
-        required: false
-        default: 'log'
-
       pl-log-commit-summary:
         description: |
           Whether or not to log commit summary for Platforma.
@@ -724,7 +713,6 @@ jobs:
           pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
           pl-docker-tag: ${{ inputs.pl-docker-tag }}
           pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
-          pl-log-dir: ${{ inputs.pl-log-dir }}
           pl-log-level: ${{ inputs.pl-log-level }}
           pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
           pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
