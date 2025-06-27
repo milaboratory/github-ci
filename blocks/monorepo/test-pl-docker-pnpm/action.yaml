@@ -94,7 +94,7 @@ runs:
   using: "composite"
   steps:
     - name: Run turbo tests dry-run
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       if: inputs.test-skip-dry-run != 'true'
       env:
         TEST_DRY_RUN: ${{ inputs.test-dry-run-script-name }}
@@ -113,7 +113,7 @@ runs:
             exit 0
           fi
 
-    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
+    - uses: ./actions/docker/pl-compose
       id: pl_compose
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
@@ -146,7 +146,7 @@ runs:
         fi
 
     - name: Stop all running containers
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
         dump-stdout: false
@@ -156,7 +156,7 @@ runs:
 
     - name: Check if we should upload logs
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       env:
         PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
       with:
@@ -185,7 +185,7 @@ runs:
 
     - name: Clean Platforma logs
       if: always() && env.UPLOAD_LOGS == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       env:
         PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
       with:
@@ -195,7 +195,7 @@ runs:
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
       with:

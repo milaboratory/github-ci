@@ -88,7 +88,7 @@ runs:
 
   steps:
     - name: Install Docker Compose
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       with:
         run: |
           echo "Installing Docker Compose..."
@@ -112,7 +112,7 @@ runs:
 
     - name: Launch Platforma
       id: launch_pl
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: ./actions/shell
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
