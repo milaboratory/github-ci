@@ -825,14 +825,9 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Install tmux
+      - name: Start tmux server manually
         if: ${{ inputs.debug-ssh-on-failure && failure() }}
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y tmux
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install tmux
-          fi
+        run: tmux start-server
         shell: bash
 
       - name: Debug with SSH
