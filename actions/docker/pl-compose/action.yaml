@@ -36,10 +36,9 @@ inputs:
       Platforma logs directory on the agent;
       this directory will be mounted inside
       the container under the path. `pl-log-destination`
-      The path must be relative to github.workspace
-      and will be appended to github.workspace within the docker compose action.
+      The path must be relative to github.workspace.
+      If not provided, a temporary directory will be created.
     required: false
-    default: 'log'
   pl-log-destination:
     description: |
       Platforma log destination file inside the container.
@@ -76,6 +75,14 @@ inputs:
     required: false
     default: 'auto'
 
+outputs:
+  pl-log-dir:
+    description: 'Path to platforma log directory'
+    value: ${{ steps.launch-pl.outputs.pl-log-dir }}
+  pl-db-dir:
+    description: 'Path to platforma db directory'
+    value: ${{ steps.launch-pl.outputs.pl-db-dir }}
+
 runs:
   using: "composite"
 
@@ -104,13 +111,14 @@ runs:
           docker compose version
 
     - name: Launch Platforma
-      uses: milaboratory/github-ci/actions/shell@v4
+      id: launch-pl
+      shell: bash
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
+        PL_LOG_DIR_INPUT: ${{ inputs.pl-log-dir }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
         PL_LOG_DESTINATION: ${{ inputs.pl-log-destination }}
         PL_LOG_COMMIT_SUMMARY: ${{ inputs.pl-log-commit-summary }}
         PL_LOG_RESOURCE_DATA: ${{ inputs.pl-log-resource-data }}
@@ -118,15 +126,25 @@ runs:
         PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
         PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
         PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
-        PL_WORKSPACE: ${{ format('{0}', github.workspace) }}
-      with:
-        dump-stdout: false
-        run: |
-          # Just in case if there are no test assets in the repository
-          mkdir -pv "${PL_TEST_ASSETS_DIR}"
+        PL_WORKSPACE: ${{ github.workspace }}
+      run: |
+        # Just in case if there are no test assets in the repository
+        mkdir -pv "${PL_TEST_ASSETS_DIR}"
+
+        export PL_LOG_DIR
+        if [ -n "${PL_LOG_DIR_INPUT}" ]; then
+          PL_LOG_DIR="${PL_WORKSPACE}/${PL_LOG_DIR_INPUT}"
           mkdir -pv "${PL_LOG_DIR}"
+        else
+          PL_LOG_DIR="$(mktemp -d)"
+        fi
+        echo "pl-log-dir=${PL_LOG_DIR}" >> "${GITHUB_OUTPUT}"
 
-          docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+        export PL_DB_DIR
+        PL_DB_DIR="$(mktemp -d)"
+        echo "pl-db-dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
 
-          echo "Wait for the Platforma to start"
-          sleep "${PL_SLEEP_TIME}"
+        docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+
+        echo "Wait for the Platforma to start"
+        sleep "${PL_SLEEP_TIME}"
