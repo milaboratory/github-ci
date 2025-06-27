@@ -825,6 +825,16 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Install tmux
+        if: ${{ inputs.debug-ssh-on-failure && failure() }}
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update && sudo apt-get install -y tmux
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install tmux
+          fi
+        shell: bash
+
       - name: Debug with SSH
         if: ${{ inputs.debug-ssh-on-failure && failure() }}
         uses: owenthereal/action-upterm@v1
