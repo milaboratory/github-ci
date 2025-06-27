@@ -65,12 +65,6 @@ services:
     restart: always
 
 volumes:
-  host-tmp:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${TMPDIR:-/tmp}
   platforma-packages:
   platforma-file-work:
   platforma-file-primary:
