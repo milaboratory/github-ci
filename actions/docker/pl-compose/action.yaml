@@ -78,10 +78,10 @@ inputs:
 outputs:
   pl-log-dir:
     description: 'Path to platforma log directory'
-    value: ${{ steps.launch_pl.outputs.pl_log_dir }}
+    value: ${{ steps.launch-pl.outputs.pl-log-dir }}
   pl-db-dir:
     description: 'Path to platforma db directory'
-    value: ${{ steps.launch_pl.outputs.pl_db_dir }}
+    value: ${{ steps.launch-pl.outputs.pl-db-dir }}
 
 runs:
   using: "composite"
@@ -111,8 +111,8 @@ runs:
           docker compose version
 
     - name: Launch Platforma
-      id: launch_pl
-      uses: milaboratory/github-ci/actions/shell@v4-db-1
+      id: launch-pl
+      shell: bash
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
@@ -127,26 +127,24 @@ runs:
         PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
         PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
         PL_WORKSPACE: ${{ github.workspace }}
-      with:
-        dump-stdout: false
-        run: |
-          # Just in case if there are no test assets in the repository
-          mkdir -pv "${PL_TEST_ASSETS_DIR}"
+      run: |
+        # Just in case if there are no test assets in the repository
+        mkdir -pv "${PL_TEST_ASSETS_DIR}"
 
-          export PL_LOG_DIR
-          if [ -n "${PL_LOG_DIR_INPUT}" ]; then
-            PL_LOG_DIR="${PL_WORKSPACE}/${PL_LOG_DIR_INPUT}"
-            mkdir -pv "${PL_LOG_DIR}"
-          else
-            PL_LOG_DIR="$(mktemp -d)"
-          fi
-          echo "pl_log_dir=${PL_LOG_DIR}" >> "${GITHUB_OUTPUT}"
+        export PL_LOG_DIR
+        if [ -n "${PL_LOG_DIR_INPUT}" ]; then
+          PL_LOG_DIR="${PL_WORKSPACE}/${PL_LOG_DIR_INPUT}"
+          mkdir -pv "${PL_LOG_DIR}"
+        else
+          PL_LOG_DIR="$(mktemp -d)"
+        fi
+        echo "pl-log-dir=${PL_LOG_DIR}" >> "${GITHUB_OUTPUT}"
 
-          export PL_DB_DIR
-          PL_DB_DIR="$(mktemp -d)"
-          echo "pl_db_dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
+        export PL_DB_DIR
+        PL_DB_DIR="$(mktemp -d)"
+        echo "pl-db-dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
 
-          docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+        docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
 
-          echo "Wait for the Platforma to start"
-          sleep "${PL_SLEEP_TIME}"
+        echo "Wait for the Platforma to start"
+        sleep "${PL_SLEEP_TIME}"
