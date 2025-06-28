@@ -82,6 +82,9 @@ outputs:
   pl-db-dir:
     description: 'Path to platforma db directory'
     value: ${{ steps.launch-pl.outputs.pl-db-dir }}
+  pl-work-dir:
+    description: 'Path to platforma work directory'
+    value: ${{ steps.launch-pl.outputs.pl-work-dir }}
 
 runs:
   using: "composite"
@@ -143,6 +146,10 @@ runs:
         export PL_DB_DIR
         PL_DB_DIR="$(mktemp -d)"
         echo "pl-db-dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
+
+        export PL_WORK_DIR
+        PL_WORK_DIR="$(mktemp -d)"
+        echo "pl-work-dir=${PL_WORK_DIR}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
 

@@ -67,6 +67,11 @@ services:
 volumes:
   platforma-packages:
   platforma-file-work:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_WORK_DIR}
   platforma-file-primary:
   platforma-file-library:
     driver: local

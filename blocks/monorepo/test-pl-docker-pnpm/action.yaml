@@ -183,6 +183,13 @@ runs:
         name: pl-docker-db
         path: ${{ steps.pl_compose.outputs.pl-db-dir }}
 
+    - name: Upload Platforma Work Dir
+      uses: actions/upload-artifact@v4
+      if: failure() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      with:
+        name: pl-docker-work-dir
+        path: ${{ steps.pl_compose.outputs.pl-work-dir }}
+
     - name: Clean Platforma logs
       if: always() && env.UPLOAD_LOGS == 'true'
       uses: milaboratory/github-ci/actions/shell@v4
