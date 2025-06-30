@@ -133,6 +133,8 @@ runs:
       run: |
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
+        export TMPDIR="${PL_WORKSPACE}/tmp"
+        mkdir -pv "${TMPDIR}"
 
         export PL_LOG_DIR
         if [ -n "${PL_LOG_DIR_INPUT}" ]; then
