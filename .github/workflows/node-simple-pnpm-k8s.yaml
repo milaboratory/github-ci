@@ -3,6 +3,20 @@ name: Run pnpm tests against the Platform running in docker on Linux
 on:
   workflow_call:
     inputs:
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
       pl-version:
         description: |
           Platform version
@@ -202,6 +216,25 @@ on:
           required: false
           default: '{}'
 
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
+
     secrets:
       env:
         description: |
@@ -341,3 +374,34 @@ jobs:
               --wait \
               --timeout "${{ inputs.helm-chart-wait-timeout }}" \
               --namespace "${{ env.NAMESPACE }}"
+
+  notify-test:
+    name: notify integration tests
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && inputs.notify-telegram
+    needs:
+      - run-tests
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            test
+            integration
+            google-batch
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.run-tests.result }}
+          tests-type: 'Integration'
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+          product-name: ${{ inputs.app-name }}
