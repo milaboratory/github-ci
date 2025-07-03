@@ -573,8 +573,8 @@ jobs:
         needs.pre-calculated-build.result == 'skipped'
       ) &&
       (
-        needs.check.result == 'success' ||
-        needs.check.result == 'skipped'
+        needs.check-changesets.result == 'success' ||
+        needs.check-changesets.result == 'skipped'
       )
     permissions:
       id-token: write
@@ -837,7 +837,7 @@ jobs:
           job-status: |
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
-            ${{ needs.check.result }}
+            ${{ needs.check-changesets.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
