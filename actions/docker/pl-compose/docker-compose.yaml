@@ -36,6 +36,7 @@ services:
       - "PL_LOG_DESTINATION=${PL_LOG_DESTINATION:-stdout}"
       - "PL_LOG_COMMIT_SUMMARY=${PL_LOG_COMMIT_SUMMARY:-false}"
       - "PL_LOG_RESOURCE_DATA=${PL_LOG_RESOURCE_DATA:-false}"
+      - "PL_LOG_ROTATION_ENABLED=${PL_LOG_ROTATION_ENABLED:-true}"
       # auth settings
       - "PL_AUTH_ENABLED=${PL_AUTH_ENABLED:-false}"
       # data controller: general settings
@@ -64,14 +65,13 @@ services:
     restart: always
 
 volumes:
-  host-tmp:
+  platforma-packages:
+  platforma-file-work:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${TMPDIR:-/tmp}
-  platforma-packages:
-  platforma-file-work:
+      device: ${PL_WORK_DIR}
   platforma-file-primary:
   platforma-file-library:
     driver: local
@@ -80,6 +80,11 @@ volumes:
       o: bind
       device: ${PL_TEST_ASSETS_DIR}
   platforma-db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_DB_DIR}
   platforma-log:
     driver: local
     driver_opts:
