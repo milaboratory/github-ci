@@ -1,0 +1,129 @@
+name: Run 'helm' CLI utility
+author: 'MiLaboratories'
+description: |
+  Run 'helm' CLI utility in action
+
+inputs:
+  helm-release-name:
+    description: |
+      Helm chart release name
+    required: false
+    default: ''
+  helm-chart-name:
+    description: |
+      Helm chart name
+    required: false
+    default: ''
+  helm-chart-registry:
+    description: |
+      The URI of the AWS ECR Private registry.
+      Helm Charts are stored as OCI images.
+    required: false
+    default: ''
+  helm-chart-values-file:
+    description: |
+      Path to Helm chart values (in YAML format)
+    required: false
+    default: ''
+  helm-chart-atomic-upgrade:
+    description: |
+      If set, upgrade process rolls back changes
+      made in case of failed upgrade.
+      The --wait flag will be set automatically if --atomic is used
+
+      If --wait flag is set, will wait until all Pods, PVCs, Services,
+      and minimum number of Pods of a Deployment, StatefulSet,
+      or ReplicaSet are in a ready state before marking
+      the release as successful. It will wait for as long as --timeout
+    required: false
+    default: 'true'
+  helm-chart-debug:
+    description: |
+      Enable verbose output (debug)
+    required: false
+    default: 'false'
+  helm-chart-wait-timeout:
+    description: |
+      Time to wait for any individual Kubernetes operation
+      (like Jobs for hooks) (default 5m0s)
+    required: false
+    default: '5m0s'
+  helm-chart-values:
+    description: |
+      A list of override values,
+      they are passed with --set flag for each value.
+    required: false
+    default: ''
+  namespace:
+    description: |
+      Kubernetes namespace name
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Helm repo add platforma
+      if: inputs.helm-chart-name == 'platforma'
+      uses: milaboratory/github-ci/actions/shell@v4
+      with:
+        dump-stdout: false
+        run: |
+          helm repo add platforma https://milaboratory.github.io/platforma-helm-charts
+          helm repo update
+
+    - name: Helm Upgrade
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
+        HELM_CHART_NAME: ${{ inputs.helm-chart-name }}
+        HELM_CHART_REGISTRY: ${{ inputs.helm-chart-registry }}
+        HELM_CHART_VALUES_FILE: ${{ inputs.helm-chart-values-file }}
+        HELM_CHART_ATOMIC_UPGRADE: ${{ inputs.helm-chart-atomic-upgrade }}
+        HELM_CHART_DEBUG: ${{ inputs.helm-chart-debug }}
+        HELM_CHART_WAIT_TIMEOUT: ${{ inputs.helm-chart-wait-timeout }}
+        HELM_CHART_VALUES: ${{ inputs.helm-chart-values }}
+        NAMESPACE: ${{ inputs.namespace }}
+      with:
+        dump-stdout: false
+        run: |
+
+          options=()
+          if [ "${HELM_CHART_ATOMIC_UPGRADE}" == "true" ];then
+            options+=( --atomic )
+          fi
+
+          if [ "${HELM_CHART_DEBUG}" == "true" ];then
+            options+=( --debug )
+          fi
+
+          if [ -n "${HELM_CHART_VALUES_FILE}" ];then
+            options+=( --values "${HELM_CHART_VALUES_FILE}" )
+          fi
+
+          set_values=()
+          if [ -n "${HELM_CHART_VALUES}" ]; then
+            while IFS= read -r _set_values; do
+              if [ -n "${_set_values}" ]; then
+                set_values+=( --set "${_set_values}" )
+              fi
+            done <<<"${HELM_CHART_VALUES}"
+          fi
+
+          if [ "${HELM_CHART_NAME}" == "platforma" ];then
+            helm upgrade --install "${HELM_RELEASE_NAME}" \
+            "platforma/${HELM_CHART_NAME}" \
+            "${options[@]}" \
+            "${set_values[@]}" \
+            --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
+            --namespace "${NAMESPACE}"
+          else
+            helm upgrade --install "${HELM_RELEASE_NAME}" \
+            "oci://${HELM_CHART_REGISTRY}/${HELM_CHART_NAME}" \
+            "${options[@]}" \
+            "${set_values[@]}" \
+            --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
+            --namespace "${NAMESPACE}"
+          fi
+

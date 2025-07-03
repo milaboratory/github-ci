@@ -1,0 +1,15 @@
+{
+    "name": "@milaboratories/github-ci-actions",
+    "scripts": {
+        "build": "turbo run build",
+        "test": "turbo run test"
+    },
+    "packageManager": "pnpm@10.10.0",
+    "devDependencies": {
+        "@changesets/cli": "catalog:",
+        "husky": "^9.1.7",
+        "turbo": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    }
+}

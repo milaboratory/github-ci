@@ -319,12 +319,21 @@ on:
       #
       # Changed files
       #
+
       changeset-default-branch:
         description:
           Specify the default branch for changesets to run checks against.
         type: string
         required: false
         default: 'main'
+
+      require-review:
+        description: |
+          Whether or not to require a review for the PR.
+        type: boolean
+        required: false
+        default: false
+
       #
       # Notifications
       #
@@ -424,7 +433,7 @@ jobs:
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
-  check:
+  check-changesets:
     name: check for changesets
     runs-on: ubuntu-latest
     needs:
@@ -477,7 +486,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.pre-calculated-task-list) }}
     needs:
-      - check
+      - check-changesets
       - metadata
     if: inputs.pre-calculated && inputs.pre-calculated-task-list != '[]'
     permissions:
@@ -554,7 +563,7 @@ jobs:
     name: unified (build test publish)
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
-      - check
+      - check-changesets
       - metadata
       - pre-calculated-build
     if: >
@@ -808,7 +817,7 @@ jobs:
     needs:
       - init
       - metadata
-      - check
+      - check-changesets
       - build-test-publish
       - pre-calculated-build
     steps:

@@ -1,0 +1,407 @@
+name: Run pnpm tests against the Platform running in docker on Linux
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: |
+          Application name in human-readable form.
+          As it is supposed to be shown in messages
+        type: string
+        required: false
+        default: ${{ github.repository }}
+
+      app-name-slug:
+        description: |
+          Application name slug (part of release file name)
+        type: string
+        required: true
+
+      pl-version:
+        description: |
+          Platform version
+        type: string
+        required: true
+        default: 'main'
+
+      pnpm-build-command:
+        description: |
+          Command to build the application.
+        type: string
+        required: false
+        default: 'build'
+
+      pnpm-test-command:
+        description: |
+          Command to test the application.
+        type: string
+        required: false
+        default: 'test'
+
+      pnpm-version:
+        description: |
+          Version of pnpm to install.
+        type: string
+        required: false
+        default: 'latest'
+
+      pl-test-storage-id:
+        description:
+          Platforma test assets storage id.
+        type: string
+        required: false
+        default: 'test-assets'
+
+      pl-test-user:
+        description: |
+          PLatforma test username.
+        type: string
+        required: false
+        default: 'testuser1'
+
+      pl-test-password:
+        description: |
+          Password for the Platforma's test user.
+        type: string
+        required: false
+        default: 'testpassword1'
+
+      pl-api-request-timeout:
+        description: |
+          Platforma API request timeout.
+          Set this value in seconds.
+        type: string
+        required: false
+        default: '3000'
+
+      pl-api-port:
+        description: |
+          Platforma API port.
+        type: string
+        required: false
+        default: '6345'
+
+      checkout-submodules:
+        description: |
+          'Submodules' mode for 'actions/checkout' action
+          '', 'false' - disable submodules support
+          'true' - checkout submodules
+          'recursive' - checkout submodules recursive
+        type: string
+        required: false
+        default: ''
+
+      package-path:
+        description: |
+          Relative path to the package.json with package version.
+        type: string
+        required: false
+        default: '.'
+
+      node-version:
+        description: |
+          Node version to use
+        type: string
+        required: true
+
+      npmrc-config:
+        description: |
+          Generates a .npmrc file based on provided configuration.
+        type: string
+        required: true
+
+      kubectl-version:
+        description: |
+          Kubectl version
+        type: string
+        required: false
+        default: 'v1.32.6'
+
+      gha-runner-label:
+        description: |
+          The label for github actions hosted runner
+        type: string
+        default: 'ubuntu-latest'
+
+      helm-version:
+        description: |
+          Helm version
+        type: string
+        required: false
+        default: '3.15.4'
+
+      helm-release-name:
+        description: |
+          Helm chart release name
+        type: string
+        required: false
+        default: ''
+
+      helm-chart-name:
+        description: |
+          Helm chart name
+        type: string
+        required: false
+        default: 'platforma'
+
+      helm-chart-registry:
+        description: |
+          The URI of the AWS ECR Private registry.
+          Helm Charts are stored as OCI images.
+        type: string
+        required: false
+        default: ''
+
+      helm-chart-values-file:
+        description: |
+          Path to Helm chart values (in YAML format)
+        type: string
+        required: false
+        default: ''
+
+      helm-chart-atomic-upgrade:
+        description: |
+          If set, upgrade process rolls back changes
+          made in case of failed upgrade.
+          The --wait flag will be set automatically if --atomic is used
+
+          If --wait flag is set, will wait until all Pods, PVCs, Services,
+          and minimum number of Pods of a Deployment, StatefulSet,
+          or ReplicaSet are in a ready state before marking
+          the release as successful. It will wait for as long as --timeout
+        type: boolean
+        required: false
+        default: true
+
+      helm-chart-debug:
+        description: |
+          Enable verbose output (debug)
+        type: boolean
+        required: false
+        default: false
+
+      helm-chart-wait-timeout:
+        description: |
+          Time to wait for any individual Kubernetes operation
+          (like Jobs for hooks) (default 5m0s)
+        type: string
+        required: false
+        default: '5m0s'
+
+      helm-chart-values:
+        description: |
+          A list of override values,
+          they are passed with --set flag for each value.
+        type: string
+        required: false
+        default: ''
+
+      namespace:
+        description: |
+          Kubernetes namespace name
+        type: string
+        required: false
+        default: 'dev-gke'
+
+      env:
+          description: |
+            custom environment variables to set for all jobs in workflow
+            as JSON-encoded map:
+              { "MY_VAR_1": "awesome value",
+                "VARIABLE_2": "not so awesome :)" }
+
+            This input's envs are merged with secrets.env
+            This input's envs have lower priority compared than secrets.env
+          type: string
+          required: false
+          default: '{}'
+
+      notify-telegram:
+        description: |
+          Enable Telegram notifications
+        required: false
+        type: boolean
+        default: true
+
+      notify-tests:
+        description: |
+          Enable notifications about tests status (ready/failed)
+          Possible values are:
+           - 'true' - send all notifications about tests status (both success and failed)
+           - 'failure-only' - send notification about failed tests, don't notify on success
+           - 'success-only' - send notification about success tests, don't notify on failures
+           - 'false' - don't send notifications about tests results at all.
+        required: false
+        type: string
+        default: 'true'
+
+    secrets:
+      env:
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
+
+          This input's envs are merged with inputs.env
+          This input's envs have HIGHER priority compared than inputs.env
+        required: false
+
+      TELEGRAM_NOTIFICATION_TARGET:
+        description: |
+          ID of Telegram Channel or User to notify on build results.
+        required: false
+      TELEGRAM_API_TOKEN:
+        description: |
+          Telegram Bot API authorization token
+jobs:
+  run-tests:
+    name: Run tests
+    runs-on: ${{ inputs.gha-runner-label }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ inputs.kubectl-version }}
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ inputs.helm-version }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          PACKAGE_PATH: ${{ inputs.package-path }}
+        with:
+          run: |
+            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
+            PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
+            ghwa_set_output pnpm-version "${PNPM_VERSION}"
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
+          NAMESPACE: ${{ inputs.namespace }}
+          PL_VERSION: ${{ inputs.pl-version }}
+        with:
+          run: |
+            PL_SAN_VERSION="${PL_VERSION}-${GITHUB_RUN_ID}"
+
+            ghwa_set_env HELM_RELEASE_NAME "${HELM_RELEASE_NAME}-${PL_SAN_VERSION}"
+            ghwa_set_env NAMESPACE "${NAMESPACE}"
+            ghwa_set_env PL_VERSION "${PL_VERSION}"
+            ghwa_set_env PL_SAN_VERSION "${PL_SAN_VERSION}"
+
+      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4
+        with:
+          helm-release-name: ${{ env.HELM_RELEASE_NAME }}
+          helm-chart-name: ${{ inputs.helm-chart-name }}
+          helm-chart-registry: ${{ inputs.helm-chart-registry }}
+          helm-chart-values-file: ${{ inputs.helm-chart-values-file }}
+          helm-chart-atomic-upgrade: ${{ inputs.helm-chart-atomic-upgrade }}
+          helm-chart-debug: ${{ inputs.helm-chart-debug }}
+          helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
+          namespace: ${{ inputs.namespace }}
+          helm-chart-values: |
+            app.image.tag=${{ env.PL_VERSION }}
+            app.coreConfig.s3.primaryStorageKeyPrefix="${{ env.PL_SAN_VERSION }}-platforma-ci-primary/"
+            app.coreConfig.s3.bucketName="${{ env.GCLOUD_CI_GKE_BUCKET_NAME }}"
+            app.persistentVolume.work.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/work"
+            app.persistentVolume.softwareloader.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/softwareloader"
+            app.persistentVolume.nfsShareVolume.mountPath="/mnt/platforma-data/instance"
+            app.coreConfig.batch.projectId="${{ env.GCLOUD_CI_GKE_PROJECT_ID }}"
+            app.coreConfig.batch.region="${{ env.GCLOUD_CI_GKE_REGION }}"
+            app.coreConfig.batch.network="${{ env.GCLOUD_CI_GKE_NETWORK }}"
+            app.coreConfig.batch.subnetwork="${{ env.GCLOUD_CI_GKE_SUBNETWORK }}"
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          HELM_NAMESPACE: ${{ env.NAMESPACE }}
+        with:
+          run: |
+            start_time=$(date +%s)
+            until kubectl get pods --namespace "${HELM_NAMESPACE}" -l "app.kubernetes.io/instance=${HELM_RELEASE_NAME}" -o json |
+              jq -e '.items[] | select(.status.phase == "Running" and (any(.status.conditions[]; .type == "Ready" and .status == "True")))' >/dev/null
+            do
+              current_time=$(date +%s)
+              elapsed_time=$((current_time - start_time))
+
+              if [ "${elapsed_time}" -ge 180 ]; then
+                echo "Timeout reached: 3 minutes have passed without all pods running and ready."
+                exit 1
+              fi
+
+              echo "Waiting for pod to be running and ready..."
+              sleep 1
+            done
+
+      - id: test
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4
+        with:
+          pl-api-addr: ${{ inputs.pl-api-addr || format('{0}-platforma.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
+          pl-api-port: ${{ inputs.pl-api-port }}
+          pl-api-request-timeout: ${{ inputs.pl-api-request-timeout }}
+          pl-test-storage-id: ${{ inputs.pl-test-storage-id }}
+          pl-test-user: ${{ inputs.pl-test-user }}
+          pl-test-password: ${{ inputs.pl-test-password }}
+          pnpm-build-command: ${{ inputs.pnpm-build-command }}
+          pnpm-test-command: ${{ inputs.pnpm-test-command }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        if: always()
+        with:
+          run: |
+            helm uninstall "${{ env.HELM_RELEASE_NAME }}" \
+              --debug \
+              --wait \
+              --timeout "${{ inputs.helm-chart-wait-timeout }}" \
+              --namespace "${{ env.NAMESPACE }}"
+
+  notify-test:
+    name: notify integration tests
+    runs-on: ubuntu-latest
+
+    if:  always()
+      && inputs.notify-telegram
+    needs:
+      - run-tests
+
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        with:
+          input: |
+            test
+            integration
+            google-batch
+
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
+        with:
+          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
+          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+
+          notification-mode: ${{ inputs.notify-tests }}
+          tests-status: ${{ needs.run-tests.result }}
+          tests-type: 'Integration'
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+          product-name: ${{ inputs.app-name }}

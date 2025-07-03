@@ -1,0 +1,47 @@
+{
+  "name": "@milaboratories/github-ci-actions-milib",
+  "version": "1.0.1",
+  "private": true,
+  "description": "MiLaboratory TypeScript Library for GitHub Actions",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest",
+    "release": "npm run build && npm run format && npm run lint",
+    "all": "npm run release && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milaboratory/github-ci.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "setup"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/exec": "catalog:",
+    "@actions/core": "catalog:",
+    "semver": "catalog:",
+    "@types/semver": "catalog:"
+  },
+  "devDependencies": {
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-github": "catalog:",
+    "typescript": "catalog:",
+    "@milaboratories/platforma-build-configs": "workspace:*"
+  }
+}
