@@ -453,6 +453,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
+          lfs: true
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
@@ -510,6 +511,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
+          lfs: true
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -605,6 +607,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
+          lfs: true
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
