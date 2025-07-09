@@ -414,6 +414,13 @@ jobs:
     needs:
       - init
     steps:
+      - uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y git-lfs
+
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -443,6 +450,13 @@ jobs:
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y git-lfs
 
       - uses: milaboratory/github-ci/actions/env@v4
         with:
@@ -499,6 +513,13 @@ jobs:
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y git-lfs2
 
       - name: Generate Zen Artisan Token
         id: app-token
@@ -594,6 +615,13 @@ jobs:
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
+
+      - uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update && \
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y git-lfs
 
       - name: Generate Zen Artisan Token
         id: app-token
