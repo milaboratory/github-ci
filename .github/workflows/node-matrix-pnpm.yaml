@@ -1,6 +1,4 @@
-# This workflow will build and upload nodejs application on the github's npm registry.
-
-name: Build and Upload NodeJS PNPM Applications
+name: Build and Test portable executable bundles
 
 on:
   workflow_call:
@@ -22,12 +20,6 @@ on:
         type: string
         required: true
 
-      gha-runner-label:
-        description: |
-          The label for github actions hosted runner
-        type: string
-        default: 'ubuntu-latest'
-
       #
       # Checkout settings
       #
@@ -39,7 +31,7 @@ on:
           'recursive' - checkout submodules recursive
         type: string
         required: false
-        default: ''
+        default: ""
 
       #
       # Environment settings
@@ -55,37 +47,16 @@ on:
           This input's envs have lower priority compared than secrets.env
         type: string
         required: false
-        default: '{}'
+        default: "{}"
 
       #
-      # NodeJS settings
+      # Node settings
       #
       node-version:
         description: |
           Node version to use
         type: string
         required: true
-
-      #
-      # Golang settings
-      #
-      golang-version:
-        description: |
-          Node version to use.
-          Examples: '1.19', '1.20'
-        type: string
-        required: false
-
-      golang-cache-hashfiles-path:
-        description: |
-          Returns a single hash for the set of files that matches the path pattern.
-          You can provide a single path pattern or multiple path patterns separated by commas.
-          The path is relative to the GITHUB_WORKSPACE directory
-          and can only include files inside of the GITHUB_WORKSPACE.
-        type: string
-        required: false
-        default: '**/go.sum'
-
       #
       # Cache control
       #
@@ -98,7 +69,7 @@ on:
 
         type: string
         required: false
-        default: 'v1'
+        default: "v1"
 
       cache-hashfiles-search-path:
         description: |
@@ -148,7 +119,48 @@ on:
           Additional pnpm tests arguments to pass
           for none --recursive pnpm invocations.
         type: string
+        required: false      
+
+      cache-paths:
+        description: |
+          Additional paths to be cached after build
+        type: string
         required: false
+        default: ""
+
+      enable-ccache:
+        description: |
+          Enable ccache for the build
+        type: boolean
+        required: false
+        default: true
+
+      ccache-options:
+        description: |
+          Additional options to pass to ccache --set-config.
+          One per line. Example:
+            hash_dir=false
+            max_size=10.0G
+            sloppiness=time_macros,include_file_mtime,include_file_ctime
+        type: string
+        required: false
+        default: ""
+
+      #
+      # Matrix control
+      #
+      pre-calculated-task-list:
+        description: |
+          JSON-formatted string listing of the specific subtasks that have been pre-calculated.
+          This list is used to manage and track the execution of parallel builds in the monorepo.
+          Example:
+            [
+              {"os":"windows-latest", "arch":"amd64", "python_version":"3.12.7"},
+            ]
+        type: string
+        required: false
+        default: '[]'
+
       #
       # Build control
       #
@@ -157,33 +169,16 @@ on:
           The name of a build script
         type: string
         required: true
-        default: 'build'
+        default: "build"
 
-      is-electron-application:
+      build-artifacts:
         description: |
-          If 'true' enables cache for an Electron application,
-          if 'false', enables cache for a generic NodeJS application.
+          List of paths to collect as build artifacts after 'build' step.
+          Supports globbing (**/my-file.bin, **/*.bin).
         type: string
         required: false
-        default: 'true'
-      #
-      # Build pre-calculated control
-      #
-      pre-calculated:
-        description:
-          Flag to indicate whether individual subtasks are pre-calculated on isolated nodes
-          to enable parallel builds within a monorepo workflow. Set to true to activate pre-calculation.
-        type: boolean
-        required: false
-        default: false
+        default: ""
 
-      pre-calculated-task-list:
-        description:
-          JSON-formatted string listing of the specific subtasks that have been pre-calculated.
-          This list is used to manage and track the execution of parallel builds in the monorepo.
-        type: string
-        required: false
-        default: '[]'
       #
       # Test control
       #
@@ -201,19 +196,6 @@ on:
         required: false
         default: 'test'
 
-      test-dry-run-script-name:
-        description: |
-          The name of a test dry-run script
-        type: string
-        required: false
-        default: 'test:dry-run'
-
-      test-skip-dry-run:
-        description: |
-          Skip test dry-run step
-        type: string
-        required: false
-        default: 'false'
       #
       # NPM registry settings
       #
@@ -261,89 +243,71 @@ on:
         type: number
         required: false
         default: 3600
+
       #
-      # Platforma Docker settings
+      # Codesign control
       #
-      pl-start-for-tests:
+      sign-binaries:
         description: |
-          Start Platforma Backend instance for tests
-        type: boolean
-        required: false
-        default: true
-
-      pl-docker-tag:
-        description: |
-          Platforma docker tag.
+          List of globbing patterns that match files to be signed after build step.
+          When built, the selected files will be signed with methods appropriate for current operating system.
         type: string
         required: false
-        default: 'main'
+        default: ""
 
-      pl-test-assets-dir:
+      notarize-paths:
         description: |
-          Platforma test assets directory;
-          this directory will be mounted inside
-          the container under the path `/storage/controllers/file/library`
-          The path must be relative to github.workspace
-          and will be appended to github.workspace within the docker compose action.
+          List of globbing patterns that match files and directories to be notarized.
+          Matched files would be notarized for releases.
         type: string
         required: false
-        default: 'assets'
+        default: ""
 
-      pl-log-dir:
+      mac-sign-entitlements:
         description: |
-          Platforma logs directory on the agent;
-          this directory will be mounted inside
-          the container under the path. `pl-log-destination`
-          The path must be relative to github.workspace
-          and will be appended to github.workspace within the docker compose action.
+          Additional entitlements to be embedded into binaries signature.
+          The contents of <dict> tag inside .plist file, like:
+            <key>com.apple.security.cs.disable-library-validation</key>
+            <true/>
+
         type: string
         required: false
-        default: 'log'
+        default: ""
 
-      pl-log-commit-summary:
+      gcp-sdk-version:
         description: |
-          Whether or not to log commit summary for Platforma.
-        type: boolean
-        required: false
-        default: true
-
-      pl-log-resource-data:
-        description: |
-          Whether or not to log resource data for Platforma.
-        type: boolean
-        required: false
-        default: true
-
-      pl-log-level:
-        description: |
-          Platforma log level
+          Version or version constraint of the gcloud SDK to install. If
+          unspecified, it will accept any installed version of the gcloud SDK. If
+          set to "latest", it will download the latest available SDK. If set to a
+          version constraint, it will download the latest available version that
+          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
         type: string
         required: false
-        default: 'info'
+        default: "latest"
 
-      pl-auth-enabled:
+      gcp-timestamping-mode:
         description: |
-          Whether or not to enable authentication in the Platforma.
-        type: boolean
-        required: false
-        default: true
-      #
-      # Changed files
-      #
-
-      changeset-default-branch:
-        description:
-          Specify the default branch for changesets to run checks against.
+          Timestamping mode to use when working with certificates and signatures
+          (i.e. when signing the code)
         type: string
         required: false
-        default: 'main'
 
-      require-review:
+      # We do not put version into secrets because it has very short value.
+      #  '1' in secrets may cause '1' to be replaced with '*' everywhere in github workflow logs
+      gcp-kms-key-version:
         description: |
-          Whether or not to require a review for the PR.
-        type: boolean
+          Version of KMS key.
+        type: string
         required: false
-        default: false
+        default: "1"
+
+      gcp-kms-digest-algorithm:
+        description: |
+          The algorithm to digest the input.
+          Must be one of: sha256, sha384, sha512.
+        type: string
+        required: false
+        default: "sha256"
 
       #
       # Notifications
@@ -365,7 +329,7 @@ on:
            - 'false' - don't send notifications about build results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
       notify-tests:
         description: |
@@ -377,7 +341,7 @@ on:
            - 'false' - don't send notifications about tests results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
     secrets:
       env:
@@ -395,10 +359,74 @@ on:
         description: |
           ID of Telegram Channel or User to notify on build results.
         required: false
+
       TELEGRAM_API_TOKEN:
         description: |
           Telegram Bot API authorization token
         required: false
+
+      MAC_SIGN_CERT_ID:
+        description: |
+          The Apple's certificate id. e.g: '5MXXYYZZFF'
+        required: false
+      MAC_SIGN_CERT:
+        description: |
+          base64-encoded p12 signing certificate file for the macOS
+          (more info here https://www.electron.build/code-signing)
+        required: false
+      MAC_SIGN_CERT_PWD:
+        description: |
+          password to decrypt the p12 signing certificate for the macOS
+        required: false
+
+      MAC_NOTR_API_KEY:
+        description: |
+          base64-encoded content of an API key file
+        required: false
+      MAC_NOTR_API_KEY_ID:
+        description: |
+          Key ID found on App Store Connect for the API key file
+        required: false
+      MAC_NOTR_API_KEY_ISSUER_ID:
+        description: |
+          Issuer ID found on App Store Connect for the API key file
+        required: false
+
+      WIN_SIGN_CERT:
+        description: |
+          base64-encoded p12 certificate file for the Windows
+          (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
+        required: false
+      WIN_SIGN_CERT_PWD:
+        description: |
+          password to decrypt the p12 signing certificate for the Windows
+        required: false
+
+      GCP_TIMESTAMPING_URL:
+        description: |
+          Timestamping URL of certificate issuer.
+        required: false
+      GCP_KMS_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Tha name of the GCP workload identity federation provider.
+        required: false
+      GCP_KMS_SERVICE_ACCOUNT:
+        description: |
+          The name of the GCP service account
+        required: false
+      GCP_KMS_LOCATION:
+        description: |
+          KMS key and keyring location
+        required: false
+      GCP_KMS_KEYRING:
+        description: |
+          KMS keyring name in Google Cloud Platform.
+        required: false
+      GCP_KMS_KEY_NAME:
+        description: |
+          KMS key name in Google Cloud Platform.
+        required: false
+
       GH_ZEN_APP_ID:
         description: |
           Zen Artisian Github AppID
@@ -406,7 +434,7 @@ on:
       GH_ZEN_APP_PRIVATE_KEY:
         description: |
           Zen Artisian Github App PrivateKey
-        required: false
+        required: false  
 
 jobs:
   init:
@@ -491,7 +519,7 @@ jobs:
 
   pre-calculated-build:
     name: pre-build
-    runs-on: ${{ inputs.gha-runner-label }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -499,7 +527,6 @@ jobs:
     needs:
       - check-changesets
       - metadata
-    if: inputs.pre-calculated && inputs.pre-calculated-task-list != '[]'
     permissions:
       id-token: write
       contents: read
@@ -521,22 +548,41 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
-
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
 
       - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
+
+      - name: Install pipx on Linux
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: runner.os == 'Linux'
+        with:
+          dump-stdout: false
+          run: |
+            python3 -m pip install --user pipx
+            python3 -m pipx ensurepath
+            echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure ccache
+        if: inputs.enable-ccache
+        uses: milaboratory/github-ci/actions/ccache@v4-beta
+        with:
+          options: ${{ inputs.ccache-options }}
+
+      - name: Cache additional paths
+        uses: actions/cache@v4
+        if: inputs.cache-paths != ''
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
@@ -559,34 +605,80 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run build for - ${{ matrix.step }}
+      - name: Run build for - ${{ matrix.python_version }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PRE_CALCULATED_STEP: ${{ matrix.step }}
+          PRE_CALCULATED_STEP: ${{ format('platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
           dump-stdout: false
           run: |
-            pnpm run build --filter="${PRE_CALCULATED_STEP}"
-    outputs:
-      status: 'completed'
+            pnpm run build --filter="${PRE_CALCULATED_STEP}"    
 
-  build-test-publish:
-    name: unified (build test publish)
+      - name: CodeSign binary on macOS
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
+        if: runner.os == 'macOS'
+          && inputs.sign-binaries != ''
+        with:
+          binaries: ${{ inputs.sign-binaries }}
+          entitlements: ${{ inputs.mac-sign-entitlements }}
+          mac-cert-id: ${{ secrets.MAC_SIGN_CERT_ID }}
+          mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
+          mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
+
+      - name: Notarize binary on macOS
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
+        if: runner.os == 'macOS'
+          && inputs.sign-binaries != ''
+        with:
+          paths: ${{ inputs.notarize-paths }}
+          mac-api-key-base64: ${{ secrets.MAC_NOTR_API_KEY }}
+          mac-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
+          mac-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
+
+      - name: Set up GCloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+        with:
+          version: ${{ inputs.gcp-sdk-version }}     
+     
+      - name: Get GoogleCloud access token for CodeSign on Windows
+        uses: google-github-actions/auth@v2
+        id: gcp-auth
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+        with:
+          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
+          token_format: "access_token"   
+
+      - name: CodeSign binary on Windows
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
+        with:
+          binaries: ${{ inputs.sign-binaries }}
+          code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
+          kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
+          kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
+          access-token: ${{ steps.gcp-auth.outputs.access_token }}
+
+      - name: Run postbuild-publish for - ${{ matrix.python_version }}
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          PRE_CALCULATED_STEP: ${{ format('platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
+        with:
+          dump-stdout: false
+          run: |
+            pnpm run postbuild-publish --filter="${PRE_CALCULATED_STEP}"
+
+  build-publish:
+    name: unified (build publish)
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
       - check-changesets
       - metadata
       - pre-calculated-build
-    if: >
-      !failure() && !cancelled() &&
-      (
-        needs.pre-calculated-build.result == 'success' ||
-        needs.pre-calculated-build.result == 'skipped'
-      ) &&
-      (
-        needs.check-changesets.result == 'success' ||
-        needs.check-changesets.result == 'skipped'
-      )
     permissions:
       id-token: write
       packages: write
@@ -621,19 +713,6 @@ jobs:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
-
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
-
-      - name: Prepare environment for Golang when requested
-        if: inputs.golang-version != ''
-        uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
-        with:
-          golang-version: ${{ inputs.golang-version }}
-          cache-version: ${{ inputs.cache-version }}
-          cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
@@ -697,48 +776,6 @@ jobs:
           fi
 
       - name: Run build
-        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-        with:
-          build-script-name: ${{ inputs.build-script-name }}
-          tests: 'false'
-          test-script-name: ${{ inputs.test-script-name }}
-          pnpm-recursive-build: ${{ inputs.pnpm-recursive-build }}
-          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
-          pnpm-build-args: ${{ inputs.pnpm-build-args }}
-          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
-
-      - name: Run tests
-        id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4-beta
-        if: inputs.test
-        env:
-          PL_ADDRESS: "http://127.0.0.1:6345"
-          PL_TEST_USER: ${{ env.PL_CI_TEST_USER }}
-          PL_TEST_PASSWORD: ${{ env.PL_CI_TEST_PASSWORD }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-        with:
-          test-script-name: ${{ inputs.test-script-name }}
-          test-dry-run-script-name: ${{ inputs.test-dry-run-script-name }}
-          test-skip-dry-run: ${{ inputs.test-skip-dry-run }}
-          pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
-          pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
-          pl-start-service: ${{ inputs.pl-start-for-tests }}
-          pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
-          pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
-          pl-docker-tag: ${{ inputs.pl-docker-tag }}
-          pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
-          pl-log-dir: ${{ inputs.pl-log-dir }}
-          pl-log-level: ${{ inputs.pl-log-level }}
-          pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
-          pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
-
-      - name: Run build (before publish)
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -849,8 +886,8 @@ jobs:
           job-status: |
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
-            ${{ needs.check-changesets.result }}
+            ${{ needs.check.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          search-tags: ${{ steps.search-tags.outputs.result }}
+          search-tags: ${{ steps.search-tags.outputs.result }}              
