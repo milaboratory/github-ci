@@ -119,7 +119,7 @@ on:
           Additional pnpm tests arguments to pass
           for none --recursive pnpm invocations.
         type: string
-        required: false      
+        required: false
 
       cache-paths:
         description: |
@@ -434,7 +434,7 @@ on:
       GH_ZEN_APP_PRIVATE_KEY:
         description: |
           Zen Artisian Github App PrivateKey
-        required: false  
+        required: false
 
 jobs:
   init:
@@ -569,12 +569,22 @@ jobs:
 
       - name: Install pipx on Linux
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: runner.os == 'Linux' || runner.os == 'macOS'
+        if: runner.os == 'Linux'
         with:
           dump-stdout: false
           run: |
             python3 -m pip install --user pipx
             python3 -m pipx ensurepath
+            echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install pipx on macOS
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: runner.os == 'macOS'
+        with:
+          dump-stdout: false
+          run: |
+            brew install pipx
+            pipx ensurepath
             echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure ccache
@@ -618,7 +628,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm run build --filter="${PRE_CALCULATED_STEP}"    
+            pnpm run build --filter="${PRE_CALCULATED_STEP}"
 
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
@@ -641,13 +651,6 @@ jobs:
           mac-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
           mac-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
 
-      - name: Set up GCloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        if: runner.os == 'Windows'
-          && inputs.sign-binaries != ''
-        with:
-          version: ${{ inputs.gcp-sdk-version }}     
-     
       - name: Get GoogleCloud access token for CodeSign on Windows
         uses: google-github-actions/auth@v2
         id: gcp-auth
@@ -656,7 +659,14 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
-          token_format: "access_token"   
+          token_format: "access_token"
+
+      - name: Set up GCloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        if: runner.os == 'Windows'
+          && inputs.sign-binaries != ''
+        with:
+          version: ${{ inputs.gcp-sdk-version }}
 
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
@@ -680,7 +690,7 @@ jobs:
 
   build-publish:
     name: unified (build publish)
-    runs-on: ${{ inputs.gha-runner-label }}
+    runs-on: ubuntu-latest
     needs:
       - check-changesets
       - metadata
@@ -889,10 +899,10 @@ jobs:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           job-status: |
-            ${{ needs.pre-calculated-build.result }}
-            ${{ needs.build-test-publish.result }}
-            ${{ needs.check.result }}
+             ${{ needs.pre-calculated-build.result }}
+             ${{ needs.build-publish.result }}
+             ${{ needs.check-changesets.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          search-tags: ${{ steps.search-tags.outputs.result }}              
+          search-tags: ${{ steps.search-tags.outputs.result }}
