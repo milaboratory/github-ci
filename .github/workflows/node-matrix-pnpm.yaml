@@ -569,7 +569,7 @@ jobs:
 
       - name: Install pipx on Linux
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         with:
           dump-stdout: false
           run: |
