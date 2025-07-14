@@ -867,7 +867,7 @@ jobs:
       - init
       - metadata
       - check-changesets
-      - build-test-publish
+      - build-publish
       - pre-calculated-build
     steps:
       - id: search-tags
