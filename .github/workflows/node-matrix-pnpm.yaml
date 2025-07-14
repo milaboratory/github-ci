@@ -614,7 +614,7 @@ jobs:
       - name: Run build for - ${{ matrix.python_version }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PRE_CALCULATED_STEP: ${{ format('platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
+          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
           dump-stdout: false
           run: |
@@ -672,7 +672,7 @@ jobs:
       - name: Run postbuild-publish for - ${{ matrix.python_version }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PRE_CALCULATED_STEP: ${{ format('platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
+          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
           dump-stdout: false
           run: |
