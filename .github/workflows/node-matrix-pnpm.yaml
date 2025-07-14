@@ -527,6 +527,12 @@ jobs:
     needs:
       - check-changesets
       - metadata
+    if: >
+      !failure() && !cancelled() &&
+      (
+        needs.check-changesets.result == 'success' ||
+        needs.check-changesets.result == 'skipped'
+      )
     permissions:
       id-token: write
       contents: read
@@ -685,7 +691,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: read
-
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
