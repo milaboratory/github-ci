@@ -824,7 +824,7 @@ jobs:
 
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: ${{ main-metapackage-name }} != ''
+        if: ${{ inputs.main-metapackage-name }} != ''
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -836,7 +836,7 @@ jobs:
 
       - name: Run build
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
-        if: ${{ main-metapackage-name }} == ''
+        if: ${{ inputs.main-metapackage-name }} == ''
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
