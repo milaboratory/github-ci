@@ -832,6 +832,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
+            pnpm run build-descriptors
             pnpm run build --filter="${MAIN_METAPACKAGE_NAME}"
 
       - name: Run build
