@@ -44,6 +44,13 @@ on:
         required: false
         default: 'main'
 
+      main-metapackage-name:
+        description:
+          Specify the name of the main metapackage.
+        type: string
+        required: false
+        default: ''
+
       #
       # Environment settings
       #
@@ -815,8 +822,21 @@ jobs:
             echo "has-changes=0" >> $GITHUB_OUTPUT
           fi
 
+      - name:  Run build - main metapackage
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        if: ${{ main-metapackage-name }} != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
+          MAIN_METAPACKAGE_NAME: ${{ inputs.main-metapackage-name }}
+        with:
+          dump-stdout: false
+          run: |
+            pnpm run build --filter="${MAIN_METAPACKAGE_NAME}"
+
       - name: Run build
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
+        if: ${{ main-metapackage-name }} == ''
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
