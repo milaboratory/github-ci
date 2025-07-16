@@ -34,6 +34,17 @@ on:
         default: ""
 
       #
+      # Changed files
+      #
+
+      changeset-default-branch:
+        description:
+          Specify the default branch for changesets to run checks against.
+        type: string
+        required: false
+        default: 'main'
+
+      #
       # Environment settings
       #
       env:
