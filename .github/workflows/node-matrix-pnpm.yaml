@@ -630,26 +630,8 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run build for - ${{ matrix.python_version }} - dry-run
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run build --dry-run=json --filter="${PRE_CALCULATED_STEP}" >> ./build-dry-run.json
-            SKIP_BUILD=$(tail -n +5 ./build-dry-run.json | jq '.tasks | map(select(.task == "build")) | all((.cache.status == "HIT") or (.cache.status == "MISS"))')
-            echo "Skip build: ${SKIP_BUILD}"
-            if [ "${SKIP_BUILD}" == "true" ]; then
-              echo "Build is cached, skipping"
-              ghwa_set_env "SKIP_BUILD" "${SKIP_BUILD}"
-              rm -f ./build-dry-run.json
-              exit 0
-            fi
-
       - name: Run build for - ${{ matrix.python_version }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
-        if: env.SKIP_BUILD != 'true'
         env:
           PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
@@ -661,7 +643,6 @@ jobs:
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         with:
           binaries: ${{ inputs.sign-binaries }}
           entitlements: ${{ inputs.mac-sign-entitlements }}
@@ -673,7 +654,6 @@ jobs:
         uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         with:
           paths: ${{ inputs.notarize-paths }}
           mac-api-key-base64: ${{ secrets.MAC_NOTR_API_KEY }}
@@ -685,7 +665,6 @@ jobs:
         id: gcp-auth
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         with:
           workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
@@ -695,14 +674,12 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
           binaries: ${{ inputs.sign-binaries }}
