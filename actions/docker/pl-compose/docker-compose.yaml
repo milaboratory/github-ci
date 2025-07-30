@@ -22,8 +22,8 @@ services:
        --work-dir="/storage/controllers/data/work"
        --packages-dir="/storage/controllers/packageLoader"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
-       --primary-storage-s3-key="static:testuser"
-       --primary-storage-s3-secret="static:testpassword"
+       --primary-storage-s3-key="testuser"
+       --primary-storage-s3-secret="testpassword"
        --primary-storage-s3-external-endpoint="http://localhost:9000/"
        --data-library-fs="test-assets=/storage/controllers/data/library"
     ports:
