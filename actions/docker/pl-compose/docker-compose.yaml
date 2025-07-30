@@ -37,6 +37,7 @@ services:
     environment:
       - "MI_LICENSE=${MI_LICENSE:-}"
       - "PL_LICENSE=${PL_LICENSE:-}"
+      - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
     volumes:
       - platforma-file-primary:/storage/controllers/data/primary
       - platforma-file-library:/storage/controllers/data/library
