@@ -39,21 +39,6 @@ inputs:
       The path must be relative to github.workspace.
       If not provided, a temporary directory will be created.
     required: false
-  pl-log-destination:
-    description: |
-      Platforma log destination file inside the container.
-    required: false
-    default: '/storage/log/platforma.log'
-  pl-log-commit-summary:
-    description: |
-      Whether or not to log commit summary for the Platforma.
-    required: false
-    default: 'true'
-  pl-log-resource-data:
-    description: |
-      Whether or not to log resource data for the Platforma.
-    required: false
-    default: 'true'
   pl-log-level:
     description: |
       Platforma log level
@@ -64,16 +49,6 @@ inputs:
       Whether or not to enable authentication in the Platforma.
     required: false
     default: 'true'
-  pl-data-create-bucket:
-    description: |
-      Try to automatically create buckets for storages if they not exist.
-    required: false
-    default: 'true'
-  pl-data-hardlink-mode:
-    description: |
-      Wether to use hardlinks when copying data between storages and within storage.
-    required: false
-    default: 'auto'
 
 outputs:
   pl-log-dir:
@@ -122,13 +97,8 @@ runs:
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_DIR_INPUT: ${{ inputs.pl-log-dir }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
-        PL_LOG_DESTINATION: ${{ inputs.pl-log-destination }}
-        PL_LOG_COMMIT_SUMMARY: ${{ inputs.pl-log-commit-summary }}
-        PL_LOG_RESOURCE_DATA: ${{ inputs.pl-log-resource-data }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
         PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
-        PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
-        PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
         PL_WORKSPACE: ${{ github.workspace }}
       run: |
         # Just in case if there are no test assets in the repository
