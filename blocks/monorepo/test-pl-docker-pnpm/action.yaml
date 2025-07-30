@@ -66,39 +66,11 @@ inputs:
     required: false
     default: 'assets'
 
-  pl-log-dir:
-    description: |
-      Platforma logs directory on the agent;
-      this directory will be mounted inside
-      the container under the path. `pl-log-destination`
-      The path must be relative to github.workspace
-      and will be appended to github.workspace within the docker compose action.
-    required: false
-    default: 'log'
-
-  pl-log-commit-summary:
-    description: |
-      Whether or not to log commit summary for Platforma.
-    required: false
-    default: 'true'
-
-  pl-log-resource-data:
-    description: |
-      Whether or not to log resource data for Platforma.
-    required: false
-    default: 'true'
-
   pl-log-level:
     description: |
       Platforma log level
     required: false
     default: 'info'
-
-  pl-auth-enabled:
-    description: |
-      Whether or not to enable authentication in the Platforma.
-    required: false
-    default: 'true'
 
 runs:
   using: "composite"
@@ -164,11 +136,17 @@ runs:
           docker stop $(docker ps -a -q)
           sleep 10
 
+          # Change ownership of the Platforma logs, db and work dir to the current user
+          USER_NAME="$(whoami)"
+          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-log-dir }}"
+          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-db-dir }}"
+          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-work-dir }}"
+
     - name: Check if we should upload logs
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+        PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
       with:
         dump-stdout: false
         run: |
@@ -180,20 +158,31 @@ runs:
           ghwa_set_env "UPLOAD_LOGS" "true"
 
     - name: Upload Platforma logs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4-beta
       if: always() && env.UPLOAD_LOGS == 'true'
-      env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
       with:
         name: pl-docker-logs
-        path: |
-          ${{ env.PL_LOG_DIR }}
+        path: ${{ steps.pl_compose.outputs.pl-log-dir }}
+
+    - name: Upload Platforma DB
+      uses: actions/upload-artifact@v4-beta
+      if: failure() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      with:
+        name: pl-docker-db
+        path: ${{ steps.pl_compose.outputs.pl-db-dir }}
+
+    - name: Upload Platforma Work Dir
+      uses: actions/upload-artifact@v4-beta
+      if: failure() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      with:
+        name: pl-docker-work-dir
+        path: ${{ steps.pl_compose.outputs.pl-work-dir }}
 
     - name: Clean Platforma logs
       if: always() && env.UPLOAD_LOGS == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
+        PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
       with:
         dump-stdout: false
         run: |

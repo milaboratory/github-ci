@@ -31,50 +31,22 @@ inputs:
       and will be appended to github.workspace within the docker compose action.
     required: false
     default: 'assets'
-  pl-log-dir:
-    description: |
-      Platforma logs directory on the agent;
-      this directory will be mounted inside
-      the container under the path. `pl-log-destination`
-      The path must be relative to github.workspace
-      and will be appended to github.workspace within the docker compose action.
-    required: false
-    default: 'log'
-  pl-log-destination:
-    description: |
-      Platforma log destination file inside the container.
-    required: false
-    default: '/storage/log/platforma.log'
-  pl-log-commit-summary:
-    description: |
-      Whether or not to log commit summary for the Platforma.
-    required: false
-    default: 'true'
-  pl-log-resource-data:
-    description: |
-      Whether or not to log resource data for the Platforma.
-    required: false
-    default: 'true'
   pl-log-level:
     description: |
       Platforma log level
     required: false
     default: 'info'
-  pl-auth-enabled:
-    description: |
-      Whether or not to enable authentication in the Platforma.
-    required: false
-    default: 'true'
-  pl-data-create-bucket:
-    description: |
-      Try to automatically create buckets for storages if they not exist.
-    required: false
-    default: 'true'
-  pl-data-hardlink-mode:
-    description: |
-      Wether to use hardlinks when copying data between storages and within storage.
-    required: false
-    default: 'auto'
+
+outputs:
+  pl-log-dir:
+    description: 'Path to platforma log directory'
+    value: ${{ steps.launch-pl.outputs.pl-log-dir }}
+  pl-db-dir:
+    description: 'Path to platforma db directory'
+    value: ${{ steps.launch-pl.outputs.pl-db-dir }}
+  pl-work-dir:
+    description: 'Path to platforma work directory'
+    value: ${{ steps.launch-pl.outputs.pl-work-dir }}
 
 runs:
   using: "composite"
@@ -104,29 +76,44 @@ runs:
           docker compose version
 
     - name: Launch Platforma
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      id: launch-pl
+      shell: bash
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
-        PL_LOG_DESTINATION: ${{ inputs.pl-log-destination }}
-        PL_LOG_COMMIT_SUMMARY: ${{ inputs.pl-log-commit-summary }}
-        PL_LOG_RESOURCE_DATA: ${{ inputs.pl-log-resource-data }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
-        PL_AUTH_ENABLED: ${{ inputs.pl-auth-enabled }}
-        PL_DATA_CREATE_BUCKET: ${{ inputs.pl-data-create-bucket }}
-        PL_DATA_HARDLINK_MODE: ${{ inputs.pl-data-hardlink-mode }}
-        PL_WORKSPACE: ${{ format('{0}', github.workspace) }}
-      with:
-        dump-stdout: false
-        run: |
-          # Just in case if there are no test assets in the repository
-          mkdir -pv "${PL_TEST_ASSETS_DIR}"
-          mkdir -pv "${PL_LOG_DIR}"
+        PL_WORKSPACE: ${{ github.workspace }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        # Just in case if there are no test assets in the repository
+        mkdir -pv "${PL_TEST_ASSETS_DIR}"
+        export TMPDIR="${PL_WORKSPACE}/tmp"
+        mkdir -pv "${TMPDIR}"
 
-          docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+        export PL_LOG_DIR
+        PL_LOG_DIR="$(mktemp -d)"
+        echo "pl-log-dir=${PL_LOG_DIR}" >> "${GITHUB_OUTPUT}"
 
-          echo "Wait for the Platforma to start"
-          sleep "${PL_SLEEP_TIME}"
+        export PL_DB_DIR
+        PL_DB_DIR="$(mktemp -d)"
+        echo "pl-db-dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
+
+        export PL_WORK_DIR
+        PL_WORK_DIR="$(mktemp -d)"
+        echo "pl-work-dir=${PL_WORK_DIR}" >> "${GITHUB_OUTPUT}"
+
+        docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+
+        echo "Wait for the Platforma to start"
+        sleep "${PL_SLEEP_TIME}"
+
+        docker ps -a
+        if [ $? -ne 0 ]; then
+          echo "Platforma container failed to start"
+        fi
+
+        ls -la "${PL_LOG_DIR}"
+        ls -la "${PL_DB_DIR}"
+        ls -la "${PL_WORK_DIR}"

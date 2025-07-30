@@ -282,51 +282,12 @@ on:
         description: |
           Platforma test assets directory;
           this directory will be mounted inside
-          the container under the path `/storage/controllers/file/library`
+          the container under the path `/storage/controllers/data/library`
           The path must be relative to github.workspace
           and will be appended to github.workspace within the docker compose action.
         type: string
         required: false
         default: 'assets'
-
-      pl-log-dir:
-        description: |
-          Platforma logs directory on the agent;
-          this directory will be mounted inside
-          the container under the path. `pl-log-destination`
-          The path must be relative to github.workspace
-          and will be appended to github.workspace within the docker compose action.
-        type: string
-        required: false
-        default: 'log'
-
-      pl-log-commit-summary:
-        description: |
-          Whether or not to log commit summary for Platforma.
-        type: boolean
-        required: false
-        default: true
-
-      pl-log-resource-data:
-        description: |
-          Whether or not to log resource data for Platforma.
-        type: boolean
-        required: false
-        default: true
-
-      pl-log-level:
-        description: |
-          Platforma log level
-        type: string
-        required: false
-        default: 'info'
-
-      pl-auth-enabled:
-        description: |
-          Whether or not to enable authentication in the Platforma.
-        type: boolean
-        required: false
-        default: true
       #
       # Changed files
       #
@@ -729,14 +690,10 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
           pl-start-service: ${{ inputs.pl-start-for-tests }}
-          pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
           pl-docker-registry: ${{ format('{0}/{1}', steps.login-ecr.outputs.registry, 'pl') }}
           pl-docker-tag: ${{ inputs.pl-docker-tag }}
           pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
-          pl-log-dir: ${{ inputs.pl-log-dir }}
           pl-log-level: ${{ inputs.pl-log-level }}
-          pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
-          pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
       - name: Run build (before publish)
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
