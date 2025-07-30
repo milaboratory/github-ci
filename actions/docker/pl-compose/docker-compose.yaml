@@ -16,7 +16,7 @@ services:
        --auth-htpasswd="/etc/htpasswd"
        --listen-address="0.0.0.0"
        --listen-port="6345"
-       --log-dst="file://storage/log/platforma.log"
+       --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --db-dir="/storage/rocksdb"
        --work-dir="/storage/controllers/data/work"
