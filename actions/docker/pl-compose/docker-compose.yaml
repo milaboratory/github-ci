@@ -24,7 +24,7 @@ services:
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="static:testuser"
        --primary-storage-s3-secret="static:testpassword"
-       --primary-storage-s3-presign-endpoint="http://localhost:9000/"
+       --primary-storage-s3-external-endpoin="http://localhost:9000/"
        --data-library-fs="test-assets=/storage/controllers/data/library"
     ports:
       - "6345:6345"
