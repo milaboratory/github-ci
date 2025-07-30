@@ -261,7 +261,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -281,7 +281,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -291,7 +291,7 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
             ghwa_set_output pnpm-version "${PNPM_VERSION}"
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
           NAMESPACE: ${{ inputs.namespace }}
@@ -305,7 +305,7 @@ jobs:
             ghwa_set_env PL_VERSION "${PL_VERSION}"
             ghwa_set_env PL_SAN_VERSION "${PL_SAN_VERSION}"
 
-      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
+      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4
         with:
           helm-release-name: ${{ env.HELM_RELEASE_NAME }}
           helm-chart-name: ${{ inputs.helm-chart-name }}
@@ -327,7 +327,7 @@ jobs:
             app.coreConfig.batch.network="${{ env.GCLOUD_CI_GKE_NETWORK }}"
             app.coreConfig.batch.subnetwork="${{ env.GCLOUD_CI_GKE_SUBNETWORK }}"
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         env:
           HELM_NAMESPACE: ${{ env.NAMESPACE }}
         with:
@@ -349,7 +349,7 @@ jobs:
             done
 
       - id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4
         with:
           pl-api-addr: ${{ inputs.pl-api-addr || format('{0}-platforma.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
           pl-api-port: ${{ inputs.pl-api-port }}
@@ -365,7 +365,7 @@ jobs:
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - uses: milaboratory/github-ci/actions/shell@v4
         if: always()
         with:
           run: |
@@ -387,14 +387,14 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             integration
             google-batch
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/tests@v4
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}

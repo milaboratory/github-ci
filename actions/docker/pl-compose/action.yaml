@@ -53,7 +53,7 @@ runs:
 
   steps:
     - name: Install Docker Compose
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
 
       with:
         run: |
