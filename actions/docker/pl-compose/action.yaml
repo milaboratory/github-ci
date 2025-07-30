@@ -109,11 +109,3 @@ runs:
 
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
-
-        docker ps -a
-        sleep 10
-        docker logs platform-platforma-1
-
-        sudo ls -la "${PL_LOG_DIR}"
-        sudo ls -la "${PL_DB_DIR}"
-        sudo ls -la "${PL_WORK_DIR}"
