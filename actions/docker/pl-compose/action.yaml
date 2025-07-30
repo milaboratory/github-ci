@@ -16,7 +16,7 @@ inputs:
     description: |
       Platforma docker tag.
     required: false
-    default: 'main'
+    default: '1.36.2'
   pl-sleep-time:
     description: |
       The waiting period after the Platforma starts.
