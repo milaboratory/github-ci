@@ -66,29 +66,11 @@ inputs:
     required: false
     default: 'assets'
 
-  pl-log-commit-summary:
-    description: |
-      Whether or not to log commit summary for Platforma.
-    required: false
-    default: 'true'
-
-  pl-log-resource-data:
-    description: |
-      Whether or not to log resource data for Platforma.
-    required: false
-    default: 'true'
-
   pl-log-level:
     description: |
       Platforma log level
     required: false
     default: 'info'
-
-  pl-auth-enabled:
-    description: |
-      Whether or not to enable authentication in the Platforma.
-    required: false
-    default: 'true'
 
 runs:
   using: "composite"
@@ -114,16 +96,13 @@ runs:
           fi
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
-      id: pl_compose
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      id: pl_compose
       with:
-        pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
         pl-docker-tag: ${{ inputs.pl-docker-tag }}
         pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
         pl-log-level: ${{ inputs.pl-log-level }}
-        pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
-        pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
