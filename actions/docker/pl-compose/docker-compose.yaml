@@ -12,21 +12,8 @@ services:
       MINIO_ROOT_PASSWORD: testpassword
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
-    command: |
-       --listen-address="0.0.0.0"
-       --listen-port="6345"
-       --log-dst="dir://storage/log"
-       --log-level="${PL_LOG_LEVEL:-info}"
-       --db-dir="/storage/rocksdb"
-       --work-dir="/storage/controllers/data/work"
-       --packages-dir="/storage/controllers/packageLoader"
-       --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
-       --primary-storage-s3-key="static:testuser"
-       --primary-storage-s3-secret="static:testpassword"
-       --primary-storage-s3-presign-endpoint="http://localhost:9000/"
-       --data-library-fs="test-assets=/storage/controllers/data/library"
     ports:
-      - "6345:6345"
+      - ${PL_API_PORT:-6345}:${PL_API_PORT:-6345}
     tmpfs: [ /tmp ]
     logging:
       driver: json-file
@@ -34,8 +21,38 @@ services:
         max-size: "100m"
         max-file: "4"
     environment:
+      # dump platforma's configuration to stdout
+      - "PL_DUMP_CONFIG_BEFORE_RUN=${PL_DUMP_CONFIG_BEFORE_RUN:-false}"
+      # license settings
       - "MI_LICENSE=${MI_LICENSE:-}"
       - "PL_LICENSE=${PL_LICENSE:-}"
+      - "PL_LICENSE_FILE=${PL_LICENSE_FILE:+/storage/license/${PL_LICENSE_FILE}}"
+      # network settings
+      - "PL_API_ADDR=0.0.0.0:${PL_API_PORT:-6345}"
+      - "PL_GRPC_TLS_ENABLED=${PL_GRPC_TLS_ENABLED:-false}"
+      - "PL_GRPC_TLS_AUTH_MODE=${PL_GRPC_TLS_AUTH_MODE:-}"
+      # logging settings
+      - "PL_LOG_LEVEL=${PL_LOG_LEVEL:-info}"
+      - "PL_LOG_DESTINATION=${PL_LOG_DESTINATION:-stdout}"
+      - "PL_LOG_COMMIT_SUMMARY=${PL_LOG_COMMIT_SUMMARY:-false}"
+      - "PL_LOG_RESOURCE_DATA=${PL_LOG_RESOURCE_DATA:-false}"
+      - "PL_LOG_ROTATION_ENABLED=${PL_LOG_ROTATION_ENABLED:-true}"
+      # auth settings
+      - "PL_AUTH_ENABLED=${PL_AUTH_ENABLED:-false}"
+      # data controller: general settings
+      - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
+      - "PL_DATA_HARDLINK_MODE=${PL_DATA_HARDLINK_MODE:-auto}"
+      # data controller: primary storage
+      - "PL_DATA_PRIMARY_TYPE=${PL_DATA_PRIMARY_TYPE:-S3}"
+      - "PL_DATA_PRIMARY_S3_ENDPOINT=${PL_DATA_PRIMARY_S3_ENDPOINT:-http://minio:9000/}"
+      - "PL_DATA_PRIMARY_S3_PRESIGN_ENDPOINT=${PL_DATA_PRIMARY_S3_PRESIGN_ENDPOINT:-${PL_DATA_PRIMARY_S3_ENDPOINT:-http://localhost:9000/}}"
+      - "PL_DATA_PRIMARY_S3_KEY_PREFIX=${PL_DATA_PRIMARY_S3_KEY_PREFIX:-}"
+      - "PL_DATA_PRIMARY_S3_REGION=${PL_DATA_PRIMARY_S3_REGION:-eu-central-1}"
+      - "PL_DATA_PRIMARY_S3_BUCKET=${PL_DATA_PRIMARY_S3_BUCKET:-platforma-primary-bucket}"
+      - "PL_DATA_PRIMARY_S3_KEY=${PL_DATA_PRIMARY_S3_KEY:-static:testuser}"
+      - "PL_DATA_PRIMARY_S3_SECRET=${PL_DATA_PRIMARY_S3_SECRET:-static:testpassword}"
+      # data controller: library storage
+      - "PL_DATA_LIBRARY_TYPE=${PL_DATA_LIBRARY_TYPE:-FS}"
     volumes:
       - platforma-file-primary:/storage/controllers/data/primary
       - platforma-file-library:/storage/controllers/data/library
