@@ -54,6 +54,7 @@ runs:
   steps:
     - name: Install Docker Compose
       uses: milaboratory/github-ci/actions/shell@v4-beta
+
       with:
         run: |
           echo "Installing Docker Compose..."
@@ -110,10 +111,9 @@ runs:
         sleep "${PL_SLEEP_TIME}"
 
         docker ps -a
-        if [ $? -ne 0 ]; then
-          echo "Platforma container failed to start"
-        fi
+        sleep 10
+        docker logs platform-platforma-1
 
-        ls -la "${PL_LOG_DIR}"
-        ls -la "${PL_DB_DIR}"
-        ls -la "${PL_WORK_DIR}"
+        sudo ls -la "${PL_LOG_DIR}"
+        sudo ls -la "${PL_DB_DIR}"
+        sudo ls -la "${PL_WORK_DIR}"

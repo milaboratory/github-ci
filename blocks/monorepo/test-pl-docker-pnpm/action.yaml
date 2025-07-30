@@ -98,14 +98,10 @@ runs:
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
-        pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
         pl-docker-tag: ${{ inputs.pl-docker-tag }}
         pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
-        pl-log-dir: ${{ inputs.pl-log-dir }}
         pl-log-level: ${{ inputs.pl-log-level }}
-        pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
-        pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
