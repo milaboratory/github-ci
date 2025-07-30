@@ -97,6 +97,7 @@ runs:
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      id: pl_compose
       with:
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
         pl-docker-tag: ${{ inputs.pl-docker-tag }}

@@ -16,7 +16,7 @@ services:
        --auth-htpasswd="/etc/htpasswd"
        --listen-address="0.0.0.0"
        --listen-port="6345"
-       --log-dst="dir://storage/log"
+       --log-dst="file://storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --db-dir="/storage/rocksdb"
        --work-dir="/storage/controllers/data/work"
@@ -25,7 +25,7 @@ services:
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
        --primary-storage-s3-external-endpoint="http://localhost:9000/"
-       --data-library-fs="test-assets=/storage/controllers/data/library"
+       --data-library-fs="library=/storage/controllers/data/library"
     ports:
       - "6345:6345"
     tmpfs: [ /tmp ]
