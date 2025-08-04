@@ -58,11 +58,11 @@ runs:
           # ditto cannot work with several files when creating archive
           #
           archive_dir="notarize-$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9')"
-          mkdir "${archive_dir}"
+          mkdir -v "${archive_dir}"
 
           while IFS= read -r ARTIFACT_PATH; do
             path_no_slashes=$(sed 's,/*$,,' <<< "${ARTIFACT_PATH}")
-            rsync -a "${path_no_slashes}" "./${archive_dir}/"
+            rsync -av "${path_no_slashes}" "./${archive_dir}/"
           done <<< "${ARTIFACTS}"
 
           #
