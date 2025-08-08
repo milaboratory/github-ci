@@ -319,6 +319,16 @@ on:
         default: "sha256"
 
       #
+      # Docker settings
+      #
+      docker-quay-push:
+        description: |
+          Whether or not to push images to quay.io registry.
+        type: boolean
+        required: false
+        default: false
+
+      #
       # Notifications
       #
       notify-telegram:
@@ -563,12 +573,20 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
-      - name: Setup AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
+
+      - name: Login to Quay.io
+        if: inputs.docker-quay-push
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
 
       - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
         with:
@@ -733,11 +751,20 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
+
+      - name: Login to Quay.io
+        if: inputs.docker-quay-push
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
 
       - name: Prepare environment for building a NodeJS application
         uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
