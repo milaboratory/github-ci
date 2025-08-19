@@ -32055,7 +32055,11 @@ function run() {
     try {
         const dataInput = core.getInput('data', { required: true });
         const template = core.getInput('template', { required: true });
+        const githubContext = core.getInput('githubContext');
         const data = JSON.parse(dataInput);
+        if (githubContext) {
+            data.github = JSON.parse(githubContext);
+        }
         const env = new nunjucks.Environment(null, {
             autoescape: false,
             throwOnUndefined: true,
