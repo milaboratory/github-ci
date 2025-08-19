@@ -39,14 +39,13 @@ runs:
     - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
       id: payload
       with:
+        githubContext: ${{ steps.safe-ctx.outputs.github }}
         data: |
           {
             "product": { "name": ${{ toJSON(inputs.product-name) }},
                          "additional_info": ${{ toJSON(inputs.additional-info) }} },
 
             "build": { "version": ${{ toJSON(inputs.build-version) }} },
-
-            "github": ${{ steps.safe-ctx.outputs.github }},
 
             "search_tags": ${{ inputs.search-tags || '[]' }},
             "slack_channel": ${{ toJSON(inputs.slack-channel) }}

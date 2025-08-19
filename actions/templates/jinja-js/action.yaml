@@ -9,6 +9,9 @@ inputs:
   template:
     description: 'The Nunjucks/Jinja template string to render.'
     required: true
+  githubContext:
+    description: 'A JSON string of the GitHub context to merge into the data.'
+    required: false
 
 outputs:
   result:
