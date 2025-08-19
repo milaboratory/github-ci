@@ -36,7 +36,7 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
+    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
       id: payload
       with:
         data: |
@@ -135,4 +135,4 @@ runs:
       with:
         token: ${{ inputs.slack-bot-token }}
         method: ${{ inputs.slack-bot-method }}
-        payload: ${{ steps.payload.outputs.data }}
+        payload: ${{ steps.payload.outputs.result }}
