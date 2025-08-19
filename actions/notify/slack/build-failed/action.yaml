@@ -48,7 +48,7 @@ runs:
 
             "github": ${{ steps.safe-ctx.outputs.github }},
 
-            "search_tags": ${{ inputs.search_tags }},
+            "search_tags": ${{ inputs.search-tags || '[]' }},
             "slack_channel": ${{ toJSON(inputs.slack-channel) }}
           }
 
