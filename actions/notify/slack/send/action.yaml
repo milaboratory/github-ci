@@ -1,0 +1,86 @@
+name: "Slack: Send to Slack"
+author: "slackapi"
+description: |
+  Send data to Slack to start a Slack workflow in Workflow Builder, 
+  call a Slack API method, or post a message into a channel
+  See original action slackapi/slack-github-action
+
+inputs:
+  api:
+    description: "A custom API URL to send Slack API method requests to."
+    required: false
+  errors:
+    default: "false"
+    description: "If the step exits with an error on errors or continues."
+    required: false
+  method:
+    description: "The Slack API method to call."
+    required: false
+  payload:
+    description: "Attributes that create the content of the request using JSON or YAML."
+    required: false
+  payload-delimiter:
+    description: "Field seperator for nested attributes in the input payload."
+    required: false
+  payload-file-path:
+    description: "Path to a file containing a valid input payload made of JSON or YAML."
+    required: false
+  payload-templated:
+    default: "false"
+    description: "If templated variables in input payloads should be replaced."
+    required: false
+  proxy:
+    description: "An optional proxied route for HTTPS connections."
+    required: false
+  retries:
+    default: "5"
+    description: "The strategy to use when performing retried requests."
+  token:
+    description: "The authentication value used with the Slack API."
+    required: false
+  webhook:
+    description: "A location for posting request payloads."
+    required: false
+  webhook-type:
+    description: "Option to use either an incoming webhook or webhook trigger."
+    required: false
+outputs:
+  ok:
+    description: "If the request completed without returning errors."
+    value: ${{ steps.send-to-slack.outputs.ok }}
+  response:
+    description: "A JSON stringified version of the Slack API response."
+    value: ${{ steps.send-to-slack.outputs.response }}
+  time:
+    description: "The Unix epoch time that the step completed."
+    value: ${{ steps.send-to-slack.outputs.time }}
+  channel_id:
+    description: "The channel ID returned with some of the Slack API methods."
+    value: ${{ steps.send-to-slack.outputs.channel_id }}
+  thread_ts:
+    description: "The timestamp of a parent Slack message with threaded replies."
+    value: ${{ steps.send-to-slack.outputs.thread_ts }}
+  ts:
+    description: "The timestamp of a Slack message or event in the response."
+    value: ${{ steps.send-to-slack.outputs.ts }}
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Send to Slack
+      id: send-to-slack
+      uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a
+      with:
+        api: ${{ inputs.api }}
+        errors: ${{ inputs.errors }}
+        method: ${{ inputs.method }}
+        payload: ${{ inputs.payload }}
+        payload-delimiter: ${{ inputs.payload-delimiter }}
+        payload-file-path: ${{ inputs.payload-file-path }}
+        payload-templated: ${{ inputs.payload-templated }}
+        proxy: ${{ inputs.proxy }}
+        retries: ${{ inputs.retries }}
+        token: ${{ inputs.token }}
+        webhook: ${{ inputs.webhook }}
+        webhook-type: ${{ inputs.webhook-type }}
