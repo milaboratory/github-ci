@@ -1,7 +1,8 @@
 import * as core from '@actions/core';
 import * as nunjucks from 'nunjucks';
 
-function run(): void {
+// Export for testing
+export function run(): void {
   try {
     const dataInput = core.getInput('data', { required: true });
     const template = core.getInput('template', { required: true });
@@ -32,4 +33,7 @@ function run(): void {
   }
 }
 
-run();
+// Run the action if not in a test environment
+if (process.env.JEST_WORKER_ID === undefined) {
+  run();
+}

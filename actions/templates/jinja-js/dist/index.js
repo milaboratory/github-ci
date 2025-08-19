@@ -32047,8 +32047,10 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const nunjucks = __importStar(__nccwpck_require__(8115));
+// Export for testing
 function run() {
     try {
         const dataInput = core.getInput('data', { required: true });
@@ -32076,7 +32078,10 @@ function run() {
         }
     }
 }
-run();
+// Run the action if not in a test environment
+if (process.env.JEST_WORKER_ID === undefined) {
+    run();
+}
 
 
 /***/ }),
