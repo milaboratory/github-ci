@@ -318,36 +318,12 @@ on:
       #
       # Notifications
       #
-      notify-telegram:
+      notify-slack:
         description: |
-          Enable Telegram notifications
+          Enable Slack notifications
         required: false
         type: boolean
         default: true
-
-      notify-build:
-        description: |
-          Enable notifications about build status (build ready/failed)
-          Possible values are:
-           - 'true' - send all notifications about build status (both success and failed)
-           - 'failure-only' - send notification about failed builds, don't notify on success
-           - 'success-only' - send notification about success builds, don't notify on failures
-           - 'false' - don't send notifications about build results at all.
-        required: false
-        type: string
-        default: 'true'
-
-      notify-tests:
-        description: |
-          Enable notifications about tests status (ready/failed)
-          Possible values are:
-           - 'true' - send all notifications about tests status (both success and failed)
-           - 'failure-only' - send notification about failed tests, don't notify on success
-           - 'success-only' - send notification about success tests, don't notify on failures
-           - 'false' - don't send notifications about tests results at all.
-        required: false
-        type: string
-        default: 'true'
 
     secrets:
       env:
@@ -361,13 +337,13 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      TELEGRAM_NOTIFICATION_TARGET:
+      SLACK_BOT_TOKEN:
         description: |
-          ID of Telegram Channel or User to notify on build results.
+          Slack bot token for notifications
         required: false
-      TELEGRAM_API_TOKEN:
+      SLACK_CHANNEL:
         description: |
-          Telegram Bot API authorization token
+          Slack channel for notifications
         required: false
       GH_ZEN_APP_ID:
         description: |
@@ -806,10 +782,10 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  notify-release:
-    name: notify release
+  notify-slack-release:
+    name: notify slack release
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && inputs.notify-slack
     needs:
       - init
       - metadata
@@ -824,12 +800,12 @@ jobs:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL }}
           job-status: |
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
