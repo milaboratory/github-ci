@@ -1,0 +1,100 @@
+name: 'Slack: Tests Notification Block'
+description: |
+  Reusable workflow block for sending Slack notifications about test results.
+
+inputs:
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID.'
+    required: true
+  product-name:
+    description: 'Name of the product that was tested.'
+    required: false
+    default: ${{ github.repository }}
+  override-version:
+    description: |
+      This option allows the user to manually specify a version number.
+      This custom version overrides the version that would be derived during the "get context" step
+    required: false
+    default: ''
+  tests-status:
+    description: 'Tests job status (e.g., success, failure, cancelled).'
+    required: true
+  notification-mode:
+    description: |
+      'true'         - notify both successes and failures
+      'failure-only' - notify only about failed tests
+      'success-only' - notify only about successful tests
+    required: false
+    default: 'true'
+  tests-type:
+    description: 'Tests type (e.g., integration, functional, unit).'
+    required: false
+    default: 'Unit'
+  report-url:
+    description: 'Tests report URL.'
+    required: false
+    default: ''
+  search-tags:
+    description: 'List of search tags for the notification.'
+    required: false
+    default: '[]'
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4
+
+    - id: define-version
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OVERRIDE_VERSION: ${{ inputs.override-version }}
+        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_VERSION}" ];then
+            echo "${OVERRIDE_VERSION}"
+          else
+            echo "${CURRENT_VERSION}"
+          fi
+
+    - id: tests-status
+      name: Merge test statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      with:
+        statuses: ${{ inputs.tests-status }}
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Report tests result to Slack
+      if: |
+        !( steps.tests-status.outputs.status != 'failure'
+           && inputs.notification-mode == 'failure-only' )
+        && !( steps.tests-status.outputs.status != 'success'
+           && inputs.notification-mode == 'success-only' )
+      uses: milaboratory/github-ci/actions/notify/slack/tests@v4-beta
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.define-version.outputs.stdout }}
+        tests-status: ${{ steps.tests-status.outputs.status }}
+        tests-type: ${{ inputs.tests-type }}
+        report-url: ${{ inputs.report-url }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}

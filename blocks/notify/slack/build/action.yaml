@@ -1,0 +1,130 @@
+name: 'Slack: Build Notification Block'
+description: |
+  Reusable workflow block for sending Slack notifications about build status.
+
+inputs:
+  job-status:
+    description: 'The status of the build job (e.g., success, failure).'
+    required: true
+  notification-mode:
+    description: |
+      'true'         - notify both successes and failures
+      'failure-only' - notify only about failed builds
+      'success-only' - notify only about successful builds
+    required: false
+    default: 'true'
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID.'
+    required: true
+  product-name:
+    description: 'Name of the product that was built.'
+    required: false
+    default: ${{ github.repository }}
+  override-version:
+    description: |
+      This option allows the user to manually specify a version number.
+      This custom version overrides the version that would be derived during the "get context" step
+    required: false
+    default: ''
+  docker-images:
+    description: 'List of Docker images related to the build in JSON format.'
+    required: false
+    default: '[]'
+  maven-packages:
+    description: 'List of Maven packages related to the build in JSON format.'
+    required: false
+    default: '[]'
+  download-links:
+    description: 'List of download links for the build in JSON format.'
+    required: false
+    default: '[]'
+  search-tags:
+    description: 'List of search tags for the notification.'
+    required: false
+    default: '[]'
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4-beta
+
+    - id: category
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        IS_RELEASE: ${{ steps.context.outputs.is-release }}
+      with:
+        run: |
+          if [ "${IS_RELEASE}" = "true" ]; then
+            echo "release"
+          else
+            echo "dev"
+          fi
+
+    - id: define-version
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        OVERRIDE_VERSION: ${{ inputs.override-version }}
+        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_VERSION}" ];then
+            echo "${OVERRIDE_VERSION}"
+          else
+            echo "${CURRENT_VERSION}"
+          fi
+
+    - id: build-status
+      name: Merge build statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      with:
+        statuses: ${{ inputs.job-status }}
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Notify on build failure
+      if: steps.build-status.outputs.status != 'success' && inputs.notification-mode != 'success-only'
+      uses: milaboratory/github-ci/actions/notify/slack/build-failed@v4-beta
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.define-version.outputs.stdout }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Notify on build success
+      if: steps.build-status.outputs.status == 'success' && inputs.notification-mode != 'failure-only'
+      uses: milaboratory/github-ci/actions/notify/slack/build-ready@v4-beta
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        build-version: ${{ steps.define-version.outputs.stdout }}
+        build-category: ${{ steps.category.outputs.stdout }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
+        download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
