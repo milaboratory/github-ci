@@ -4,8 +4,7 @@
   "description": "Jinja-JS Template Renderer",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc",
-    "package": "npm run build && ncc build --source-map --license licenses.txt",
+    "package": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "test": "jest"
   },
   "dependencies": {
