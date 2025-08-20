@@ -137,7 +137,9 @@ runs:
                       "text": "View CI Logs",
                       "emoji": true
                     },
-                    "style": "{% if tests_status == 'failure' %}danger{% endif %}",
+                    {% if tests_status == 'failure' %}
+                    "style": "danger",
+                    {% endif %}
                     "url": "{{ github.server_url }}/{{ github.repository }}/actions/runs/{{ github.run_id }}"
                   }
                 ]
