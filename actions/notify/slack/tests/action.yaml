@@ -90,7 +90,7 @@ runs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Commit:*\n" ~ commit_link
+                    "text": "*Commit:*\n{{ commit_link }}"
                   },
                   {
                     "type": "mrkdwn",
@@ -106,7 +106,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit message:*\n" ~ head_commit_message
+                  "text": "*Commit message:*\n{{ head_commit_message }}"
                 }
               },
               {% if additional_info | length > 0 %}
