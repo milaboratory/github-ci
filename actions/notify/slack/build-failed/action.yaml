@@ -42,22 +42,23 @@ runs:
         githubContext: ${{ steps.safe-ctx.outputs.github }}
         data: |
           {
-            "product": { "name": ${{ toJSON(inputs.product-name) }},
-            "additional_info": ${{ toJSON(inputs.additional-info) }} },
-            "build": { "version": ${{ toJSON(inputs.build-version) }} },
+            "product_name": ${{ toJSON(inputs.product-name) }},
+            "additional_info": ${{ toJSON(inputs.additional-info) }},
+            "build_version": ${{ toJSON(inputs.build-version) }},
             "search_tags": ${{ inputs.search-tags || '[]' }},
             "slack_channel": ${{ toJSON(inputs.slack-channel) }}
           }
 
         template: |
+          {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' else '' %}
           {
-            "text": "💩 Build Failed: {{ product.name }} version {{ build.version }}",
+            "text": "💩 Build Failed: {{ product_name }} version {{ build_version }}",
             "blocks": [
               {
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "💩 Build Failed: {{ product.name }}",
+                  "text": "💩 Build Failed: {{ product_name }}",
                   "emoji": true
                 }
               },
@@ -66,7 +67,7 @@ runs:
                 "fields": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Version:*\n`{{ build.version }}`"
+                    "text": "*Version:*\n`{{ build_version }}`"
                   },
                   {
                     "type": "mrkdwn",
@@ -78,15 +79,15 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha[:8] }}`> - {% if github.event_name == 'push' %}{{ github.event.head_commit.message }}{% endif %}"
+                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha[:8] }}`> - {{ head_commit_message }}"
                 }
               },
-              {% if product.additional_info | length > 0 %}
+              {% if additional_info | length > 0 %}
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Additional Info:*\n{{ product.additional_info }}"
+                  "text": "*Additional Info:*\n{{ additional_info }}"
                 }
               },
               {% endif %}
