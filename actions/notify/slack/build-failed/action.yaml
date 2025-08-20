@@ -36,97 +36,57 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
+    - name: Debug safe-ctx output
+      shell: bash
+      run: echo "${{ steps.safe-ctx.outputs.github }}"
+
     - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
       id: payload
       with:
         githubContext: ${{ steps.safe-ctx.outputs.github }}
         data: |
           {
-            "product_name": ${{ toJSON(inputs.product-name) }},
-            "additional_info": ${{ toJSON(inputs.additional-info) }},
-            "build_version": ${{ toJSON(inputs.build-version) }},
-            "search_tags": ${{ inputs.search-tags || '[]' }},
             "slack_channel": ${{ toJSON(inputs.slack-channel) }}
           }
 
         template: |
-          {% set sha_short = github.sha | slice(0, 8) %}
-          {% set commit_url = github.server_url ~ "/" ~ github.repository ~ "/commit/" ~ github.sha %}
-          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ "`>" %}
-          {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
-          {% set full_text = "*Commit by " ~ github.actor ~ ":*\\n" ~ commit_link ~ " - " ~ head_commit_message %}
           {
-            "text": "💩 Build Failed: {{ product_name }} version {{ build_version }}",
+            "text": "Debug run for build failure",
             "blocks": [
               {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "💩 Build Failed: {{ product_name }}",
-                  "emoji": true
-                }
-              },
-              {
                 "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Version:*\n`{{ build_version }}`"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Branch:*\n`{{ github.ref_name }}`"
-                  }
-                ]
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Actor: `{{ github.actor }}`"
+                }
               },
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": {{ full_text | json }}
+                  "text": "SHA: `{{ github.sha }}`"
                 }
               },
-              {% if additional_info | length > 0 %}
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Additional Info:*\n{{ additional_info }}"
+                  "text": "Server URL: `{{ github.server_url }}`"
                 }
               },
-              {% endif %}
               {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Source",
-                      "emoji": true
-                    },
-                    "url": "{{ github.server_url }}/{{ github.repository }}/tree/{{ github.sha }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View CI Logs",
-                      "emoji": true
-                    },
-                    "style": "danger",
-                    "url": "{{ github.server_url }}/{{ github.repository }}/actions/runs/{{ github.run_id }}"
-                  }
-                ]
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Repository: `{{ github.repository }}`"
+                }
               },
               {
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "Tags: #{{ github.event.repository.name | replace('-', '_') | replace('.', '_') }}{%- if search_tags | length > 0 %}{% for i in search_tags %} #{{ i | replace('-', '_') | replace('/', '_') }}{% endfor %}{%- endif %}"
-                  }
-                ]
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Commit Message: `{{ github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' }}`"
+                }
               }
             ],
             "channel": "{{ slack_channel }}"
