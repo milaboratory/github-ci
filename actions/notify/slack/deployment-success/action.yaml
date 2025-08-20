@@ -92,7 +92,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Docker Images:*\n```\n{% for image in docker_images %}{{ image }}\\n{% endfor %}```"
+                  "text": "*Docker Images:*\n```\n{% for image in docker_images %}{{ image }}\n{% endfor %}```"
                 }
               },
               {% endif %}

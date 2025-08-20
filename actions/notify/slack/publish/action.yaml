@@ -75,7 +75,7 @@ runs:
           {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ "`>" %}
           {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
           {% set commit_text = "*Commit by " ~ github.actor ~ ":*\\n" ~ commit_link ~ " - " ~ head_commit_message %}
-          {% set product_type_c = product_type[0]|upper ~ product_type[1:] %}
+          {% set product_type_c = (product_type | slice(0, 1) | upper) ~ (product_type | slice(1)) %}
           {% if job_status == "failure" %}
             {% set icon = "❌" %}
             {% set title = product_type_c ~ " publication failed" %}
