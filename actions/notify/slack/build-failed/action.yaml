@@ -93,13 +93,6 @@ runs:
               },
               {% endif %}
               {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Debug Info:\n```\n{{ github | json }}\n```"
-                }
-              },
-              {
                 "type": "actions",
                 "elements": [
                   {
