@@ -50,12 +50,6 @@ runs:
           }
 
         template: |
-          {% set sha_short = github.sha | slice(0, 8) %}
-          {% set commit_url = github.server_url ~ "/" ~ github.repository ~ "/commit/" ~ github.sha %}
-          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ "`>" %}
-          {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
-          {% set safe_head_commit_message = head_commit_message | replace('\\', '\\\\') | replace('"', '\\"') %}
-          {% set full_text = "*Commit by " ~ github.actor ~ ":*\\n" ~ commit_link ~ " - " ~ safe_head_commit_message %}
           {
             "text": "💩 Build Failed: {{ product_name }} version {{ build_version }}",
             "blocks": [
@@ -84,7 +78,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "{{ full_text }}"
+                  "text": "*Commit by {{ github.actor }}:*\\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha | slice(0, 8) }}`> - {{ github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' }}"
                 }
               },
               {% if additional_info | length > 0 %}
