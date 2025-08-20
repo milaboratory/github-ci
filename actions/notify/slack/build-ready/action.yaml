@@ -74,9 +74,8 @@ runs:
           {% set icon = category_icons[build_category] | default('💚') %}
           {% set sha_short = github.sha | truncate(8, true, '') %}
           {% set commit_url = github.server_url ~ "/" ~ github.repository ~ "/commit/" ~ github.sha %}
-          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ "`>" %}
+          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ " (" ~ github.ref_name ~ ")`>" %}
           {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
-          {% set commit_text = "*Commit by " ~ github.actor ~ ":*\\n" ~ commit_link ~ " - " ~ head_commit_message %}
           {
             "text": "{{ icon }} New {{ build_category }} build for {{ product_name }}: {{ build_version }}",
             "blocks": [
@@ -97,11 +96,11 @@ runs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Author:*\n`{{ github.actor }}`"
+                    "text": "*Commit:*\n" ~ commit_link
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch:*\n`{{ github.ref_name }}`"
+                    "text": "*Author:*\n`{{ github.actor }}`"
                   }
                 ]
               },
@@ -109,7 +108,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "{{ commit_text }}"
+                  "text": "*Commit message:*\n" ~ head_commit_message
                 }
               },
               {% if docker_images | length > 0 %}

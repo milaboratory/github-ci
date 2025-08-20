@@ -68,9 +68,8 @@ runs:
           {% set icon = status_icons[tests_status] | default('✅') %}
           {% set sha_short = github.sha | truncate(8, true, '') %}
           {% set commit_url = github.server_url ~ "/" ~ github.repository ~ "/commit/" ~ github.sha %}
-          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ "`>" %}
+          {% set commit_link = "<" ~ commit_url ~ "|`" ~ sha_short ~ " (" ~ github.ref_name ~ ")`>" %}
           {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
-          {% set commit_text = "*Commit by " ~ github.actor ~ ":*\\n" ~ commit_link ~ " - " ~ head_commit_message %}
           {
             "text": "{{ icon }} {{ tests_type }} tests for {{ product_name }} {{ build_version }}: {{ tests_status }}",
             "blocks": [
@@ -91,6 +90,10 @@ runs:
                   },
                   {
                     "type": "mrkdwn",
+                    "text": "*Commit:*\n" ~ commit_link
+                  },
+                  {
+                    "type": "mrkdwn",
                     "text": "*Author:*\n`{{ github.actor }}`"
                   },
                   {
@@ -103,7 +106,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "{{ commit_text }}"
+                  "text": "*Commit message:*\n" ~ head_commit_message
                 }
               },
               {% if additional_info | length > 0 %}
