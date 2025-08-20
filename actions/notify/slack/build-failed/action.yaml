@@ -36,6 +36,10 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
+    - name: Debug safe-ctx output
+      shell: bash
+      run: echo "${{ steps.safe-ctx.outputs.github }}"
+
     - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
       id: payload
       with:
