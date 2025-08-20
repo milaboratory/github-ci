@@ -36,18 +36,16 @@ runs:
     - id: safe-ctx
       uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
+    - uses: milaboratory/github-ci/actions/templates/jinja@v4-beta
       id: payload
       with:
-        githubContext: ${{ steps.safe-ctx.outputs.github }}
         data: |
           {
             "product": { "name": ${{ toJSON(inputs.product-name) }},
-                         "additional_info": ${{ toJSON(inputs.additional-info) }} },
-
+            "additional_info": ${{ toJSON(inputs.additional-info) }} },
             "build": { "version": ${{ toJSON(inputs.build-version) }} },
-
             "search_tags": ${{ inputs.search-tags || '[]' }},
+            "github": ${{ steps.safe-ctx.outputs.github }},
             "slack_channel": ${{ toJSON(inputs.slack-channel) }}
           }
 
