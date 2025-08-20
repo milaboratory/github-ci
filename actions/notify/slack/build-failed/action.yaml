@@ -5,10 +5,10 @@ description: |
 inputs:
   slack-bot-token:
     description: 'Slack Bot Token.'
-    required: false
+    required: true
   slack-channel:
     description: 'Slack channel name or ID (e.g., #channel-name or C12345). Required when using slack-bot-token.'
-    required: false
+    required: true
   slack-bot-method:
     description: 'Slack Bot Method. Use this OR slack-webhook-url.'
     required: false
@@ -51,6 +51,7 @@ runs:
 
         template: |
           {
+            "text": "💩 Build Failed: {{ product.name }} version {{ build.version }}",
             "blocks": [
               {
                 "type": "header",
@@ -77,7 +78,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha[:8] }}`> - {% if github.event_name == 'push' %}{{ github.event.head_commit.message }}{% endif %}"
+                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha[:8] }}`> - {% if github.event_name == 'push' %}{{ github.event.head_commit.message }}{% endif %}"
                 }
               },
               {% if product.additional_info | length > 0 %}
@@ -122,10 +123,8 @@ runs:
                   }
                 ]
               }
-            ]
-            {%- if slack_channel %}
-            , "channel": "{{ slack_channel }}"
-            {% endif %}
+            ],
+            "channel": "{{ slack_channel }}"
           }
 
     - uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
