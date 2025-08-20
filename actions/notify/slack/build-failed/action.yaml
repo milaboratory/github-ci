@@ -70,6 +70,10 @@ runs:
                   },
                   {
                     "type": "mrkdwn",
+                    "text": "*Hash:*\n`{{ github.sha | truncate(8, true, '') }}`"
+                  },
+                  {
+                    "type": "mrkdwn",
                     "text": "*Branch:*\n`{{ github.ref_name }}`"
                   }
                 ]
@@ -78,8 +82,8 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha | slice(0, 8) }}`> - {{ github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' }}"
-                }
+                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha | truncate(8, true, '') }}`> - {{ github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' }}"
+                },
               },
               {% if additional_info | length > 0 %}
               {
