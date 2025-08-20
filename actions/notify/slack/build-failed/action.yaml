@@ -51,6 +51,7 @@ runs:
 
         template: |
           {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
+          {% set commit_text = "*Commit by " ~ github.actor ~ ":*\\n<" ~ github.server_url ~ "/" ~ github.repository ~ "/commit/" ~ github.sha ~ "|`" ~ github.sha[:8] ~ "`> - " ~ head_commit_message %}
           {
             "text": "💩 Build Failed: {{ product_name }} version {{ build_version }}",
             "blocks": [
@@ -79,7 +80,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit by {{ github.actor }}:*\n<{{ github.server_url }}/{{ github.repository }}/commit/{{ github.sha }}|`{{ github.sha[:8] }}`> - {{ head_commit_message }}"
+                  "text": {{ commit_text | json }}
                 }
               },
               {% if additional_info | length > 0 %}
