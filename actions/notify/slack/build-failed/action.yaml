@@ -50,7 +50,7 @@ runs:
           }
 
         template: |
-          {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' else '' %}
+          {% set head_commit_message = github.event.head_commit.message if github.event_name == 'push' and github.event.head_commit else '' %}
           {
             "text": "💩 Build Failed: {{ product_name }} version {{ build_version }}",
             "blocks": [
