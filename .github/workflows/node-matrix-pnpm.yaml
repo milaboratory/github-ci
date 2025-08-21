@@ -692,7 +692,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-          && env.SKIP_BUILD != 'true'
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
