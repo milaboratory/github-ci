@@ -29,9 +29,9 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
-    - uses: milaboratory/github-ci/actions/notify/slack/review-required@v4-beta
+    - uses: milaboratory/github-ci/actions/notify/slack/review-required@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

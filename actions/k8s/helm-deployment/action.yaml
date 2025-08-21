@@ -66,7 +66,7 @@ runs:
   steps:
     - name: Helm repo add platforma
       if: inputs.helm-chart-name == 'platforma'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         dump-stdout: false
         run: |
@@ -74,7 +74,7 @@ runs:
           helm repo update
 
     - name: Helm Upgrade
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
         HELM_CHART_NAME: ${{ inputs.helm-chart-name }}
