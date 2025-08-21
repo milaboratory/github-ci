@@ -103,6 +103,13 @@ on:
           Enable Telegram notifications
         required: false
         type: boolean
+        default: false
+
+      notify-slack:
+        description: |
+          Enable Slack notifications
+        required: false
+        type: boolean
         default: true
 
       notify-build:
@@ -135,6 +142,15 @@ on:
       TELEGRAM_API_TOKEN:
         description: |
           Telegram Bot API authorization token
+        required: false
+
+      SLACK_BOT_TOKEN:
+        description: |
+          Slack bot token for notifications
+        required: false
+      SLACK_CHANNEL:
+        description: |
+          Slack channel for notifications
         required: false
 
 jobs:
@@ -231,8 +247,7 @@ jobs:
   notify-make-stable:
     name: notify make-stable
     runs-on: ubuntu-latest
-
-    if: always()
+    if: always() && inputs.notify-telegram
     needs:
       - metadata
       - mark-stable
@@ -250,6 +265,34 @@ jobs:
         with:
           telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
+          job-status: |
+            ${{ needs.mark-stable.result }}
+          product-name: ${{ inputs.app-name }}
+          override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
+          override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          search-tags: ${{ steps.search-tags.outputs.result }}
+
+  notify-slack-make-stable:
+    name: notify slack make-stable
+    runs-on: ubuntu-latest
+    if: always() && inputs.notify-slack
+    needs:
+      - metadata
+      - mark-stable
+    steps:
+      - id: search-tags
+        if: always()
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        with:
+          input: |
+            mark-as-stable
+
+      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4-beta
+        env:
+          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
+        with:
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL }}
           job-status: |
             ${{ needs.mark-stable.result }}
           product-name: ${{ inputs.app-name }}
