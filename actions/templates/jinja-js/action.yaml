@@ -1,0 +1,22 @@
+name: 'Jinja-JS Template Renderer'
+description: 'Renders a Nunjucks (Jinja-like) template with given data.'
+author: 'Gemini'
+
+inputs:
+  data:
+    description: 'A JSON string of data to be used in the template.'
+    required: true
+  template:
+    description: 'The Nunjucks/Jinja template string to render.'
+    required: true
+  githubContext:
+    description: 'A JSON string of the GitHub context to merge into the data.'
+    required: false
+
+outputs:
+  result:
+    description: 'The rendered template string.'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

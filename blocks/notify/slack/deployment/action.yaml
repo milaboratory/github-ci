@@ -1,0 +1,93 @@
+name: 'Slack: Deployment Notification Block'
+description: |
+  Reusable workflow block for sending Slack notifications about deployment status.
+
+inputs:
+  job-status:
+    description: 'The status of the deployment job (e.g., success, failure, cancelled).'
+    required: true
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID.'
+    required: true
+  product-name:
+    description: 'Name of the product that was deployed.'
+    required: false
+    default: ${{ github.repository }}
+  docker-images:
+    description: 'List of Docker images related to the build in JSON format.'
+    required: false
+    default: '[]'
+  search-tags:
+    description: 'List of search tags for the notification.'
+    required: false
+    default: '[]'
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4
+
+    - id: job-status
+      name: Merge job statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      with:
+        statuses: ${{ inputs.job-status }}
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Notify on deployment success
+      if: steps.job-status.outputs.status == 'success'
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-success@v4
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.context.outputs.current-version }}
+        tag: ${{ steps.context.outputs.current-version-tag }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Notify on deployment failure
+      if: steps.job-status.outputs.status == 'failure'
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-failed@v4
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.context.outputs.current-version }}
+        tag: ${{ steps.context.outputs.current-version-tag }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Notify on deployment cancellation
+      if: steps.job-status.outputs.status == 'cancelled'
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-cancelled@v4
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.context.outputs.current-version }}
+        tag: ${{ steps.context.outputs.current-version-tag }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}

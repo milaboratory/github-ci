@@ -1,0 +1,97 @@
+name: 'Slack: Review Required Notification'
+description: |
+  Notify a Slack channel that a review is required.
+
+inputs:
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID (e.g., #channel-name or C12345).'
+    required: true
+  slack-bot-method:
+    description: 'Slack Bot Method.'
+    required: false
+    default: 'chat.postMessage'
+  message:
+    description: 'Message to display in the notification.'
+    required: true
+  reviewers:
+    description: 'List of reviewers to call for action (one per line).'
+    required: true
+  product-name:
+    description: 'Name of the product that was built.'
+    required: false
+    default: ${{ github.repository }}
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
+
+    - uses: milaboratory/github-ci/actions/strings/json-list@v4
+      id: reviewers
+      with:
+        input: ${{ inputs.reviewers }}
+
+    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4
+      id: payload
+      with:
+        githubContext: ${{ steps.safe-ctx.outputs.github }}
+        data: |
+          {
+            "product_name": ${{ toJSON(inputs.product-name) }},
+            "additional_info": ${{ toJSON(inputs.additional-info) }},
+            "message": ${{ toJSON(inputs.message) }},
+            "reviewers": ${{ steps.reviewers.outputs.result }},
+            "slack_channel": ${{ toJSON(inputs.slack-channel) }}
+          }
+
+        template: |
+          {% set approval_link = "<" ~ github.server_url ~ "/" ~ github.repository ~ "/actions/runs/" ~ github.run_id ~ "|approval is required>" %}
+          {% if reviewers | length %}
+            {% set reviewer_text = reviewers | join(', ') ~ ", your " ~ approval_link %}
+          {% else %}
+            {% set reviewer_text = "Your " ~ approval_link %}
+          {% endif %}
+          {
+            "text": "🧑‍🚀 [{{ product_name }}] {{ message }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "🧑‍🚀 *{{ product_name }}:* {{ message }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "{{ reviewer_text }}"
+                }
+              },
+              {% if additional_info | length > 0 %}
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Additional Info:*\n{{ additional_info }}"
+                }
+              },
+              {% endif %}
+            ],
+            "channel": "{{ slack_channel }}"
+          }
+
+    - uses: milaboratory/github-ci/actions/notify/slack/send@v4
+      with:
+        token: ${{ inputs.slack-bot-token }}
+        method: ${{ inputs.slack-bot-method }}
+        payload: ${{ steps.payload.outputs.result }}

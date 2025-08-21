@@ -1,0 +1,135 @@
+name: 'Slack: Release Failed Notification'
+description: |
+  Notify a Slack channel about a failed release.
+
+inputs:
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID (e.g., #channel-name or C12345).'
+    required: true
+  slack-bot-method:
+    description: 'Slack Bot Method.'
+    required: false
+    default: 'chat.postMessage'
+  product-name:
+    description: 'Name of the product that was built.'
+    required: false
+    default: ${{ github.repository }}
+  version:
+    description: 'Release version number.'
+    required: true
+  tag:
+    description: 'Release tag.'
+    required: true
+  search-tags:
+    description: 'List of search tags for the notification.'
+    required: false
+    default: '[]'
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: safe-ctx
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
+
+    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4
+      id: payload
+      with:
+        githubContext: ${{ steps.safe-ctx.outputs.github }}
+        data: |
+          {
+            "product_name": ${{ toJSON(inputs.product-name) }},
+            "additional_info": ${{ toJSON(inputs.additional-info) }},
+            "version": ${{ toJSON(inputs.version) }},
+            "tag": ${{ toJSON(inputs.tag) }},
+            "search_tags": ${{ inputs.search-tags }},
+            "slack_channel": ${{ toJSON(inputs.slack-channel) }}
+          }
+
+        template: |
+          {
+            "text": "☠️ Release of {{ product_name }} {{ version }} failed",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "☠️ Release Failed: {{ product_name }}",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Version:*\n<{{ github.server_url }}/{{ github.repository }}/releases/tag/{{ tag }}|`{{ version }}`>"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Author:*\n`{{ github.actor }}`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n`{{ github.ref_name }}`"
+                  }
+                ]
+              },
+              {% if additional_info | length > 0 %}
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Additional Info:*\n{{ additional_info }}"
+                }
+              },
+              {% endif %}
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Source",
+                      "emoji": true
+                    },
+                    "url": "{{ github.server_url }}/{{ github.repository }}/tree/{{ github.sha }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View CI Logs",
+                      "emoji": true
+                    },
+                    "style": "danger",
+                    "url": "{{ github.server_url }}/{{ github.repository }}/actions/runs/{{ github.run_id }}"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "Tags: #{{ github.event.repository.name | replace('-', '_') | replace('.', '_') }}{%- if search_tags | length > 0 %}{% for tag in search_tags %} #{{ tag | replace('-', '_') | replace('/', '_') }}{% endfor %}{%- endif %}"
+                  }
+                ]
+              }
+            ],
+            "channel": "{{ slack_channel }}"
+          }
+
+    - uses: milaboratory/github-ci/actions/notify/slack/send@v4
+      with:
+        token: ${{ inputs.slack-bot-token }}
+        method: ${{ inputs.slack-bot-method }}
+        payload: ${{ steps.payload.outputs.result }}

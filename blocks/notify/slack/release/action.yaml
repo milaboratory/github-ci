@@ -1,0 +1,131 @@
+name: 'Slack: Release Notification Block'
+description: |
+  Reusable workflow block for sending Slack notifications about release status.
+
+inputs:
+  job-status:
+    description: 'The status of the release job (e.g., success, failure).'
+    required: true
+  slack-bot-token:
+    description: 'Slack Bot Token.'
+    required: true
+  slack-channel:
+    description: 'Slack channel name or ID.'
+    required: true
+  product-name:
+    description: 'Name of the product that was released.'
+    required: false
+    default: ${{ github.repository }}
+  override-version:
+    description: |
+      This option allows the user to manually specify a version number.
+      This custom version overrides the version that would be derived during the "get context" step.
+    required: false
+    default: ''
+  override-tag:
+    description: |
+      This option allows the user to manually specify a tag.
+      This custom tag overrides the tag that would be derived during the "get context" step.
+    required: false
+    default: ''
+  docker-images:
+    description: 'List of Docker images related to the build in JSON format.'
+    required: false
+    default: '[]'
+  maven-packages:
+    description: 'List of Maven packages related to the build in JSON format.'
+    required: false
+    default: '[]'
+  download-links:
+    description: 'List of download links for the build in JSON format.'
+    required: false
+    default: '[]'
+  search-tags:
+    description: 'List of search tags for the notification.'
+    required: false
+    default: '[]'
+  additional-info:
+    description: 'Additional text to append to the message.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: context
+      uses: milaboratory/github-ci/actions/context@v4
+
+    - id: define-version
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OVERRIDE_VERSION: ${{ inputs.override-version }}
+        CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_VERSION}" ];then
+            echo "${OVERRIDE_VERSION}"
+          else
+            echo "${CURRENT_VERSION}"
+          fi
+
+    - id: define-tag
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        OVERRIDE_TAG: ${{ inputs.override-tag }}
+        CURRENT_TAG: ${{ steps.context.outputs.current-version-tag }}
+      with:
+        run: |
+          if [ ! -z "${OVERRIDE_TAG}" ];then
+            echo "${OVERRIDE_TAG}"
+          else
+            echo "${CURRENT_TAG}"
+          fi
+
+    - id: job-status
+      name: Merge job statuses
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      with:
+        statuses: ${{ inputs.job-status }}
+
+    - id: json
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        MAVEN_PACKAGES: ${{ inputs.maven-packages }}
+        DOCKER_IMAGES: ${{ inputs.docker-images }}
+        DOWNLOAD_LINKS: ${{ inputs.download-links }}
+        SEARCH_TAGS: ${{ inputs.search-tags }}
+      with:
+        dump-stdout: false
+        run: |
+          ghwa_set_output "docker-images" "${DOCKER_IMAGES:-[]}"
+          ghwa_set_output "maven-packages" "${MAVEN_PACKAGES:-[]}"
+          ghwa_set_output "download-links" "${DOWNLOAD_LINKS:-[]}"
+          ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
+
+    - name: Notify on release success
+      if: steps.job-status.outputs.status == 'success'
+      uses: milaboratory/github-ci/actions/notify/slack/release-ready@v4
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.define-version.outputs.stdout }}
+        tag: ${{ steps.define-tag.outputs.stdout }}
+        docker-images: ${{ fromJSON(steps.json.outputs.data).docker-images }}
+        maven-packages: ${{ fromJSON(steps.json.outputs.data).maven-packages }}
+        download-links: ${{ fromJSON(steps.json.outputs.data).download-links }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
+
+    - name: Notify on release failure
+      if: steps.job-status.outputs.status == 'failure'
+      uses: milaboratory/github-ci/actions/notify/slack/release-failed@v4
+      with:
+        slack-bot-token: ${{ inputs.slack-bot-token }}
+        slack-channel: ${{ inputs.slack-channel }}
+        product-name: ${{ inputs.product-name }}
+        version: ${{ steps.define-version.outputs.stdout }}
+        tag: ${{ steps.define-tag.outputs.stdout }}
+        search-tags: ${{ fromJSON(steps.json.outputs.data).search-tags }}
+        additional-info: ${{ inputs.additional-info }}
