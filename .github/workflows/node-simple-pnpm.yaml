@@ -314,7 +314,15 @@ on:
           Whether or not to push images to quay.io registry.
         type: boolean
         required: false
-        default: false
+        default: true
+
+      docker-ga-push:
+        description: |
+          Whether or not to push images to GA registry.
+        type: boolean
+        required: false
+        default: true
+
       #
       # Notifications
       #
@@ -605,6 +613,14 @@ jobs:
           registry: quay.io
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
+
+      - name: Login to Docker GA
+        if: inputs.docker-ga-push
+        uses: docker/login-action@v3
+        with:
+          registry: containers.pl-open.science
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}    
 
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
