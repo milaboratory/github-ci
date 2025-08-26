@@ -517,6 +517,8 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
+      - uses: fawazahmed0/action-debug-vscode@main
+
       - name: Login to Docker GA
         if: inputs.docker-ga-push && env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
         shell: bash
