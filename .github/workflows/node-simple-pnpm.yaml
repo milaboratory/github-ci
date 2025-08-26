@@ -468,7 +468,13 @@ jobs:
     needs:
       - check-changesets
       - metadata
-    if: inputs.pre-calculated && inputs.pre-calculated-task-list != '[]'
+    if: >
+      inputs.pre-calculated && inputs.pre-calculated-task-list != '[]' &&
+      !failure() && !cancelled() &&
+      (
+        needs.check-changesets.result == 'success' ||
+        needs.check-changesets.result == 'skipped'
+      )
     permissions:
       id-token: write
       contents: read
@@ -536,6 +542,13 @@ jobs:
           dump-stdout: false
           run: |
             pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run changeset version
+        if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          run: |
+            pnpm run version-packages
 
       - name: Run build for - ${{ matrix.step }}
         uses: milaboratory/github-ci/actions/shell@v4
@@ -620,7 +633,7 @@ jobs:
         with:
           registry: containers.pl-open.science
           username: ${{ env.QUAY_USERNAME }}
-          password: ${{ env.QUAY_ROBOT_TOKEN }}    
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
 
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
