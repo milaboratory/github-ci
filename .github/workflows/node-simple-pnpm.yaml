@@ -515,6 +515,8 @@ jobs:
           registry: quay.io
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
+
       - name: Login to Docker GA
         if: inputs.docker-ga-push && env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
         uses: docker/login-action@v3
@@ -522,6 +524,8 @@ jobs:
           registry: containers.pl-open.science
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
+
       - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
@@ -632,6 +636,7 @@ jobs:
           registry: quay.io
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
 
       - name: Login to Docker GA
         if: inputs.docker-ga-push && env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
@@ -640,6 +645,7 @@ jobs:
           registry: containers.pl-open.science
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
 
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
