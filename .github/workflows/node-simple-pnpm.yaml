@@ -542,6 +542,13 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Run changeset version
+        if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            pnpm run version-packages
+
       - name: Run build for - ${{ matrix.step }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
