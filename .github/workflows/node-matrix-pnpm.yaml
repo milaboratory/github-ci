@@ -573,6 +573,15 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
+      - name: Install system build tools on Linux
+        if: runner.os == 'Linux'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -749,6 +758,15 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
+
+      - name: Install system build tools on Linux
+        if: runner.os == 'Linux'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
