@@ -545,14 +545,22 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm install --frozen-lockfile --prefer-offline
+          DEFAULT_BRANCH: origin/${{ inputs.changeset-default-branch }}
+
+        run: |
+          if git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-workspace.yaml$'; then
+            # Changes in pnpm-workspace.yaml have to be accompanied by pnpm-lock.yaml update
+            if ! git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-lock.yaml$'; then
+              echo "Changes in pnpm-workspace.yaml detected, but no updates in pnpm-lock.yaml were found in current branch"
+              exit 1
+            fi
+          fi
+
+          pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
@@ -674,14 +682,22 @@ jobs:
           team-id: ${{ inputs.team-id }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm install --frozen-lockfile --prefer-offline
+          DEFAULT_BRANCH: origin/${{ inputs.changeset-default-branch }}
+
+        run: |
+          if git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-workspace.yaml$'; then
+            # Changes in pnpm-workspace.yaml have to be accompanied by pnpm-lock.yaml update
+            if ! git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-lock.yaml$'; then
+              echo "Changes in pnpm-workspace.yaml detected, but no updates in pnpm-lock.yaml were found in current branch"
+              exit 1
+            fi
+          fi
+
+          pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
