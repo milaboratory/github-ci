@@ -724,6 +724,12 @@ jobs:
           run: |
             pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
 
+      - name: Save prebuild results for transfer to final build
+        uses: milaboratory/github-ci/actions/artifact/save@v4-beta
+        with:
+          name: prebuild-results-${{ matrix.os }}-${{ matrix.arch }}
+          path: '*/dist/'
+
   build-publish:
     name: unified (build publish)
     runs-on: ubuntu-latest
@@ -844,6 +850,12 @@ jobs:
             echo "has-changes=0" >> $GITHUB_OUTPUT
           fi
 
+
+      - name: Restore prebuild results
+        uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
+        with:
+          pattern: prebuild-results-
+
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
@@ -853,6 +865,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
+            pnpm run --if-present before-publish
             pnpm run build --filter="${MAIN_METAPACKAGE_NAME}"
 
       - name: Get GitHub App User ID
