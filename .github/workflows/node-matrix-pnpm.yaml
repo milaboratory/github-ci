@@ -722,7 +722,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm run after-prebuild --if-present --filter="${PRE_CALCULATED_STEP}"
+            pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
 
   build-publish:
     name: unified (build publish)
