@@ -854,7 +854,7 @@ jobs:
       - name: Restore prebuild results
         uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
         with:
-          pattern: prebuild-results-
+          pattern: prebuild-results-*
 
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4-beta
