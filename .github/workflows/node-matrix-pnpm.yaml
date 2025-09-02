@@ -727,7 +727,7 @@ jobs:
       - name: Save prebuild results for transfer to final build
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta
         with:
-          name: prebuild-results-${{ matrix.os }}-${{ matrix.arch }}
+          name: prebuild-results-${{ matrix.python_version }}-${{ matrix.os }}-${{ matrix.arch }}
           path: '*/dist/'
 
   build-publish:
