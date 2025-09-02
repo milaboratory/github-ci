@@ -537,7 +537,7 @@ jobs:
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
   pre-calculated-build:
-    name: pre-build
+    name: prebuild
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
