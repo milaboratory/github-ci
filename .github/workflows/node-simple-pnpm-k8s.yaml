@@ -216,13 +216,6 @@ on:
           required: false
           default: '{}'
 
-      notify-telegram:
-        description: |
-          Enable Telegram notifications
-        required: false
-        type: boolean
-        default: true
-
       notify-tests:
         description: |
           Enable notifications about tests status (ready/failed)
@@ -247,13 +240,14 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      TELEGRAM_NOTIFICATION_TARGET:
+      SLACK_BOT_TOKEN:
         description: |
-          ID of Telegram Channel or User to notify on build results.
+          Slack bot token for notifications
         required: false
-      TELEGRAM_API_TOKEN:
+      SLACK_CHANNEL:
         description: |
-          Telegram Bot API authorization token
+          Slack channel for notifications
+        required: false
 jobs:
   run-tests:
     name: Run tests
@@ -316,16 +310,11 @@ jobs:
           helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
-            app.image.tag=${{ env.PL_VERSION }}
-            app.coreConfig.s3.primaryStorageKeyPrefix="${{ env.PL_SAN_VERSION }}-platforma-ci-primary/"
-            app.coreConfig.s3.bucketName="${{ env.GCLOUD_CI_GKE_BUCKET_NAME }}"
-            app.persistentVolume.work.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/work"
-            app.persistentVolume.softwareloader.mountPath="/mnt/platforma-data/instance/${{ env.PL_SAN_VERSION }}/softwareloader"
-            app.persistentVolume.nfsShareVolume.mountPath="/mnt/platforma-data/instance"
-            app.coreConfig.batch.projectId="${{ env.GCLOUD_CI_GKE_PROJECT_ID }}"
-            app.coreConfig.batch.region="${{ env.GCLOUD_CI_GKE_REGION }}"
-            app.coreConfig.batch.network="${{ env.GCLOUD_CI_GKE_NETWORK }}"
-            app.coreConfig.batch.subnetwork="${{ env.GCLOUD_CI_GKE_SUBNETWORK }}"
+            image.tag=${{ env.PL_VERSION }}
+            primaryStorage.gcp.url="format('gs://{0}/{1}-platforma-ci-primary/', ${{ env.GCLOUD_CI_GKE_BUCKET_NAME }}, ${{ env.PL_SAN_VERSION }})"
+            googleBatch.jobNamePrefix="${{ env.PL_SAN_VERSION }}"
+            volumes.workDirName="format('{0}/work', ${{ env.PL_SAN_VERSION }})"
+            volumes.packagesDirName="format('{0}/packages', ${{ env.PL_SAN_VERSION }})"
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
@@ -394,14 +383,12 @@ jobs:
             integration
             google-batch
 
-      - uses: milaboratory/github-ci/blocks/notify/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/slack/tests@v4-beta
         with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL }}
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.run-tests.result }}
           tests-type: 'Integration'
           search-tags: ${{ steps.search-tags.outputs.result }}
-
           product-name: ${{ inputs.app-name }}
