@@ -311,10 +311,10 @@ jobs:
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
             image.tag=${{ env.PL_VERSION }}
-            primaryStorage.gcp.url=${{ format('gs://{0}/{1}-platforma-ci-primary/', env.GCLOUD_CI_GKE_BUCKET_NAME, env.PL_SAN_VERSION) }}"
+            primaryStorage.gcp.url="${{ format('gs://{0}/{1}-platforma-ci-primary/', env.GCLOUD_CI_GKE_BUCKET_NAME, env.PL_SAN_VERSION) }}"
             googleBatch.jobNamePrefix="${{ env.PL_SAN_VERSION }}"
-            volumes.workDirName=${{ format('{0}/work', env.PL_SAN_VERSION) }}
-            volumes.packagesDirName=${{ format('{0}/packages', env.PL_SAN_VERSION) }}
+            volumes.workDirName="${{ format('{0}/work', env.PL_SAN_VERSION) }}"
+            volumes.packagesDirName="${{ format('{0}/packages', env.PL_SAN_VERSION) }}"
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
