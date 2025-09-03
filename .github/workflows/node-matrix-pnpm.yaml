@@ -537,7 +537,7 @@ jobs:
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
   pre-calculated-build:
-    name: pre-build
+    name: prebuild
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -572,6 +572,15 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
+
+      - name: Install system build tools on Linux
+        if: runner.os == 'Linux'
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -706,14 +715,20 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Run postbuild-publish for - ${{ matrix.python_version }}
+      - name: Run publish-archive for - ${{ matrix.python_version }}
         uses: milaboratory/github-ci/actions/shell@v4
         env:
           PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
           dump-stdout: false
           run: |
-            pnpm run postbuild-publish --filter="${PRE_CALCULATED_STEP}"
+            pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
+
+      - name: Save prebuild results for transfer to final build
+        uses: milaboratory/github-ci/actions/artifact/save@v4
+        with:
+          name: prebuild-results-${{ matrix.python_version }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: '*/dist/'
 
   build-publish:
     name: unified (build publish)
@@ -749,6 +764,15 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
+
+      - name: Install system build tools on Linux
+        if: runner.os == 'Linux'
+        uses: milaboratory/github-ci/actions/shell@v4
+        with:
+          dump-stdout: false
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -826,6 +850,12 @@ jobs:
             echo "has-changes=0" >> $GITHUB_OUTPUT
           fi
 
+
+      - name: Restore prebuild results
+        uses: milaboratory/github-ci/actions/artifact/restore@v4
+        with:
+          pattern: prebuild-results-*
+
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4
         env:
@@ -835,7 +865,7 @@ jobs:
         with:
           dump-stdout: false
           run: |
-            pnpm run build-descriptors
+            pnpm run --if-present before-publish
             pnpm run build --filter="${MAIN_METAPACKAGE_NAME}"
 
       - name: Get GitHub App User ID
@@ -939,4 +969,3 @@ jobs:
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
-
