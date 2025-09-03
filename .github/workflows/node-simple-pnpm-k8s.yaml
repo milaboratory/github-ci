@@ -216,6 +216,13 @@ on:
           required: false
           default: '{}'
 
+      notify-slack:
+        description: |
+          Enable Slack notifications
+        required: false
+        type: boolean
+        default: true
+
       notify-tests:
         description: |
           Enable notifications about tests status (ready/failed)
@@ -369,7 +376,7 @@ jobs:
     runs-on: ubuntu-latest
 
     if:  always()
-      && inputs.notify-telegram
+      && inputs.notify-slack
     needs:
       - run-tests
 
