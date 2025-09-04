@@ -95,3 +95,5 @@ runs:
           echo "::error::No artifacts were restored by the action. Only artifacts saved with 'artifact/save' action can be restored by 'artifact/restore'" >&2
           exit 1
         fi
+
+        rm -rf "./artifacts-restore-5b3513f5"
