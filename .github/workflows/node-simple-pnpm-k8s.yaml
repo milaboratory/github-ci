@@ -196,6 +196,13 @@ on:
         required: false
         default: ''
 
+      helm-chart-render-template:
+        description: |
+          Template helm chart before deployment
+        type: boolean
+        required: false
+        default: false 
+
       namespace:
         description: |
           Kubernetes namespace name
@@ -315,6 +322,7 @@ jobs:
           helm-chart-atomic-upgrade: ${{ inputs.helm-chart-atomic-upgrade }}
           helm-chart-debug: ${{ inputs.helm-chart-debug }}
           helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
+          helm-chart-render-template: ${{ inputs.helm-chart-render-template }}
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
             image.tag=${{ env.PL_VERSION }}
