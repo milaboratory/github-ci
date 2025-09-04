@@ -314,10 +314,9 @@ on:
           Whether or not to push images to quay.io registry.
         type: boolean
         required: false
-        default: true
+        default: false
 
       docker-ga-push:
-
         description: |
           Whether or not to push images to GA registry.
         type: boolean
