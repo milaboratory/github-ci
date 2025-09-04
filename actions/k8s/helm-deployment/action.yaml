@@ -88,8 +88,8 @@ runs:
         HELM_CHART_ATOMIC_UPGRADE: ${{ inputs.helm-chart-atomic-upgrade }}
         HELM_CHART_DEBUG: ${{ inputs.helm-chart-debug }}
         HELM_CHART_WAIT_TIMEOUT: ${{ inputs.helm-chart-wait-timeout }}
-        HELM_CHART_VALUES: ${{ inputs.helm-chart-values }}
         HELM_CHART_RENDER_TEMPLATE: ${{ inputs.helm-chart-render-template }}
+        HELM_CHART_VALUES: ${{ inputs.helm-chart-values }}
         NAMESPACE: ${{ inputs.namespace }}
       with:
         dump-stdout: false
@@ -122,7 +122,7 @@ runs:
             "platforma/${HELM_CHART_NAME}" \
             "${options[@]}" \
             "${set_values[@]}" \
-            --namespace "${NAMESPACE}""
+            --namespace "${NAMESPACE}"
           fi
 
           if [ "${HELM_CHART_NAME}" == "platforma" ];then
