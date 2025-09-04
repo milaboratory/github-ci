@@ -54,7 +54,7 @@ inputs:
       they are passed with --set flag for each value.
     required: false
     default: ''
-  helm-chart-template:
+  helm-chart-render-template:
     description: |
       Template helm chart before deployment
     required: false
@@ -89,7 +89,7 @@ runs:
         HELM_CHART_DEBUG: ${{ inputs.helm-chart-debug }}
         HELM_CHART_WAIT_TIMEOUT: ${{ inputs.helm-chart-wait-timeout }}
         HELM_CHART_VALUES: ${{ inputs.helm-chart-values }}
-        HELM_CHART_TEMPLATE: ${{ inputs.helm-chart-template }}
+        HELM_CHART_RENDER_TEMPLATE: ${{ inputs.helm-chart-render-template }}
         NAMESPACE: ${{ inputs.namespace }}
       with:
         dump-stdout: false
@@ -117,7 +117,7 @@ runs:
             done <<<"${HELM_CHART_VALUES}"
           fi
 
-          if [ "${HELM_CHART_TEMPLATE}" == "true" ] && [ "${HELM_CHART_NAME}" == "platforma" ];then
+          if [ "${HELM_CHART_RENDER_TEMPLATE}" == "true" ] && [ "${HELM_CHART_NAME}" == "platforma" ];then
             helm template "${HELM_RELEASE_NAME}" \
             "platforma/${HELM_CHART_NAME}" \
             "${options[@]}" \
