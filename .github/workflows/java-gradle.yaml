@@ -2076,7 +2076,7 @@ jobs:
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   signDistArchive:
-    name: sign-archive
+    name: sign and publish
     runs-on: ubuntu-latest
 
     if: inputs.sign-dist-archive
