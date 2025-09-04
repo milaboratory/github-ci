@@ -196,12 +196,12 @@ on:
         required: false
         default: ''
 
-     helm-chart-render-template:
+      helm-chart-render-template:
         description: |
           Template helm chart before deployment
         type: boolean
         required: false
-        default: 'false'  
+        default: false 
 
       namespace:
         description: |
