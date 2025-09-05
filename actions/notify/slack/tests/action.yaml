@@ -121,6 +121,7 @@ runs:
               {
                 "type": "actions",
                 "elements": [
+                  {% if report_url | length > 0 %}
                   {
                     "type": "button",
                     "text": {
@@ -130,6 +131,7 @@ runs:
                     },
                     "url": "{{ report_url }}"
                   },
+                  {% endif %}
                   {
                     "type": "button",
                     "text": {

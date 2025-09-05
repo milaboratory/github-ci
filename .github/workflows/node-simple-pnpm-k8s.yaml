@@ -196,6 +196,13 @@ on:
         required: false
         default: ''
 
+      helm-chart-render-template:
+        description: |
+          Template helm chart before deployment
+        type: boolean
+        required: false
+        default: false
+
       namespace:
         description: |
           Kubernetes namespace name
@@ -283,6 +290,7 @@ jobs:
           fetch-depth: '0'
 
       - uses: milaboratory/github-ci/actions/shell@v4
+        id: npm-pkg-metadata
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -291,6 +299,22 @@ jobs:
             PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
             ghwa_set_output pnpm-version "${PNPM_VERSION}"
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
+
+      - name: Login to Docker GA
+        uses: docker/login-action@v3
+        with:
+          registry: containers.pl-open.science
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
 
       - uses: milaboratory/github-ci/actions/shell@v4
         env:
@@ -315,13 +339,14 @@ jobs:
           helm-chart-atomic-upgrade: ${{ inputs.helm-chart-atomic-upgrade }}
           helm-chart-debug: ${{ inputs.helm-chart-debug }}
           helm-chart-wait-timeout: ${{ inputs.helm-chart-wait-timeout }}
+          helm-chart-render-template: ${{ inputs.helm-chart-render-template }}
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
             image.tag=${{ env.PL_VERSION }}
-            primaryStorage.gcs.url="${{ format('gs://{0}/{1}-platforma-ci-primary/', env.GCLOUD_CI_GKE_BUCKET_NAME, env.PL_SAN_VERSION) }}"
-            googleBatch.jobNamePrefix="${{ env.PL_SAN_VERSION }}"
-            googleBatch.volumes.workDirName="${{ format('{0}/work', env.PL_SAN_VERSION) }}"
-            googleBatch.volumes.packagesDirName="${{ format('{0}/packages', env.PL_SAN_VERSION) }}"
+            primaryStorage.gcs.url=${{ format('gs://{0}/{1}-platforma-ci-primary/', env.GCLOUD_CI_GKE_BUCKET_NAME, env.PL_SAN_VERSION) }}
+            googleBatch.jobNamePrefix=${{ env.PL_SAN_VERSION }}
+            googleBatch.volumes.workDirName=${{ format('{0}/work', env.PL_SAN_VERSION) }}
+            googleBatch.volumes.packagesDirName=${{ format('{0}/packages', env.PL_SAN_VERSION) }}
 
       - uses: milaboratory/github-ci/actions/shell@v4
         env:
@@ -370,6 +395,10 @@ jobs:
               --wait \
               --timeout "${{ inputs.helm-chart-wait-timeout }}" \
               --namespace "${{ env.NAMESPACE }}"
+    
+    outputs:
+      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
+      pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
   notify-test:
     name: notify integration tests
@@ -391,9 +420,12 @@ jobs:
             google-batch
 
       - uses: milaboratory/github-ci/blocks/notify/slack/tests@v4
+        env:
+          NPM_PKG_VERSION: ${{ needs.run-tests.outputs.npm-pkg-version }}
         with:
           slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL }}
+          build-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.run-tests.result }}
           tests-type: 'Integration'
