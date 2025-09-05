@@ -421,11 +421,11 @@ jobs:
 
       - uses: milaboratory/github-ci/blocks/notify/slack/tests@v4-beta
         env:
-          NPM_PKG_VERSION:
+          NPM_PKG_VERSION: ${{ needs.run-tests.outputs.npm-pkg-version }}
         with:
           slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL }}
-          build-version: ${{ needs.run-tests.outputs.npm-pkg-version }}
+          build-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.run-tests.result }}
           tests-type: 'Integration'
