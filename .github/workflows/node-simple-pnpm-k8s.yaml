@@ -290,6 +290,7 @@ jobs:
           fetch-depth: '0'
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
+        id: npm-pkg-metadata
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
