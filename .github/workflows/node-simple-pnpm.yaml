@@ -321,7 +321,7 @@ on:
           Whether or not to push images to GA registry.
         type: boolean
         required: false
-        default: false
+        default: true
 
       #
       # Notifications
