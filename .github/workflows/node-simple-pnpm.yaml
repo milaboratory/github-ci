@@ -760,6 +760,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+          PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers" # until MILAB-4008 is resolved
         with:
           test-script-name: ${{ inputs.test-script-name }}
           test-dry-run-script-name: ${{ inputs.test-dry-run-script-name }}
