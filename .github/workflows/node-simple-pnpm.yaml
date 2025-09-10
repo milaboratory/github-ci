@@ -314,14 +314,14 @@ on:
           Whether or not to push images to quay.io registry.
         type: boolean
         required: false
-        default: false
+        default: true
 
       docker-ga-push:
         description: |
           Whether or not to push images to GA registry.
         type: boolean
         required: false
-        default: true
+        default: false
 
       #
       # Notifications
@@ -572,6 +572,7 @@ jobs:
         uses: milaboratory/github-ci/actions/shell@v4
         env:
           PRE_CALCULATED_STEP: ${{ matrix.step }}
+          PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
         with:
           dump-stdout: false
           run: |
@@ -738,6 +739,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+          PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers" # until MILAB-4008 is resolved
         with:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
