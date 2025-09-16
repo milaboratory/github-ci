@@ -41,6 +41,13 @@ on:
         required: false
         default: ''
 
+      checkout-git-lfs:
+        description: |
+          Use git lfs when checking-out the repository
+        type: string
+        required: false
+        default: 'false'
+
       #
       # Environment settings
       #
@@ -149,6 +156,7 @@ on:
           for none --recursive pnpm invocations.
         type: string
         required: false
+
       #
       # Build control
       #
@@ -166,6 +174,7 @@ on:
         type: string
         required: false
         default: 'true'
+
       #
       # Build pre-calculated control
       #
@@ -184,6 +193,7 @@ on:
         type: string
         required: false
         default: '[]'
+
       #
       # Test control
       #
@@ -214,6 +224,7 @@ on:
         type: string
         required: false
         default: 'false'
+
       #
       # NPM registry settings
       #
@@ -261,6 +272,7 @@ on:
         type: number
         required: false
         default: 3600
+
       #
       # Platforma Docker settings
       #
@@ -288,10 +300,10 @@ on:
         type: string
         required: false
         default: 'assets'
+
       #
       # Changed files
       #
-
       changeset-default-branch:
         description:
           Specify the default branch for changesets to run checks against.
@@ -396,6 +408,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
@@ -430,6 +443,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
 
@@ -493,6 +507,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
@@ -622,6 +637,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
