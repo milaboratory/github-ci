@@ -288,7 +288,7 @@ on:
           Platforma docker tag.
         type: string
         required: false
-        default: 'main'
+        default: '1.41.8'
 
       pl-test-assets-dir:
         description: |
