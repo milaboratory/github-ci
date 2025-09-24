@@ -1,0 +1,19 @@
+name: "Automerge 'v4' to 'master'"
+
+on:
+  pull_request:
+    branches: [ 'v4-beta' ]
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./actions/post-step
+        with:
+          run: |
+            echo "Hello, world!"
