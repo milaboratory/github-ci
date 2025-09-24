@@ -7,12 +7,12 @@ packages:
 catalog:
   # Build
   'typescript': ~5.8.3
-  'vite': ^6.3.5
+  'vite': ^7.1.7
 
   # 'tsconfig-paths': ^4.2.0
   'tsup': ~8.3.5
   'rollup-plugin-node-externals': ^8.0.0
-  '@rollup/plugin-node-resolve': ^15.2.3
+  '@rollup/plugin-node-resolve': ^16.0.1
   # 'rollup-plugin-sourcemaps2': ^0.5.0
   'vite-plugin-dts': ^4.5.3
   # 'tsc-alias': ^1.8.11
