@@ -4,7 +4,7 @@
         "build": "turbo run build",
         "test": "turbo run test"
     },
-    "packageManager": "pnpm@10.10.0",
+    "packageManager": "pnpm@10.17.1",
     "devDependencies": {
         "@changesets/cli": "catalog:",
         "husky": "^9.1.7",

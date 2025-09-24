@@ -38,15 +38,15 @@ inputs:
     default: 'info'
 
 outputs:
-  pl-log-dir:
+  main-root:
+    description: 'Path to platforma main root directory'
+    value: ${{ steps.launch-pl.outputs.main-root }}
+  log-dir:
     description: 'Path to platforma log directory'
-    value: ${{ steps.launch-pl.outputs.pl-log-dir }}
-  pl-db-dir:
+    value: ${{ steps.launch-pl.outputs.main-root }}/log
+  db-dir:
     description: 'Path to platforma db directory'
-    value: ${{ steps.launch-pl.outputs.pl-db-dir }}
-  pl-work-dir:
-    description: 'Path to platforma work directory'
-    value: ${{ steps.launch-pl.outputs.pl-work-dir }}
+    value: ${{ steps.launch-pl.outputs.main-root }}/rocksdb
 
 runs:
   using: "composite"
@@ -82,6 +82,7 @@ runs:
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
+        PL_MAIN_ROOT: ${{ }}
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
@@ -93,19 +94,10 @@ runs:
         export TMPDIR="${PL_WORKSPACE}/tmp"
         mkdir -pv "${TMPDIR}"
 
-        export PL_LOG_DIR
-        PL_LOG_DIR="$(mktemp -d)"
-        echo "pl-log-dir=${PL_LOG_DIR}" >> "${GITHUB_OUTPUT}"
+        export MAIN_ROOT="$(mktemp -d)"
+        echo "main-root=${MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
-        export PL_DB_DIR
-        PL_DB_DIR="$(mktemp -d)"
-        echo "pl-db-dir=${PL_DB_DIR}" >> "${GITHUB_OUTPUT}"
-
-        export PL_WORK_DIR
-        PL_WORK_DIR="$(mktemp -d)"
-        echo "pl-work-dir=${PL_WORK_DIR}" >> "${GITHUB_OUTPUT}"
-
-        docker compose --file ${{ github.action_path }}/docker-compose.yaml up --detach --force-recreate
+        docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --detach --force-recreate
 
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
