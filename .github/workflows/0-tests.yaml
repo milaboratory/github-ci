@@ -3,6 +3,7 @@ name: "Automerge 'v4' to 'master'"
 on:
   pull_request:
     branches: [ 'v4-beta' ]
+    types: [opened, reopened, synchronize]
 
 jobs:
   merge:
