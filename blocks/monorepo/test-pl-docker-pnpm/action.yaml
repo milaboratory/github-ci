@@ -124,19 +124,6 @@ runs:
           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
         fi
 
-    - name: Stop all running containers
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      with:
-        dump-stdout: false
-        run: |
-          docker stop $(docker ps -a -q)
-          sleep 10
-
-          # Change ownership of the Platforma logs, db and work dir to the current user
-          USER_NAME="$(whoami)"
-          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl-compose.outputs.main-root }}"
-
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta

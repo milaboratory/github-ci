@@ -80,11 +80,19 @@ runs:
       id: launch-pl
       shell: bash
       env:
+        #
+        # Script parameters.
+        #
+        PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
+
+        #
+        # docker-compose.yaml parameters.
+        #
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
+        PL_WORKSPACE: ${{ github.workspace }}
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
-        PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Just in case if there are no test assets in the repository
@@ -100,10 +108,14 @@ runs:
 
     - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
+        ACTION_PATH: ${{ github.action_path }}
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
       with:
         run: |
-          # Change ownership of platforma state to the current user before uploading
+          # Stop the Platforma
+          docker compose --file "${ACTION_PATH}/docker-compose.yaml" down
+
+          # Change ownership of Platforma state to the current user before uploading
           sudo chown -R "$(id -u):$(id -g)" "${PL_MAIN_ROOT}"
 
     - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
