@@ -2,6 +2,7 @@
     "name": "@milaboratories/github-ci-actions",
     "scripts": {
         "build": "turbo run build",
+        "release": "turbo run release",
         "test": "turbo run test"
     },
     "packageManager": "pnpm@10.17.1",

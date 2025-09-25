@@ -277,13 +277,13 @@ export async function ensureHistorySize(
  */
 export async function getChangedFiles(refSpec: string): Promise<string[]> {
   const cmd: string[] = ["diff", "--name-only", refSpec];
-  
+
   const diffResult = await git(...cmd);
   const filesStr = diffResult.stdout.trim();
-  
+
   if (!filesStr) {
     return [];
   }
-  
+
   return filesStr.split("\n");
 }

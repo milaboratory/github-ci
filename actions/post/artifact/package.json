@@ -5,7 +5,7 @@
   "description": "GitHub Action for running post-steps in composite actions",
   "main": "./lib/index.js",
   "scripts": {
-    "build": "vite build",
+    "build": "tsc && ncc build --source-map --license licenses.txt",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
@@ -23,8 +23,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "@rollup/plugin-node-resolve": "catalog:",
+    "@vercel/ncc": "catalog:",
     "@milaboratories/platforma-build-configs": "workspace:*"
   }
 } 
