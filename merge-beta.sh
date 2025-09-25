@@ -24,7 +24,7 @@ if [ "${__REAL_RUN:-}" != "true" ]; then
     tmp_script="$(mktemp)"
     cat "${0}" > "${tmp_script}"
     chmod +x "${tmp_script}"
-    __REAL_RUN="true" "${tmp_script}" "${@}"
+    __REAL_RUN="true" "${tmp_script}"
     exit 0
 fi
 
