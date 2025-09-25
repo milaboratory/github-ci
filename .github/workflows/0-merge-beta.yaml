@@ -1,6 +1,13 @@
 name: "Create PR for beta branch (v4-beta -> v4)"
 
 on:
+  push:
+    paths:
+      - '.github/workflows/0-merge-beta.yaml'
+    branches:
+      - 'v4-beta'
+      - 'v4'
+
   workflow_dispatch:
     inputs:
       target_branch:
@@ -55,9 +62,9 @@ jobs:
           git fetch origin
           git branch --remotes
           if git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
-            git checkout "${TARGET_BRANCH}"
-          else
             git checkout "origin/${MERGE_BRANCH}"
+          else
+            git checkout "${TARGET_BRANCH}"
           fi
 
           git checkout -b "${MERGE_BRANCH}"
