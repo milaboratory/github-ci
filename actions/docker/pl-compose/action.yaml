@@ -97,28 +97,18 @@ runs:
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
 
-        export PL_MAIN_ROOT="${PL_WORKSPACE}/platforma-backend-main-root"
+        export PL_MAIN_ROOT="$(TMPDIR=${PL_WORKSPACE} mktemp --directory)"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         export PL_MINIO_ROOT="${PL_MAIN_ROOT}/minio"
-        mkdir -pv "${PL_MINIO_ROOT}"
-
-        echo "Main root contents:"
-        ls -lA "${PL_MAIN_ROOT}"
-        echo "Workspace contents:"
-        ls -lA "${PL_WORKSPACE}"
+        mkdir -p "${PL_MINIO_ROOT}"
+        echo "minio-root=${PL_MINIO_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
 
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
-
-        echo "Active mounts:"
-        mount
-
-        echo "Main root after start:"
-        ls -lA "${PL_MAIN_ROOT}"
 
     #
     # Ordering of post-steps is reversed. We need to declare the last step first.
@@ -144,7 +134,7 @@ runs:
         # docker-compose.yaml parameters.
         #
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
-        PL_MINIO_ROOT: ${{ steps.launch-pl.outputs.minio-root }}/minio
+        PL_MINIO_ROOT: ${{ steps.launch-pl.outputs.minio-root }}
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_WORKSPACE: ${{ github.workspace }}

@@ -50,12 +50,9 @@ export async function runPost(): Promise<void> {
 
   let toUpload: string[];
   if (path) {
-    toUpload = await util.expandPaths(
-      path
-        .split("\n")
-        .map((p: string) => p.trim())
-        .filter((p: string) => p !== ""),
-    );
+    const lines = path.split("\n").map((p: string) => p.trim()).filter((p: string) => p !== "")
+    // No need to expand paths to files if we tar all of them
+    toUpload = createArchive ? lines : await util.expandPaths(lines);
   } else {
     toUpload = await util.expandGlob(glob);
   }
