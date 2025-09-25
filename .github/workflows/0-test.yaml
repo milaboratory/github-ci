@@ -8,7 +8,7 @@ on:
   push:
     paths:
       - '.github/workflows/0-test.yaml'
-      - 'actions/post/artifact/'
+      - 'actions/post/artifact/**'
     branches: [ 'v4', 'v4-beta' ]
 
 jobs:
