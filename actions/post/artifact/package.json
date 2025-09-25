@@ -5,8 +5,8 @@
   "description": "GitHub Action for running post-steps in composite actions",
   "main": "./lib/index.js",
   "scripts": {
-    "cleanup": "rm -rf lib dist",
-    "build": "rm -rf lib dist && tsc && ncc build dist/index.js --out lib --source-map",
+    "cleanup": "rm -rf lib dist node_modules .turbo",
+    "build": "rm -rf lib dist && tsc && ncc build dist/index.js --minify --out lib --source-map",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
