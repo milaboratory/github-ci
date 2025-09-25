@@ -57,6 +57,8 @@ async function expandGlob(pattern: string): Promise<string[]> {
 }
 
 async function expandPaths(...pathList: string[]): Promise<string[]> {
+  core.info(`Expanding paths: ${pathList.join(', ')}`);
+  core.info(`CWD: ${process.cwd()}`);
   const filesList: string[] = [];
 
   for (const pathItem of pathList) {
