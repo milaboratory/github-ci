@@ -6,7 +6,7 @@
   "main": "./lib/index.js",
   "scripts": {
     "cleanup": "rm -rf lib dist node_modules .turbo",
-    "build": "rm -rf lib dist && tsc && ncc build dist/index.js --minify --out lib --source-map",
+    "build": "rm -rf lib dist && tsc && ncc build dist/action.js --minify --out lib --source-map",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",

@@ -5,8 +5,11 @@ name: "Test"
 
 on:
   workflow_call:
-#   push:
-#     branches: [ 'v4-beta' ]
+  push:
+    paths:
+      - '.github/workflows/0-test.yaml'
+      - 'actions/post/artifact/**'
+    branches: [ 'v4', 'v4-beta' ]
 
 jobs:
   run-test:
@@ -19,10 +22,16 @@ jobs:
 
       - shell: bash
         run: |
-          echo "Hello, world!" > test.txt
+          echo $PWD
+          pwd
+          mkdir -p test-dir
+          echo "Test 1 file content" > test-dir/test1.txt
+          echo "Test 2 file content" > test-dir/test2.txt
+
+          find $(pwd)
 
       - uses: ./actions/post/artifact
         with:
           name: test
           path: |
-            test.txt
+            test-dir
