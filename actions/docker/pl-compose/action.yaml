@@ -119,6 +119,7 @@ runs:
     - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       with:
         name: platforma-dump
+        archive: true
         path: |
           ${{ steps.launch-pl.outputs.main-root }}
 
