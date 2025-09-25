@@ -1,11 +1,15 @@
+# This workflow is never used by any external repository.
+# It is created solely for testing purposes when developing new actions.
+# Feel free to change it however you want.
 name: "Test"
 
 on:
-  push:
-    branches: [ 'v4-beta' ]
+  workflow_call:
+#   push:
+#     branches: [ 'v4-beta' ]
 
 jobs:
-  merge:
+  run-test:
     runs-on: ubuntu-latest
 
     steps:
