@@ -22,6 +22,8 @@ jobs:
 
       - shell: bash
         run: |
+          echo $PWD
+          pwd
           mkdir -p test-dir
           echo "Test 1 file content" > test-dir/test1.txt
           echo "Test 2 file content" > test-dir/test2.txt
