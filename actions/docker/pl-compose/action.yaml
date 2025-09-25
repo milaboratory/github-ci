@@ -106,6 +106,23 @@ runs:
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
 
+    #
+    # Ordering of post-steps is reversed. We need to declare the last step first.
+    #
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
+      env:
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+      with:
+        run: |
+          # Remove platforma state in the end
+          rm -rfv "${PL_MAIN_ROOT}"
+
+    - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      with:
+        name: platforma-dump
+        path: |
+          ${{ steps.launch-pl.outputs.main-root }}
+
     - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
@@ -126,17 +143,3 @@ runs:
 
           # Change ownership of Platforma state to the current user before uploading
           sudo chown -R "$(id -u):$(id -g)" "${PL_MAIN_ROOT}"
-
-    - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
-      with:
-        name: platforma-dump
-        path: |
-          ${{ steps.launch-pl.outputs.main-root }}
-
-    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
-      env:
-        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
-      with:
-        run: |
-          # Remove platforma state in the end
-          rm -rfv "${PL_MAIN_ROOT}"
