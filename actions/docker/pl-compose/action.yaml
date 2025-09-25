@@ -26,9 +26,8 @@ inputs:
     description: |
       Platforma test assets directory;
       this directory will be mounted inside
-      the container under the path `/storage/controllers/file/library`
+      the container under the path `/storage/library`
       The path must be relative to github.workspace
-      and will be appended to github.workspace within the docker compose action.
     required: false
     default: 'assets'
   pl-log-level:

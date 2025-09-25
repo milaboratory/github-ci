@@ -96,6 +96,7 @@ runs:
           fi
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
+      name: Launch Platforma docker container
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       id: pl-compose
       with:
