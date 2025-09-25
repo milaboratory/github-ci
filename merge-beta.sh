@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -o nounset
+set -o errexit
+
 DATE=$(date +%Y-%m-%d)
 
 : ${TARGET_BRANCH:="v4"}
@@ -16,6 +19,15 @@ if git status --porcelain | grep -q .; then
     exit 1
 fi
 
+if [ "${__REAL_RUN:-}" != "true" ]; then
+    echo "Copying script to temporary file to not loose original code during checkouts..."
+    tmp_script="$(mktemp)"
+    cat "${0}" > "${tmp_script}"
+    chmod +x "${tmp_script}"
+    __REAL_RUN="true" "${tmp_script}" "${@}"
+    exit 0
+fi
+
 git fetch --prune origin
 if git branch | grep -qE " ${MERGE_BRANCH}( |$)"; then
     # Merge branch exists in local repository
@@ -29,13 +41,13 @@ else if git branch --remotes | grep -qE " origin/${MERGE_BRANCH}( |$)"; then
     git merge --no-edit "${TARGET_BRANCH}"
 
 else
-    git checkout "${TARGET_BRANCH}"
     git checkout -b "${MERGE_BRANCH}"
 fi
 
 if git branch | grep -qE " ${SOURCE_BRANCH}( |$)"; then
     # Source branch exists in local repository
-else 
+    true
+else
     SOURCE_BRANCH="origin/${SOURCE_BRANCH}"
 fi
 
