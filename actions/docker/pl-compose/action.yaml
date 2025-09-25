@@ -82,7 +82,7 @@ runs:
       env:
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
-        PL_MAIN_ROOT: ${{ }}
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
