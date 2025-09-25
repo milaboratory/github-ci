@@ -97,7 +97,11 @@ runs:
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
 
-        export PL_MAIN_ROOT="$(TMPDIR=${PL_WORKSPACE} mktemp --directory)"
+        # Never! NEVER! put volumes mounted into docker container outside runner workspace.
+        # Runner workspace is the only directory that is guaranteed to be shared between runner FS and
+        # docker host, wherever it is. Attempt to bind-mount directories outside WORKSPACE will randomly fail
+        # depending on moon phases and mood of the scheduler god. :(
+        export PL_MAIN_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         export PL_MINIO_ROOT="${PL_MAIN_ROOT}/minio"

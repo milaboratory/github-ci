@@ -53,6 +53,10 @@ services:
 
     restart: always
 
+# Never! NEVER! put volumes mounted into docker container outside runner workspace.
+# Runner workspace is the only directory that is guaranteed to be shared between runner FS and
+# docker host, wherever it is. Attempt to bind-mount directories outside WORKSPACE will randomly fail
+# depending on moon phases and mood of the scheduler god. :(
 volumes:
   main-root:
     driver: local
