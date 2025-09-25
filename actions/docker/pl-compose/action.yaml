@@ -97,7 +97,7 @@ runs:
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
 
-        export PL_MAIN_ROOT="${HOME}/platforma-backend-main-root"
+        export PL_MAIN_ROOT="${PL_WORKSPACE}/platforma-backend-main-root"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         export PL_MINIO_ROOT="${PL_MAIN_ROOT}/minio"
@@ -105,14 +105,17 @@ runs:
 
         echo "Main root contents:"
         ls -lA "${PL_MAIN_ROOT}"
-        echo "Home contents:"
-        ls -lA "${HOME}"
+        echo "Workspace contents:"
+        ls -lA "${PL_WORKSPACE}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
 
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
+
+        echo "Active mounts:"
+        mount
 
         echo "Main root after start:"
         ls -lA "${PL_MAIN_ROOT}"
