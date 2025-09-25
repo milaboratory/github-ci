@@ -31,7 +31,7 @@ services:
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
        --primary-storage-s3-external-endpoint="http://localhost:9000/"
-       --data-library-fs="library=/storage/library"
+       --data-library-fs="library=/library"
 
     ports:
       - "6345:6345"
@@ -45,7 +45,7 @@ services:
 
     volumes:
       - main-root:/storage
-      - test-assets:/storage/library
+      - test-assets:/library
       - workspace:${PL_WORKSPACE}
       - ${ACTION_PATH}/htpasswd:/etc/htpasswd
 
