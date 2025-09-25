@@ -35,7 +35,7 @@ export async function expandGlob(pattern: string): Promise<string[]> {
   return files;
 }
 
-export async function expandPaths(...pathList: string[]): Promise<string[]> {
+export async function expandPaths(pathList: string[]): Promise<string[]> {
   core.debug(`Expanding paths: ${pathList.join(", ")}`);
   core.debug(`CWD: ${process.cwd()}`);
   const filesList: string[] = [];
@@ -44,7 +44,8 @@ export async function expandPaths(...pathList: string[]): Promise<string[]> {
     if (!pathItem) continue;
 
     try {
-      const stats = await fs.promises.stat(path.join(process.cwd(), pathItem));
+      core.debug(`Checking path: '${pathItem}'`);
+      const stats = await fs.promises.stat(pathItem);
       if (stats.isFile()) {
         core.debug(`Adding file: ${pathItem}`);
         filesList.push(pathItem);
@@ -55,7 +56,7 @@ export async function expandPaths(...pathList: string[]): Promise<string[]> {
           withFileTypes: true,
         });
         const files = await expandPaths(
-          ...entries.map((entry) => path.join(pathItem, entry.name)),
+          entries.map((entry) => path.join(pathItem, entry.name)),
         );
         filesList.push(...files);
       }
