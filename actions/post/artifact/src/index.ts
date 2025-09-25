@@ -56,6 +56,36 @@ async function expandGlob(pattern: string): Promise<string[]> {
   return files;
 }
 
+async function expandPaths(...pathList: string[]): Promise<string[]> {
+  const filesList: string[] = [];
+
+  for (const pathItem of pathList) {
+    if (!pathItem) continue;
+
+    try {
+      const stats = await fs.promises.stat(pathItem);
+
+      if (stats.isFile()) {
+        // If it's a file, add it directly
+        filesList.push(pathItem);
+      } else if (stats.isDirectory()) {
+        // If it's a directory, recursively process all entries inside
+        const entries = await fs.promises.readdir(pathItem, { withFileTypes: true });
+        const files = await expandPaths(...entries.map(entry => path.join(pathItem, entry.name)));
+        filesList.push(...files);
+      }
+    } catch (error) {
+      core.warning(`Path not found or inaccessible: ${pathItem}`);
+    }
+  }
+
+  if (filesList.length === 0) {
+    core.warning(`No files found in the provided paths`);
+  }
+
+  return filesList;
+}
+
 async function uploadArtifact(
   name: string,
   toUpload: string[],
@@ -118,7 +148,11 @@ async function runPost(): Promise<void> {
 
   let toUpload: string[]
   if (path) {
-    toUpload = path.split('\n');
+    toUpload = await expandPaths(
+      path.split('\n').
+        map((p: string) => p.trim()).
+        filter((p: string) => p !== '')
+    );
   } else {
     toUpload = await expandGlob(glob);
   }
