@@ -14,7 +14,7 @@ services:
       MINIO_ROOT_PASSWORD: testpassword
 
     volumes:
-      - minio:/data
+      - ${PL_MAIN_ROOT}/minio:/data
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
@@ -27,6 +27,9 @@ services:
        --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --main-root="/storage"
+       --db-dir="/storage/rocksdb"
+       --work-dir="/storage/work"
+       --packages-dir="/storage/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
@@ -44,35 +47,37 @@ services:
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
 
     volumes:
-      - main-root:/storage
-      - test-assets:/library
-      - workspace:${PL_WORKSPACE}
+      - ${PL_MAIN_ROOT}/work:/storage/work
+      - ${PL_MAIN_ROOT}/rocksdb:/storage/rocksdb
+      - ${PL_MAIN_ROOT}/log:/storage/log
+      - ${PL_TEST_ASSETS_DIR}:/library
+      - ${PL_WORKSPACE}:${PL_WORKSPACE}
       - ${ACTION_PATH}/htpasswd:/etc/htpasswd
 
     restart: always
 
-volumes:
-  main-root:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_MAIN_ROOT}
-  test-assets:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_TEST_ASSETS_DIR}
-  workspace:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_WORKSPACE}
-  minio:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_MINIO_ROOT}
+# volumes:
+#   main_root:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: ${PL_MAIN_ROOT}
+#   test_assets:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: ${PL_TEST_ASSETS_DIR}
+#   workspace:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: ${PL_WORKSPACE}
+#   minio:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: ${PL_MINIO_ROOT}

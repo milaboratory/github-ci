@@ -114,6 +114,9 @@ runs:
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
 
+        echo "Main root after start:"
+        ls -lA "${PL_MAIN_ROOT}"
+
     #
     # Ordering of post-steps is reversed. We need to declare the last step first.
     #
