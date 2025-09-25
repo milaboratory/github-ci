@@ -76,7 +76,7 @@ runs:
   using: "composite"
   steps:
     - name: Run turbo tests dry-run
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       if: inputs.test-skip-dry-run != 'true'
       env:
         TEST_DRY_RUN: ${{ inputs.test-dry-run-script-name }}
@@ -95,7 +95,7 @@ runs:
             exit 0
           fi
 
-    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
+    - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
       name: Launch Platforma docker container
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       id: pl-compose
@@ -127,7 +127,7 @@ runs:
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PL_ASSETS_DIR: ${{ format('{0}/{1}',  github.workspace, inputs.pl-test-assets-dir) }}
       with:

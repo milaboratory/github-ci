@@ -105,7 +105,7 @@ runs:
 
     - name: Notify on release success
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/slack/release-ready@v4-beta
+      uses: milaboratory/github-ci/actions/notify/slack/release-ready@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -120,7 +120,7 @@ runs:
 
     - name: Notify on release failure
       if: steps.job-status.outputs.status == 'failure'
-      uses: milaboratory/github-ci/actions/notify/slack/release-failed@v4-beta
+      uses: milaboratory/github-ci/actions/notify/slack/release-failed@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
