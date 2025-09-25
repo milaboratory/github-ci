@@ -7,6 +7,10 @@ inputs:
   path:
     description: 'A file, directory or wildcard pattern that describes what to upload'
     required: true
+  retention-days:
+    description: 'The number of days to keep the artifact'
+    required: false
+    default: '5'
 runs:
   using: 'node20'
   main: 'lib/index.js'
