@@ -13,6 +13,7 @@ services:
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
+    user: root
 
     command: |
        --auth-htpasswd="/etc/htpasswd"
@@ -33,7 +34,7 @@ services:
     tmpfs: [ /tmp ]
 
     environment:
-      - "MI_LICENSE=${MI_LICENSE:-}"
+      - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
       - "PL_LICENSE=${PL_LICENSE:-}"
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
 

@@ -9,11 +9,23 @@ const STATE_ARTIFACT_STATE = 'post_artifact_state';
 
 async function runMain(): Promise<void> {
   const name = core.getInput('name', { required: true });
-  const path = core.getInput('path', { required: true });
+  const path = core.getInput('path', { required: false });
+  const glob = core.getInput('glob', { required: false });
+
+  const createArchive = core.getInput('archive', { required: false }) === 'true';
   const retentionDays = Number(core.getInput('retention-days', { required: false })) ?? 5;
 
+  if (!path && !glob) {
+    core.setFailed(`'path' or 'glob' inputs are required`);
+    return;
+  }
+  if (path && glob) {
+    core.setFailed(`'path' and 'glob' inputs cannot be used together`);
+    return;
+  }
+
   core.saveState(STATE_ARTIFACT_STATE, 
-    {name, path, retentionDays}
+    {name, path, glob, createArchive, retentionDays}
   );
 
   core.info('Registered post-step artifact upload to be executed after the job.');
@@ -30,42 +42,58 @@ async function createTarArchive(files: string[], archivePath: string): Promise<v
   });
 }
 
-async function uploadArtifact(name: string, pathPattern: string, retentionDays: number): Promise<void> {
+async function expandGlob(pattern: string): Promise<string[]> {
+  if (!pattern) {
+    return [];
+  }
+  const globber = await glob.create(pattern)
+  const files = await globber.glob()
+  if (files.length === 0) {
+    core.warning(`No files found matching pattern: ${pattern}`);
+    return [];
+  }
+
+  return files;
+}
+
+async function uploadArtifact(
+  name: string,
+  toUpload: string[],
+  createArchive: boolean,
+  retentionDays: number,
+): Promise<void> {
   try {
-    const globber = await glob.create(pathPattern)
-    const files = await globber.glob()
-    if (files.length === 0) {
-      core.warning(`No files found matching pattern: ${pathPattern}`);
-      return;
-    }
+    core.info(`Uploading ${toUpload.length} files:`);
+    toUpload.forEach((file) => core.info(`  ${file}`));
 
-    core.info(`Found ${files.length} files to upload:`);
-    files.forEach((file) => core.info(`  ${file}`));
-
-    // Create tar archive
     const archiveName = `artifact-${name}.tar`;
     const archivePath = path.join(process.cwd(), archiveName);
-    
-    core.info(`Creating tar archive: ${archivePath}`);
-    await createTarArchive(files, archivePath);
+
+    if (createArchive) {
+      core.info(`Creating tar archive: ${archivePath}`);
+      await createTarArchive(toUpload, archivePath);
+      toUpload = [archivePath];
+    }
 
     // Upload artifact
     core.info(`Uploading artifact: ${name}`);
     const artifactClient = new artifact.DefaultArtifactClient()
     const uploadResult = await artifactClient.uploadArtifact(
-      name, [archivePath], process.cwd(), {
+      name, toUpload, process.cwd(), {
         retentionDays: retentionDays,
       }
     );
     
     core.info(`Artifact uploaded successfully. ID: ${uploadResult.id}`);
     
-    // Clean up tar file
-    try {
-      await fs.promises.unlink(archivePath);
-      core.info('Cleaned up temporary tar file');
-    } catch (cleanupError) {
-      core.warning(`Failed to clean up tar file: ${cleanupError}`);
+    if (createArchive) {
+      // Clean up tar file
+      try {
+        await fs.promises.unlink(archivePath);
+        core.info('Cleaned up temporary tar file');
+      } catch (cleanupError) {
+        core.warning(`Failed to clean up tar file: ${cleanupError}`);
+      }
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -78,19 +106,31 @@ async function uploadArtifact(name: string, pathPattern: string, retentionDays: 
 }
 
 async function runPost(): Promise<void> {
-  const {name, path, retentionDays} = JSON.parse(core.getState(STATE_ARTIFACT_STATE));
+  const {name, path, glob, createArchive, retentionDays} = JSON.parse(core.getState(STATE_ARTIFACT_STATE));
   if (!name) {
     core.info('Empty artifact name. Nowhere to upload');
     return;
   }
-  if (!path) {
+  if (!path && !glob) {
     core.info('Empty path. Nothing to upload.');
+    return;
+  }
+
+  let toUpload: string[]
+  if (path) {
+    toUpload = path.split('\n');
+  } else {
+    toUpload = await expandGlob(glob);
+  }
+
+  if (toUpload.length === 0) {
+    core.info('No files to upload. Nothing to do.');
     return;
   }
 
   core.startGroup(`Running post-step artifact upload: name=${name}`);
   try {
-    await uploadArtifact(name, path, retentionDays);
+    await uploadArtifact(name, toUpload, createArchive, retentionDays);
   } finally {
     core.endGroup();
   }
