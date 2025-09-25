@@ -2,7 +2,8 @@ packages:
   - lib/build-configs
   - lib/milib
 
-  - actions/post-step
+  - actions/post/shell
+  - actions/post/artifact
 
 catalog:
   # Build
@@ -37,6 +38,8 @@ catalog:
   "@actions/exec": "^1.1.1"
   "@actions/core": "^1.10.0"
   "@actions/github": "^6.0.1"
+  "@actions/artifact": "^2.3.2"
+  "@actions/glob": "^0.5.0"
   "semver": "^7.6.3"
 
   # # Test

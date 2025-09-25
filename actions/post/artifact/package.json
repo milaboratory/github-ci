@@ -1,5 +1,5 @@
 {
-  "name": "@milaboratories/github-ci-actions-review",
+  "name": "@milaboratories/actions.post.artifact",
   "version": "1.0.0",
   "private": true,
   "description": "GitHub Action for running post-steps in composite actions",
@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@actions/core": "catalog:",
+    "@actions/artifact": "catalog:",
+    "@actions/glob": "catalog:",
     "@actions/github": "catalog:",
     "@milaboratories/github-ci-actions-milib": "workspace:*"
   },

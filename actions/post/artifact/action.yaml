@@ -1,0 +1,13 @@
+name: 'Post-step artifact upload'
+description: 'Uploads artifacts as a post-step of composite action'
+inputs:
+  name:
+    description: 'Name of the artifact to upload'
+    required: true
+  path:
+    description: 'A file, directory or wildcard pattern that describes what to upload'
+    required: true
+runs:
+  using: 'node20'
+  main: 'lib/index.js'
+  post: 'lib/index.js'
