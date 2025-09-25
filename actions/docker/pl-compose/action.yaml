@@ -100,7 +100,8 @@ runs:
         export PL_MAIN_ROOT="$(TMPDIR=${HOME} mktemp --directory)"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
-        docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --detach --force-recreate
+        docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
+        docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
 
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
@@ -139,7 +140,6 @@ runs:
       with:
         run: |
           # Collect logs
-          docker compose --file "${ACTION_PATH}/docker-compose.yaml" config > "${PL_MAIN_ROOT}/compose.yaml"
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" logs > "${PL_MAIN_ROOT}/compose-logs.txt"
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" images > "${PL_MAIN_ROOT}/compose-images.txt"
 
