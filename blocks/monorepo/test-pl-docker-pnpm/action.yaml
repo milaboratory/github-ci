@@ -137,38 +137,6 @@ runs:
           USER_NAME="$(whoami)"
           sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl-compose.outputs.main-root }}"
 
-    - name: Check if we should upload logs
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        PL_MAIN_ROOT: ${{ steps.pl-compose.outputs.main-root }}
-      with:
-        dump-stdout: false
-        run: |
-          if [ -z "$(ls -A ${PL_MAIN_ROOT})" ]; then
-            ghwa_error "Tests report '${PL_MAIN_ROOT}' is empty, nothing to upload. It seems something broke platforma process."
-            exit 0
-          fi
-
-          ghwa_set_env "UPLOAD_LOGS" "true"
-
-    - name: Upload Platforma state dump
-      uses: actions/upload-artifact@v4-beta
-      if: always() && env.UPLOAD_LOGS == 'true'
-      with:
-        name: pl-docker-dump
-        path: ${{ steps.pl-compose.outputs.main-root }}
-
-    - name: Clean Platforma state files
-      if: always() && env.UPLOAD_LOGS == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      env:
-        PL_MAIN_ROOT: ${{ steps.pl-compose.outputs.main-root }}
-      with:
-        dump-stdout: false
-        run: |
-          sudo rm -rfv "${PL_MAIN_ROOT}"
-
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta

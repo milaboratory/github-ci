@@ -85,15 +85,12 @@ runs:
         PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
         PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
         PL_SLEEP_TIME: ${{ inputs.pl-sleep-time }}
-        PL_WORKSPACE: ${{ github.workspace }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
-        export TMPDIR="${PL_WORKSPACE}/tmp"
-        mkdir -pv "${TMPDIR}"
 
-        export PL_MAIN_ROOT="$(mktemp -d)"
+        export PL_MAIN_ROOT="$(TMPDIR=${HOME} mktemp --directory)"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --detach --force-recreate
@@ -101,8 +98,24 @@ runs:
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
 
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
+      env:
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+      with:
+        run: |
+          # Change ownership of platforma state to the current user before uploading
+          sudo chown -R "$(id -u):$(id -g)" "${PL_MAIN_ROOT}"
+
     - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       with:
         name: platforma-dump
         path: |
           ${{ steps.launch-pl.outputs.main-root }}
+
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
+      env:
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+      with:
+        run: |
+          # Remove platforma state in the end
+          rm -rfv "${PL_MAIN_ROOT}"

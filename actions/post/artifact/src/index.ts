@@ -88,7 +88,7 @@ async function runPost(): Promise<void> {
     return;
   }
 
-  core.startGroup('Running post-step script');
+  core.startGroup(`Running post-step artifact upload: name=${name}`);
   try {
     await uploadArtifact(name, path, retentionDays);
   } finally {
