@@ -371,7 +371,7 @@ jobs:
 
       - id: test
         uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4
-        env:
+        # env:
           # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
 
         with:
