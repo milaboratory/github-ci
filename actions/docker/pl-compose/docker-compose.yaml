@@ -3,7 +3,7 @@ name: "platform"
 services:
   minio:
     image: quay.io/minio/minio
-    command: server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+    command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
 
     ports:
       - "9001:9001"
@@ -14,7 +14,7 @@ services:
       MINIO_ROOT_PASSWORD: testpassword
 
     volumes:
-      - minio:/data
+      - main-root:/data
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
@@ -49,7 +49,7 @@ services:
       - main-root:/storage
       - ${PL_TEST_ASSETS_DIR}:/library
       - ${PL_WORKSPACE}:${PL_WORKSPACE}
-      - ${ACTION_PATH}/htpasswd:/etc/htpasswd
+      - ${HTPASSWD_PATH}:/etc/htpasswd
 
     restart: always
 
@@ -64,9 +64,3 @@ volumes:
       type: none
       o: bind
       device: ${PL_MAIN_ROOT}
-  minio:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_MINIO_ROOT}
