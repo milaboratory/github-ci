@@ -138,6 +138,9 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       with:
         run: |
+          # Collect logs
+          docker compose --file "${ACTION_PATH}/docker-compose.yaml" logs > "${PL_MAIN_ROOT}/compose-logs.txt"
+
           # Stop the Platforma
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" down
 
