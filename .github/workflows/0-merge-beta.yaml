@@ -85,6 +85,7 @@ jobs:
 
           git add .
           git commit -m "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git remote -v
           git push origin "${MERGE_BRANCH}"
 
