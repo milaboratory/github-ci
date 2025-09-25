@@ -28,6 +28,8 @@ jobs:
           echo "Test 1 file content" > test-dir/test1.txt
           echo "Test 2 file content" > test-dir/test2.txt
 
+          find $(pwd)
+
       - uses: ./actions/post/artifact
         with:
           name: test
