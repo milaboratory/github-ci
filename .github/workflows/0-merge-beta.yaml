@@ -53,10 +53,11 @@ jobs:
           MERGE_BRANCH="merge-${DATE}"
 
           git fetch origin
-          if ! git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
-            git checkout "origin/${MERGE_BRANCH}"
-          else
+          git branch --remotes
+          if git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
             git checkout "${TARGET_BRANCH}"
+          else
+            git checkout "origin/${MERGE_BRANCH}"
           fi
 
           git checkout -b "${MERGE_BRANCH}"
