@@ -45,6 +45,7 @@ jobs:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
+          set -x
           git config --global user.name "${APP_SLUG}[bot]"
           git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>"
 
@@ -53,11 +54,12 @@ jobs:
 
           git fetch origin
           if ! git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
-            git checkout "${TARGET_BRANCH}"
-            git checkout -b "${MERGE_BRANCH}"
+            git checkout "origin/${MERGE_BRANCH}"
           else
-            git checkout "${MERGE_BRANCH}"
+            git checkout "${TARGET_BRANCH}"
           fi
+
+          git checkout -b "${MERGE_BRANCH}"
           
           git merge \
             --message "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
