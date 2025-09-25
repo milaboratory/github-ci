@@ -21,7 +21,8 @@ jobs:
           branch: ${{ github.event.inputs.target_branch }}
           fetch-depth: 1000
 
-      - shell: bash
+      - name: Merge ${{ github.event.inputs.target_branch }}-beta
+        shell: bash
         env:
           TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
         run: |
@@ -36,7 +37,10 @@ jobs:
             git checkout "${MERGE_BRANCH}"
           fi
           
-          git merge --no-edit "${TARGET_BRANCH}-beta" --strategy-option theirs
+          git merge \
+            --message "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
+            "origin/${TARGET_BRANCH}-beta" \
+            --strategy-option theirs
 
           # Replace all @v4-beta with @v4 in all action.yaml and all workflows
           {
