@@ -75,4 +75,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${PL_MAIN_ROOT}/minio
+      device: ${PL_MINIO_ROOT}

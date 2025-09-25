@@ -100,6 +100,14 @@ runs:
         export PL_MAIN_ROOT="$(TMPDIR=${HOME} mktemp --directory)"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
+        export PL_MINIO_ROOT="${PL_MAIN_ROOT}/minio"
+        mkdir -pv "${PL_MINIO_ROOT}"
+
+        echo "Main root contents:"
+        ls -lA "${PL_MAIN_ROOT}"
+        echo "Home contents:"
+        ls -lA "${HOME}"
+
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
 
@@ -126,11 +134,11 @@ runs:
 
     - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
-        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
-
         #
         # docker-compose.yaml parameters.
         #
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+        PL_MINIO_ROOT: ${{ steps.launch-pl.outputs.minio-root }}/minio
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_WORKSPACE: ${{ github.workspace }}
