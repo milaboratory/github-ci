@@ -75,7 +75,7 @@ jobs:
             "origin/${TARGET_BRANCH}-beta" \
             --strategy-option theirs
 
-          # Replace all @v4-beta with @v4 in all action.yaml and all workflows
+          # Replace all v4-beta with v4 in all action.yaml and all workflows
           {
             find . -type f -name "action.yaml"
             find .github/workflows -type f -name "*.yaml"
