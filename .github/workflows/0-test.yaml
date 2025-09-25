@@ -9,7 +9,7 @@ on:
     paths:
       - '.github/workflows/0-test.yaml'
       - 'actions/post/artifact/**'
-    branches: [ 'v4', 'v4-beta' ]
+    branches: [ 'v4', 'v4' ]
 
 jobs:
   run-test:

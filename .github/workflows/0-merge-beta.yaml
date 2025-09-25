@@ -1,11 +1,11 @@
-name: "Create PR for beta branch (v4-beta -> v4)"
+name: "Create PR for beta branch (v4 -> v4)"
 
 on:
   push:
     paths:
       - '.github/workflows/0-merge-beta.yaml'
     branches:
-      - 'v4-beta'
+      - 'v4'
       - 'v4'
 
   workflow_dispatch:
@@ -69,13 +69,13 @@ jobs:
           fi
 
           git checkout -b "${MERGE_BRANCH}"
-          
+
           git merge \
             --message "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
             "origin/${TARGET_BRANCH}-beta" \
             --strategy-option theirs
 
-          # Replace all v4-beta with v4 in all action.yaml and all workflows
+          # Replace all v4 with v4 in all action.yaml and all workflows
           {
             find . -type f -name "action.yaml"
             find .github/workflows -type f -name "*.yaml"
