@@ -29,7 +29,7 @@ services:
        --main-root="/storage"
        --db-dir="/storage/rocksdb"
        --work-dir="/storage/work"
-       --packages-dir="/storage/packages"
+       --packages-dir="/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"

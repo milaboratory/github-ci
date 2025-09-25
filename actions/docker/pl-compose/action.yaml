@@ -112,7 +112,7 @@ runs:
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
 
         echo "Wait for the Platforma to start"
-        sleep "${PL_SLEEP_TIME}"
+        sleep "${PL_SLEEP_TIME}0"
 
         echo "Main root after start:"
         ls -lA "${PL_MAIN_ROOT}"
