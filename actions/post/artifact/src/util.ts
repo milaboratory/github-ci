@@ -44,7 +44,7 @@ export async function expandPaths(...pathList: string[]): Promise<string[]> {
     if (!pathItem) continue;
 
     try {
-      const stats = await fs.promises.stat(pathItem);
+      const stats = await fs.promises.stat(path.join(process.cwd(), pathItem));
       if (stats.isFile()) {
         core.debug(`Adding file: ${pathItem}`);
         filesList.push(pathItem);
@@ -61,6 +61,7 @@ export async function expandPaths(...pathList: string[]): Promise<string[]> {
       }
     } catch (error) {
       core.warning(`Path not found or inaccessible: ${pathItem}`);
+      core.debug('error: '+error);
     }
   }
 
