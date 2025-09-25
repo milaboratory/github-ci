@@ -57,8 +57,8 @@ async function expandGlob(pattern: string): Promise<string[]> {
 }
 
 async function expandPaths(...pathList: string[]): Promise<string[]> {
-  core.info(`Expanding paths: ${pathList.join(', ')}`);
-  core.info(`CWD: ${process.cwd()}`);
+  core.debug(`Expanding paths: ${pathList.join(', ')}`);
+  core.debug(`CWD: ${process.cwd()}`);
   const filesList: string[] = [];
 
   for (const pathItem of pathList) {
@@ -66,12 +66,13 @@ async function expandPaths(...pathList: string[]): Promise<string[]> {
 
     try {
       const stats = await fs.promises.stat(pathItem);
-
       if (stats.isFile()) {
-        // If it's a file, add it directly
+        core.debug(`Adding file: ${pathItem}`);
         filesList.push(pathItem);
+
       } else if (stats.isDirectory()) {
-        // If it's a directory, recursively process all entries inside
+        core.debug(`Traversing directory: ${pathItem}`);
+
         const entries = await fs.promises.readdir(pathItem, { withFileTypes: true });
         const files = await expandPaths(...entries.map(entry => path.join(pathItem, entry.name)));
         filesList.push(...files);
