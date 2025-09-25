@@ -69,7 +69,7 @@ jobs:
           fi
 
           git checkout -b "${MERGE_BRANCH}"
-          
+
           git merge \
             --message "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
             "origin/${TARGET_BRANCH}-beta" \

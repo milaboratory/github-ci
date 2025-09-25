@@ -139,7 +139,9 @@ runs:
       with:
         run: |
           # Collect logs
+          docker compose --file "${ACTION_PATH}/docker-compose.yaml" config > "${PL_MAIN_ROOT}/compose.yaml"
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" logs > "${PL_MAIN_ROOT}/compose-logs.txt"
+          docker compose --file "${ACTION_PATH}/docker-compose.yaml" images > "${PL_MAIN_ROOT}/compose-images.txt"
 
           # Stop the Platforma
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" down
