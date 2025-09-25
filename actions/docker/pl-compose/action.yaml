@@ -97,7 +97,7 @@ runs:
         # Just in case if there are no test assets in the repository
         mkdir -pv "${PL_TEST_ASSETS_DIR}"
 
-        export PL_MAIN_ROOT="$(TMPDIR=${HOME} mktemp --directory)"
+        export PL_MAIN_ROOT="${HOME}/platforma-backend-main-root"
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         export PL_MINIO_ROOT="${PL_MAIN_ROOT}/minio"
