@@ -39,9 +39,29 @@ services:
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
 
     volumes:
-      - ${PL_MAIN_ROOT}:/storage
-      - ${PL_TEST_ASSETS_DIR}:/storage/library
-      - ${PL_WORKSPACE}:${PL_WORKSPACE}
+      - main-root:/storage
+      - test-assets:/storage/library
+      - workspace:${PL_WORKSPACE}
       - ${ACTION_PATH}/htpasswd:/etc/htpasswd
 
     restart: always
+
+volumes:
+  main-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_MAIN_ROOT}
+  test-assets:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_TEST_ASSETS_DIR}
+  workspace:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_WORKSPACE}
