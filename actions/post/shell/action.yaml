@@ -1,0 +1,10 @@
+name: 'Custom post-steps for composite actions'
+description: 'Allows to run bash script as a post-step of composite action'
+inputs:
+  run:
+    description: 'Bash script to run as a post-step'
+    required: true
+runs:
+  using: 'node20'
+  main: 'lib/index.js'
+  post: 'lib/index.js'

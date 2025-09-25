@@ -1,0 +1,26 @@
+name: 'Post-step artifact upload'
+description: 'Uploads artifacts as a post-step of composite action'
+inputs:
+  name:
+    description: 'Name of the artifact to upload'
+    required: true
+  glob:
+    description: 'A glob pattern that describes what to upload'
+    required: false
+  path:
+    description: 'A file or directory to upload'
+    required: false
+
+  archive:
+    description: 'Create a tar archive with uploaded files to preserve permissions'
+    required: false
+    default: 'false'
+
+  retention-days:
+    description: 'The number of days to keep the artifact'
+    required: false
+    default: '5'
+runs:
+  using: 'node20'
+  main: 'lib/index.js'
+  post: 'lib/index.js'

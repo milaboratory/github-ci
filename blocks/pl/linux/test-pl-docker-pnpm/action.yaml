@@ -158,16 +158,14 @@ runs:
           fi
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4
+      name: Launch Platforma docker container
+      id: pl-compose
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       with:
-        pl-auth-enabled: ${{ inputs.pl-auth-enabled }}
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
         pl-docker-tag: ${{ inputs.pl-docker-tag }}
         pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
-        pl-log-dir: ${{ inputs.pl-log-dir }}
         pl-log-level: ${{ inputs.pl-log-level }}
-        pl-log-commit-summary: ${{ inputs.pl-log-commit-summary }}
-        pl-log-resource-data: ${{ inputs.pl-log-resource-data }}
 
     - name: Run test - ${{ inputs.test-script-name}}
       if: env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true'
@@ -189,50 +187,6 @@ runs:
 
            pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
           fi
-
-    - name: Stop all running containers
-      uses: milaboratory/github-ci/actions/shell@v4
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      with:
-        dump-stdout: false
-        run: |
-          docker stop $(docker ps -a -q)
-          sleep 10
-
-    - name: Check if we should upload logs
-      if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
-      with:
-        dump-stdout: false
-        run: |
-          if [ -z "$(ls -A ${PL_LOG_DIR})" ]; then
-            ghwa_error "Tests report '${PL_LOG_DIR}' is empty, nothing to upload. It seems something broke platforma process."
-            exit 0
-          fi
-
-          ghwa_set_env "UPLOAD_LOGS" "true"
-
-    - name: Upload Platforma logs
-      uses: actions/upload-artifact@v4
-      if: always() && env.UPLOAD_LOGS == 'true'
-      env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
-      with:
-        name: pl-docker-logs
-        path: |
-          ${{ env.PL_LOG_DIR }}
-
-    - name: Clean Platforma logs
-      if: always() && env.UPLOAD_LOGS == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
-      env:
-        PL_LOG_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-log-dir) }}
-      with:
-        dump-stdout: false
-        run: |
-          sudo rm -rfv "${PL_LOG_DIR}"
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')

@@ -31,12 +31,13 @@ export function PlViteStdLib(overrideConfig?: UserConfig) {
   return defineConfig({
     build: {
       outDir: 'lib',
+      minify: false,
       lib: {
         entry: resolve('src', 'index.ts'),
         fileName: 'index',
         formats: ['es', 'cjs']
       },
-      sourcemap: false,
+      sourcemap: true,
       rollupOptions: {}
     },
     plugins: [
