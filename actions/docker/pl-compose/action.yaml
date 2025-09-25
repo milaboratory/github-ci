@@ -106,10 +106,19 @@ runs:
         echo "Wait for the Platforma to start"
         sleep "${PL_SLEEP_TIME}"
 
-    - uses: milaboratory/github-ci/actions/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
-        ACTION_PATH: ${{ github.action_path }}
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+
+        #
+        # docker-compose.yaml parameters.
+        #
+        PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
+        PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
+        PL_WORKSPACE: ${{ github.workspace }}
+        PL_TEST_ASSETS_DIR: ${{ format('{0}/{1}', github.workspace, inputs.pl-test-assets-dir) }}
+        PL_LOG_LEVEL: ${{ inputs.pl-log-level }}
+        ACTION_PATH: ${{ github.action_path }}
       with:
         run: |
           # Stop the Platforma
