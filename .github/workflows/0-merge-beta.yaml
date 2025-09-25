@@ -26,6 +26,9 @@ jobs:
         env:
           TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
         run: |
+          git config user.email "ci@milaboratory.com"
+          git config user.name "Mi CI/CD Robot"
+
           DATE=$(date +%Y-%m-%d)
           MERGE_BRANCH="merge-${DATE}"
 
