@@ -1,0 +1,56 @@
+name: "Create PR for beta branch (v4-beta -> v4)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Target branch to merge into"
+        required: true
+        type: choice
+        options:
+          - v4
+        default: "v4"
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          branch: ${{ github.event.inputs.target_branch }}
+          fetch-depth: 1000
+
+      - shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          MERGE_BRANCH="merge-${DATE}"
+
+          git fetch origin
+          if ! git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
+            git checkout "${TARGET_BRANCH}"
+            git checkout -b "${MERGE_BRANCH}"
+          else
+            git checkout "${MERGE_BRANCH}"
+          fi
+          
+          git merge --no-edit "${TARGET_BRANCH}-beta" --strategy-option theirs
+
+          # Replace all @v4-beta with @v4 in all action.yaml and all workflows
+          {
+            find . -type f -name "action.yaml"
+            find .github/workflows -type f -name "*.yaml"
+          } |
+            xargs -L 1 \
+              sed -i "s/${TARGET_BRANCH}-beta/${TARGET_BRANCH}/g"
+
+          git add .
+          git commit -m "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}"
+          git push origin "${MERGE_BRANCH}"
+
+          gh pr create \
+            --title "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
+            --base "${TARGET_BRANCH}" \
+            --head "${MERGE_BRANCH}"
