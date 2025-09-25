@@ -86,4 +86,5 @@ git push origin "${MERGE_BRANCH}"
 gh pr create \
     --title "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
     --base "${TARGET_BRANCH}" \
-    --head "${MERGE_BRANCH}"
+    --head "${MERGE_BRANCH}" \
+    --body ""
