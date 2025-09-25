@@ -6,7 +6,9 @@ name: "Test"
 on:
   workflow_call:
   push:
-    paths: [ '.github/workflows/0-test.yaml' ]
+    paths:
+      - '.github/workflows/0-test.yaml'
+      - 'actions/post/artifact/'
     branches: [ 'v4', 'v4-beta' ]
 
 jobs:
