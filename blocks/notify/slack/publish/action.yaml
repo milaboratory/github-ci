@@ -75,7 +75,7 @@ runs:
       with:
         statuses: ${{ inputs.job-status }}
 
-    - uses: milaboratory/github-ci/actions/notify/slack/publish@v4
+    - uses: milaboratory/github-ci/actions/notify/slack/publish@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

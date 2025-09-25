@@ -1,0 +1,28 @@
+# This workflow is never used by any external repository.
+# It is created solely for testing purposes when developing new actions.
+# Feel free to change it however you want.
+name: "Test"
+
+on:
+  workflow_call:
+#   push:
+#     branches: [ 'v4-beta' ]
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - shell: bash
+        run: |
+          echo "Hello, world!" > test.txt
+
+      - uses: ./actions/post/artifact
+        with:
+          name: test
+          path: |
+            test.txt

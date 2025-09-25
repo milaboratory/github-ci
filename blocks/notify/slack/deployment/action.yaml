@@ -55,7 +55,7 @@ runs:
 
     - name: Notify on deployment success
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-success@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-success@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -68,7 +68,7 @@ runs:
 
     - name: Notify on deployment failure
       if: steps.job-status.outputs.status == 'failure'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-failed@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-failed@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -81,7 +81,7 @@ runs:
 
     - name: Notify on deployment cancellation
       if: steps.job-status.outputs.status == 'cancelled'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-cancelled@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-cancelled@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

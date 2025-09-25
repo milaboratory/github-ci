@@ -65,7 +65,7 @@ runs:
         run: |
           ghwa_set_output "search-tags" "${SEARCH_TAGS:-[]}"
 
-    - uses: milaboratory/github-ci/actions/notify/slack/test-regression@v4
+    - uses: milaboratory/github-ci/actions/notify/slack/test-regression@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

@@ -2,17 +2,18 @@ packages:
   - lib/build-configs
   - lib/milib
 
-  - actions/review
+  - actions/post/shell
+  - actions/post/artifact
 
 catalog:
   # Build
   'typescript': ~5.8.3
-  'vite': ^6.3.5
+  'vite': ^7.1.7
 
   # 'tsconfig-paths': ^4.2.0
   'tsup': ~8.3.5
   'rollup-plugin-node-externals': ^8.0.0
-  '@rollup/plugin-node-resolve': ^15.2.3
+  '@rollup/plugin-node-resolve': ^16.0.1
   # 'rollup-plugin-sourcemaps2': ^0.5.0
   'vite-plugin-dts': ^4.5.3
   # 'tsc-alias': ^1.8.11
@@ -21,12 +22,14 @@ catalog:
 
   # # Build util / linters
 
+  '@vercel/ncc': ^0.38.4
   '@changesets/cli': ^2.29.2
 
   '@typescript-eslint/eslint-plugin': ^8.33.1
   '@typescript-eslint/parser': ^8.33.1
   'eslint': ^9.28.0
   'eslint-plugin-github': ^6.0.0
+  'prettier': ^3.6.2
 
   'turbo': ^2.5.2
 
@@ -35,6 +38,8 @@ catalog:
   "@actions/exec": "^1.1.1"
   "@actions/core": "^1.10.0"
   "@actions/github": "^6.0.1"
+  "@actions/artifact": "^2.3.2"
+  "@actions/glob": "^0.5.0"
   "semver": "^7.6.3"
 
   # # Test
@@ -44,5 +49,5 @@ catalog:
 
   # # Types
 
-  '@types/node': ~20.16.15
+  '@types/node': ^24.5.2
   '@types/semver': ^7.7.0

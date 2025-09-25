@@ -35,13 +35,13 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: artifacts-list
       with:
         patterns: ${{ inputs.paths }}
         relative: true
 
-    - uses: milaboratory/github-ci/actions/shell@v4
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         ARTIFACTS: ${{ steps.artifacts-list.outputs.paths }}
         API_KEY_BASE64: ${{ inputs.mac-api-key-base64 }}

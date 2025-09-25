@@ -461,7 +461,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
@@ -477,7 +477,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -499,9 +499,9 @@ jobs:
     if: github.ref_name == 'main' || github.event_name == 'merge_group'
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -512,7 +512,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -523,13 +523,13 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check for Changesets
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
@@ -556,7 +556,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -575,7 +575,7 @@ jobs:
 
       - name: Install system build tools on Linux
         if: runner.os == 'Linux'
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           dump-stdout: false
           run: |
@@ -597,14 +597,14 @@ jobs:
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
 
       - name: Install pipx on Linux
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: runner.os == 'Linux'
         with:
           dump-stdout: false
@@ -614,7 +614,7 @@ jobs:
             echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install pipx on macOS
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: runner.os == 'macOS'
         with:
           dump-stdout: false
@@ -625,7 +625,7 @@ jobs:
 
       - name: Configure ccache
         if: inputs.enable-ccache
-        uses: milaboratory/github-ci/actions/ccache@v4
+        uses: milaboratory/github-ci/actions/ccache@v4-beta
         with:
           options: ${{ inputs.ccache-options }}
 
@@ -637,7 +637,7 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-cache-additional-${{ inputs.cache-version }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -648,7 +648,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -658,7 +658,7 @@ jobs:
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run build for - ${{ matrix.python_version }}
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
@@ -667,7 +667,7 @@ jobs:
             pnpm run build --filter="${PRE_CALCULATED_STEP}"
 
       - name: CodeSign binary on macOS
-        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
         with:
@@ -678,7 +678,7 @@ jobs:
           mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
 
       - name: Notarize binary on macOS
-        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4
+        uses: milaboratory/github-ci/blocks/signing-tools/macos-notarize@v4-beta
         if: runner.os == 'macOS'
           && inputs.sign-binaries != ''
         with:
@@ -707,7 +707,7 @@ jobs:
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
-        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4
+        uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
           binaries: ${{ inputs.sign-binaries }}
           code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
@@ -716,7 +716,7 @@ jobs:
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
       - name: Run publish-archive for - ${{ matrix.python_version }}
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
         with:
@@ -725,7 +725,7 @@ jobs:
             pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
 
       - name: Save prebuild results for transfer to final build
-        uses: milaboratory/github-ci/actions/artifact/save@v4
+        uses: milaboratory/github-ci/actions/artifact/save@v4-beta
         with:
           name: prebuild-results-${{ matrix.python_version }}-${{ matrix.os }}-${{ matrix.arch }}
           path: '*/dist/'
@@ -745,9 +745,9 @@ jobs:
       issues: read
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -767,7 +767,7 @@ jobs:
 
       - name: Install system build tools on Linux
         if: runner.os == 'Linux'
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           dump-stdout: false
           run: |
@@ -790,7 +790,7 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -800,14 +800,14 @@ jobs:
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -818,7 +818,7 @@ jobs:
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
             pnpm run version-packages
@@ -852,12 +852,12 @@ jobs:
 
 
       - name: Restore prebuild results
-        uses: milaboratory/github-ci/actions/artifact/restore@v4
+        uses: milaboratory/github-ci/actions/artifact/restore@v4-beta
         with:
           pattern: prebuild-results-*
 
       - name:  Run build - main metapackage
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -876,7 +876,7 @@ jobs:
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
       - name: Commit changed files to main
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         if: steps.check-changes.outputs.has-changes == '1'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
@@ -920,7 +920,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.create-tag == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -950,12 +950,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
