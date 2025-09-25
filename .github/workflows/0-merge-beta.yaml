@@ -53,43 +53,8 @@ jobs:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           TARGET_BRANCH: ${{ github.event.inputs.target_branch || 'v4' }}
         run: |
-          set -x
           git config --global user.name "${APP_SLUG}[bot]"
           git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>"
+          #git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
-          DATE=$(date +%Y-%m-%d)
-          MERGE_BRANCH="merge-${DATE}"
-
-          git fetch origin
-          git branch --remotes
-          if git branch --remotes | grep -q "origin/${MERGE_BRANCH}"; then
-            git checkout "origin/${MERGE_BRANCH}"
-          else
-            git checkout "${TARGET_BRANCH}"
-          fi
-
-          git checkout -b "${MERGE_BRANCH}"
-
-          git merge \
-            --message "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
-            "origin/${TARGET_BRANCH}-beta" \
-            --strategy-option theirs
-
-          # Replace all v4-beta with v4 in all action.yaml and all workflows
-          {
-            find . -type f -name "action.yaml"
-            find .github/workflows -type f -name "*.yaml"
-          } |
-            xargs -L 1 \
-              sed -i "s/${TARGET_BRANCH}-beta/${TARGET_BRANCH}/g"
-
-          git add .
-          git commit -m "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git remote -v
-          git push origin "${MERGE_BRANCH}"
-
-          gh pr create \
-            --title "Merge ${TARGET_BRANCH}-beta into ${TARGET_BRANCH}" \
-            --base "${TARGET_BRANCH}" \
-            --head "${MERGE_BRANCH}"
+          ./merge-beta.sh # script in repository root

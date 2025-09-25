@@ -3,18 +3,24 @@ name: "platform"
 services:
   minio:
     image: quay.io/minio/minio
-    command: server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+    command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+
     ports:
       - "9001:9001"
       - "9000:9000"
+
     environment:
       MINIO_ROOT_USER: testuser
       MINIO_ROOT_PASSWORD: testpassword
+
+    volumes:
+      - main-root:/data
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
     user: root
 
+    # Packages can be large. We don't want to save them after execution.
     command: |
        --auth-htpasswd="/etc/htpasswd"
        --listen-address="0.0.0.0"
@@ -22,11 +28,12 @@ services:
        --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --main-root="/storage"
+       --packages-dir="/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
        --primary-storage-s3-external-endpoint="http://localhost:9000/"
-       --data-library-fs="library=/storage/library"
+       --data-library-fs="library=/library"
 
     ports:
       - "6345:6345"
@@ -39,9 +46,21 @@ services:
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
 
     volumes:
-      - ${PL_MAIN_ROOT}:/storage
-      - ${PL_TEST_ASSETS_DIR}:/storage/library
+      - main-root:/storage
+      - ${PL_TEST_ASSETS_DIR}:/library
       - ${PL_WORKSPACE}:${PL_WORKSPACE}
-      - ${ACTION_PATH}/htpasswd:/etc/htpasswd
+      - ${HTPASSWD_PATH}:/etc/htpasswd
 
     restart: always
+
+# Never! NEVER! put volumes mounted into docker container outside runner workspace.
+# Runner workspace is the only directory that is guaranteed to be shared between runner FS and
+# docker host, wherever it is. Attempt to bind-mount directories outside WORKSPACE will randomly fail
+# depending on moon phases and mood of the scheduler god. :(
+volumes:
+  main-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_MAIN_ROOT}
