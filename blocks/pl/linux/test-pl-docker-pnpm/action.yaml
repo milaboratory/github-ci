@@ -211,7 +211,7 @@ runs:
 
           ghwa_set_env "UPLOAD_LOGS" "true"
 
-    - name: Upload Platforma logs
+    - name: Upload Platforma state dump
       uses: actions/upload-artifact@v4
       if: always() && env.UPLOAD_LOGS == 'true'
       with:
@@ -219,7 +219,7 @@ runs:
         path: |
           ${{ steps.pl-compose.outputs.main-root }}
 
-    - name: Clean Platforma logs
+    - name: Clean Platforma state files
       if: always() && env.UPLOAD_LOGS == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:

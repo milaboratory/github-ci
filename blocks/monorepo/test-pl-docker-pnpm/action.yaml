@@ -97,7 +97,7 @@ runs:
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      id: pl_compose
+      id: pl-compose
       with:
         pl-docker-registry: ${{ inputs.pl-docker-registry }}
         pl-docker-tag: ${{ inputs.pl-docker-tag }}
@@ -135,55 +135,39 @@ runs:
 
           # Change ownership of the Platforma logs, db and work dir to the current user
           USER_NAME="$(whoami)"
-          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-log-dir }}"
-          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-db-dir }}"
-          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl_compose.outputs.pl-work-dir }}"
+          sudo chown -R "${USER_NAME}:${USER_NAME}" "${{ steps.pl-compose.outputs.main-root }}"
 
     - name: Check if we should upload logs
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
+        PL_MAIN_ROOT: ${{ steps.pl-compose.outputs.main-root }}
       with:
         dump-stdout: false
         run: |
-          if [ -z "$(ls -A ${PL_LOG_DIR})" ]; then
-            ghwa_error "Tests report '${PL_LOG_DIR}' is empty, nothing to upload. It seems something broke platforma process."
+          if [ -z "$(ls -A ${PL_MAIN_ROOT})" ]; then
+            ghwa_error "Tests report '${PL_MAIN_ROOT}' is empty, nothing to upload. It seems something broke platforma process."
             exit 0
           fi
 
           ghwa_set_env "UPLOAD_LOGS" "true"
 
-    - name: Upload Platforma logs
+    - name: Upload Platforma state dump
       uses: actions/upload-artifact@v4-beta
       if: always() && env.UPLOAD_LOGS == 'true'
       with:
-        name: pl-docker-logs
-        path: ${{ steps.pl_compose.outputs.pl-log-dir }}
+        name: pl-docker-dump
+        path: ${{ steps.pl-compose.outputs.main-root }}
 
-    - name: Upload Platforma DB
-      uses: actions/upload-artifact@v4-beta
-      if: failure() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      with:
-        name: pl-docker-db
-        path: ${{ steps.pl_compose.outputs.pl-db-dir }}
-
-    - name: Upload Platforma Work Dir
-      uses: actions/upload-artifact@v4-beta
-      if: failure() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
-      with:
-        name: pl-docker-work-dir
-        path: ${{ steps.pl_compose.outputs.pl-work-dir }}
-
-    - name: Clean Platforma logs
+    - name: Clean Platforma state files
       if: always() && env.UPLOAD_LOGS == 'true'
       uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
-        PL_LOG_DIR: ${{ steps.pl_compose.outputs.pl-log-dir }}
+        PL_MAIN_ROOT: ${{ steps.pl-compose.outputs.main-root }}
       with:
         dump-stdout: false
         run: |
-          sudo rm -rfv "${PL_LOG_DIR}"
+          sudo rm -rfv "${PL_MAIN_ROOT}"
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
