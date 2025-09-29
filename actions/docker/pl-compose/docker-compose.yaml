@@ -3,89 +3,64 @@ name: "platform"
 services:
   minio:
     image: quay.io/minio/minio
-    command: server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+    command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+
     ports:
       - "9001:9001"
       - "9000:9000"
+
     environment:
       MINIO_ROOT_USER: testuser
       MINIO_ROOT_PASSWORD: testpassword
+
+    volumes:
+      - main-root:/data
+
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
+    user: root
+
+    # Packages can be large. We don't want to save them after execution.
     command: |
        --auth-htpasswd="/etc/htpasswd"
        --listen-address="0.0.0.0"
        --listen-port="6345"
        --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
-       --db-dir="/storage/rocksdb"
-       --work-dir="/storage/controllers/data/work"
-       --packages-dir="/storage/controllers/packageLoader"
+       --main-root="/storage"
+       --packages-dir="/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
        --primary-storage-s3-external-endpoint="http://localhost:9000/"
-       --data-library-fs="library=/storage/controllers/data/library"
+       --data-library-fs="library=/library"
+
     ports:
       - "6345:6345"
+
     tmpfs: [ /tmp ]
-    logging:
-      driver: json-file
-      options:
-        max-size: "100m"
-        max-file: "4"
+
     environment:
-      - "MI_LICENSE=${MI_LICENSE:-}"
+      - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
       - "PL_LICENSE=${PL_LICENSE:-}"
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
+
     volumes:
-      - platforma-file-primary:/storage/controllers/data/primary
-      - platforma-file-library:/storage/controllers/data/library
-      - platforma-file-work:/storage/controllers/data/work
-      - platforma-packages:/storage/controllers/packageLoader
-      - platforma-db:/storage/rocksdb
-      - platforma-log:/storage/log
-      - platforma-license:/storage/license
-      - platforma-workspace:${PL_WORKSPACE}
-      - ${ACTION_PATH}/htpasswd:/etc/htpasswd
+      - main-root:/storage
+      - ${PL_TEST_ASSETS_DIR}:/library
+      - ${PL_WORKSPACE}:${PL_WORKSPACE}
+      - ${HTPASSWD_PATH}:/etc/htpasswd
+
     restart: always
 
+# Never! NEVER! put volumes mounted into docker container outside runner workspace.
+# Runner workspace is the only directory that is guaranteed to be shared between runner FS and
+# docker host, wherever it is. Attempt to bind-mount directories outside WORKSPACE will randomly fail
+# depending on moon phases and mood of the scheduler god. :(
 volumes:
-  platforma-packages:
-  platforma-file-work:
+  main-root:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PL_WORK_DIR}
-  platforma-file-primary:
-  platforma-file-library:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_TEST_ASSETS_DIR}
-  platforma-db:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_DB_DIR}
-  platforma-log:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_LOG_DIR}
-  platforma-license:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_LICENSE_DIR:-}
-  platforma-workspace:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PL_WORKSPACE}
+      device: ${PL_MAIN_ROOT}

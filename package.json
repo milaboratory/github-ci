@@ -2,9 +2,11 @@
     "name": "@milaboratories/github-ci-actions",
     "scripts": {
         "build": "turbo run build",
+        "format": "turbo run format",
+        "release": "turbo run release",
         "test": "turbo run test"
     },
-    "packageManager": "pnpm@10.10.0",
+    "packageManager": "pnpm@10.17.1",
     "devDependencies": {
         "@changesets/cli": "catalog:",
         "husky": "^9.1.7",

@@ -2,10 +2,16 @@
     "$schema": "https://turbo.build/schema.json",
     "globalDependencies": ["tsconfig.json"],
     "tasks": {
+      "format": {},
       "build": {
         "inputs": ["$TURBO_DEFAULT$"],
         "outputs": ["./lib/**", "./dist/**"],
         "dependsOn": ["^build"]
+      },
+      "release": {
+        "inputs": ["$TURBO_DEFAULT$"],
+        "outputs": ["./lib/**", "./dist/**"],
+        "dependsOn": ["^release"]
       },
       "test": {
         "dependsOn": ["build"]

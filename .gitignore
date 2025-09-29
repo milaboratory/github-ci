@@ -98,7 +98,6 @@ Thumbs.db
 # JS-related things
 .turbo/
 dist/
-!/actions/**/dist/
 node_modules/
 
 # IDEs

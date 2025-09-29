@@ -1,4 +1,4 @@
-import * as semver from 'semver'
+import * as semver from "semver";
 
 // /**
 //  * Check if version string contains only dots, hyphens and numbers:
@@ -36,23 +36,23 @@ export function parse(v: string): versionInfo {
     semver: false, // the version seems to conform with semver
   } as versionInfo;
 
-  const sv = semver.parse(v)
+  const sv = semver.parse(v);
   if (sv) {
-    result.major = sv.major
-    result.minor = sv.minor
-    result.patch = sv.patch
-    result.semver = true
+    result.major = sv.major;
+    result.minor = sv.minor;
+    result.patch = sv.patch;
+    result.semver = true;
 
     if (sv.prerelease.length > 0) {
-      result.suffix += sv.prerelease.join(".")
+      result.suffix += sv.prerelease.join(".");
     }
 
     if (sv.build.length > 0) {
-      const p = sv.build.map((v: string | number) => v.toString())
-      result.suffix += "+" + sv.build.join(".")
+      const p = sv.build.map((v: string | number) => v.toString());
+      result.suffix += "+" + sv.build.join(".");
     }
 
-    return result
+    return result;
   }
 
   const parts = v.split(".");
@@ -193,23 +193,27 @@ function parse_suffix(value: string): parseSuffixResult {
  *   - returns  1 if <a> > <b>
  *   - returns  0 if <a> == <b>
  */
-export function compare(a: versionInfo, b: versionInfo, trySanitize?: boolean): number {
+export function compare(
+  a: versionInfo,
+  b: versionInfo,
+  trySanitize?: boolean,
+): number {
   if (trySanitize === undefined) {
-    trySanitize = true
+    trySanitize = true;
   }
 
   if (trySanitize) {
-    a = sanitize(a)
-    b = sanitize(b)
+    a = sanitize(a);
+    b = sanitize(b);
   }
 
   if (a.semver && !b.semver) {
     // Always prefer semver versions to non-semver
-    return 1
+    return 1;
   }
   if (b.semver && !a.semver) {
     // Always prefer semver versions to non-semver
-    return -1
+    return -1;
   }
   if (!a.semver && !b.semver) {
     // Compare unknown version formats as stings
@@ -287,26 +291,25 @@ export function toString(v: versionInfo): string {
  * @returns versionInfo - version info after sanitizing. It might still not be a valid semver!
  */
 export function sanitize(v: string | versionInfo): versionInfo {
-  var versionString: string
+  var versionString: string;
 
   if (typeof v === "string") {
-    versionString = v
-    v = parse(versionString)
-
+    versionString = v;
+    v = parse(versionString);
   } else {
-    versionString = v.original
+    versionString = v.original;
   }
 
   if (v.semver) {
-    return v
+    return v;
   }
 
-  const regex = /[^0-9A-Za-z.+-]/g
-  const sanitized = versionString.replace(regex, "-")
-  const result = parse(sanitized)
-  result.original = versionString
+  const regex = /[^0-9A-Za-z.+-]/g;
+  const sanitized = versionString.replace(regex, "-");
+  const result = parse(sanitized);
+  result.original = versionString;
 
-  return result
+  return result;
 }
 
 /**
@@ -316,17 +319,19 @@ export function sanitize(v: string | versionInfo): versionInfo {
  * @returns versionInfo - version in semver format
  */
 export function toSemver(v: string | versionInfo): versionInfo {
-  const i = sanitize(v)
+  const i = sanitize(v);
   if (i.semver) {
-    return i
+    return i;
   }
 
-  var vString: string
+  var vString: string;
   if (typeof v === "string") {
-    vString = v
+    vString = v;
   } else {
-    vString = v.original
+    vString = v.original;
   }
 
-  throw new Error(`version ${vString} has not semver format and cannot be transformed to semver automatiaclly`)
+  throw new Error(
+    `version ${vString} has not semver format and cannot be transformed to semver automatiaclly`,
+  );
 }

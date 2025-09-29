@@ -1,0 +1,30 @@
+{
+  "name": "@milaboratories/actions.post.artifact",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Action for running post-steps in composite actions",
+  "main": "./lib/index.js",
+  "scripts": {
+    "cleanup": "rm -rf lib dist node_modules .turbo",
+    "build": "rm -rf lib dist && tsc && ncc build dist/action.js --minify --out lib --source-map",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest",
+    "release": "npm run build && npm run format && npm run lint",
+    "all": "npm run release && npm test"
+  },
+  "dependencies": {
+    "@actions/core": "catalog:",
+    "@actions/artifact": "catalog:",
+    "@actions/glob": "catalog:",
+    "@actions/github": "catalog:",
+    "@milaboratories/github-ci-actions-milib": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "@vercel/ncc": "catalog:",
+    "@milaboratories/platforma-build-configs": "workspace:*"
+  }
+} 
