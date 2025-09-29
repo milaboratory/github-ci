@@ -1,0 +1,25 @@
+name: Test Stats Send Action
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+jobs:
+  send_stats_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send test statistics
+        id: send_test_stats
+        uses: ./actions/notify/stats/send
+        with:
+          base-url: "https://mon.pl-open.science/" # Replace with your actual base URL
+          relative-path: "ci/github/test/" # A unique path for your test data
+          data-json: '{"test_value": 123, "event": "test_workflow_dispatch"}'
+
+      - name: Check outputs
+        run: |
+          echo "Action 'ok' output: ${{ steps.send_test_stats.outputs.ok }}"
+          echo "Action 'response' output: ${{ steps.send_test_stats.outputs.response }}"
+          echo "Action 'time' output: ${{ steps.send_test_stats.outputs.time }}"
