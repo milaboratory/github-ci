@@ -1,0 +1,70 @@
+name: "Stats: Send to Statistics"
+author: "pvyazankin"
+description: |
+  Send data to statistics system. Core concepts are in 
+  https://github.com/milaboratory/text/blob/main/features/monitoring/platforma-monitoring-prd.md
+  Example: `curl -X PUT "https://mon.pl-open.science/${USER}/test" -H "Content-Type: application/json" -d '{"psv": 1}'`
+
+inputs:
+  base-url:
+    default: "https://mon.pl-open.science/ci/github/"
+    description: "Base URL of the statistics system."
+    required: true
+  relative-path:
+    description: |
+      Relative path of the statistics system. The path where statistics will be stored.
+      You could find your data in (Metabase)[https://mon-web.pl-open.science/question#] 
+      filtered by RequestPath:`/ci/github/$your-relative-path`
+    required: true
+  data-json:
+    description: "Data to send to the statistics system in JSON format."
+    required: true
+  retries:
+    default: "5"
+    description: "The strategy to use when performing retried requests."
+outputs:
+  ok:
+    description: "If the request completed without returning errors."
+    value: ${{ steps.send-to-stats.outputs.ok }}
+  response:
+    description: "A JSON stringified version of the response."
+    value: ${{ steps.send-to-stats.outputs.response }}
+  time:
+    description: "The Unix epoch time that the step completed."
+    value: ${{ steps.send-to-stats.outputs.time }}
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Send to Statistics
+      id: send-to-stats
+      env:
+        RETRY_COUNT: ${{ inputs.retries }}
+      run: |
+        attempt=0
+        while [ $attempt -lt $RETRY_COUNT ]; do
+          response_output=$(curl -X PUT "${{ inputs.base-url }}${{ inputs.relative-path }}" -H "Content-Type: application/json" -d '${{ inputs.data-json }}' -w '\n%{http_code}' -s)
+          http_code=$(echo "$response_output" | tail -n1)
+          response_body=$(echo "$response_output" | sed '$d')
+
+          echo "Response: $response_body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "::set-output name=ok::true"
+            echo "::set-output name=response::$response_body"
+            echo "::set-output name=time::$(date +%s)"
+            exit 0
+          else
+            echo "Attempt $((attempt + 1)) failed with HTTP code $http_code. Retrying in 5 seconds..."
+            sleep 5
+          fi
+          attempt=$((attempt + 1))
+        done
+
+        echo "::set-output name=ok::false"
+        echo "::set-output name=response::"
+        echo "::set-output name=time::$(date +%s)"
+        exit 1
+      shell: bash
