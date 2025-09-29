@@ -19,37 +19,9 @@ inputs:
   data-json:
     description: "Data to send to the statistics system in JSON format."
     required: true
-  # method:
-  #   description: "The Slack API method to call."
-  #   required: false
-  # payload:
-  #   description: "Attributes that create the content of the request using JSON or YAML."
-  #   required: false
-  # payload-delimiter:
-  #   description: "Field seperator for nested attributes in the input payload."
-  #   required: false
-  # payload-file-path:
-  #   description: "Path to a file containing a valid input payload made of JSON or YAML."
-  #   required: false
-  # payload-templated:
-  #   default: "false"
-  #   description: "If templated variables in input payloads should be replaced."
-  #   required: false
-  # proxy:
-  #   description: "An optional proxied route for HTTPS connections."
-  #   required: false
   retries:
     default: "5"
     description: "The strategy to use when performing retried requests."
-  # token:
-  #   description: "The authentication value used with the Slack API."
-  #   required: false
-  # webhook:
-  #   description: "A location for posting request payloads."
-  #   required: false
-  # webhook-type:
-  #   description: "Option to use either an incoming webhook or webhook trigger."
-  #   required: false
 outputs:
   ok:
     description: "If the request completed without returning errors."
@@ -60,15 +32,6 @@ outputs:
   time:
     description: "The Unix epoch time that the step completed."
     value: ${{ steps.send-to-stats.outputs.time }}
-  # channel_id:
-  #   description: "The channel ID returned with some of the Slack API methods."
-  #   value: ${{ steps.send-to-slack.outputs.channel_id }}
-  # thread_ts:
-  #   description: "The timestamp of a parent Slack message with threaded replies."
-  #   value: ${{ steps.send-to-slack.outputs.thread_ts }}
-  # ts:
-  #   description: "The timestamp of a Slack message or event in the response."
-  #   value: ${{ steps.send-to-slack.outputs.ts }}
 
 runs:
   using: 'composite'
