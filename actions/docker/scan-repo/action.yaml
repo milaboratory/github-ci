@@ -82,14 +82,12 @@ runs:
           sh -s -- -b "${trivy_dir}" v0.67.0
 
         trivy_bin="${trivy_dir}/trivy"
+        report_file="${trivy_dir}/report-file"
         
         "${trivy_bin}" version
 
-        _report_file="${ACTION_PATH}/trivy/report-file"
-        true > "${_report_file}"
-
         echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
-        echo "report-file=${_report_file}" >> "${GITHUB_OUTPUT}"
+        echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
 
     - name: Post save report
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
