@@ -37,6 +37,11 @@ inputs:
       Scanners to use.
     required: false
     default: 'vuln,secret,misconfig'
+  severity:
+    description: |
+      Severity of vulnerabilities to scan.
+    required: false
+    default: 'HIGH,CRITICAL'
   ignore-unfixed:
     description: |
       Ignore unfixed vulnerabilities.
@@ -99,6 +104,7 @@ runs:
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
         SCANNERS: ${{ inputs.scanners }}
+        SEVERITY: ${{ inputs.severity }}
         IGNORE_UNFIXED: ${{ inputs.ignore-unfixed }}
 
         REPORT_FORMAT: ${{ inputs.report-format }}

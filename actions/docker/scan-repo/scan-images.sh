@@ -7,10 +7,12 @@ registry="${1}" # i.e. containers.pl-open.science
 repository="${2}" # i.e. milaboratories/pl-containers
 tag="${3:-}"
 
+: "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
+: "${SEVERITY:=HIGH,CRITICAL}"
 : "${IGNORE_UNFIXED:=false}"
 
 : "${REPORT_FORMAT:=json}"
@@ -20,13 +22,17 @@ log() {
     echo "$@" >&2
 }
 
+logf() {
+    printf "$@" >&2
+}
+
 get_list_page() {
     local _registry="$1"
     local _repository="$2"
     local _last="$3"
     local _n="${4:-100}"
 
-    curl -s "https://${_registry}/v2/${_repository}/tags/list?last=${_last}&n=${_n}" | 
+    curl -s "https://${_registry}/v2/${_repository}/tags/list?last=${_last}&n=${_n}" |
         jq -r '.tags[]' | grep -v '^$'
 }
 
@@ -37,8 +43,6 @@ list_images() {
     local _list=()
     local _last=""
     local _n=100 # this is maximum. Values higher are silently reduced.
-
-    log "Listing images for ${_registry}/${_repository}..."
 
     mapfile -t _list <<< "$(get_list_page "${_registry}" "${_repository}" "${_last}" "${_n}")"
 
@@ -69,6 +73,7 @@ scan_image() {
         --format "${REPORT_FORMAT}"
         --pkg-types "${PKG_TYPES}"
         --scanners "${SCANNERS}"
+        --severity "${SEVERITY}"
         --exit-code "1"
     )
 
@@ -76,11 +81,27 @@ scan_image() {
         _opts+=( --ignore-unfixed )
     fi
 
-    log "  scanning image ${_image}..."
+    if [ "${DEBUG}" != "true" ]; then
+        _opts+=( --quiet )
+    fi
+
+    if [ "${DRY_RUN:-false}" != "false" ]; then
+        echo "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+        return 0
+    fi
+
+    log "  scanning image ${_image}"
+
     if [ -n "${REPORT_FILE}" ]; then
+    (
+        [ "${DEBUG}" == "true" ] && set -x
         "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" >> "${REPORT_FILE}"
+    )
     else
+    (
+        [ "${DEBUG}" == "true" ] && set -x
         "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+    )
     fi
 }
 
@@ -103,13 +124,70 @@ scan_images() {
 #
 
 if [ -n "${REPORT_FILE}" ]; then
-    log "  report file: ${REPORT_FILE}"
+    log "Report file: ${REPORT_FILE}"
     echo "" > "${REPORT_FILE}"
 fi
 
+cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
+logf "Analysis command:\n  ${cmd_example}\n\n"
+
+success=true
 if [ -n "${tag}" ]; then
-    scan_image "${registry}/${repository}:${tag}"
+    scan_image "${registry}/${repository}:${tag}" || success=false
 else
+    log "Scanning images in ${registry}/${repository}..."
     list_images "${registry}" "${repository}" |
-        scan_images
+        scan_images || success=false
 fi
+
+if [ "${success}" == "true" ]; then
+    exit 0
+fi
+
+if [ -n "${REPORT_FILE}" ]; then
+    log ""
+    log "CVEs found:"
+    cat "${REPORT_FILE}" |
+        jq -r '
+            select(.Results[].Vulnerabilities) |
+            [
+                .ArtifactName,
+                (
+                    [
+                        .Results[] |
+                        select(.Vulnerabilities) |
+                        .Vulnerabilities[] |
+                        .Severity
+                    ] |
+                        group_by(.) |
+                        map({key: .[0], value: length}) |
+                        map("\(.key): \(.value)") |
+                        join(", ")
+                )
+            ] |
+                .[0] + " (" + .[1] + ")"'
+
+    log ""
+    log "Misconfigurations found: "
+    cat "${REPORT_FILE}" |
+        jq -r '
+            select(.Results | any(.Misconfigurations)) |
+            [
+                .ArtifactName,
+                (
+                    [
+                        .Results[] |
+                        select(.Misconfigurations) |
+                        .Misconfigurations[] |
+                        .Severity
+                    ] |
+                        group_by(.) |
+                        map({key: .[0], value: length}) |
+                        map("\(.key): \(.value)") |
+                        join(", ")
+                )
+            ] |
+                .[0] + " (" + .[1] + ")"'
+fi
+
+exit 1
