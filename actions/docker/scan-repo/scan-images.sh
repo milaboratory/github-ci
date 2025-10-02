@@ -38,8 +38,9 @@ get_list_page() {
 }
 
 list_images() {
-    local _registry="$1"
-    local _repository="$2"
+    local _registry="${1}"
+    local _repository="${2}"
+    local _limit="${3:-}"
 
     local _list=()
     local _last=""
@@ -57,6 +58,11 @@ list_images() {
         for _tag in "${_list[@]}"; do
             echo "${_registry}/${_repository}:${_tag}"
             _items_count=$((_items_count + 1))
+
+            if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
+                # Prevent 'broken pipe' echo issue when reader stopped consuming our output.
+                return
+            fi
         done
 
         _last="${_list[-1]}"
@@ -91,7 +97,7 @@ scan_image() {
         return 0
     fi
 
-    log "  scanning image ${_image}"
+    log "  scanning ${_image}"
 
     if [ -n "${REPORT_FILE}" ]; then
     (
@@ -145,16 +151,20 @@ if [ -n "${tag}" ]; then
     scan_image "${registry}/${repository}:${tag}" || success=false
 else
     log "Scanning images in ${registry}/${repository}..."
-    list_images "${registry}" "${repository}" |
+    list_images "${registry}" "${repository}" "${SCAN_IMAGES_LIMIT}" |
         scan_images "${SCAN_IMAGES_LIMIT}" || success=false
 fi
 
 if [ "${success}" == "true" ]; then
-    log "Scan completed successfully, no CVEs found"
+    log "Scan completed successfully, no CVEs found!"
     exit 0
 fi
 
-log "Found issues in scanned images."
+log ""
+log "# ====================================================== #"
+log "#             Found issues in scanned images             #"
+log "# ====================================================== #"
+log ""
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
     log ""
     log "CVEs found:"
