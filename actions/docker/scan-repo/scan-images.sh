@@ -154,7 +154,8 @@ if [ "${success}" == "true" ]; then
     exit 0
 fi
 
-if [ -n "${REPORT_FILE}" ]; then
+log "Found issues in scanned images."
+if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
     log ""
     log "CVEs found:"
     cat "${REPORT_FILE}" |

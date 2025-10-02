@@ -11,13 +11,11 @@ inputs:
   registry:
     description: |
       Docker registry (i.e. quay.io, containers.pl-open.science and so on)
-    required: false
-    default: 'containers.pl-open.science'
+    required: true
   repository:
     description: |
       Repository inside the registry (i.e. milaboratories/pl-containers)
-    required: false
-    default: 'milaboratories/pl-containers'
+    required: true
   tag:
     description: |
       Tag to scan. Empty value starts all tags scanning.
@@ -55,7 +53,7 @@ inputs:
     description: |
       Format of the report.
     required: false
-    default: 'table'
+    default: 'json'
 
 outputs:
   report:
