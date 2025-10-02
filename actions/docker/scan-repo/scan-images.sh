@@ -9,6 +9,7 @@ tag="${3:-}"
 
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
+: "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -106,11 +107,19 @@ scan_image() {
 }
 
 scan_images() {
+    local _limit="${1:-}"
     local _success=true
 
+    local _items_count=0
     while read -r tag; do
         if ! scan_image "${tag}"; then
             _success=false
+        fi
+
+        _items_count=$((_items_count + 1))
+        if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
+            log "  reached scan limit of ${_limit} images"
+            break
         fi
     done
 
@@ -137,10 +146,11 @@ if [ -n "${tag}" ]; then
 else
     log "Scanning images in ${registry}/${repository}..."
     list_images "${registry}" "${repository}" |
-        scan_images || success=false
+        scan_images "${SCAN_IMAGES_LIMIT}" || success=false
 fi
 
 if [ "${success}" == "true" ]; then
+    log "Scan completed successfully, no CVEs found"
     exit 0
 fi
 

@@ -93,6 +93,14 @@ runs:
         echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
         echo "report-file=${_report_file}" >> "${GITHUB_OUTPUT}"
 
+    - name: Post save report
+      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      with:
+        name: trivy-report
+        archive: true
+        path: |
+          ${{ steps.init.outputs.report-file }}
+
     - name: Scan images
       id: scan-images
       shell: bash
@@ -110,4 +118,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
+        SCAN_IMAGES_LIMIT=10 "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
