@@ -81,9 +81,10 @@ runs:
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
+        WORKSPACE_PATH: ${{ github.workspace }}
       run: |
-        trivy_dir="${ACTION_PATH}/bin"
-        mkdir "${trivy_dir}"
+        trivy_dir="${WORKSPACE_PATH}/trivy"
+        mkdir -p "${trivy_dir}"
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
           sh -s -- -b "${trivy_dir}" v0.67.0
 
