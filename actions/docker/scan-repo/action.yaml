@@ -16,9 +16,15 @@ inputs:
     description: |
       Repository inside the registry (i.e. milaboratories/pl-containers)
     required: true
+
   tag:
     description: |
-      Tag to scan. Empty value starts all tags scanning.
+      Tag to scan. Empty value starts all tags scanning within limit.
+    required: false
+    default: ''
+  limit:
+    description: |
+      Limit number of images to scan. Empty value = 'no limit'.
     required: false
     default: ''
 
@@ -106,6 +112,7 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
         TAG: ${{ inputs.tag }}
+        SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
@@ -116,4 +123,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        SCAN_IMAGES_LIMIT=10 "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
+        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"

@@ -20,3 +20,4 @@ jobs:
         with:
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
+          limit: 5
