@@ -101,6 +101,8 @@ runs:
       id: scan-images
       shell: bash
       env:
+        ACTION_PATH: ${{ github.action_path }}
+
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
         TAG: ${{ inputs.tag }}
