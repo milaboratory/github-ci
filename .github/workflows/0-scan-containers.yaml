@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - '.github/workflows/0-scan-containers.yaml'
+      - 'actions/docker/scan-repo/**'
     branches: [ 'v4-beta' ]
 
 jobs:
