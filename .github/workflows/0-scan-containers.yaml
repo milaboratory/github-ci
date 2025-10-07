@@ -1,0 +1,23 @@
+# This workflow is never used by any external repository.
+# It is created solely for testing purposes when developing new actions.
+# Feel free to change it however you want.
+name: "Scan containers"
+
+on:
+  workflow_call:
+  push:
+    paths:
+      - '.github/workflows/0-scan-containers.yaml'
+      - 'actions/docker/scan-repo/**'
+    branches: [ 'v4-beta' ]
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: milaboratory/github-ci/actions/docker/scan-repo@v4
+        with:
+          registry: containers.pl-open.science
+          repository: milaboratories/pl-containers
+          # limit: 5
