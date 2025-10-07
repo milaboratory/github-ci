@@ -3,6 +3,8 @@
 set -o nounset
 set -o errexit
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 registry="${1}" # i.e. containers.pl-open.science
 repository="${2}" # i.e. milaboratories/pl-containers
 tag="${3:-}"
@@ -10,7 +12,7 @@ tag="${3:-}"
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
-: "${IGNORE_LIST_FILE:=}" # file with list of images to ignore
+: "${IGNORE_LIST_FILE:=${script_dir}/ignore-list.txt}" # file with list of images to ignore
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
