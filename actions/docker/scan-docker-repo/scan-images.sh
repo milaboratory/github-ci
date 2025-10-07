@@ -32,25 +32,6 @@ log() {
     logf "%s\n" "$*"
 }
 
-log_group() {
-    local _title="$1"
-    if [ -z "${CI:-}" ]; then
-        log ""
-        log "$1"
-        return
-    fi
-
-    echo "::group::${_title}"
-}
-
-log_endgroup() {
-    if [ -z "${CI:-}" ]; then
-        return
-    fi
-
-    echo "::endgroup::"
-}
-
 get_list_page() {
     local _registry="$1"
     local _repository="$2"
@@ -190,7 +171,8 @@ log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
 
-    log_group "CVEs found:"
+    log ""
+    log "CVEs found:"
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results[].Vulnerabilities) |
@@ -210,9 +192,9 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
-    log_endgroup
 
-    log_group "Misconfigurations found: "
+    log ""
+    log "Misconfigurations found: "
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results | any(.Misconfigurations)) |
@@ -232,7 +214,6 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
-    log_endgroup
 fi
 
 logf "Skipped images: %d\n" "$(wc -l "${SKIPPED_LIST_FILE}" | awk '{print $1}')"
