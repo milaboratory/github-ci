@@ -25,6 +25,25 @@ log() {
     logf "%s\n" "$*"
 }
 
+log_group() {
+    local _title="$1"
+    if [ -z "${CI:-}" ]; then
+        log ""
+        log "$1"
+        return
+    fi
+
+    echo "::group::${_title}"
+}
+
+log_endgroup() {
+    if [ -z "${CI:-}" ]; then
+        return
+    fi
+
+    echo "::endgroup::"
+}
+
 list_npm_packages() {
     log "Listing npm packages in current workspace"
     pnpm ls \
@@ -169,13 +188,13 @@ log "# ===================================================== #"
 log "#                      Scan failed                      #"
 log "# ===================================================== #"
 
-log ""
-log "Failed to scan:"
+log_group "Failed to scan:"
 cat "${failed_to_scan_packages}" | awk '{printf "  %s\n", $0}' >&2
+log_endgroup
 
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
-    log ""
-    log "CVEs found:"
+
+    log_group "CVEs found:"
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results[].Vulnerabilities) |
@@ -195,9 +214,9 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
+    log_endgroup
 
-    log ""
-    log "Misconfigurations found: "
+    log_group "Misconfigurations found: "
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results | any(.Misconfigurations)) |
@@ -217,6 +236,7 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
+    log_endgroup
 fi
 
 exit 1

@@ -23,12 +23,33 @@ tag="${3:-}"
 : "${REPORT_FORMAT:=json}"
 : "${REPORT_FILE:=}"
 
+skipped_images_file=$(mktemp)
+
 logf() {
     printf "$@" >&2
 }
 
 log() {
     logf "%s\n" "$*"
+}
+
+log_group() {
+    local _title="$1"
+    if [ -z "${CI:-}" ]; then
+        log ""
+        log "$1"
+        return
+    fi
+
+    echo "::group::${_title}"
+}
+
+log_endgroup() {
+    if [ -z "${CI:-}" ]; then
+        return
+    fi
+
+    echo "::endgroup::"
 }
 
 get_list_page() {
@@ -63,6 +84,7 @@ list_images() {
             local _full_tag="${_registry}/${_repository}:${_tag}"
             if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
                 log "  skipping ${_full_tag} (listed in ignore list)"
+                echo "${_full_tag}" >> "${skipped_images_file}"
                 continue
             fi
 
@@ -168,8 +190,8 @@ log "# ====================================================== #"
 log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
-    log ""
-    log "CVEs found:"
+
+    log_group "CVEs found:"
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results[].Vulnerabilities) |
@@ -189,9 +211,9 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
+    log_endgroup
 
-    log ""
-    log "Misconfigurations found: "
+    log_group "Misconfigurations found: "
     cat "${REPORT_FILE}" |
         jq -r '
             select(.Results | any(.Misconfigurations)) |
@@ -211,6 +233,12 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                 )
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
+    log_endgroup
 fi
+
+# GitHub Actions foldable log section for skipped images
+log_group "Skipped images"
+cat "${skipped_images_file}" | awk '{printf "  %s\n", $0}' >&2
+log_endgroup
 
 exit 1
