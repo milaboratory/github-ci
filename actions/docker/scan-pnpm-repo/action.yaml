@@ -1,0 +1,96 @@
+name: Scan images built by pnpm monorepo
+author: 'MiLaboratories'
+description: |
+  Scan software images that are part of pnpm monorepo.
+  Checks all npm packages in monorepo and gets docker images of all software packages.
+  Scans all images for CVEs and misconfigurations.
+
+inputs:
+  #
+  # Scan settings
+  #
+  pkg-types:
+    description: |
+      Type of packages to scan.
+    required: false
+    default: 'os,library'
+  scanners:
+    description: |
+      Scanners to use.
+    required: false
+    default: 'vuln,secret,misconfig'
+  severity:
+    description: |
+      Severity of vulnerabilities to scan.
+    required: false
+    default: 'HIGH,CRITICAL'
+  ignore-unfixed:
+    description: |
+      Ignore unfixed vulnerabilities.
+    required: false
+    default: 'false'
+
+  #
+  # Report settings
+  #
+  report-format:
+    description: |
+      Format of the report.
+    required: false
+    default: 'json'
+
+outputs:
+  report-file:
+    description: |
+      Scan report file path.
+    value: ${{ steps.init.outputs.report-file }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install Trivy
+      id: init
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        WORKSPACE_PATH: ${{ github.workspace }}
+      run: |
+        trivy_dir="${WORKSPACE_PATH}/trivy"
+        mkdir -p "${trivy_dir}"
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
+          sh -s -- -b "${trivy_dir}" 
+        # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
+
+        trivy_bin="${trivy_dir}/trivy"
+        report_file="${trivy_dir}/report-file"
+        
+        "${trivy_bin}" version
+
+        echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
+        echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
+
+    - name: Post save report
+      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      with:
+        name: trivy-report
+        archive: true
+        path: |
+          ${{ steps.init.outputs.report-file }}
+
+    - name: Scan workspace
+      id: scan-packages
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+
+        TRIVY_BIN: ${{ steps.init.outputs.trivy }}
+        PKG_TYPES: ${{ inputs.pkg-types }}
+        SCANNERS: ${{ inputs.scanners }}
+        SEVERITY: ${{ inputs.severity }}
+        IGNORE_UNFIXED: ${{ inputs.ignore-unfixed }}
+
+        REPORT_FORMAT: ${{ inputs.report-format }}
+        REPORT_FILE: ${{ steps.init.outputs.report-file }}
+      run: |
+        "${ACTION_PATH}/scan-workspace.sh"
