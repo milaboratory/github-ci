@@ -27,6 +27,12 @@ inputs:
       Limit number of images to scan. Empty value = 'no limit'.
     required: false
     default: ''
+  ignore-list-file:
+    description: | 
+      Do not scan these images for CVEs. Each line in a file is expected to be a full image tag.
+      I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+    required: false
+    default: ''
 
   #
   # Scan settings
@@ -115,6 +121,7 @@ runs:
         REPOSITORY: ${{ inputs.repository }}
         TAG: ${{ inputs.tag }}
         SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
+        IGNORE_LIST_FILE: ${{ inputs.ignore-list-file }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
