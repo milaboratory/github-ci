@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+
+set -o nounset
+set -o errexit
+
+registry="${1}" # i.e. containers.pl-open.science
+repository="${2}" # i.e. milaboratories/pl-containers
+tag="${3:-}"
+
+: "${DEBUG:=false}"
+: "${TRIVY_BIN:=trivy}"
+: "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
+
+: "${PKG_TYPES:=os,library}"
+: "${SCANNERS:=vuln,secret,misconfig}"
+: "${SEVERITY:=HIGH,CRITICAL}"
+: "${IGNORE_UNFIXED:=false}"
+
+: "${REPORT_FORMAT:=json}"
+: "${REPORT_FILE:=}"
+
+log() {
+    echo "$@" >&2
+}
+
+logf() {
+    printf "$@" >&2
+}
+
+get_list_page() {
+    local _registry="$1"
+    local _repository="$2"
+    local _last="$3"
+    local _n="${4:-100}"
+
+    curl -s "https://${_registry}/v2/${_repository}/tags/list?last=${_last}&n=${_n}" |
+        jq -r '.tags[]' | grep -v '^$'
+}
+
+list_images() {
+    local _registry="${1}"
+    local _repository="${2}"
+    local _limit="${3:-}"
+
+    local _list=()
+    local _last=""
+    local _n=100 # this is maximum. Values higher are silently reduced.
+
+    mapfile -t _list <<< "$(get_list_page "${_registry}" "${_repository}" "${_last}" "${_n}")"
+
+    local _items_count=0
+    while [ "${#_list[@]}" -gt 0 ]; do
+        if [ "${#_list[@]}" -eq 1 ] && [ -z "${_list[0]}" ]; then
+            break
+        fi
+
+        local _tag
+        for _tag in "${_list[@]}"; do
+            echo "${_registry}/${_repository}:${_tag}"
+            _items_count=$((_items_count + 1))
+
+            if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
+                # Prevent 'broken pipe' echo issue when reader stopped consuming our output.
+                return
+            fi
+        done
+
+        _last="${_list[-1]}"
+        _list=()
+        mapfile -t _list <<< "$(get_list_page "${_registry}" "${_repository}" "${_last}" "${_n}")"
+    done
+
+    log "  items found: ${_items_count}"
+}
+
+scan_image() {
+    local _image="$1"
+
+    local _opts=(
+        --format "${REPORT_FORMAT}"
+        --pkg-types "${PKG_TYPES}"
+        --scanners "${SCANNERS}"
+        --severity "${SEVERITY}"
+        --exit-code "1"
+    )
+
+    if [ "${IGNORE_UNFIXED}" == "true" ]; then
+        _opts+=( --ignore-unfixed )
+    fi
+
+    if [ "${DEBUG}" != "true" ]; then
+        _opts+=( --quiet )
+    fi
+
+    if [ "${DRY_RUN:-false}" != "false" ]; then
+        echo "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+        return 0
+    fi
+
+    log "  scanning ${_image}"
+
+    if [ -n "${REPORT_FILE}" ]; then
+    (
+        [ "${DEBUG}" == "true" ] && set -x
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" >> "${REPORT_FILE}"
+    )
+    else
+    (
+        [ "${DEBUG}" == "true" ] && set -x
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+    )
+    fi
+}
+
+scan_images() {
+    local _limit="${1:-}"
+    local _success=true
+
+    local _items_count=0
+    while read -r tag; do
+        if ! scan_image "${tag}"; then
+            _success=false
+        fi
+
+        _items_count=$((_items_count + 1))
+        if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
+            log "  reached scan limit of ${_limit} images"
+            break
+        fi
+    done
+
+    if [ "${_success}" != "true" ]; then
+        return 1
+    fi
+}
+
+#
+# Script body
+#
+
+if [ -n "${REPORT_FILE}" ]; then
+    log "Report file: ${REPORT_FILE}"
+    echo "" > "${REPORT_FILE}"
+fi
+
+cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
+logf "Analysis command:\n  ${cmd_example}\n\n"
+
+success=true
+if [ -n "${tag}" ]; then
+    scan_image "${registry}/${repository}:${tag}" || success=false
+else
+    log "Scanning images in ${registry}/${repository}..."
+    list_images "${registry}" "${repository}" "${SCAN_IMAGES_LIMIT}" |
+        scan_images "${SCAN_IMAGES_LIMIT}" || success=false
+fi
+
+if [ "${success}" == "true" ]; then
+    log "Scan completed successfully, no CVEs found!"
+    exit 0
+fi
+
+log ""
+log "# ====================================================== #"
+log "#             Found issues in scanned images             #"
+log "# ====================================================== #"
+log ""
+if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
+    log ""
+    log "CVEs found:"
+    cat "${REPORT_FILE}" |
+        jq -r '
+            select(.Results[].Vulnerabilities) |
+            [
+                .ArtifactName,
+                (
+                    [
+                        .Results[] |
+                        select(.Vulnerabilities) |
+                        .Vulnerabilities[] |
+                        .Severity
+                    ] |
+                        group_by(.) |
+                        map({key: .[0], value: length}) |
+                        map("\(.key): \(.value)") |
+                        join(", ")
+                )
+            ] |
+                .[0] + " (" + .[1] + ")"'
+
+    log ""
+    log "Misconfigurations found: "
+    cat "${REPORT_FILE}" |
+        jq -r '
+            select(.Results | any(.Misconfigurations)) |
+            [
+                .ArtifactName,
+                (
+                    [
+                        .Results[] |
+                        select(.Misconfigurations) |
+                        .Misconfigurations[] |
+                        .Severity
+                    ] |
+                        group_by(.) |
+                        map({key: .[0], value: length}) |
+                        map("\(.key): \(.value)") |
+                        join(", ")
+                )
+            ] |
+                .[0] + " (" + .[1] + ")"'
+fi
+
+exit 1
