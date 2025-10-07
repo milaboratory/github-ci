@@ -83,7 +83,7 @@ list_images() {
         for _tag in "${_list[@]}"; do
             local _full_tag="${_registry}/${_repository}:${_tag}"
             if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
-                log "  skipping ${_full_tag} (listed in ignore list)"
+                [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
                 echo "${_full_tag}" >> "${skipped_images_file}"
                 continue
             fi
