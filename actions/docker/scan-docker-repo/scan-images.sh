@@ -10,6 +10,7 @@ tag="${3:-}"
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
+: "${IGNORE_LIST_FILE:=}" # file with list of images to ignore
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -56,13 +57,14 @@ list_images() {
 
         local _tag
         for _tag in "${_list[@]}"; do
-            echo "${_registry}/${_repository}:${_tag}"
-            _items_count=$((_items_count + 1))
-
-            if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
-                # Prevent 'broken pipe' echo issue when reader stopped consuming our output.
-                return
+            local _full_tag="${_registry}/${_repository}:${_tag}"
+            if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
+                log "  skipping ${_full_tag} (listed in ignore list)"
+                continue
             fi
+
+            echo "${_full_tag}" 2>/dev/null
+            _items_count=$((_items_count + 1))
         done
 
         _last="${_list[-1]}"
