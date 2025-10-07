@@ -68,11 +68,6 @@ inputs:
     default: 'json'
 
 outputs:
-  report:
-    description: |
-      Raw scan report contents.
-    value: ${{ steps.scan.outputs.report }}
-
   report-file:
     description: |
       Scan report file path.

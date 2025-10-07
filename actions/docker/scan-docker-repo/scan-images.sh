@@ -2,6 +2,7 @@
 
 set -o nounset
 set -o errexit
+set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -22,12 +23,12 @@ tag="${3:-}"
 : "${REPORT_FORMAT:=json}"
 : "${REPORT_FILE:=}"
 
-log() {
-    echo "$@" >&2
-}
-
 logf() {
     printf "$@" >&2
+}
+
+log() {
+    logf "%s\n" "$*"
 }
 
 get_list_page() {
@@ -106,12 +107,12 @@ scan_image() {
     if [ -n "${REPORT_FILE}" ]; then
     (
         [ "${DEBUG}" == "true" ] && set -x
-        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" >> "${REPORT_FILE}"
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output >> "${REPORT_FILE}"
     )
     else
     (
         [ "${DEBUG}" == "true" ] && set -x
-        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output
     )
     fi
 }
@@ -122,9 +123,7 @@ scan_images() {
 
     local _items_count=0
     while read -r tag; do
-        if ! scan_image "${tag}"; then
-            _success=false
-        fi
+        scan_image "${tag}" || _success=false
 
         _items_count=$((_items_count + 1))
         if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
@@ -144,7 +143,7 @@ scan_images() {
 
 if [ -n "${REPORT_FILE}" ]; then
     log "Report file: ${REPORT_FILE}"
-    echo "" > "${REPORT_FILE}"
+    printf "" > "${REPORT_FILE}"
 fi
 
 cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
@@ -168,7 +167,6 @@ log ""
 log "# ====================================================== #"
 log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
-log ""
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
     log ""
     log "CVEs found:"
@@ -190,7 +188,7 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                         join(", ")
                 )
             ] |
-                .[0] + " (" + .[1] + ")"'
+                .[0] + " (" + .[1] + ")"' >&2
 
     log ""
     log "Misconfigurations found: "
@@ -212,7 +210,7 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                         join(", ")
                 )
             ] |
-                .[0] + " (" + .[1] + ")"'
+                .[0] + " (" + .[1] + ")"' >&2
 fi
 
 exit 1
