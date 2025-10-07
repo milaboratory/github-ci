@@ -14,6 +14,7 @@ tag="${3:-}"
 : "${TRIVY_BIN:=trivy}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
 : "${IGNORE_LIST_FILE:=${script_dir}/ignore-list.txt}" # file with list of images to ignore
+: "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -62,7 +63,8 @@ list_images() {
         for _tag in "${_list[@]}"; do
             local _full_tag="${_registry}/${_repository}:${_tag}"
             if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
-                log "  skipping ${_full_tag} (listed in ignore list)"
+                [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
+                echo "${_full_tag}" >> "${SKIPPED_LIST_FILE}"
                 continue
             fi
 
@@ -168,6 +170,7 @@ log "# ====================================================== #"
 log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
+
     log ""
     log "CVEs found:"
     cat "${REPORT_FILE}" |
@@ -212,5 +215,8 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
             ] |
                 .[0] + " (" + .[1] + ")"' >&2
 fi
+
+logf "Skipped images: %d\n" "$(wc -l "${SKIPPED_LIST_FILE}" | awk '{print $1}')"
+[ "${DEBUG}" == "true" ] && cat "${SKIPPED_LIST_FILE}" | awk '{printf "  %s\n", $0}' >&2
 
 exit 1

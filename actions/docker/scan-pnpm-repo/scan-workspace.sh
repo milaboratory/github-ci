@@ -174,6 +174,7 @@ log "Failed to scan:"
 cat "${failed_to_scan_packages}" | awk '{printf "  %s\n", $0}' >&2
 
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
+
     log ""
     log "CVEs found:"
     cat "${REPORT_FILE}" |
