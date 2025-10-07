@@ -584,14 +584,11 @@ jobs:
             pnpm run version-packages
 
       - name: Run build for - ${{ matrix.step }}
-        uses: milaboratory/github-ci/actions/shell@v4
+        shell: bash
         env:
           PRE_CALCULATED_STEP: ${{ matrix.step }}
-          PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run build --filter="${PRE_CALCULATED_STEP}"
+        run: |
+          pnpm run build --filter="${PRE_CALCULATED_STEP}"
     outputs:
       status: 'completed'
 
@@ -717,10 +714,9 @@ jobs:
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        uses: milaboratory/github-ci/actions/shell@v4
-        with:
-          run: |
-            pnpm run version-packages
+        shell: bash
+        run: |
+          pnpm run version-packages
 
       - name: Get changed files staged and unstaged
         if: github.event_name == 'push'
@@ -804,6 +800,9 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-build-args: ${{ inputs.pnpm-build-args }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+
+      - name: Perform security scan checks before publication
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'

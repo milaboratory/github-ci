@@ -1,0 +1,130 @@
+name: Scan existing images in docker repository
+author: 'MiLaboratories'
+description: |
+  Scan images in docker repository.
+  If no tag is set, lists and scans all registry tags.
+
+inputs:
+  #
+  # Scan target settings
+  #
+  registry:
+    description: |
+      Docker registry (i.e. quay.io, containers.pl-open.science and so on)
+    required: true
+  repository:
+    description: |
+      Repository inside the registry (i.e. milaboratories/pl-containers)
+    required: true
+
+  tag:
+    description: |
+      Tag to scan. Empty value starts all tags scanning within limit.
+    required: false
+    default: ''
+  limit:
+    description: |
+      Limit number of images to scan. Empty value = 'no limit'.
+    required: false
+    default: ''
+  ignore-list-file:
+    description: | 
+      Do not scan these images for CVEs. Each line in a file is expected to be a full image tag.
+      I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+    required: false
+    default: ''
+
+  #
+  # Scan settings
+  #
+  pkg-types:
+    description: |
+      Type of packages to scan.
+    required: false
+    default: 'os,library'
+  scanners:
+    description: |
+      Scanners to use.
+    required: false
+    default: 'vuln,secret,misconfig'
+  severity:
+    description: |
+      Severity of vulnerabilities to scan.
+    required: false
+    default: 'HIGH,CRITICAL'
+  ignore-unfixed:
+    description: |
+      Ignore unfixed vulnerabilities.
+    required: false
+    default: 'false'
+
+  #
+  # Report settings
+  #
+  report-format:
+    description: |
+      Format of the report.
+    required: false
+    default: 'json'
+
+outputs:
+  report-file:
+    description: |
+      Scan report file path.
+    value: ${{ steps.init.outputs.report-file }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install Trivy
+      id: init
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        WORKSPACE_PATH: ${{ github.workspace }}
+      run: |
+        trivy_dir="${WORKSPACE_PATH}/trivy"
+        mkdir -p "${trivy_dir}"
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
+          sh -s -- -b "${trivy_dir}"
+        # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
+
+        trivy_bin="${trivy_dir}/trivy"
+        report_file="${trivy_dir}/report-file"
+        
+        "${trivy_bin}" version
+
+        echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
+        echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
+
+    - name: Post save report
+      uses: milaboratory/github-ci/actions/post/artifact@v4
+      with:
+        name: trivy-report
+        archive: true
+        path: |
+          ${{ steps.init.outputs.report-file }}
+
+    - name: Scan images
+      id: scan-images
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+
+        REGISTRY: ${{ inputs.registry }}
+        REPOSITORY: ${{ inputs.repository }}
+        TAG: ${{ inputs.tag }}
+        SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
+        IGNORE_LIST_FILE: ${{ inputs.ignore-list-file }}
+
+        TRIVY_BIN: ${{ steps.init.outputs.trivy }}
+        PKG_TYPES: ${{ inputs.pkg-types }}
+        SCANNERS: ${{ inputs.scanners }}
+        SEVERITY: ${{ inputs.severity }}
+        IGNORE_UNFIXED: ${{ inputs.ignore-unfixed }}
+
+        REPORT_FORMAT: ${{ inputs.report-format }}
+        REPORT_FILE: ${{ steps.init.outputs.report-file }}
+      run: |
+        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"

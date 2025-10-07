@@ -1,33 +1,11 @@
-name: Scan existing images in docker repository
+name: Scan images built by pnpm monorepo
 author: 'MiLaboratories'
 description: |
-  Scan images in docker repository.
-  If no tag is set, lists and scans all registry tags.
+  Scan software images that are part of pnpm monorepo.
+  Checks all npm packages in monorepo and gets docker images of all software packages.
+  Scans all images for CVEs and misconfigurations.
 
 inputs:
-  #
-  # Scan target settings
-  #
-  registry:
-    description: |
-      Docker registry (i.e. quay.io, containers.pl-open.science and so on)
-    required: true
-  repository:
-    description: |
-      Repository inside the registry (i.e. milaboratories/pl-containers)
-    required: true
-
-  tag:
-    description: |
-      Tag to scan. Empty value starts all tags scanning within limit.
-    required: false
-    default: ''
-  limit:
-    description: |
-      Limit number of images to scan. Empty value = 'no limit'.
-    required: false
-    default: ''
-
   #
   # Scan settings
   #
@@ -62,11 +40,6 @@ inputs:
     default: 'json'
 
 outputs:
-  report:
-    description: |
-      Raw scan report contents.
-    value: ${{ steps.scan.outputs.report }}
-
   report-file:
     description: |
       Scan report file path.
@@ -86,7 +59,8 @@ runs:
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
-          sh -s -- -b "${trivy_dir}" v0.67.0
+          sh -s -- -b "${trivy_dir}" 
+        # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
 
         trivy_bin="${trivy_dir}/trivy"
         report_file="${trivy_dir}/report-file"
@@ -104,16 +78,11 @@ runs:
         path: |
           ${{ steps.init.outputs.report-file }}
 
-    - name: Scan images
-      id: scan-images
+    - name: Scan workspace
+      id: scan-packages
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-
-        REGISTRY: ${{ inputs.registry }}
-        REPOSITORY: ${{ inputs.repository }}
-        TAG: ${{ inputs.tag }}
-        SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
@@ -124,4 +93,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
+        "${ACTION_PATH}/scan-workspace.sh"

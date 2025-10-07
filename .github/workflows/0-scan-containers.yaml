@@ -8,7 +8,7 @@ on:
   push:
     paths:
       - '.github/workflows/0-scan-containers.yaml'
-      - 'actions/docker/scan-repo/**'
+      - 'actions/docker/scan-docker-repo/**'
     branches: [ 'v4-beta' ]
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: milaboratory/github-ci/actions/docker/scan-repo@v4
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
         with:
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
