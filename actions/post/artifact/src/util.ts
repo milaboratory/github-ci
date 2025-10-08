@@ -6,11 +6,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 export async function createTarArchive(
+  workdir: string,
   files: string[],
   archivePath: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tar = spawn("tar", ["-c", "-f", archivePath, ...files], {
+    const tar = spawn("tar", ["-C", workdir, "-c", "-f", archivePath, ...files], {
       stdio: "inherit",
     });
     tar.on("error", (err) => reject(err));
@@ -81,15 +82,21 @@ export async function uploadArtifact(
   retentionDays: number,
 ): Promise<void> {
   try {
-    core.info(`Uploading ${toUpload.length} files:`);
+    const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+    const workspaceToCWD = path.relative(workspace, process.cwd());
+
+    toUpload = toUpload.map((file) => path.relative(process.cwd(), file)); // abs paths -> relative to current wd.
+    toUpload = toUpload.map((file) => path.join(workspaceToCWD, file)); // relative to wd -> relative to workspace.
+
+    core.info(`Uploading ${toUpload.length} workspace files:`);
     toUpload.forEach((file) => core.info(`  ${file}`));
 
     const archiveName = `artifact-${name}.tar`;
-    const archivePath = path.join(process.cwd(), archiveName);
+    const archivePath = path.join(workspace, archiveName);
 
     if (createArchive) {
       core.info(`Creating tar archive: ${archivePath}`);
-      await createTarArchive(toUpload, archivePath);
+      await createTarArchive(workspace, toUpload, archivePath);
       toUpload = [archivePath];
     }
 
@@ -99,7 +106,7 @@ export async function uploadArtifact(
     const uploadResult = await artifactClient.uploadArtifact(
       name,
       toUpload,
-      process.cwd(),
+      workspace,
       {
         retentionDays: retentionDays,
       },

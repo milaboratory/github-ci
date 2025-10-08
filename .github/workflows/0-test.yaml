@@ -21,17 +21,24 @@ jobs:
           fetch-depth: 0
 
       - shell: bash
+        id: create-files
         run: |
-          echo $PWD
           pwd
+
           mkdir -p test-dir
           echo "Test 1 file content" > test-dir/test1.txt
           echo "Test 2 file content" > test-dir/test2.txt
 
+          mkdir -p test-dir2
+          echo "Test 3 file content" > test-dir2/test3.txt
+
           find $(pwd)
+
+          echo "root=$(pwd)" >> "${GITHUB_OUTPUT}"
 
       - uses: ./actions/post/artifact
         with:
           name: test
           path: |
             test-dir
+            ${{ steps.create-files.outputs.root }}/test-dir2
