@@ -38,7 +38,15 @@ jobs:
 
       - uses: ./actions/post/artifact
         with:
-          name: test
+          name: test-direct
+          path: |
+            test-dir
+            ${{ steps.create-files.outputs.root }}/test-dir2
+
+      - uses: ./actions/post/artifact
+        with:
+          name: test-archive
+          archive: true
           path: |
             test-dir
             ${{ steps.create-files.outputs.root }}/test-dir2
