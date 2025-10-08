@@ -2,6 +2,9 @@
 
 set -o nounset
 set -o errexit
+set -o pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 registry="${1}" # i.e. containers.pl-open.science
 repository="${2}" # i.e. milaboratories/pl-containers
@@ -10,6 +13,8 @@ tag="${3:-}"
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
+: "${IGNORE_LIST_FILE:=${script_dir}/ignore-list.txt}" # file with list of images to ignore
+: "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -19,12 +24,12 @@ tag="${3:-}"
 : "${REPORT_FORMAT:=json}"
 : "${REPORT_FILE:=}"
 
-log() {
-    echo "$@" >&2
-}
-
 logf() {
     printf "$@" >&2
+}
+
+log() {
+    logf "%s\n" "$*"
 }
 
 get_list_page() {
@@ -56,13 +61,15 @@ list_images() {
 
         local _tag
         for _tag in "${_list[@]}"; do
-            echo "${_registry}/${_repository}:${_tag}"
-            _items_count=$((_items_count + 1))
-
-            if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
-                # Prevent 'broken pipe' echo issue when reader stopped consuming our output.
-                return
+            local _full_tag="${_registry}/${_repository}:${_tag}"
+            if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
+                [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
+                echo "${_full_tag}" >> "${SKIPPED_LIST_FILE}"
+                continue
             fi
+
+            echo "${_full_tag}" 2>/dev/null
+            _items_count=$((_items_count + 1))
         done
 
         _last="${_list[-1]}"
@@ -102,12 +109,12 @@ scan_image() {
     if [ -n "${REPORT_FILE}" ]; then
     (
         [ "${DEBUG}" == "true" ] && set -x
-        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" >> "${REPORT_FILE}"
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output >> "${REPORT_FILE}"
     )
     else
     (
         [ "${DEBUG}" == "true" ] && set -x
-        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+        "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output
     )
     fi
 }
@@ -118,9 +125,7 @@ scan_images() {
 
     local _items_count=0
     while read -r tag; do
-        if ! scan_image "${tag}"; then
-            _success=false
-        fi
+        scan_image "${tag}" || _success=false
 
         _items_count=$((_items_count + 1))
         if [ -n "${_limit}" ] && [ "${_items_count}" -ge "${_limit}" ]; then
@@ -140,7 +145,7 @@ scan_images() {
 
 if [ -n "${REPORT_FILE}" ]; then
     log "Report file: ${REPORT_FILE}"
-    echo "" > "${REPORT_FILE}"
+    printf "" > "${REPORT_FILE}"
 fi
 
 cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
@@ -164,8 +169,8 @@ log ""
 log "# ====================================================== #"
 log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
-log ""
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
+
     log ""
     log "CVEs found:"
     cat "${REPORT_FILE}" |
@@ -186,7 +191,7 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                         join(", ")
                 )
             ] |
-                .[0] + " (" + .[1] + ")"'
+                .[0] + " (" + .[1] + ")"' >&2
 
     log ""
     log "Misconfigurations found: "
@@ -208,7 +213,10 @@ if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
                         join(", ")
                 )
             ] |
-                .[0] + " (" + .[1] + ")"'
+                .[0] + " (" + .[1] + ")"' >&2
 fi
+
+logf "Skipped images: %d\n" "$(wc -l "${SKIPPED_LIST_FILE}" | awk '{print $1}')"
+[ "${DEBUG}" == "true" ] && cat "${SKIPPED_LIST_FILE}" | awk '{printf "  %s\n", $0}' >&2
 
 exit 1
