@@ -82,21 +82,25 @@ export async function uploadArtifact(
   retentionDays: number,
 ): Promise<void> {
   try {
-    const workspace = process.env.RUNNER_WORKSPACE || process.cwd();
-    const workspaceToCWD = path.relative(workspace, process.cwd());
-
-    toUpload = toUpload.map((file) => path.relative(process.cwd(), file)); // abs paths -> relative to current wd.
-    toUpload = toUpload.map((file) => path.join(workspaceToCWD, file)); // relative to wd -> relative to workspace.
+    const workspace = process.env.RUNNER_WORKSPACE || process.cwd()
+    const root = createArchive ? workspace : process.cwd();
 
     core.info(`Uploading ${toUpload.length} workspace files:`);
     toUpload.forEach((file) => core.info(`  ${file}`));
 
     const archiveName = `artifact-${name}.tar`;
-    const archivePath = path.join(workspace, archiveName);
-
+    const archivePath = path.join(root, archiveName);
     if (createArchive) {
       core.info(`Creating tar archive: ${archivePath}`);
-      await createTarArchive(workspace, toUpload, archivePath);
+
+      core.info(`  resolving paths relative to workspace`);
+      const workspaceToCWD = path.relative(root, process.cwd());
+      toUpload = toUpload.map((file) => path.relative(process.cwd(), file)); // abs paths -> relative to current wd.
+      toUpload = toUpload.map((file) => path.join(workspaceToCWD, file));    // relative to wd -> relative to workspace.
+
+      toUpload.forEach((file) => core.debug(`  ${file}`));
+      await createTarArchive(root, toUpload, archivePath);
+
       toUpload = [archivePath];
     }
 
@@ -106,7 +110,7 @@ export async function uploadArtifact(
     const uploadResult = await artifactClient.uploadArtifact(
       name,
       toUpload,
-      workspace,
+      root,
       {
         retentionDays: retentionDays,
       },
