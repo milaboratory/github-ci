@@ -82,7 +82,7 @@ export async function uploadArtifact(
   retentionDays: number,
 ): Promise<void> {
   try {
-    const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+    const workspace = process.env.RUNNER_WORKSPACE || process.cwd();
     const workspaceToCWD = path.relative(workspace, process.cwd());
 
     toUpload = toUpload.map((file) => path.relative(process.cwd(), file)); // abs paths -> relative to current wd.
