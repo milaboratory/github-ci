@@ -122,7 +122,8 @@ runs:
       with:
         run: |
           # Remove platforma state in the end
-          rm -rfv "${PL_MAIN_ROOT}"
+          echo "Removing '${PL_MAIN_ROOT}'"
+          rm -rf "${PL_MAIN_ROOT}"
 
     - uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
@@ -133,10 +134,12 @@ runs:
 
     - uses: milaboratory/github-ci/actions/post/shell@v4
       env:
+        ACTION_PATH: ${{ github.action_path }}
+        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+
         #
         # docker-compose.yaml parameters.
         #
-        PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_WORKSPACE: ${{ github.workspace }}
