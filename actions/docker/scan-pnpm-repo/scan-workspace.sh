@@ -195,7 +195,8 @@ if [ -z "${PATHS_TO_SCAN}" ]; then
         select_software_packages |
         jq --raw-output '.path'
 else
-    echo "${PATHS_TO_SCAN}"
+    echo "${PATHS_TO_SCAN}" |
+        grep -vE '^ *$' # no empty lines
 fi |
     scan_npm_packages || success=false
 
