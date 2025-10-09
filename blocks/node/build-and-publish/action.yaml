@@ -25,6 +25,7 @@ inputs:
     description: |
       Indicates whether the current run is intended for a release.
     required: false
+
   #
   # NodeJS Control
   #
@@ -98,57 +99,6 @@ inputs:
       Set always-auth in npmrc.
     required: false
     default: 'false'
-  #
-  # GCP Control
-  #
-  # gcloud-kms-workload-identity-provider:
-  #   description: |
-  #     Tha name of the GCP workload identity federation provider.
-  #   required: false
-
-  # gcloud-kms-service-account:
-  #   description: |
-  #     The name of the GCP service account.
-  #   required: false
-
-  # gcloud-sdk-version:
-  #   description: |
-  #     Version or version constraint of the gcloud SDK to install. If
-  #     unspecified, it will accept any installed version of the gcloud SDK. If
-  #     set to "latest", it will download the latest available SDK. If set to a
-  #     version constraint, it will download the latest available version that
-  #     matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
-  #   required: false
-  #   default: 'latest'
-
-  # gcloud-kms-location:
-  #   description: |
-  #     KMS key and keyring location
-  #   required: false
-  #   default: 'europe-west3'
-
-  # gcloud-kms-digest-algorithm:
-  #   description: |
-  #     The algorithm to digest the input.
-  #     Must be one of: sha256, sha384, sha512.
-  #   required: false
-  #   default: 'sha256'
-
-  # gcloud-kms-key-version:
-  #   description: |
-  #     Version of KMS key.
-  #   required: false
-  #   default: '1'
-
-  # gcloud-kms-keyring:
-  #   description: |
-  #     KMS keyring name in GCP.
-  #   required: false
-
-  # gcloud-kms-key-name:
-  #   description: |
-  #     KMS key name in GCP.
-  #   required: false
 
   #
   # AWS Control
@@ -175,19 +125,6 @@ runs:
         role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
         aws-region: ${{ inputs.s3-region }}
 
-    # - name: Configure GCP credentials
-    #   id: gcp_auth
-    #   uses: google-github-actions/auth@v2
-    #   with:
-    #     workload_identity_provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
-    #     service_account: ${{ inputs.gcloud-kms-service-account }}
-    #     token_format: 'access_token'
-    #
-    # - name: Set up GCloud SDK
-    #   uses: google-github-actions/setup-gcloud@v2
-    #   with:
-    #     version: ${{ inputs.gcloud-sdk-version }}
-  
     - name: Login to Quay.io
       if: env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
       uses: docker/login-action@v3
@@ -269,31 +206,31 @@ runs:
         package-paths: |
           ${{ inputs.execution-path }}
 
-    # - name: Publish npm package
-    #   shell: bash
-    #   env:
-    #     WORKING_DIRECTORY: ${{ inputs.execution-path }}
-    #     NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-    #     PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
-    #     PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
-    #     PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
-    #     IS_RELEASE: ${{ inputs.is-release }}
-    #   run: |
-    #     cd "${WORKING_DIRECTORY}"
-    #     if [ -z "${PUBLISH_SCRIPT}" ]; then
-    #       if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
-    #         if [ "${IS_RELEASE}" == "true" ];then
-    #           npm publish --access public
-    #         else
-    #           npm publish --tag beta --access public
-    #         fi
-    #       else
-    #         if [ "${IS_RELEASE}" == "true" ];then
-    #           npm publish
-    #         else
-    #           npm publish --tag beta
-    #         fi
-    #       fi
-    #     else
-    #         npm run "${PUBLISH_SCRIPT}"
-    #     fi
+    - name: Publish npm package
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
+        PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
+        PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
+        IS_RELEASE: ${{ inputs.is-release }}
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        if [ -z "${PUBLISH_SCRIPT}" ]; then
+          if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish --access public
+            else
+              npm publish --tag beta --access public
+            fi
+          else
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish
+            else
+              npm publish --tag beta
+            fi
+          fi
+        else
+            npm run "${PUBLISH_SCRIPT}"
+        fi

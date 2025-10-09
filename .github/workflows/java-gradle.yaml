@@ -249,19 +249,6 @@ on:
         required: false
         default: true
 
-      # artifact-paths:
-      #   description: |
-      #     List of paths to artifacts to save after build run.
-      #     Empty list disables artifacts storage.
-      #
-      #     Relative paths are relative to gradle 'buildDir' project's property.
-      #     Absolute paths (starting with '/') are relative to repository root.
-      #     Patterns ('*', '**', etc.) are supported.
-      #
-      #   type: string
-      #   required: false
-      #   default: ''
-
       #
       # Tests control
       #
@@ -868,39 +855,6 @@ on:
         required: false
         default: 'eu-central-1'
 
-      # sign-gcloud-kms-digest-algorithm:
-      #   description: |
-      #     The algorithm to digest the input.
-      #     Must be one of: sha256, sha384, sha512.
-      #   type: string
-      #   required: false
-      #   default: 'sha256'
-
-      # sign-gcloud-kms-key-version:
-      #   description: |
-      #     Version of KMS key.
-      #   type: string
-      #   required: false
-      #   default: '1'
-
-      # sign-gcloud-kms-location:
-      #   description: |
-      #     KMS key and keyring location.
-      #   type: string
-      #   required: false
-      #   default: 'europe-west3'
-
-      # sign-gcloud-sdk-version:
-      #   description: |
-      #     Version or version constraint of the gcloud SDK to install. If
-      #     unspecified, it will accept any installed version of the gcloud SDK. If
-      #     set to "latest", it will download the latest available SDK. If set to a
-      #     version constraint, it will download the latest available version that
-      #     matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
-      #   type: string
-      #   required: false
-      #   default: 'latest'
-
       node-execution-path:
         description: |
           Specify the path where to execute release script.
@@ -1064,31 +1018,6 @@ on:
         description: |
           Password for GPG key
         required: false
-
-      # SIGN_DIST_ARCHIVE_S3_BUCKET:
-      #   description: |
-      #     Registry's S3 Bucket name to upload signed artifacts.
-      #   required: false
-
-      # SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
-      #   description: |
-      #     Tha name of the GCP workload identity federation provider.
-      #   required: false
-
-      # SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
-      #   description: |
-      #     The name of the GCP service account.
-      #   required: false
-
-      # SIGN_GCLOUD_KMS_KEYRING:
-      #   description: |
-      #     KMS keyring name in GCP.
-      #   required: false
-
-      # SIGN_GCLOUD_KMS_KEY_NAME:
-      #   description: |
-      #     KMS key name in GCP.
-      #   required: false
 
       BIN_REGISTRY_S3_BUCKET_URL:
         description: |
@@ -2106,7 +2035,7 @@ jobs:
 
       - uses: milaboratory/github-ci/blocks/node/build-and-publish@v4-beta
         name: Release npm package
-        # if: github.ref_name == inputs.release-branch-name && inputs.node-execution-path != ''
+        if: github.ref_name == inputs.release-branch-name && inputs.node-execution-path != ''
         with:
           is-release: ${{ steps.context.outputs.is-release }}
           artifact-name: ${{ inputs.product-name-slug }}
@@ -2122,14 +2051,6 @@ jobs:
           publish-script-name: ${{ inputs.publish-script-name }}
           publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
-          # gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
-          # gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          # gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
-          # gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
-          # gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
-          # gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
-          # gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
-          # gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
           s3-region: ${{ inputs.pl-package-s3-region }}
           s3-iam-role-to-assume: ${{ secrets.BIN_REGISTRY_S3_IAM_ROLE }}
 
