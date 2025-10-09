@@ -13,7 +13,7 @@ set -o pipefail
 
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
-: "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
+: "${SKIPPED_LIST_FILE:=}" # file with list of actually skipped images
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -75,7 +75,7 @@ select_software_packages() {
         fi
 
         [ "${DEBUG}" = "true" ] && log "  package '${_name}' is skipped (not software package)"
-        echo "${_package}" >> "${SKIPPED_LIST_FILE}"
+        [ -n "${SKIPPED_LIST_FILE}" ] && echo "${_package}" >> "${SKIPPED_LIST_FILE}"
     done
 
     log "  software packages found: ${_items_count}"
@@ -186,6 +186,11 @@ scan_npm_packages() {
 if [ -n "${REPORT_FILE}" ]; then
     log "Report file: ${REPORT_FILE}"
     printf "" > "${REPORT_FILE}"
+fi
+
+if ! [ -n "${SKIPPED_LIST_FILE}"]; then
+    log "Skipped list file: ${SKIPPED_LIST_FILE}"
+    printf "" > "${SKIPPED_LIST_FILE}"
 fi
 
 cmd_example=$(DRY_RUN="y" scan_npm_package "<package-path>")
