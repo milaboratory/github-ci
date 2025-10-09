@@ -1065,12 +1065,6 @@ on:
           Password for GPG key
         required: false
 
-      SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME:
-        description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        required: false
-
       # SIGN_DIST_ARCHIVE_S3_BUCKET:
       #   description: |
       #     Registry's S3 Bucket name to upload signed artifacts.
@@ -1099,6 +1093,12 @@ on:
       BIN_REGISTRY_S3_BUCKET_URL:
         description: |
           Pl's bin registry S3 bucket url.
+        required: false
+
+      BIN_REGISTRY_S3_IAM_ROLE:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
         required: false
 
 jobs:
@@ -2131,7 +2131,7 @@ jobs:
           # gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
           # gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
           s3-region: ${{ inputs.pl-package-s3-region }}
-          s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
+          s3-iam-role-to-assume: ${{ secrets.BIN_REGISTRY_S3_IAM_ROLE }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
