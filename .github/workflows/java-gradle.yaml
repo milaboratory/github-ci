@@ -249,19 +249,6 @@ on:
         required: false
         default: true
 
-      # artifact-paths:
-      #   description: |
-      #     List of paths to artifacts to save after build run.
-      #     Empty list disables artifacts storage.
-      #
-      #     Relative paths are relative to gradle 'buildDir' project's property.
-      #     Absolute paths (starting with '/') are relative to repository root.
-      #     Patterns ('*', '**', etc.) are supported.
-      #
-      #   type: string
-      #   required: false
-      #   default: ''
-
       #
       # Tests control
       #
@@ -850,58 +837,23 @@ on:
         default: 'false'
 
       #
-      #  Archive singing control
+      # PL package building control
       #
-      sign-dist-archive:
+      build-pl-package:
         description: |
-          Set it to 'true' if you want to sign and upload archive to registry S3 bucket
+          Enables building and publishing PL software package.
           This feature requires 'dist-archive' feature to be enabled and
-          configured. The file created at 'dist-archive' step is signed and uploaded
-          to registry S3 storage.
+          configured.
         type: boolean
         required: false
         default: false
 
-      sign-dist-archive-s3-region:
+      pl-package-s3-region:
         description: |
-          Upload signed application artifact's files to
-          AWS S3 bucket in given region.
+          Region of PL packages registry in AWS.
         type: string
         required: false
         default: 'eu-central-1'
-
-      sign-gcloud-kms-digest-algorithm:
-        description: |
-          The algorithm to digest the input.
-          Must be one of: sha256, sha384, sha512.
-        type: string
-        required: false
-        default: 'sha256'
-
-      sign-gcloud-kms-key-version:
-        description: |
-          Version of KMS key.
-        type: string
-        required: false
-        default: '1'
-
-      sign-gcloud-kms-location:
-        description: |
-          KMS key and keyring location.
-        type: string
-        required: false
-        default: 'europe-west3'
-
-      sign-gcloud-sdk-version:
-        description: |
-          Version or version constraint of the gcloud SDK to install. If
-          unspecified, it will accept any installed version of the gcloud SDK. If
-          set to "latest", it will download the latest available SDK. If set to a
-          version constraint, it will download the latest available version that
-          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
-        type: string
-        required: false
-        default: 'latest'
 
       node-execution-path:
         description: |
@@ -1067,40 +1019,15 @@ on:
           Password for GPG key
         required: false
 
-      SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME:
-        description: |
-          The ARN of a IAM role to assume and configure the Actions environment with
-          assumed role credentials.
-        required: false
-
-      SIGN_DIST_ARCHIVE_S3_BUCKET:
-        description: |
-          Registry's S3 Bucket name to upload signed artifacts.
-        required: false
-
-      SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
-        description: |
-          Tha name of the GCP workload identity federation provider.
-        required: false
-
-      SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
-        description: |
-          The name of the GCP service account.
-        required: false
-
-      SIGN_GCLOUD_KMS_KEYRING:
-        description: |
-          KMS keyring name in GCP.
-        required: false
-
-      SIGN_GCLOUD_KMS_KEY_NAME:
-        description: |
-          KMS key name in GCP.
-        required: false
-
       BIN_REGISTRY_S3_BUCKET_URL:
         description: |
           Pl's bin registry S3 bucket url.
+        required: false
+
+      BIN_REGISTRY_S3_IAM_ROLE:
+        description: |
+          The ARN of a IAM role to assume and configure the Actions environment with
+          assumed role credentials.
         required: false
 
 jobs:
@@ -1314,7 +1241,7 @@ jobs:
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   notify-test-unit:
-    name: notify unit test
+    name: 'Notify: Unit test'
     runs-on: ubuntu-latest
 
     if:  always()
@@ -1461,7 +1388,7 @@ jobs:
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
   test-regression:
-    name: :test (reg)
+    name: 'Regression: tests'
     strategy:
       fail-fast: false
       matrix:
@@ -1581,7 +1508,7 @@ jobs:
       report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   test-regression-create-pr:
-    name: :test (reg) create pr
+    name: 'Regression: create PR'
     runs-on: ubuntu-latest
 
     needs:
@@ -1662,7 +1589,7 @@ jobs:
       pr-operation: ${{ steps.create-pull-request.outputs.pull-request-operation }}
 
   notify-test-regression-changes:
-    name: notify regression tests changes
+    name: 'Notify: regression tests changes'
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram
@@ -1694,7 +1621,7 @@ jobs:
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   fail-workflow-on-test-regression-changes:
-    name: fail workflow on regression tests changes
+    name: 'Regression: fail PR on changes'
     runs-on: ubuntu-latest
 
     if: needs.test-regression-create-pr.outputs.started == 'true'
@@ -1717,7 +1644,7 @@ jobs:
             exit 1
 
   notify-test-regression:
-    name: notify regression test
+    name: 'Notify: regression test'
     runs-on: ubuntu-latest
 
     if: always()
@@ -1836,7 +1763,7 @@ jobs:
       obfus-mapping-s3-path: ${{ steps.with-mapping.outputs.obfuscation-mapping-s3-path }}
 
   notify-build-distArchive:
-    name: notify archive build
+    name: 'Notify: Archive build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-archive
@@ -1938,7 +1865,7 @@ jobs:
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   notify-build-distDocker:
-    name: notify docker build
+    name: 'Notify: Docker build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-docker
@@ -2044,7 +1971,7 @@ jobs:
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-build-distLibrary:
-    name: notify library build
+    name: 'Notify: Library build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-library
@@ -2075,11 +2002,11 @@ jobs:
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
-  signDistArchive:
-    name: sign and publish
+  publishPlPackage:
+    name: Publish PL package
     runs-on: ubuntu-latest
 
-    if: inputs.sign-dist-archive
+    if: inputs.build-pl-package
     needs:
       - distArchive
     permissions:
@@ -2106,8 +2033,9 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4
-        if: github.ref_name == inputs.release-branch-name
+      - uses: milaboratory/github-ci/blocks/node/build-and-publish@v4
+        name: Release npm package
+        if: github.ref_name == inputs.release-branch-name && inputs.node-execution-path != ''
         with:
           is-release: ${{ steps.context.outputs.is-release }}
           artifact-name: ${{ inputs.product-name-slug }}
@@ -2123,33 +2051,25 @@ jobs:
           publish-script-name: ${{ inputs.publish-script-name }}
           publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
-          gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
-          gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
-          gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
-          gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
-          gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
-          gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
-          gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
-          s3-region: ${{ inputs.sign-dist-archive-s3-region }}
-          s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
+          s3-region: ${{ inputs.pl-package-s3-region }}
+          s3-iam-role-to-assume: ${{ secrets.BIN_REGISTRY_S3_IAM_ROLE }}
 
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  notify-build-signDistArchive:
-    name: notify sign archive build
+  notify-build-publishPlPackage:
+    name: 'Notify: Publish PL package'
     runs-on: ubuntu-latest
     if: always()
-      && inputs.sign-dist-archive
+      && inputs.build-pl-package
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && ( needs.signDistArchive.result != 'cancelled' || needs.signDistArchive.result != 'skipped' )
+      && ( needs.publishPlPackage.result != 'cancelled' || needs.publishPlPackage.result != 'skipped' )
       && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
     needs:
-      - signDistArchive
+      - publishPlPackage
       - build
     steps:
       - id: search-tags
@@ -2167,12 +2087,12 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
-            ${{ needs.signDistArchive.result }}
-          product-name: ${{ format('{0} - Signed Archive', inputs.product-name) }}
+            ${{ needs.publishPlPackage.result }}
+          product-name: ${{ format('{0} - PL package', inputs.product-name) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
-    name: update the latest build link on the CDN
+    name: Update 'latest' in CDN
     runs-on: ubuntu-latest
 
     if: inputs.cdn-redirect-s3
@@ -2234,7 +2154,7 @@ jobs:
         run: 'true'
 
   notify-release-review:
-    name: notify review required
+    name: 'Notify: review required'
     runs-on: ubuntu-latest
 
     if:  always()
@@ -2431,7 +2351,7 @@ jobs:
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-release:
-    name: notify release
+    name: 'Notify: release'
     runs-on: ubuntu-latest
 
     if:  always()
