@@ -13,6 +13,7 @@ set -o pipefail
 
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
+: "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -74,6 +75,7 @@ select_software_packages() {
         fi
 
         [ "${DEBUG}" = "true" ] && log "  package '${_name}' is skipped (not software package)"
+        echo "${_package}" >> "${SKIPPED_LIST_FILE}"
     done
 
     log "  software packages found: ${_items_count}"

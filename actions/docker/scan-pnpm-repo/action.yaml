@@ -73,11 +73,13 @@ runs:
 
         trivy_bin="${trivy_dir}/trivy"
         report_file="${trivy_dir}/report-file"
-        
+        skipped_file="${trivy_dir}/skipped-file"
+
         "${trivy_bin}" version
 
         echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
         echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
+        echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
     - name: Post save report
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
@@ -86,6 +88,7 @@ runs:
         archive: true
         path: |
           ${{ steps.init.outputs.report-file }}
+          ${{ steps.init.outputs.skipped-file }}
 
     - name: Scan workspace
       id: scan-packages
@@ -93,6 +96,7 @@ runs:
       env:
         PATHS_TO_SCAN: ${{ inputs.package-paths }}
         ACTION_PATH: ${{ github.action_path }}
+        SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
