@@ -63,7 +63,7 @@ runs:
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-        WORKSPACE_PATH: ${{ github.workspace }}
+        WORKSPACE_PATH: ${{ runner.workspace }}
       run: |
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
