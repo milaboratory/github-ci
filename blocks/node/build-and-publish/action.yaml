@@ -269,7 +269,7 @@ runs:
         package-paths: |
           ${{ inputs.execution-path }}
 
-    - name: Run release - ${{ inputs.release-script-name }}
+    - name: Publish npm package
       shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}

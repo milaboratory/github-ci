@@ -2106,8 +2106,9 @@ jobs:
           gpg-key: ${{ secrets.GIT_CRYPT_GPG_KEY }}
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
-      - uses: milaboratory/github-ci/blocks/node/sign-and-publish@v4-beta
-        if: github.ref_name == inputs.release-branch-name
+      - uses: milaboratory/github-ci/blocks/node/build-and-publish@v4-beta
+        name: Release npm package
+        if: github.ref_name == inputs.release-branch-name && inputs.node-execution-path != ''
         with:
           is-release: ${{ steps.context.outputs.is-release }}
           artifact-name: ${{ inputs.product-name-slug }}
