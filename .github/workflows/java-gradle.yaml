@@ -850,47 +850,45 @@ on:
         default: 'false'
 
       #
-      #  Archive singing control
+      # PL package building control
       #
-      sign-dist-archive:
+      build-pl-package:
         description: |
-          Set it to 'true' if you want to sign and upload archive to registry S3 bucket
+          Enables building and publishing PL software package.
           This feature requires 'dist-archive' feature to be enabled and
-          configured. The file created at 'dist-archive' step is signed and uploaded
-          to registry S3 storage.
+          configured.
         type: boolean
         required: false
         default: false
 
-      sign-dist-archive-s3-region:
+      pl-package-s3-region:
         description: |
-          Upload signed application artifact's files to
-          AWS S3 bucket in given region.
+          Region of PL packages registry in AWS.
         type: string
         required: false
         default: 'eu-central-1'
 
-      sign-gcloud-kms-digest-algorithm:
-        description: |
-          The algorithm to digest the input.
-          Must be one of: sha256, sha384, sha512.
-        type: string
-        required: false
-        default: 'sha256'
+      # sign-gcloud-kms-digest-algorithm:
+      #   description: |
+      #     The algorithm to digest the input.
+      #     Must be one of: sha256, sha384, sha512.
+      #   type: string
+      #   required: false
+      #   default: 'sha256'
 
-      sign-gcloud-kms-key-version:
-        description: |
-          Version of KMS key.
-        type: string
-        required: false
-        default: '1'
+      # sign-gcloud-kms-key-version:
+      #   description: |
+      #     Version of KMS key.
+      #   type: string
+      #   required: false
+      #   default: '1'
 
-      sign-gcloud-kms-location:
-        description: |
-          KMS key and keyring location.
-        type: string
-        required: false
-        default: 'europe-west3'
+      # sign-gcloud-kms-location:
+      #   description: |
+      #     KMS key and keyring location.
+      #   type: string
+      #   required: false
+      #   default: 'europe-west3'
 
       sign-gcloud-sdk-version:
         description: |
@@ -1073,10 +1071,10 @@ on:
           assumed role credentials.
         required: false
 
-      SIGN_DIST_ARCHIVE_S3_BUCKET:
-        description: |
-          Registry's S3 Bucket name to upload signed artifacts.
-        required: false
+      # SIGN_DIST_ARCHIVE_S3_BUCKET:
+      #   description: |
+      #     Registry's S3 Bucket name to upload signed artifacts.
+      #   required: false
 
       SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
         description: |
@@ -1088,15 +1086,15 @@ on:
           The name of the GCP service account.
         required: false
 
-      SIGN_GCLOUD_KMS_KEYRING:
-        description: |
-          KMS keyring name in GCP.
-        required: false
+      # SIGN_GCLOUD_KMS_KEYRING:
+      #   description: |
+      #     KMS keyring name in GCP.
+      #   required: false
 
-      SIGN_GCLOUD_KMS_KEY_NAME:
-        description: |
-          KMS key name in GCP.
-        required: false
+      # SIGN_GCLOUD_KMS_KEY_NAME:
+      #   description: |
+      #     KMS key name in GCP.
+      #   required: false
 
       BIN_REGISTRY_S3_BUCKET_URL:
         description: |
@@ -2075,11 +2073,11 @@ jobs:
           maven-packages: ${{ needs.distLibrary.outputs.libs-list }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
-  signDistArchive:
-    name: sign and publish
+  publishPlPackage:
+    name: Publish PL package
     runs-on: ubuntu-latest
 
-    if: inputs.sign-dist-archive
+    if: inputs.build-pl-package
     needs:
       - distArchive
     permissions:
@@ -2125,14 +2123,14 @@ jobs:
           publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
-          gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
-          gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
-          gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
           gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
           gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
-          gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
-          gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
-          s3-region: ${{ inputs.sign-dist-archive-s3-region }}
+          # gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
+          # gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
+          # gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
+          # gcloud-kms-keyring: ${{ secrets.SIGN_GCLOUD_KMS_KEYRING }}
+          # gcloud-kms-key-name: ${{ secrets.SIGN_GCLOUD_KMS_KEY_NAME }}
+          s3-region: ${{ inputs.pl-package-s3-region }}
           s3-iam-role-to-assume: ${{ secrets.SIGN_DIST_ARCHIVE_S3_IAM_ROLE_TO_ASSUME }}
 
     outputs:
@@ -2140,17 +2138,17 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  notify-build-signDistArchive:
-    name: notify sign archive build
+  notify-build-publishPlPackage:
+    name: notify pl package publish
     runs-on: ubuntu-latest
     if: always()
-      && inputs.sign-dist-archive
+      && inputs.build-pl-package
       && inputs.notify-telegram
       && inputs.notify-build != 'false'
-      && ( needs.signDistArchive.result != 'cancelled' || needs.signDistArchive.result != 'skipped' )
+      && ( needs.publishPlPackage.result != 'cancelled' || needs.publishPlPackage.result != 'skipped' )
       && ( needs.build.result != 'cancelled' || needs.build.result != 'failure' )
     needs:
-      - signDistArchive
+      - publishPlPackage
       - build
     steps:
       - id: search-tags
@@ -2168,8 +2166,8 @@ jobs:
           telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
           notification-mode: ${{ inputs.notify-build }}
           build-status: |
-            ${{ needs.signDistArchive.result }}
-          product-name: ${{ format('{0} - Signed Archive', inputs.product-name) }}
+            ${{ needs.publishPlPackage.result }}
+          product-name: ${{ format('{0} - PL package', inputs.product-name) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:

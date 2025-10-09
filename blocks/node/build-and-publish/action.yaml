@@ -121,34 +121,34 @@ inputs:
     required: false
     default: 'latest'
 
-  gcloud-kms-location:
-    description: |
-      KMS key and keyring location
-    required: false
-    default: 'europe-west3'
+  # gcloud-kms-location:
+  #   description: |
+  #     KMS key and keyring location
+  #   required: false
+  #   default: 'europe-west3'
 
-  gcloud-kms-digest-algorithm:
-    description: |
-      The algorithm to digest the input.
-      Must be one of: sha256, sha384, sha512.
-    required: false
-    default: 'sha256'
+  # gcloud-kms-digest-algorithm:
+  #   description: |
+  #     The algorithm to digest the input.
+  #     Must be one of: sha256, sha384, sha512.
+  #   required: false
+  #   default: 'sha256'
 
-  gcloud-kms-key-version:
-    description: |
-      Version of KMS key.
-    required: false
-    default: '1'
+  # gcloud-kms-key-version:
+  #   description: |
+  #     Version of KMS key.
+  #   required: false
+  #   default: '1'
 
-  gcloud-kms-keyring:
-    description: |
-      KMS keyring name in GCP.
-    required: false
+  # gcloud-kms-keyring:
+  #   description: |
+  #     KMS keyring name in GCP.
+  #   required: false
 
-  gcloud-kms-key-name:
-    description: |
-      KMS key name in GCP.
-    required: false
+  # gcloud-kms-key-name:
+  #   description: |
+  #     KMS key name in GCP.
+  #   required: false
 
   #
   # AWS Control
@@ -277,11 +277,6 @@ runs:
         PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
         PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
         PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
-        GCP_KMS_KEY_VERSION: ${{ inputs.gcloud-kms-key-version }}
-        GCP_KMS_KEY_NAME: ${{ inputs.gcloud-kms-key-name }}
-        GCP_KMS_KEYRING: ${{ inputs.gcloud-kms-keyring }}
-        GCP_KMS_LOCATION: ${{ inputs.gcloud-kms-location }}
-        GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
         IS_RELEASE: ${{ inputs.is-release }}
       run: |
         cd "${WORKING_DIRECTORY}"
