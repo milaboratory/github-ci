@@ -94,6 +94,9 @@ runs:
           sh -s -- -b "${trivy_dir}"
         # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
 
+        tar -czf "${trivy_dir}/report-file.tar.gz" "${trivy_dir}/report-file"
+        mv "${trivy_dir}/report-file.tar.gz" "${trivy_dir}/report-file"
+
         trivy_bin="${trivy_dir}/trivy"
         report_file="${trivy_dir}/report-file"
         skipped_file="${trivy_dir}/skipped-file"
