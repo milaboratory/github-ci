@@ -1312,7 +1312,7 @@ jobs:
       report-url: https://cdn.milaboratory.com/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   notify-test-unit:
-    name: notify unit test
+    name: 'Notify: Unit test'
     runs-on: ubuntu-latest
 
     if:  always()
@@ -1834,7 +1834,7 @@ jobs:
       obfus-mapping-s3-path: ${{ steps.with-mapping.outputs.obfuscation-mapping-s3-path }}
 
   notify-build-distArchive:
-    name: notify archive build
+    name: 'Notify: Archive build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-archive
@@ -1936,7 +1936,7 @@ jobs:
       docker-tags: ${{ steps.docker-push.outputs.pushed-json }}
 
   notify-build-distDocker:
-    name: notify docker build
+    name: 'Notify: Docker build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-docker
@@ -2042,7 +2042,7 @@ jobs:
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-build-distLibrary:
-    name: notify library build
+    name: 'Notify: Library build'
     runs-on: ubuntu-latest
     if: always()
       && inputs.dist-library
@@ -2139,7 +2139,7 @@ jobs:
       started: 'true'
 
   notify-build-publishPlPackage:
-    name: notify pl package publish
+    name: 'Notify: Publish PL package'
     runs-on: ubuntu-latest
     if: always()
       && inputs.build-pl-package
@@ -2171,7 +2171,7 @@ jobs:
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   update-cdn-link:
-    name: update the latest build link on the CDN
+    name: Update 'latest' in CDN
     runs-on: ubuntu-latest
 
     if: inputs.cdn-redirect-s3
@@ -2233,7 +2233,7 @@ jobs:
         run: 'true'
 
   notify-release-review:
-    name: notify review required
+    name: 'Notify: review required'
     runs-on: ubuntu-latest
 
     if:  always()
@@ -2430,7 +2430,7 @@ jobs:
       libs-list: ${{ steps.libs-list.outputs.result }}
 
   notify-release:
-    name: notify release
+    name: 'Notify: release'
     runs-on: ubuntu-latest
 
     if:  always()
