@@ -890,16 +890,16 @@ on:
       #   required: false
       #   default: 'europe-west3'
 
-      sign-gcloud-sdk-version:
-        description: |
-          Version or version constraint of the gcloud SDK to install. If
-          unspecified, it will accept any installed version of the gcloud SDK. If
-          set to "latest", it will download the latest available SDK. If set to a
-          version constraint, it will download the latest available version that
-          matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
-        type: string
-        required: false
-        default: 'latest'
+      # sign-gcloud-sdk-version:
+      #   description: |
+      #     Version or version constraint of the gcloud SDK to install. If
+      #     unspecified, it will accept any installed version of the gcloud SDK. If
+      #     set to "latest", it will download the latest available SDK. If set to a
+      #     version constraint, it will download the latest available version that
+      #     matches the constraint. Examples: "290.0.1" or ">= 197.0.1".
+      #   type: string
+      #   required: false
+      #   default: 'latest'
 
       node-execution-path:
         description: |
@@ -1076,15 +1076,15 @@ on:
       #     Registry's S3 Bucket name to upload signed artifacts.
       #   required: false
 
-      SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
-        description: |
-          Tha name of the GCP workload identity federation provider.
-        required: false
+      # SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER:
+      #   description: |
+      #     Tha name of the GCP workload identity federation provider.
+      #   required: false
 
-      SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
-        description: |
-          The name of the GCP service account.
-        required: false
+      # SIGN_GCLOUD_KMS_SERVICE_ACCOUNT:
+      #   description: |
+      #     The name of the GCP service account.
+      #   required: false
 
       # SIGN_GCLOUD_KMS_KEYRING:
       #   description: |
@@ -2122,9 +2122,9 @@ jobs:
           publish-script-name: ${{ inputs.publish-script-name }}
           publish-to-public: ${{ inputs.publish-to-public }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
-          gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
-          gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
+          # gcloud-sdk-version: ${{ inputs.sign-gcloud-sdk-version }}
+          # gcloud-kms-workload-identity-provider: ${{ secrets.SIGN_GCLOUD_KMS_WORKLOAD_IDENTITY_PROVIDER }}
+          # gcloud-kms-service-account: ${{ secrets.SIGN_GCLOUD_KMS_SERVICE_ACCOUNT }}
           # gcloud-kms-location: ${{ inputs.sign-gcloud-kms-location }}
           # gcloud-kms-digest-algorithm: ${{ inputs.sign-gcloud-kms-digest-algorithm }}
           # gcloud-kms-key-version: ${{ inputs.sign-gcloud-kms-key-version }}
