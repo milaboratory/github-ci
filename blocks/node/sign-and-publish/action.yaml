@@ -207,10 +207,10 @@ runs:
         ecr: false
 
     - name: Add MiLab shell utils to PATH
-      uses: milaboratory/github-ci/actions/milab-shell-utils@v4
+      uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
     - id: artifact-path
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
       with:
@@ -223,7 +223,7 @@ runs:
         path: ${{ steps.artifact-path.outputs.stdout }}
 
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare@v4
+      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
       with:
         node-version: ${{ inputs.node-version }}
         cache-version: ${{ inputs.node-cache-version }}
@@ -234,30 +234,43 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Update npm to latest available version
-      uses: milaboratory/github-ci/actions/shell@v4
-      with:
-        run: |
-          npm i -g npm@latest
+      shell: bash
+      run: |
+        npm i -g npm@latest
 
     - name: Install NodeJS packages with npm
-      uses: milaboratory/github-ci/actions/shell@v4
+      shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
-      with:
-        run: |
-          cd "${WORKING_DIRECTORY}"
-          npm ci
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        npm ci
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4
+      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
       with:
         package_json: ${{ format('{0}/{1}/package.json', github.workspace, inputs.execution-path) }}
         version: ${{ inputs.build-version }}
 
+    - name: Build the package
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        npm run build
+
+    - name: Perform security scan checks before publication
+      uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
+      with:
+        package-paths: |
+          ${{ inputs.execution-path }}
+
     - name: Run release - ${{ inputs.release-script-name }}
-      uses: milaboratory/github-ci/actions/shell@v4
+      shell: bash
       env:
         WORKING_DIRECTORY: ${{ inputs.execution-path }}
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
@@ -270,23 +283,22 @@ runs:
         GCP_KMS_LOCATION: ${{ inputs.gcloud-kms-location }}
         GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcloud-kms-digest-algorithm }}
         IS_RELEASE: ${{ inputs.is-release }}
-      with:
-        run: |
-          cd "${WORKING_DIRECTORY}"
-          if [ -z "${PUBLISH_SCRIPT}" ]; then
-            if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
-              if [ "${IS_RELEASE}" == "true" ];then
-                npm publish --access public
-              else
-                npm publish --tag beta --access public
-              fi
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        if [ -z "${PUBLISH_SCRIPT}" ]; then
+          if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish --access public
             else
-              if [ "${IS_RELEASE}" == "true" ];then
-                npm publish
-              else
-                npm publish --tag beta
-              fi
+              npm publish --tag beta --access public
             fi
           else
-              npm run "${PUBLISH_SCRIPT}"
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish
+            else
+              npm publish --tag beta
+            fi
           fi
+        else
+            npm run "${PUBLISH_SCRIPT}"
+        fi

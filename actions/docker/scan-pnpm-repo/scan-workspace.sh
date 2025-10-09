@@ -4,6 +4,13 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+# Scan single package in given directory.
+# When empty - software packages in current pnpm workspace are automatically
+#              detected and scanned.
+# When not empty - is expected to keep \n-separatedlist of package directories
+#                  to scan. Each package is required to be pl software package.
+: "${PATHS_TO_SCAN:=}"
+
 : "${DEBUG:=false}"
 : "${TRIVY_BIN:=trivy}"
 
@@ -25,30 +32,42 @@ log() {
     logf "%s\n" "$*"
 }
 
-list_npm_packages() {
+# List all packages in current pnpm workspace.
+# Output format is:
+#  [ { "name": "<npm package name>",
+#      "version": "<.version field from package.json>",
+#      "path": "<abs path to package root>",
+#      "private": <.private field from package.json> },
+#    ... ]
+list_packages() {
     log "Listing npm packages in current workspace"
     pnpm ls \
         --recursive \
         --depth -1 \
-        --json | 
+        --json |
         jq \
             --compact-output \
             '.[] | select(.private | not)'
 }
 
-select_software_packages() {
-    local _package
-    local _name
-    local _path
+# Checks if package in given directory is pl software package.
+is_software_package() {
+    local _package_path="$1"
+    jq --exit-status 'has("block-software")' "${_package_path}/package.json" >/dev/null;
+}
 
+# Gets input from list_packages() and selects only pl software packages.
+# Works like grep: does not modify the input, just filters it.
+select_software_packages() {
     [ "${DEBUG}" = "true" ] && log "  selecting software packages..."
 
     local _items_count=0
+    local _package
     while read -r _package; do
-        _name=$(jq -r '.name' <<< "${_package}")
-        _path=$(jq -r '.path' <<< "${_package}")
+        local _name=$(jq -r '.name' <<< "${_package}")
+        local _path=$(jq -r '.path' <<< "${_package}")
 
-        if jq --exit-status 'has("block-software")' "${_path}/package.json" >/dev/null; then
+        if is_software_package "${_path}"; then
             echo "${_package}" 2>/dev/null
             _items_count=$((_items_count + 1))
             continue
@@ -60,6 +79,11 @@ select_software_packages() {
     log "  software packages found: ${_items_count}"
 }
 
+# Get list of docker images built by given npm package.
+# Output format is:
+#  <full docker image tag 1>
+#  <full docker image tag 2>
+#  ...
 get_npm_package_images() {
     local _package_path="$1"
 
@@ -77,9 +101,10 @@ get_npm_package_images() {
         jq --raw-output 'select(.type == "docker") | .remoteArtifactLocation'
 }
 
+# Scan all docker images in single npm package with Trivy.
 scan_npm_package() {
     local _package_path="$1"
-    
+
     local _opts=(
         --format "${REPORT_FORMAT}"
         --pkg-types "${PKG_TYPES}"
@@ -101,15 +126,24 @@ scan_npm_package() {
         return 0
     fi
 
+    if ! is_software_package "${_package_path}"; then
+        # Make error report informative: we tried to scan wrong package.
+        # Important for selective scan mode.
+        log "! Package '${_package_path}' is not a software package"
+        echo "${_package_path} (not a software package)" >> "${failed_to_scan_packages}"
+        return 1
+    fi
+
     local _images=()
     mapfile -t _images <<< "$(get_npm_package_images "${_package_path}")"
 
     if [ "${#_images[@]}" -eq 0 ] || [ -z "${_images[0]}" ]; then
+        # Make error report informative: we did not build package, or it has no rules for docker.
         log "! No docker images found for '${_package_path}'"
         echo "${_package_path} (no images found)" >> "${failed_to_scan_packages}"
         return 1
     fi
-    
+
     for _image in "${_images[@]}"; do
         log "  scanning ${_image}"
 
@@ -127,6 +161,8 @@ scan_npm_package() {
     done
 }
 
+# Scan all npm packages obtained from stdin
+# Expects input to contain paths to packages root directories.
 scan_npm_packages() {
     local _package_path
 
@@ -154,9 +190,13 @@ cmd_example=$(DRY_RUN="y" scan_npm_package "<package-path>")
 logf "Analysis command:\n  %s\n\n" "${cmd_example}"
 
 success=true
-list_npm_packages |
-    select_software_packages |
-    jq --raw-output '.path' |
+if [ -z "${PATHS_TO_SCAN}" ]; then
+    list_packages |
+        select_software_packages |
+        jq --raw-output '.path'
+else
+    echo "${PATHS_TO_SCAN}"
+fi |
     scan_npm_packages || success=false
 
 if [ "${success}" == "true" ]; then
