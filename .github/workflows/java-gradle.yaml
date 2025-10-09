@@ -1459,7 +1459,7 @@ jobs:
           report-url: ${{ fromJSON(needs.test-integration.outputs.report-uploaded) && needs.test-integration.outputs.report-url || '' }}
 
   test-regression:
-    name: :test (reg)
+    name: 'Regression: tests'
     strategy:
       fail-fast: false
       matrix:
@@ -1579,7 +1579,7 @@ jobs:
       report-url: ${{ inputs.cdn-url }}/internal/ci/${{ steps.test.outputs.report-path }}index.html
 
   test-regression-create-pr:
-    name: :test (reg) create pr
+    name: 'Regression: create PR'
     runs-on: ubuntu-latest
 
     needs:
@@ -1660,7 +1660,7 @@ jobs:
       pr-operation: ${{ steps.create-pull-request.outputs.pull-request-operation }}
 
   notify-test-regression-changes:
-    name: notify regression tests changes
+    name: 'Notify: regression tests changes'
     runs-on: ubuntu-latest
 
     if: inputs.notify-telegram
@@ -1692,7 +1692,7 @@ jobs:
           search-tags: ${{ steps.search-tags.outputs.result }}
 
   fail-workflow-on-test-regression-changes:
-    name: fail workflow on regression tests changes
+    name: 'Regression: fail PR on changes'
     runs-on: ubuntu-latest
 
     if: needs.test-regression-create-pr.outputs.started == 'true'
@@ -1715,7 +1715,7 @@ jobs:
             exit 1
 
   notify-test-regression:
-    name: notify regression test
+    name: 'Notify: regression test'
     runs-on: ubuntu-latest
 
     if: always()
