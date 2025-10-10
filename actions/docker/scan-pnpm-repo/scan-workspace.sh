@@ -105,7 +105,8 @@ get_npm_package_images() {
 
 # Scan all docker images in single npm package with Trivy.
 scan_npm_package() {
-    local _package_path="$1"
+    local _package_path="${1}"
+    local _require_docker="${2:-false}"
 
     local _opts=(
         --format "${REPORT_FORMAT}"
@@ -143,7 +144,11 @@ scan_npm_package() {
         # Make error report informative: we did not build package, or it has no rules for docker.
         log "! No docker images found for '${_package_path}'"
         echo "${_package_path} (no images found)" >> "${failed_to_scan_packages}"
-        return 1
+        if [ "${_require_docker}" == "true" ]; then
+            return 1
+        else
+            return 0
+        fi
     fi
 
     for _image in "${_images[@]}"; do
@@ -166,12 +171,13 @@ scan_npm_package() {
 # Scan all npm packages obtained from stdin
 # Expects input to contain paths to packages root directories.
 scan_npm_packages() {
+    local _require_docker="${1:-false}"
     local _package_path
 
     local _success=true
     while read -r _package_path; do
         log "Checking ${_package_path}:"
-        scan_npm_package "${_package_path}" || _success=false
+        scan_npm_package "${_package_path}" "${_require_docker}" || _success=false
     done
 
     if [ "${_success}" != "true" ]; then
@@ -200,12 +206,13 @@ success=true
 if [ -z "${PATHS_TO_SCAN}" ]; then
     list_packages |
         select_software_packages |
-        jq --raw-output '.path'
+        jq --raw-output '.path' |
+        scan_npm_packages "false" || success=false
 else
     echo "${PATHS_TO_SCAN}" |
-        grep -vE '^ *$' # no empty lines
-fi |
-    scan_npm_packages || success=false
+        grep -vE '^ *$' |
+        scan_npm_packages "true" || success=false
+fi
 
 if [ "${success}" == "true" ]; then
     log "Scan completed successfully, no CVEs found!"
