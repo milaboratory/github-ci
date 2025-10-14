@@ -4,6 +4,8 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+DEBUG=true
+
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
 #              detected and scanned.
