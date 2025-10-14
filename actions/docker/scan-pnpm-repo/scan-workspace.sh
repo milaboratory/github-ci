@@ -3,7 +3,6 @@
 set -o nounset
 set -o errexit
 set -o pipefail
-set -x
 
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
@@ -184,16 +183,18 @@ scan_npm_package() {
             fi
 
             debug "  examining software: ${_sw}"
+            local _sw_name=$(jq --raw-output '.name' <<< "${_sw}")
+            local _sw_tag=$(jq --raw-output 'select(.docker.tag) | .docker.tag' <<< "${_sw}")
 
-            if ! jq --exit-status 'select(.docker.tag)' <<< "${_sw}" >/dev/null; then
-                log "! No docker images found for '${_package_path}' in software $(jq --raw-output '.name' <<< "${_sw}")"
-                echo "${_package_path}: no images found in $(jq --raw-output '.name' <<< "${_sw}")" >> "${failed_to_scan_packages}"
+            if [ -z "${_sw_tag}" ]; then
+                log "! No docker images found for '${_package_path}' in software '${_sw_name}'"
+                echo "${_package_path}: no images found in '${_sw_name}'" >> "${failed_to_scan_packages}"
                 # We always require docker for all software used by tengo.
                 return 1
             fi
 
             debug "  adding docker image to check list"
-            _images+=( "$(jq --raw-output '.docker.tag' <<< "${_sw}")" )
+            _images+=( "${_sw_tag}" )
         done <<< "$(
             cd "${_package_path}" &&
                 ./node_modules/.bin/pl-tengo dump software --log-level=error
