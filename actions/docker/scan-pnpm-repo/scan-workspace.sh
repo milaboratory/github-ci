@@ -4,8 +4,6 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-DEBUG=true
-
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
 #              detected and scanned.
@@ -13,7 +11,7 @@ DEBUG=true
 #                  to scan. Each package is required to be pl software package.
 : "${PATHS_TO_SCAN:=}"
 
-: "${DEBUG:=${ACTIONS_STEP_DEBUG:-false}}"
+: "${DEBUG:=${ACTIONS_STEP_DEBUG:-${RUNNER_DEBUG:-false}}}"
 : "${TRIVY_BIN:=trivy}"
 : "${SKIPPED_LIST_FILE:=}" # file with list of actually skipped images
 
@@ -36,7 +34,9 @@ log() {
 }
 
 debug() {
-    [ "${DEBUG}" == "true" ] && log "$*"
+    if [ "${DEBUG:-}" = "true" ]; then
+        log "$*"
+    fi
 }
 
 # List all packages in current pnpm workspace.
@@ -203,12 +203,12 @@ scan_npm_package() {
 
         if [ -n "${REPORT_FILE}" ]; then
         (
-            [ "${DEBUG}" == "true" ] && set -x
+            [ "${DEBUG}" != "true" ] || set -x
             "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output >> "${REPORT_FILE}"
         )
         else
         (
-            [ "${DEBUG}" == "true" ] && set -x
+            [ "${DEBUG}" != "true" ] || set -x
             "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output
         )
         fi
