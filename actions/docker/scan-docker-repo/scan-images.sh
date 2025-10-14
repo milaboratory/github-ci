@@ -10,7 +10,7 @@ registry="${1}" # i.e. containers.pl-open.science
 repository="${2}" # i.e. milaboratories/pl-containers
 tag="${3:-}"
 
-: "${DEBUG:=${ACTIONS_STEP_DEBUG:-false}}"
+: "${DEBUG:=${ACTIONS_STEP_DEBUG:-${RUNNER_DEBUG:-false}}}"
 : "${TRIVY_BIN:=trivy}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
 : "${IGNORE_LIST_FILE:=${script_dir}/ignore-list.txt}" # file with list of images to ignore
