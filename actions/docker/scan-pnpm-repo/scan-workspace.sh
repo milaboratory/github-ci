@@ -50,6 +50,7 @@ list_packages() {
         --recursive \
         --depth -1 \
         --json |
+        grep -v 'WARN' |
         jq \
             --compact-output \
             '.[] | select(.private | not)'
