@@ -158,6 +158,10 @@ scan_npm_package() {
     elif is_tengo_package "${_package_path}"; then
         local _sw
         while read -r _sw; do
+            if [ -z "${_sw}" ]; then
+                continue
+            fi
+
             if ! jq --exit-status 'select(.docker.tag)' <<< "${_sw}" >/dev/null; then
                 log "! No docker images found for '${_package_path}' in software $(jq --raw-output '.name' <<< "${_sw}")"
                 echo "${_package_path}: no images found in $(jq --raw-output '.name' <<< "${_sw}")" >> "${failed_to_scan_packages}"
