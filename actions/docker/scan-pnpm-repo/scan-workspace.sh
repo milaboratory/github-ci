@@ -174,8 +174,7 @@ scan_npm_package() {
             _images+=( "$(jq --raw-output '.docker.tag' <<< "${_sw}")" )
         done <<< "$(
             cd "${_package_path}" &&
-                pnpm pl-tengo dump software --log-level=error |
-                grep -v 'WARN' # pnpm may produce warnings like ' WARN  Issue while reading ".npmrc" ...' to its stdout, breaking jq
+                ./node_modules/.bin/pl-tengo dump software --log-level=error
         )"
 
     else
