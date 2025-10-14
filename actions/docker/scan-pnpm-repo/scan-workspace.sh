@@ -4,8 +4,6 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-set -x
-
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
 #              detected and scanned.
@@ -33,6 +31,10 @@ logf() {
 
 log() {
     logf "%s\n" "$*"
+}
+
+debug() {
+    [ "${DEBUG}" == "true" ] && log "$*"
 }
 
 # List all packages in current pnpm workspace.
@@ -87,7 +89,7 @@ select_software_packages() {
             continue
         fi
 
-        [ "${DEBUG}" = "true" ] && log "  package '${_name}' is skipped (not software or tengo package)"
+        debug "  package '${_name}' is skipped (not software or tengo package)"
         [ -n "${SKIPPED_LIST_FILE}" ] && echo "${_package}" >> "${SKIPPED_LIST_FILE}"
     done
 
@@ -102,7 +104,7 @@ select_software_packages() {
 get_software_package_images() {
     local _package_path="$1"
 
-    [ "${DEBUG}" = "true" ] && log "  getting docker images for '${_package_path}'..."
+    debug "  getting docker images for '${_package_path}'..."
 
     if [ ! -d "${_package_path}/dist/artifacts/" ]; then
         log "  no artifacts found for software package '${_package_path}'. Seems package was not built."
@@ -144,25 +146,32 @@ scan_npm_package() {
 
     local _images=()
     if is_software_package "${_package_path}"; then
-        mapfile -t _images <<< "$(get_software_package_images "${_package_path}")"
+        debug "  package '${_package_path}' is a software package"
 
+        mapfile -t _images <<< "$(get_software_package_images "${_package_path}")"
         if [ "${#_images[@]}" -eq 0 ] || [ -z "${_images[0]}" ]; then
             # Make error report informative: we did not build package, or it has no rules for docker.
             log "! No docker images found for '${_package_path}'"
             echo "${_package_path}: no images found" >> "${failed_to_scan_packages}"
             if [ "${_require_docker}" == "true" ]; then
+                debug "  require_docker = true. Returning 1"
                 return 1
             else
+                debug "  require_docker = false. Not an error."
                 return 0
             fi
         fi
 
     elif is_tengo_package "${_package_path}"; then
+        debug "  package '${_package_path}' is a tengo package"
+
         local _sw
         while read -r _sw; do
             if [ -z "${_sw}" ]; then
-                continue
+                continue # workflow with zero software dependencies causes _sw to be empty
             fi
+
+            debug "  examining software: ${_sw}"
 
             if ! jq --exit-status 'select(.docker.tag)' <<< "${_sw}" >/dev/null; then
                 log "! No docker images found for '${_package_path}' in software $(jq --raw-output '.name' <<< "${_sw}")"
@@ -171,6 +180,7 @@ scan_npm_package() {
                 return 1
             fi
 
+            debug "  adding docker image to check list"
             _images+=( "$(jq --raw-output '.docker.tag' <<< "${_sw}")" )
         done <<< "$(
             cd "${_package_path}" &&
