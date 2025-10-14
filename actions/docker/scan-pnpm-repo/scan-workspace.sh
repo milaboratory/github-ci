@@ -11,7 +11,7 @@ set -o pipefail
 #                  to scan. Each package is required to be pl software package.
 : "${PATHS_TO_SCAN:=}"
 
-: "${DEBUG:=false}"
+: "${DEBUG:=${ACTIONS_STEP_DEBUG:-false}}"
 : "${TRIVY_BIN:=trivy}"
 : "${SKIPPED_LIST_FILE:=}" # file with list of actually skipped images
 
