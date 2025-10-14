@@ -3,6 +3,7 @@
 set -o nounset
 set -o errexit
 set -o pipefail
+set -x
 
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
@@ -52,7 +53,6 @@ list_packages() {
         --recursive \
         --depth -1 \
         --json |
-        grep -v 'WARN' |
         jq \
             --compact-output \
             '.[] | select(.private | not)'
@@ -66,7 +66,13 @@ is_software_package() {
 
 is_tengo_package() {
     local _package_path="$1"
-    find "${_package_path}/src" -type f -name '*.tengo' 2>/dev/null | head -n 1 | grep -q '.'
+    if [ -d "${_package_path}/src" ]; then
+        find "${_package_path}/src" -type f -name '*.tengo' |
+            head -n 1 |
+            grep -q '.'
+    else
+        return 1
+    fi
 }
 
 # Gets input from list_packages() and selects only pl software packages.
