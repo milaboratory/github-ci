@@ -4,6 +4,8 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+set -x
+
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
 #              detected and scanned.
@@ -227,7 +229,7 @@ if [ -n "${REPORT_FILE}" ]; then
     printf "" > "${REPORT_FILE}"
 fi
 
-if ! [ -n "${SKIPPED_LIST_FILE}"]; then
+if ! [ -n "${SKIPPED_LIST_FILE}" ]; then
     log "Skipped list file: ${SKIPPED_LIST_FILE}"
     printf "" > "${SKIPPED_LIST_FILE}"
 fi
