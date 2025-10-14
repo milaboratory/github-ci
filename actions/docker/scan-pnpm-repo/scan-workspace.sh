@@ -67,7 +67,7 @@ is_software_package() {
 is_tengo_package() {
     local _package_path="$1"
     if [ -d "${_package_path}/src" ]; then
-        find "${_package_path}/src" -type f -name '*.tengo' |
+        find "${_package_path}/src" -type f -maxdepth 3 -name '*.tengo' |
             grep -q '.'
     else
         return 1
