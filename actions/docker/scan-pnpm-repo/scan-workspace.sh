@@ -147,7 +147,7 @@ scan_npm_package() {
         if [ "${#_images[@]}" -eq 0 ] || [ -z "${_images[0]}" ]; then
             # Make error report informative: we did not build package, or it has no rules for docker.
             log "! No docker images found for '${_package_path}'"
-            echo "${_package_path} (no images found)" >> "${failed_to_scan_packages}"
+            echo "${_package_path}: no images found" >> "${failed_to_scan_packages}"
             if [ "${_require_docker}" == "true" ]; then
                 return 1
             else
@@ -159,8 +159,8 @@ scan_npm_package() {
         local _sw
         while read -r _sw; do
             if ! jq --exit-status 'select(.docker.tag)' <<< "${_sw}" >/dev/null; then
-                log "! No docker images found for '${_package_path}'"
-                echo "${_package_path} (no images found)" >> "${failed_to_scan_packages}"
+                log "! No docker images found for '${_package_path}' in software $(jq --raw-output '.name' <<< "${_sw}")"
+                echo "${_package_path}: no images found in $(jq --raw-output '.name' <<< "${_sw}")" >> "${failed_to_scan_packages}"
                 # We always require docker for all software used by tengo.
                 return 1
             fi
@@ -176,7 +176,7 @@ scan_npm_package() {
         # Make error report informative: we tried to scan wrong package.
         # Important for selective scan mode.
         log "! Package '${_package_path}' is not a software or tengo package"
-        echo "${_package_path} (not a software or tengo package)" >> "${failed_to_scan_packages}"
+        echo "${_package_path}: not a software or tengo package" >> "${failed_to_scan_packages}"
         return 1
     fi
 
