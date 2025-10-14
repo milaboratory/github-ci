@@ -2,7 +2,6 @@
 
 set -o nounset
 set -o errexit
-set -o pipefail
 
 # Scan single package in given directory.
 # When empty - software packages in current pnpm workspace are automatically
@@ -11,7 +10,7 @@ set -o pipefail
 #                  to scan. Each package is required to be pl software package.
 : "${PATHS_TO_SCAN:=}"
 
-: "${DEBUG:=false}"
+: "${DEBUG:=${ACTIONS_STEP_DEBUG:-${RUNNER_DEBUG:-false}}}"
 : "${TRIVY_BIN:=trivy}"
 : "${SKIPPED_LIST_FILE:=}" # file with list of actually skipped images
 
@@ -31,6 +30,12 @@ logf() {
 
 log() {
     logf "%s\n" "$*"
+}
+
+debug() {
+    if [ "${DEBUG:-}" = "true" ]; then
+        log "$*"
+    fi
 }
 
 # List all packages in current pnpm workspace.
@@ -57,14 +62,25 @@ is_software_package() {
     jq --exit-status 'has("block-software")' "${_package_path}/package.json" >/dev/null;
 }
 
+is_tengo_package() {
+    local _package_path="$1"
+    find "${_package_path}/src" -type f -name '*.tengo' 2>/dev/null |
+        head -n 1 |
+        grep -q '.'
+}
+
 # Gets input from list_packages() and selects only pl software packages.
 # Works like grep: does not modify the input, just filters it.
 select_software_packages() {
-    [ "${DEBUG}" = "true" ] && log "  selecting software packages..."
+    debug "  selecting software packages..."
 
     local _items_count=0
     local _package
     while read -r _package; do
+        if [ -z "${_package}" ]; then
+            continue
+        fi
+
         local _name=$(jq -r '.name' <<< "${_package}")
         local _path=$(jq -r '.path' <<< "${_package}")
 
@@ -74,22 +90,28 @@ select_software_packages() {
             continue
         fi
 
-        [ "${DEBUG}" = "true" ] && log "  package '${_name}' is skipped (not software package)"
+        if is_tengo_package "${_path}"; then
+            echo "${_package}" 2>/dev/null
+            _items_count=$((_items_count + 1))
+            continue
+        fi
+
+        debug "  package '${_name}' is skipped (not software or tengo package)"
         [ -n "${SKIPPED_LIST_FILE}" ] && echo "${_package}" >> "${SKIPPED_LIST_FILE}"
     done
 
     log "  software packages found: ${_items_count}"
 }
 
-# Get list of docker images built by given npm package.
+# Get list of docker images built in given software package.
 # Output format is:
 #  <full docker image tag 1>
 #  <full docker image tag 2>
 #  ...
-get_npm_package_images() {
+get_software_package_images() {
     local _package_path="$1"
 
-    [ "${DEBUG}" = "true" ] && log "  getting docker images for '${_package_path}'..."
+    debug "  getting docker images for '${_package_path}'..."
 
     if [ ! -d "${_package_path}/dist/artifacts/" ]; then
         log "  no artifacts found for software package '${_package_path}'. Seems package was not built."
@@ -129,26 +151,57 @@ scan_npm_package() {
         return 0
     fi
 
-    if ! is_software_package "${_package_path}"; then
+    local _images=()
+    if is_software_package "${_package_path}"; then
+        debug "  package '${_package_path}' is a software package"
+
+        mapfile -t _images <<< "$(get_software_package_images "${_package_path}")"
+        if [ "${#_images[@]}" -eq 0 ] || [ -z "${_images[0]}" ]; then
+            # Make error report informative: we did not build package, or it has no rules for docker.
+            log "! No docker images found for '${_package_path}'"
+            echo "${_package_path}: no images found" >> "${failed_to_scan_packages}"
+            if [ "${_require_docker}" == "true" ]; then
+                debug "  require_docker = true. Returning 1"
+                return 1
+            else
+                debug "  require_docker = false. Not an error."
+                return 0
+            fi
+        fi
+
+    elif is_tengo_package "${_package_path}"; then
+        debug "  package '${_package_path}' is a tengo package"
+
+        local _sw
+        while read -r _sw; do
+            if [ -z "${_sw}" ]; then
+                continue # workflow with zero software dependencies causes _sw to be empty
+            fi
+
+            debug "  examining software: ${_sw}"
+            local _sw_name=$(jq --raw-output '.name' <<< "${_sw}")
+            local _sw_tag=$(jq --raw-output 'select(.docker.tag) | .docker.tag' <<< "${_sw}")
+
+            if [ -z "${_sw_tag}" ]; then
+                log "! No docker images found for '${_package_path}' in software '${_sw_name}'"
+                echo "${_package_path}: no images found in '${_sw_name}'" >> "${failed_to_scan_packages}"
+                # We always require docker for all software used by tengo.
+                return 1
+            fi
+
+            debug "  adding docker image to check list"
+            _images+=( "${_sw_tag}" )
+        done <<< "$(
+            cd "${_package_path}" &&
+                ./node_modules/.bin/pl-tengo dump software --log-level=error
+        )"
+
+    else
         # Make error report informative: we tried to scan wrong package.
         # Important for selective scan mode.
-        log "! Package '${_package_path}' is not a software package"
-        echo "${_package_path} (not a software package)" >> "${failed_to_scan_packages}"
+        log "! Package '${_package_path}' is not a software or tengo package"
+        echo "${_package_path}: not a software or tengo package" >> "${failed_to_scan_packages}"
         return 1
-    fi
-
-    local _images=()
-    mapfile -t _images <<< "$(get_npm_package_images "${_package_path}")"
-
-    if [ "${#_images[@]}" -eq 0 ] || [ -z "${_images[0]}" ]; then
-        # Make error report informative: we did not build package, or it has no rules for docker.
-        log "! No docker images found for '${_package_path}'"
-        echo "${_package_path} (no images found)" >> "${failed_to_scan_packages}"
-        if [ "${_require_docker}" == "true" ]; then
-            return 1
-        else
-            return 0
-        fi
     fi
 
     for _image in "${_images[@]}"; do
@@ -156,12 +209,12 @@ scan_npm_package() {
 
         if [ -n "${REPORT_FILE}" ]; then
         (
-            [ "${DEBUG}" == "true" ] && set -x
+            [ "${DEBUG}" != "true" ] || set -x
             "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output >> "${REPORT_FILE}"
         )
         else
         (
-            [ "${DEBUG}" == "true" ] && set -x
+            [ "${DEBUG}" != "true" ] || set -x
             "${TRIVY_BIN}" image "${_opts[@]}" "${_image}" | jq --compact-output
         )
         fi
@@ -194,7 +247,7 @@ if [ -n "${REPORT_FILE}" ]; then
     printf "" > "${REPORT_FILE}"
 fi
 
-if ! [ -n "${SKIPPED_LIST_FILE}"]; then
+if [ -n "${SKIPPED_LIST_FILE}" ]; then
     log "Skipped list file: ${SKIPPED_LIST_FILE}"
     printf "" > "${SKIPPED_LIST_FILE}"
 fi
