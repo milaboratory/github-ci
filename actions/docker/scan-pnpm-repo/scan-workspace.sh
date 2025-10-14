@@ -68,7 +68,6 @@ is_tengo_package() {
     local _package_path="$1"
     if [ -d "${_package_path}/src" ]; then
         find "${_package_path}/src" -type f -name '*.tengo' |
-            head -n 1 |
             grep -q '.'
     else
         return 1
@@ -83,6 +82,10 @@ select_software_packages() {
     local _items_count=0
     local _package
     while read -r _package; do
+        if [ -z "${_package}" ]; then
+            continue
+        fi
+
         local _name=$(jq -r '.name' <<< "${_package}")
         local _path=$(jq -r '.path' <<< "${_package}")
 
