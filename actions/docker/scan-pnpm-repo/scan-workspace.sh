@@ -176,6 +176,7 @@ scan_npm_package() {
     elif is_tengo_package "${_package_path}"; then
         debug "  package '${_package_path}' is a tengo package"
 
+        local _success=true
         local _sw
         while read -r _sw; do
             if [ -z "${_sw}" ]; then
@@ -190,7 +191,8 @@ scan_npm_package() {
                 log "! No docker images found for '${_package_path}' in software '${_sw_name}'"
                 echo "${_package_path}: no images found in '${_sw_name}'" >> "${failed_to_scan_packages}"
                 # We always require docker for all software used by tengo.
-                return 1
+                _success=false
+                continue
             fi
 
             debug "  adding docker image to check list"
@@ -199,6 +201,10 @@ scan_npm_package() {
             cd "${_package_path}" &&
                 ./node_modules/.bin/pl-tengo dump software --log-level=error
         )"
+
+        if [ "${_success}" != "true" ]; then
+            return 1
+        fi
 
     else
         # Make error report informative: we tried to scan wrong package.
