@@ -658,13 +658,11 @@ jobs:
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run build for - ${{ matrix.selector }}
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        shell: bash
         env:
           PRE_CALCULATED_STEP: ${{ matrix.selector }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run build --filter="${PRE_CALCULATED_STEP}"
+        run: |
+          pnpm run build --filter="${PRE_CALCULATED_STEP}"
 
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4-beta
@@ -715,19 +713,29 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Run publish-archive for - ${{ matrix.selector }}
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+      - name: Run after-prebuild for - ${{ matrix.selector }}
+        id: after-prebuild
+        shell: bash
         env:
           PRE_CALCULATED_STEP: ${{ matrix.selector }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
+        run: |
+          pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
+
+      - name: Generate archive name
+        id: archive-name
+        shell: bash
+        env:
+          M_SELECTOR: ${{ matrix.selector }}
+          M_OS: ${{ matrix.os }}
+          M_ARCH: ${{ matrix.arch }}
+        run: |
+          M_SELECTOR=$(echo "${M_SELECTOR}" | tr '/.!@#$%^&*(){}[]<>:;"\'' '_') # cut special symbols from file name
+          echo 'name=prebuild-results-${M_SELECTOR}-${M_OS}-${M_ARCH}' >> $GITHUB_OUTPUT
 
       - name: Save prebuild results for transfer to final build
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta
         with:
-          name: prebuild-results-${{ matrix.selector }}-${{ matrix.os }}-${{ matrix.arch }}
+          name: ${{ steps.archive-name.outputs.name }}
           path: '*/dist/'
 
   build-publish:
