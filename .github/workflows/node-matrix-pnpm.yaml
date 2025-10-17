@@ -173,7 +173,7 @@ on:
           This list is used to manage and track the execution of parallel builds in the monorepo.
           Example:
             [
-              {"os":"windows-latest", "arch":"amd64", "python_version":"3.12.7"},
+              {"os":"windows-latest", "arch":"amd64", "selector":"@platforma-open/milaboratories.runenv-python-3.12.7"},
             ]
         type: string
         required: false
@@ -657,10 +657,10 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run build for - ${{ matrix.python_version }}
+      - name: Run build for - ${{ matrix.selector }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
         with:
           dump-stdout: false
           run: |
@@ -715,10 +715,10 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Run publish-archive for - ${{ matrix.python_version }}
+      - name: Run publish-archive for - ${{ matrix.selector }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
         with:
           dump-stdout: false
           run: |
@@ -727,7 +727,7 @@ jobs:
       - name: Save prebuild results for transfer to final build
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta
         with:
-          name: prebuild-results-${{ matrix.python_version }}-${{ matrix.os }}-${{ matrix.arch }}
+          name: prebuild-results-${{ matrix.selector }}-${{ matrix.os }}-${{ matrix.arch }}
           path: '*/dist/'
 
   build-publish:
