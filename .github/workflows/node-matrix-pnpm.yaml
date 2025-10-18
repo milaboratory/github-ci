@@ -610,7 +610,7 @@ jobs:
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
             return
-          else
+          fi
 
           python3 -m pip install --user pipx
           python3 -m pipx ensurepath
@@ -623,7 +623,7 @@ jobs:
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
             return
-          else
+          fi
 
           brew install pipx
           pipx ensurepath
