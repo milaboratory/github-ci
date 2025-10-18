@@ -308,13 +308,13 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
-      # - name: Login to Docker GA
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: containers.pl-open.science
-      #     username: ${{ env.QUAY_USERNAME }}
-      #     password: ${{ env.QUAY_ROBOT_TOKEN }}
-      #     ecr: false
+      - name: Login to Docker GA
+        uses: docker/login-action@v3
+        with:
+          registry: containers.pl-open.science
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
+          ecr: false
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
