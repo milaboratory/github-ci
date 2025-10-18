@@ -729,7 +729,7 @@ jobs:
           M_OS: ${{ matrix.os }}
           M_ARCH: ${{ matrix.arch }}
         run: |
-          M_SELECTOR=$(echo "${M_SELECTOR}" | tr '/.!@#$%^&*(){}[]<>:;"\'' '_') # cut special symbols from file name
+          M_SELECTOR=$(echo "${M_SELECTOR}" | tr \''/.!@#$%^&*(){}[]<>:;"' '_') # cut special symbols from file name
           echo 'name=prebuild-results-${M_SELECTOR}-${M_OS}-${M_ARCH}' >> $GITHUB_OUTPUT
 
       - name: Save prebuild results for transfer to final build
