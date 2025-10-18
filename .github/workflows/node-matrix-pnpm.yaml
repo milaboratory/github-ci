@@ -604,24 +604,30 @@ jobs:
           team-id: ${{ inputs.team-id }}
 
       - name: Install pipx on Linux
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        shell: bash
         if: runner.os == 'Linux'
-        with:
-          dump-stdout: false
-          run: |
-            python3 -m pip install --user pipx
-            python3 -m pipx ensurepath
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: |
+          if command -v pipx > /dev/null; then
+            echo "pipx is already installed"
+            return
+          else
+
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install pipx on macOS
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        shell: bash
         if: runner.os == 'macOS'
-        with:
-          dump-stdout: false
-          run: |
-            brew install pipx
-            pipx ensurepath
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: |
+          if command -v pipx > /dev/null; then
+            echo "pipx is already installed"
+            return
+          else
+
+          brew install pipx
+          pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure ccache
         if: inputs.enable-ccache
