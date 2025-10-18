@@ -871,6 +871,9 @@ jobs:
         with:
           pattern: prebuild-results-*
 
+      - name: Perform security scan checks before publication
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
+
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
