@@ -609,7 +609,7 @@ jobs:
         run: |
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
-            return
+            exit 0
           fi
 
           python3 -m pip install --user pipx
@@ -622,7 +622,7 @@ jobs:
         run: |
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
-            return
+            exit 0
           fi
 
           brew install pipx
