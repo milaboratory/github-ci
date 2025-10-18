@@ -730,7 +730,8 @@ jobs:
           M_ARCH: ${{ matrix.arch }}
         run: |
           M_SELECTOR=$(echo "${M_SELECTOR}" | tr \''/.!@#$%^&*(){}[]<>:;"' '_') # cut special symbols from file name
-          echo 'name=prebuild-results-${M_OS}-${M_ARCH}-${M_SELECTOR}' >> $GITHUB_OUTPUT
+          echo "name=prebuild-results-${M_OS}-${M_ARCH}-${M_SELECTOR}" # report resulting artifact name
+          echo "name=prebuild-results-${M_OS}-${M_ARCH}-${M_SELECTOR}" >> $GITHUB_OUTPUT
 
       - name: Save prebuild results for transfer to final build
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta
