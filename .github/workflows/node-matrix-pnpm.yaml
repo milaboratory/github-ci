@@ -597,7 +597,7 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Login to Quay.io
-        if: inputs.docker-quay-push
+        if: inputs.docker-quay-push && runner.os == 'Linux'
         uses: docker/login-action@v3
         with:
           registry: quay.io
@@ -605,7 +605,7 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
 
       - name: Login to Docker GA
-        if: inputs.docker-ga-push
+        if: inputs.docker-ga-push && runner.os == 'Linux'
         uses: docker/login-action@v3
         with:
           registry: containers.pl-open.science
