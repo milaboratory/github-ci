@@ -26,7 +26,7 @@ on:
         description: |
           The label for github actions hosted runner
         type: string
-        default: 'ubuntu-latest'
+        default: 'ubuntu-blocks-medium-amd64'
 
       #
       # Checkout settings
