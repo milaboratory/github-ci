@@ -622,27 +622,31 @@ jobs:
         shell: bash
         if: runner.os == 'Linux'
         run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
+            python3 -m pipx ensurepath
             exit 0
           fi
 
           python3 -m pip install --user pipx
           python3 -m pipx ensurepath
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install pipx on macOS
         shell: bash
         if: runner.os == 'macOS'
         run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
           if command -v pipx > /dev/null; then
             echo "pipx is already installed"
+            pipx ensurepath
             exit 0
           fi
 
           brew install pipx
           pipx ensurepath
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure ccache
         if: inputs.enable-ccache
