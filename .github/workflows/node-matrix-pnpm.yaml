@@ -173,7 +173,7 @@ on:
           This list is used to manage and track the execution of parallel builds in the monorepo.
           Example:
             [
-              {"os":"windows-latest", "arch":"amd64", "python_version":"3.12.7"},
+              {"os":"windows-latest", "arch":"amd64", "selector":"@platforma-open/milaboratories.runenv-python-3.12.7"},
             ]
         type: string
         required: false
@@ -326,7 +326,14 @@ on:
           Whether or not to push images to quay.io registry.
         type: boolean
         required: false
-        default: false
+        default: true
+
+      docker-ga-push:
+        description: |
+          Whether or not to push images to GA registry.
+        type: boolean
+        required: false
+        default: true
 
       #
       # Notifications
@@ -590,10 +597,18 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Login to Quay.io
-        if: inputs.docker-quay-push
+        if: inputs.docker-quay-push && runner.os == 'Linux'
         uses: docker/login-action@v3
         with:
           registry: quay.io
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
+
+      - name: Login to Docker GA
+        if: inputs.docker-ga-push && runner.os == 'Linux'
+        uses: docker/login-action@v3
+        with:
+          registry: containers.pl-open.science
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
 
@@ -604,24 +619,30 @@ jobs:
           team-id: ${{ inputs.team-id }}
 
       - name: Install pipx on Linux
-        uses: milaboratory/github-ci/actions/shell@v4
+        shell: bash
         if: runner.os == 'Linux'
-        with:
-          dump-stdout: false
-          run: |
-            python3 -m pip install --user pipx
-            python3 -m pipx ensurepath
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: |
+          if command -v pipx > /dev/null; then
+            echo "pipx is already installed"
+            exit 0
+          fi
+
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install pipx on macOS
-        uses: milaboratory/github-ci/actions/shell@v4
+        shell: bash
         if: runner.os == 'macOS'
-        with:
-          dump-stdout: false
-          run: |
-            brew install pipx
-            pipx ensurepath
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: |
+          if command -v pipx > /dev/null; then
+            echo "pipx is already installed"
+            exit 0
+          fi
+
+          brew install pipx
+          pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure ccache
         if: inputs.enable-ccache
@@ -657,14 +678,12 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run build for - ${{ matrix.python_version }}
-        uses: milaboratory/github-ci/actions/shell@v4
+      - name: Run build for - ${{ matrix.selector }}
+        shell: bash
         env:
-          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run build --filter="${PRE_CALCULATED_STEP}"
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
+        run: |
+          pnpm run build --filter="${PRE_CALCULATED_STEP}"
 
       - name: CodeSign binary on macOS
         uses: milaboratory/github-ci/blocks/signing-tools/macos-sign@v4
@@ -715,19 +734,30 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Run publish-archive for - ${{ matrix.python_version }}
-        uses: milaboratory/github-ci/actions/shell@v4
+      - name: Run after-prebuild for - ${{ matrix.selector }}
+        id: after-prebuild
+        shell: bash
         env:
-          PRE_CALCULATED_STEP: ${{ format('@platforma-open/milaboratories.runenv-python-{0}', matrix.python_version) }}
-        with:
-          dump-stdout: false
-          run: |
-            pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
+        run: |
+          pnpm run --if-present after-prebuild --filter="${PRE_CALCULATED_STEP}"
+
+      - name: Generate archive name
+        id: archive-name
+        shell: bash
+        env:
+          M_SELECTOR: ${{ matrix.selector }}
+          M_OS: ${{ matrix.os }}
+          M_ARCH: ${{ matrix.arch }}
+        run: |
+          M_SELECTOR=$(echo "${M_SELECTOR}" | tr \''/.!@#$%^&*(){}[]<>:;"' '_') # cut special symbols from file name
+          echo "name=prebuild-results-${M_OS}-${M_ARCH}-${M_SELECTOR}" # report resulting artifact name
+          echo "name=prebuild-results-${M_OS}-${M_ARCH}-${M_SELECTOR}" >> $GITHUB_OUTPUT
 
       - name: Save prebuild results for transfer to final build
         uses: milaboratory/github-ci/actions/artifact/save@v4
         with:
-          name: prebuild-results-${{ matrix.python_version }}-${{ matrix.os }}-${{ matrix.arch }}
+          name: ${{ steps.archive-name.outputs.name }}
           path: '*/dist/'
 
   build-publish:
@@ -786,6 +816,14 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: quay.io
+          username: ${{ env.QUAY_USERNAME }}
+          password: ${{ env.QUAY_ROBOT_TOKEN }}
+
+      - name: Login to Docker GA
+        if: inputs.docker-quay-push
+        uses: docker/login-action@v3
+        with:
+          registry: containers.pl-open.science
           username: ${{ env.QUAY_USERNAME }}
           password: ${{ env.QUAY_ROBOT_TOKEN }}
 
@@ -855,6 +893,9 @@ jobs:
         uses: milaboratory/github-ci/actions/artifact/restore@v4
         with:
           pattern: prebuild-results-*
+
+      - name: Perform security scan checks before publication
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
 
       - name:  Run build - main metapackage
         uses: milaboratory/github-ci/actions/shell@v4
