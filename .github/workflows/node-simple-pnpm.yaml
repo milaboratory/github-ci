@@ -642,7 +642,7 @@ jobs:
       - name: Check infrastructure requirements for publication
         uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
         with:
-          packages-to-check: |
+          packages: |
             @platforma-sdk/block-tools
 
       - name: Configure AWS credentials
