@@ -57,7 +57,7 @@ check_package() {
 # ------------------------------
 
 log ""
-log "  Checking infrastructure requirements for publication"
+log "  Checking infrastructure pnpm package requirements"
 log "----------------------------------------------------------------------------"
 log ""
 
