@@ -40,7 +40,11 @@ check_package() {
     fi
 
     if [ "${_latest_version}" != "${_current_version}" ]; then
-      log "Latest version of '${_package}' is ${_latest_version}. Update package to make CI work"
+      logf "%s\n%s\n%s\n" \
+        "Update package '${_package}' to make CI work." \
+        "  latest version: ${_latest_version}" \
+        "  version used: ${_current_version}"
+
       return 1
     fi
   done
@@ -66,8 +70,12 @@ if ! [ -f "${lockfile}" ]; then
 fi
 
 success=true
-while read -r package; do
-  check_package "${lockfile}" "${package}" || success=false
+while read -r pkg; do
+  if [ -z "${pkg}" ]; then
+    continue
+  fi
+
+  check_package "${lockfile}" "${pkg}" || success=false
 done <<< "${PACKAGES_TO_CHECK}"
 
 if [ "${success}" != "true" ]; then

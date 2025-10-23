@@ -4,7 +4,7 @@ description: |
   Check the status of a NPM package within a registry
 
 inputs:
-  packages-to-check:
+  packages:
     description: |
       List of NPM packages to require latest versions in lock file.
     required: true
@@ -19,6 +19,6 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
 
         # Script parameters.
-        PACKAGES_TO_CHECK: ${{ inputs.packages-to-check }}
+        PACKAGES_TO_CHECK: ${{ inputs.packages }}
 
       run: "${ACTION_PATH}/require.sh"        
