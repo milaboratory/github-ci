@@ -3,7 +3,8 @@
 set -o nounset
 set -o errexit
 
-: "${PACKAGES_TO_CHECK:=}"
+: "${PACKAGES_TO_CHECK:=}" # require these packages to be latest
+: "${RECURSIVE:=false}" # make sure none of dependencies also use an old version
 
 logf() {
   printf "$@" >&2
@@ -18,7 +19,8 @@ latest_version() {
   npm view "${1}" version 2>/dev/null
 }
 
-versions_in_use() {
+# Get all versions of a package used directly or by transitive dependencies.
+versions_recursive() {
   local _lockfile="${1}"
   local _package="${2}"
 
@@ -27,14 +29,32 @@ versions_in_use() {
     awk -F '@' '{print $3}'
 }
 
+# Get all versions of a package used directly by pnpm workspace catalog
+versions_direct() {
+  cat "${_lockfile}" |
+    yq ".catalogs[][\"${_package}\"].version"
+}
+
 check_package() {
   local _lockfile="${1}"
   local _package="${2}"
+  local _recursive="${3:-false}"
 
   local _latest_version
   _latest_version=$(latest_version "${_package}")
 
-  for _current_version in $(versions_in_use "${_lockfile}" "${_package}"); do
+  local _versions
+  if [ "${_recursive}" == "true" ]; then
+    _versions=(
+      $(versions_recursive "${_lockfile}" "${_package}")
+    )
+  else
+    _versions=(
+      $(versions_direct "${_lockfile}" "${_package}")
+    )
+  fi
+
+  for _current_version in "${_versions[@]}"; do
     if [ -z "${_current_version}" ]; then
       continue
     fi

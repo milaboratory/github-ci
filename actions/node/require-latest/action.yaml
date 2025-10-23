@@ -9,6 +9,12 @@ inputs:
       List of NPM packages to require latest versions in lock file.
     required: true
 
+  recursive:
+    description: |
+      Check if old version of packages is used by any dependency (direct or transitive).
+    required: false
+    default: "false"
+
 runs:
   using: "composite"
 
@@ -20,5 +26,6 @@ runs:
 
         # Script parameters.
         PACKAGES_TO_CHECK: ${{ inputs.packages }}
+        RECURSIVE: ${{ inputs.recursive }}
 
       run: "${ACTION_PATH}/require.sh"        
