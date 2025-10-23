@@ -41,7 +41,7 @@ check_package() {
 
     if [ "${_latest_version}" != "${_current_version}" ]; then
       logf "%s\n%s\n%s\n" \
-        "Update package '${_package}' to make CI work." \
+        "Old package '${_package}' detected:" \
         "  latest version: ${_latest_version}" \
         "  version used: ${_current_version}"
 
@@ -56,9 +56,9 @@ check_package() {
 #          Script body
 # ------------------------------
 
-log "# -------------------------------------------------------------- #"
-log "#      Checking infrastructure requirements for publication      #"
-log "# -------------------------------------------------------------- #"
+log ""
+log "  Checking infrastructure requirements for publication"
+log "--------------------------------------------------------"
 log ""
 
 lockfile="./pnpm-lock.yaml"
