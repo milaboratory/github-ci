@@ -639,6 +639,12 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
 
+      - name: Check infrastructure requirements for publication
+        uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
+        with:
+          packages-to-check: |
+            @platforma-sdk/block-tools
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

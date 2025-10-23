@@ -1,0 +1,24 @@
+name: Check NPM package status in a registry
+author: "MiLaboratories"
+description: |
+  Check the status of a NPM package within a registry
+
+inputs:
+  packages-to-check:
+    description: |
+      List of NPM packages to require latest versions in lock file.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Check latest versions of packages used
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+
+        # Script parameters.
+        PACKAGES_TO_CHECK: ${{ inputs.packages-to-check }}
+
+      run: "${ACTION_PATH}/require.sh"        
