@@ -58,7 +58,7 @@ check_package() {
 
 log ""
 log "  Checking infrastructure requirements for publication"
-log "--------------------------------------------------------"
+log "----------------------------------------------------------------------------"
 log ""
 
 lockfile="./pnpm-lock.yaml"
