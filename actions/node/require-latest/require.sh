@@ -82,7 +82,7 @@ if [ "${success}" != "true" ]; then
   log ""
   log "----------------------------------------------------------------------------"
   log "  Update insfrastructure packages to make CI work"
-  log "    pnpm update-sdk; pnpm install; pnpm add pnpm-lock.yaml pnpm-workspace.yaml"
+  log "    don't forget to run pnpm install; pnpm add pnpm-lock.yaml pnpm-workspace.yaml"
   log ""
   exit 1
 fi
