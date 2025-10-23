@@ -81,7 +81,7 @@ done <<< "${PACKAGES_TO_CHECK}"
 if [ "${success}" != "true" ]; then
   log ""
   log "----------------------------------------------------------------------------"
-  log "  Update insfrastructure packages to make CI work"
+  log "  Update packages listed above to make CI work"
   log "    don't forget to run: pnpm install; git add pnpm-lock.yaml pnpm-workspace.yaml"
   log ""
   exit 1
