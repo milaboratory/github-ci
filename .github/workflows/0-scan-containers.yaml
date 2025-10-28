@@ -4,7 +4,7 @@
 name: "Scan containers"
 
 on:
-  workflow_call:
+  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/0-scan-containers.yaml'
