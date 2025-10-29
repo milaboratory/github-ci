@@ -72,4 +72,8 @@ fi
     awk \
         -v "chunks_count=${chunks_count}" \
         -v "prefix=${target_dir}/chunk_" \
-        '{print > (prefix ((NR-1) % chunks_count + 1))}'
+        '{
+            chunk_id = (NR-1) % chunks_count + 1;
+            target_file = sprintf("%s%03d", prefix, chunk_id);
+            print > target_file;
+        }'
