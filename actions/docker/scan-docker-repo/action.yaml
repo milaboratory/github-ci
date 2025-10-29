@@ -185,11 +185,10 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
         CONCURRENCY: ${{ inputs.concurrency }}
-        TRIVY_DIR: ${{ steps.init.outputs.trivy-dir }}
         IGNORE_LIST: ${{ inputs.ignore-list }}
         SKIPPED_FILE: ${{ steps.init.outputs.skipped-file }}
       run: |
-        PLAN_DIR="${TRIVY_DIR}/plan"
+        PLAN_DIR="./plan"
 
         "${ACTION_PATH}/create-plan.sh" "${REGISTRY}" "${REPOSITORY}" "${PLAN_DIR}" "${CONCURRENCY}"
         matrix="$(
