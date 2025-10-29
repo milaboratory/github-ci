@@ -72,7 +72,8 @@ jobs:
       - name: Download all reports
         uses: actions/download-artifact@v4
         with:
-          name: '*'
+          pattern: '*'
+          merge-multiple: true
           path: ./reports
 
       - name: Upload consolidated report
