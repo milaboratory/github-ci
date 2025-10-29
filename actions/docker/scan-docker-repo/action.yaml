@@ -245,7 +245,9 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
         SUMMARIZE_DIR: ${{ inputs.summarize-dir }}
       run: |
-        find "${SUMMARIZE_DIR}" -name 'report-*' -type f |
-          while read -r report_file; do
-            "${ACTION_PATH}/summarize.sh" "${report_file}" >> "${SUMMARIZE_DIR}/00-reports-summary.txt"
-          done
+        tmp_file="$(mktemp)"
+        find "${SUMMARIZE_DIR}" -name 'report-*' -type f -exec cat '{}' \; > "${tmp_file}"
+
+        "${ACTION_PATH}/summarize.sh" "${tmp_file}" > "${SUMMARIZE_DIR}/00-reports-summary.txt"
+
+        rm "${tmp_file}"
