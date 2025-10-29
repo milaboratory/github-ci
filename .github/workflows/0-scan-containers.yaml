@@ -27,18 +27,29 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: plan
+          name: scanning-plan
           path: ${{ steps.plan.outputs.plan-dir }}
 
     outputs:
+      plan-dir: ${{ steps.plan.outputs.plan-dir }}
       plan-matrix: ${{ steps.plan.outputs.plan-matrix }}
 
-  # run-test:
-  #   runs-on: ubuntu-latest
+  run-test:
+    runs-on: ubuntu-latest
+    needs: plan
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.plan-matrix) }}
 
-  #   steps:
-  #     - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
-  #       with:
-  #         registry: containers.pl-open.science
-  #         repository: milaboratories/pl-containers
-  #         limit: 5
+    steps:
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: scanning-plan
+          path: ${{ needs.plan.outputs.plan-dir }}
+
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+        with:
+          mode: scan
+          plan-file: ${{ matrix.plan-file }}
+          limit: 2
