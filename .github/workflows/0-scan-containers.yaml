@@ -79,7 +79,7 @@ jobs:
           mode: scan
           report-name: "report-${{ matrix.plan-file }}"
           tag-file: scan-chunks/${{ matrix.plan-file }}
-          limit: ${{ github.event && '' || 2 }} # limit scanning to 2 images for automatic runs to speedup script development
+          limit: ${{ github.event.inputs && 100000 || 2 }} # limit scanning to 2 images for automatic runs to speedup script development
 
   collect:
     runs-on: ubuntu-latest
