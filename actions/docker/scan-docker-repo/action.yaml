@@ -208,13 +208,7 @@ runs:
         SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
 
         # Script options
-        REGISTRY: ${{ inputs.registry }}
-        REPOSITORY: ${{ inputs.repository }}
-
-        TAGS: ${{ inputs.tags }}
         TAG_FILE: ${{ inputs.tag-file }}
-
-        SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
@@ -225,4 +219,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAGS}"
+        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}"
