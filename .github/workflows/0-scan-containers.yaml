@@ -52,8 +52,8 @@ jobs:
 
       - shell: bash
         run: |
+          # Random sleep to avoid limiting on trivy side
           sl=$((RANDOM % 10))
-          echo "Sleeping for ${sl} seconds to avoid limiting on trivy side"
           sleep ${sl}
 
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
