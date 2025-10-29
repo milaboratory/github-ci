@@ -35,8 +35,9 @@ jobs:
       plan-dir: ${{ steps.plan.outputs.plan-dir }}
       plan-matrix: ${{ steps.plan.outputs.plan-matrix }}
 
-  run-test:
+  scan:
     runs-on: ubuntu-latest
+    name: scan ${{ matrix.plan-file }}
     needs: plan
     strategy:
       matrix:
