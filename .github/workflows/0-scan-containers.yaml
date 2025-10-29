@@ -40,6 +40,7 @@ jobs:
     name: scan ${{ matrix.plan-file }}
     needs: plan
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.plan-matrix) }}
 
