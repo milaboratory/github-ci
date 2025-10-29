@@ -4,20 +4,109 @@
 name: "Scan containers"
 
 on:
-  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/0-scan-containers.yaml'
       - 'actions/docker/scan-docker-repo/**'
     branches: [ 'v4-beta' ]
 
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: |
+          Docker registry to scan.
+        type: string
+        default: 'containers.pl-open.science'
+      repository:
+        description: |
+          Repository to scan.
+        type: string
+        default: 'milaboratories/pl-containers'
+      concurrency:
+        description: |
+          Number of concurrent jobs to plan.
+        type: number
+        default: 3
+
 jobs:
-  run-test:
+  plan:
     runs-on: ubuntu-latest
 
     steps:
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+        id: plan
         with:
-          registry: containers.pl-open.science
-          repository: milaboratories/pl-containers
-          # limit: 5
+          mode: plan
+          report-name: "skipped-images"
+
+          registry: ${{ github.event.inputs.registry || 'containers.pl-open.science' }}
+          repository: ${{ github.event.inputs.repository || 'milaboratories/pl-containers' }}
+          concurrency: ${{ github.event.inputs.concurrency || 3 }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 00-scanning-plan
+          path: ${{ steps.plan.outputs.plan-dir }}
+
+    outputs:
+      plan-dir: ${{ steps.plan.outputs.plan-dir }}
+      plan-matrix: ${{ steps.plan.outputs.plan-matrix }}
+
+  scan:
+    runs-on: ubuntu-latest
+    name: scan ${{ matrix.plan-file }}
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.plan-matrix) }}
+
+    steps:
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: 00-scanning-plan
+          path: "scan-chunks"
+
+      - shell: bash
+        run: |
+          # Random sleep to avoid limiting on trivy side
+          sl=$((RANDOM % 10))
+          sleep ${sl}
+
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+        with:
+          mode: scan
+          report-name: "report-${{ matrix.plan-file }}"
+          tag-file: scan-chunks/${{ matrix.plan-file }}
+          limit: 2
+
+  collect:
+    runs-on: ubuntu-latest
+    needs: scan
+    if: always()
+    steps:
+      - name: Download skipped list
+        uses: actions/download-artifact@v4
+        with:
+          name: skipped-images
+          path: ./consolidated
+
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'report-*'
+          merge-multiple: true
+          path: ./consolidated
+
+      - name: Summarize all reports
+        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+        with:
+          mode: summarize
+          summarize-dir: ./consolidated
+
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: 00-consolidated-report
+          path: ./consolidated

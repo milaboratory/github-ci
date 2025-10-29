@@ -5,8 +5,17 @@ description: |
   If no tag is set, lists and scans all registry tags.
 
 inputs:
+  mode:
+    description: |
+      Planning parallel scan or start the scanner.
+       - 'scan' - start the scanner
+       - 'plan' - plan the scan
+       - 'summarize' - create summary for all reports
+    default: 'scan'
+    required: false
+
   #
-  # Scan target settings
+  # Plan mode settings
   #
   registry:
     description: |
@@ -16,27 +25,47 @@ inputs:
     description: |
       Repository inside the registry (i.e. milaboratories/pl-containers)
     required: true
-
-  tag:
+  concurrency:
     description: |
-      Tag to scan. Empty value starts all tags scanning within limit.
+      Number of concurrent jobs to plan (when mode == 'plan')
+    required: false
+    default: '1'
+  ignore-list:
+    description: |
+      Do not scan images listed in given files for CVEs.
+      For file path:
+        Each line in a file is expected to be a full image tag.
+        I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+        Empty lines and lines starting with '#' are ignored.
+
+      For directory path:
+        All files in directory are expected to have valid format, as described above.
+        Duplicate items in several files are not a problem.
+    required: false
+    default: ''
+
+  #
+  # Scan mode settings
+  #
+  tags:
+    description: |
+      Tags to scan. Empty value starts all tags scanning within limit.
+      Each tag is expected to be on a separate line.
+    required: false
+    default: ''
+  tag-file:
+    description: |
+      File with tags to scan. Each tag is expected to be on a separate line.
+      Empty lines and lines starting with '#' are ignored.
     required: false
     default: ''
   limit:
     description: |
       Limit number of images to scan. Empty value = 'no limit'.
-    required: false
-    default: ''
-  ignore-list-file:
-    description: | 
-      Do not scan these images for CVEs. Each line in a file is expected to be a full image tag.
-      I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+      Use for test purposes only, there is no sence for this in production.
     required: false
     default: ''
 
-  #
-  # Scan settings
-  #
   pkg-types:
     description: |
       Type of packages to scan.
@@ -61,21 +90,52 @@ inputs:
   #
   # Report settings
   #
+  report-name:
+    description: |
+      Name of the report file.
+    required: false
+    default: 'trivy-report'
   report-format:
     description: |
       Format of the report.
     required: false
     default: 'json'
 
+  #
+  # Summarize mode settings
+  #
+  summarize-dir:
+    description: |
+      Directory with reports to summarize.
+    required: false
+    default: './reports'
+
 outputs:
   report-file:
     description: |
       Scan report file path.
     value: ${{ steps.init.outputs.report-file }}
+
   skipped-list-file:
     description: |
       List of skipped images.
     value: ${{ steps.init.outputs.skipped-list-file }}
+
+  plan-dir:
+    description: |
+      Directory with scanning plan (list of images split into chunks).
+    value: ${{ steps.plan.outputs.plan-dir }}
+
+  plan-matrix:
+    description: |
+      JSON plan for matirx builds. 
+      Provides 'plan-dir', 'plan-file' as matrix items.
+        - 'plan-dir' is the directory with plan files;
+        - 'plan-file' is the name of the plan file without path, i.e. 'chunk_1';
+
+      Full plan path is '<plan-dir>/<plan-file>'.
+
+    value: ${{ steps.plan.outputs.matrix }}
 
 runs:
   using: "composite"
@@ -87,6 +147,7 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         WORKSPACE_PATH: ${{ runner.workspace }}
+        REPORT_NAME: ${{ inputs.report-name }}
       run: |
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
@@ -95,36 +156,75 @@ runs:
         # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
 
         trivy_bin="${trivy_dir}/trivy"
-        report_file="${trivy_dir}/report-file"
-        skipped_file="${trivy_dir}/skipped-file"
+        report_file="./${REPORT_NAME}"
+        skipped_file="./skipped-images"
 
         "${trivy_bin}" version
 
+        echo "trivy-dir=${trivy_dir}" >> "${GITHUB_OUTPUT}"
         echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
         echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
         echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
+    - name: Post save plan
+      uses: milaboratory/github-ci/actions/post/artifact@v4
+      if: inputs.mode == 'plan'
+      with:
+        name: ${{ inputs.report-name }}
+        archive: false
+        path: ${{ steps.init.outputs.skipped-file }}
+
     - name: Post save report
       uses: milaboratory/github-ci/actions/post/artifact@v4
+      if: inputs.mode == 'scan'
       with:
-        name: trivy-report
-        archive: true
-        path: |
-          ${{ steps.init.outputs.report-file }}
-          ${{ steps.init.outputs.skipped-file }}
+        name: ${{ inputs.report-name }}
+        archive: false
+        path: ${{ steps.init.outputs.report-file }}
 
-    - name: Scan images
-      id: scan-images
+    - name: Create scanning plan
+      id: plan
+      if: inputs.mode == 'plan'
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
 
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
-        TAG: ${{ inputs.tag }}
+        CONCURRENCY: ${{ inputs.concurrency }}
+        IGNORE_LIST: ${{ inputs.ignore-list }}
+        SKIPPED_FILE: ${{ steps.init.outputs.skipped-file }}
+      run: |
+        PLAN_DIR="./plan"
+
+        "${ACTION_PATH}/create-plan.sh" "${REGISTRY}" "${REPOSITORY}" "${PLAN_DIR}" "${CONCURRENCY}"
+        matrix="$(
+          ls "${PLAN_DIR}" |
+            jq \
+              --slurp \
+              --raw-input \
+              --compact-output \
+              --arg dir "${PLAN_DIR}" \
+              'split("\n") |
+                map( select(. != "") ) |
+                map( {"plan-dir": $dir, "plan-file": .} )'
+        )"
+
+        echo "plan-dir=${PLAN_DIR}" >> "${GITHUB_OUTPUT}"
+        echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
+
+    - name: Scan images
+      id: scan-images
+      if: inputs.mode == 'scan'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+
+        # Debug options
         SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
-        IGNORE_LIST_FILE: ${{ inputs.ignore-list-file }}
-        SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
+
+        # Script options
+        TAG_FILE: ${{ inputs.tag-file }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
         PKG_TYPES: ${{ inputs.pkg-types }}
@@ -135,4 +235,19 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
+        "${ACTION_PATH}/scan-images.sh"
+
+    - name: Summarize all reports
+      id: summarize
+      if: inputs.mode == 'summarize'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        SUMMARIZE_DIR: ${{ inputs.summarize-dir }}
+      run: |
+        tmp_file="$(mktemp)"
+        find "${SUMMARIZE_DIR}" -name 'report-*' -type f -exec cat '{}' \; > "${tmp_file}"
+
+        "${ACTION_PATH}/summarize.sh" "${tmp_file}" > "${SUMMARIZE_DIR}/00-reports-summary.txt"
+
+        rm "${tmp_file}"

@@ -1,5 +1,3 @@
-# Do not check these images for CVEs. 
-# We know they fail and will never fix them.
 containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
 containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.847d2cb9b5de
 containers.pl-open.science/milaboratories/pl-containers:platforma-open.babraham.software-fastqc.0.12.1.docker.150cc6c01714

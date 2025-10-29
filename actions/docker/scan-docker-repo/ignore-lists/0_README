@@ -1,0 +1,4 @@
+# Files in this directory contains lists of images to be skipped when scanning the
+# registry for CVEs. 
+# This is for images we published before CVE scanning feature became part of our 
+# normal CI pipeline of all blocks. We know images are faulty and will never fix them.
