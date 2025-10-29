@@ -24,7 +24,7 @@ jobs:
 
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
-          concurrency: 20
+          concurrency: 100
 
       - uses: actions/upload-artifact@v4
         with:
