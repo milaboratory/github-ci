@@ -189,7 +189,7 @@ runs:
 
         "${ACTION_PATH}/create-plan.sh" "${REGISTRY}" "${REPOSITORY}" "${PLAN_DIR}" "${CONCURRENCY}"
         matrix="$(
-          find ./plan -type f |
+          find "${PLAN_DIR}" -type f |
             jq --raw-input '{"plan-file": .}' |
             jq --compact-output --slurp
         )"
