@@ -4,6 +4,24 @@
 name: "Scan containers"
 
 on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: |
+          Docker registry to scan.
+        type: string
+        default: 'containers.pl-open.science'
+      repository:
+        description: |
+          Repository to scan.
+        type: string
+        default: 'milaboratories/pl-containers'
+      concurrency:
+        description: |
+          Number of concurrent jobs to plan.
+        type: number
+        default: 3
+
   workflow_call:
     inputs:
       registry:
@@ -39,9 +57,9 @@ jobs:
           mode: plan
           report-name: "skipped-images"
 
-          registry: ${{ inputs.registry }}
-          repository: ${{ inputs.repository }}
-          concurrency: ${{ inputs.concurrency }}
+          registry: ${{ github.event.inputs.registry || inputs.registry }}
+          repository: ${{ github.event.inputs.repository || inputs.repository }}
+          concurrency: ${{ github.event.inputs.concurrency || inputs.concurrency }}
 
       - uses: actions/upload-artifact@v4
         with:
