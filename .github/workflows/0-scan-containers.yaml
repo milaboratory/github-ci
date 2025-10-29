@@ -49,9 +49,14 @@ jobs:
           name: scanning-plan
           path: "scan-chunks"
 
+      - shell: bash
+        run: |
+          sl=$((RANDOM % 10))
+          echo "Sleeping for ${sl} seconds to avoid limiting on trivy side"
+          sleep ${sl}
+
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         with:
           mode: scan
           report-name: "trivy-report-${{ matrix.plan-file }}"
           tag-file: scan-chunks/${{ matrix.plan-file }}
-          limit: 2
