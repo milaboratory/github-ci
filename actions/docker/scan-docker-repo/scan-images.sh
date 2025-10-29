@@ -85,7 +85,7 @@ list_images() {
 
         local _tag
         for _tag in "${_list[@]}"; do
-            echo "${_full_tag}" 2>/dev/null
+            echo "${_registry}/${_repository}:${_tag}" 2>/dev/null
             _items_count=$((_items_count + 1))
         done
 
@@ -98,7 +98,7 @@ list_images() {
 }
 
 should_ignore() {
-    local __full_tag="${1}"
+    local _full_tag="${1}"
 
     if [ -z "${ignore_lists}" ]; then
         return 1 # do not ignore anything when ignore list is empty
@@ -192,6 +192,11 @@ scan_images() {
 # Script body
 #
 
+if [ -n "${SKIPPED_LIST_FILE}" ] && [ ! -f "${SKIPPED_LIST_FILE}" ]; then
+    log "Skipped list file: ${SKIPPED_LIST_FILE}"
+    printf "" > "${SKIPPED_LIST_FILE}"
+fi
+
 if [ -n "${REPORT_FILE}" ]; then
     log "Report file: ${REPORT_FILE}"
     printf "" > "${REPORT_FILE}"
@@ -211,7 +216,7 @@ cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
 logf "Analysis command:\n  ${cmd_example}\n\n"
 
 success=true
-if [ -n "${tags}" ]; then
+if [ -n "${tags:-}" ]; then
     for tag in "${tags[@]}"; do
         scan_image "${registry}/${repository}:${tag}" || success=false
     done
