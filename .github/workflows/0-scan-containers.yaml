@@ -5,6 +5,23 @@ name: "Scan containers"
 
 on:
   workflow_call:
+    inputs:
+      registry:
+        description: |
+          Docker registry to scan.
+        type: string
+        default: 'containers.pl-open.science'
+      repository:
+        description: |
+          Repository to scan.
+        type: string
+        default: 'milaboratories/pl-containers'
+      concurrency:
+        description: |
+          Number of concurrent jobs to plan.
+        type: number
+        default: 3
+
   push:
     paths:
       - '.github/workflows/0-scan-containers.yaml'
@@ -22,9 +39,9 @@ jobs:
           mode: plan
           report-name: "skipped-images"
 
-          registry: containers.pl-open.science
-          repository: milaboratories/pl-containers
-          concurrency: 3
+          registry: ${{ inputs.registry }}
+          repository: ${{ inputs.repository }}
+          concurrency: ${{ inputs.concurrency }}
 
       - uses: actions/upload-artifact@v4
         with:
