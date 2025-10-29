@@ -117,7 +117,7 @@ outputs:
   plan-dir:
     description: |
       Directory with scanning plan (list of images split into chunks).
-    value: ${{ steps.init.outputs.plan-dir }}
+    value: ${{ steps.plan.outputs.plan-dir }}
 
   plan-matrix:
     description: |
@@ -183,7 +183,7 @@ runs:
         CONCURRENCY: ${{ inputs.concurrency }}
         TRIVY_DIR: ${{ steps.init.outputs.trivy-dir }}
         IGNORE_LIST: ${{ inputs.ignore-list }}
-        SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
+        SKIPPED_FILE: ${{ steps.init.outputs.skipped-file }}
       run: |
         PLAN_DIR="${TRIVY_DIR}/plan"
 
@@ -194,6 +194,7 @@ runs:
             jq --compact-output --slurp
         )"
 
+        echo "plan-dir=${PLAN_DIR}" >> "${GITHUB_OUTPUT}"
         echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
     - name: Scan images

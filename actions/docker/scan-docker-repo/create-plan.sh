@@ -25,7 +25,7 @@ chunks_count="${4}" # number of groups to split into
 # Special interface for action
 #
 : "${IGNORE_LIST:=${script_dir}/ignore-lists}" # file or directory with list of images to ignore
-: "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
+: "${SKIPPED_FILE:=$(mktemp)}" # file with list of actually skipped images
 
 ignore_lists=()
 if [ -n "${IGNORE_LIST}" ]; then
@@ -46,7 +46,7 @@ skip_ignored() {
                 "${ignore_lists[@]}"; then
 
                 [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
-                echo "${_full_tag}" >> "${SKIPPED_LIST_FILE}"
+                echo "${_full_tag}" >> "${SKIPPED_FILE}"
 
                 return
             fi
