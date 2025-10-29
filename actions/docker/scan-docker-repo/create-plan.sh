@@ -38,18 +38,17 @@ skip_ignored() {
     local _full_tag
 
     while read -r _full_tag; do
-        if [ -n "${ignore_lists}" ]; then
-            if grep \
+        if [ -n "${ignore_lists}" ] &&
+            grep \
                 --recursive \
                 --silent \
                 --line-regexp "${_full_tag}" \
-                "${ignore_lists[@]}"; then
+            "${ignore_lists[@]}"; then
 
-                [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
-                echo "${_full_tag}" >> "${SKIPPED_FILE}"
+            [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
+            echo "${_full_tag}" >> "${SKIPPED_FILE}"
 
-                return
-            fi
+            continue
         fi
 
         echo "${_full_tag}"
