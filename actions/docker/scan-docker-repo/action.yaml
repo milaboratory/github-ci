@@ -199,10 +199,10 @@ runs:
               --slurp \
               --raw-input \
               --compact-output \
-              --arg plandir "${PLAN_DIR}" \
+              --arg dir "${PLAN_DIR}" \
               'split("\n") |
                 map( select(. != "") ) |
-                map( {"plan-dir": plandir, "plan-file": .} )'
+                map( {"plan-dir": $dir, "plan-file": .} )'
         )"
 
         echo "plan-dir=${PLAN_DIR}" >> "${GITHUB_OUTPUT}"
