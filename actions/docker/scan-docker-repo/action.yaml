@@ -5,8 +5,16 @@ description: |
   If no tag is set, lists and scans all registry tags.
 
 inputs:
+  mode:
+    description: |
+      Planning parallel scan or start the scanner.
+       - 'scan' - start the scanner
+       - 'plan' - plan the scan
+    default: 'scan'
+    required: false
+
   #
-  # Scan target settings
+  # Plan mode settings
   #
   registry:
     description: |
@@ -16,15 +24,11 @@ inputs:
     description: |
       Repository inside the registry (i.e. milaboratories/pl-containers)
     required: true
-
-  mode:
+  concurrency:
     description: |
-      Planning parallel scan or start the scanner.
-       - 'scan' - start the scanner
-       - 'plan' - plan the scan
-    default: 'scan'
+      Number of concurrent jobs to plan (when mode == 'plan')
     required: false
-
+    default: '1'
   ignore-list:
     description: |
       Do not scan images listed in given files for CVEs.
@@ -38,15 +42,6 @@ inputs:
         Duplicate items in several files are not a problem.
     required: false
     default: ''
-
-  #
-  # Plan mode settings
-  #
-  concurrency:
-    description: |
-      Number of concurrent jobs to plan (when mode == 'plan')
-    required: false
-    default: '1'
 
   #
   # Scan mode settings
@@ -97,6 +92,11 @@ inputs:
   #
   # Report settings
   #
+  report-name:
+    description: |
+      Name of the report file.
+    required: false
+    default: 'trivy-report'
   report-format:
     description: |
       Format of the report.
@@ -121,8 +121,13 @@ outputs:
 
   plan-matrix:
     description: |
-      JSON plan for matirx builds. Provides path to 'plan-file' as matrix item.
-      Path to plan file includes plan-dir prefix, i.e. 'plan/chunk_1'
+      JSON plan for matirx builds. 
+      Provides 'plan-dir', 'plan-file' as matrix items.
+        - 'plan-dir' is the directory with plan files;
+        - 'plan-file' is the name of the plan file without path, i.e. 'chunk_1';
+
+      Full plan path is '<plan-dir>/<plan-file>'.
+
     value: ${{ steps.plan.outputs.matrix }}
 
 runs:
@@ -157,7 +162,7 @@ runs:
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       if: inputs.mode == 'plan'
       with:
-        name: skipped-images
+        name: ${{ inputs.report-name }}
         archive: true
         path: |
           ${{ steps.init.outputs.skipped-file }}
@@ -166,7 +171,7 @@ runs:
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       if: inputs.mode == 'scan'
       with:
-        name: trivy-report
+        name: ${{ inputs.report-name }}
         archive: true
         path: |
           ${{ steps.init.outputs.report-file }}
@@ -189,9 +194,15 @@ runs:
 
         "${ACTION_PATH}/create-plan.sh" "${REGISTRY}" "${REPOSITORY}" "${PLAN_DIR}" "${CONCURRENCY}"
         matrix="$(
-          find "${PLAN_DIR}" -type f |
-            jq --raw-input '{"plan-file": .}' |
-            jq --compact-output --slurp
+          ls "${PLAN_DIR}" |
+            jq \
+              --slurp \
+              --raw-input \
+              --compact-output \
+              --arg plandir "${PLAN_DIR}" \
+              'split("\n") |
+                map( select(. != "") ) |
+                map( {"plan-dir": plandir, "plan-file": .} )'
         )"
 
         echo "plan-dir=${PLAN_DIR}" >> "${GITHUB_OUTPUT}"
@@ -219,4 +230,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}"
+        "${ACTION_PATH}/scan-images.sh"

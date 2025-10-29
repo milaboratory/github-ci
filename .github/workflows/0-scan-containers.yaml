@@ -20,6 +20,7 @@ jobs:
         id: plan
         with:
           mode: plan
+          report-name: "skipped-images"
 
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
@@ -46,10 +47,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: scanning-plan
-          path: ${{ needs.plan.outputs.plan-dir }}
+          path: "scan-chunks"
 
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         with:
           mode: scan
-          plan-file: ${{ matrix.plan-file }}
+          report-name: "trivy-report-${{ matrix.plan-file }}"
+          plan-file: scan-chunks/${{ matrix.plan-file }}
           limit: 2
