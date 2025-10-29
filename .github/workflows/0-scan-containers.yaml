@@ -53,5 +53,5 @@ jobs:
         with:
           mode: scan
           report-name: "trivy-report-${{ matrix.plan-file }}"
-          plan-file: scan-chunks/${{ matrix.plan-file }}
+          tag-file: scan-chunks/${{ matrix.plan-file }}
           limit: 2
