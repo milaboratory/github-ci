@@ -6,15 +6,39 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+#
+# Positional parameters
+#
 registry="${1}" # i.e. containers.pl-open.science
 repository="${2}" # i.e. milaboratories/pl-containers
-tag="${3:-}"
+shift 2
+tags=("${@}") # scan given tags only (no listing)
 
-: "${DEBUG:=${ACTIONS_STEP_DEBUG:-false}}"
-: "${TRIVY_BIN:=trivy}"
+#
+# Debug options
+#
+: "${DEBUG:=${ACTIONS_STEP_DEBUG:-${RUNNER_DEBUG:-false}}}"
 : "${SCAN_IMAGES_LIMIT:=}" # stop sanning after this amount of images
-: "${IGNORE_LIST_FILE:=${script_dir}/ignore-list.txt}" # file with list of images to ignore
+
+#
+# Special interface for action
+#
+: "${TAGS:=}" # scan given tags only (for simpler action code)
+: "${TAG_FILE:=}" # file with list of tags to scan (parallel scanning feature)
+: "${IGNORE_LIST:=${script_dir}/ignore-lists}" # file or directory with list of images to ignore
 : "${SKIPPED_LIST_FILE:=$(mktemp)}" # file with list of actually skipped images
+
+ignore_lists=()
+if [ -n "${IGNORE_LIST}" ]; then
+    mapfile -t ignore_lists < <(
+        grep --extended-regexp --invert-match '^#|^ *$' <<<"${IGNORE_LIST}"
+    )
+fi
+
+#
+# Trivy control
+#
+: "${TRIVY_BIN:=trivy}"
 
 : "${PKG_TYPES:=os,library}"
 : "${SCANNERS:=vuln,secret,misconfig}"
@@ -61,13 +85,6 @@ list_images() {
 
         local _tag
         for _tag in "${_list[@]}"; do
-            local _full_tag="${_registry}/${_repository}:${_tag}"
-            if [ -n "${IGNORE_LIST_FILE}" ] && grep --silent --line-regexp "${_full_tag}" "${IGNORE_LIST_FILE}"; then
-                [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
-                echo "${_full_tag}" >> "${SKIPPED_LIST_FILE}"
-                continue
-            fi
-
             echo "${_full_tag}" 2>/dev/null
             _items_count=$((_items_count + 1))
         done
@@ -78,6 +95,34 @@ list_images() {
     done
 
     log "  items found: ${_items_count}"
+}
+
+should_ignore() {
+    local __full_tag="${1}"
+
+    if [ -z "${ignore_lists}" ]; then
+        return 1 # do not ignore anything when ignore list is empty
+    fi
+
+    if grep \
+        --recursive \
+        --silent \
+        --line-regexp "${_full_tag}" \
+        "${ignore_lists[@]}"; then
+        
+        [ "${DEBUG}" == "true" ] && log "  skipping ${_full_tag} (listed in ignore list)"
+        echo "${_full_tag}" >> "${SKIPPED_LIST_FILE}"
+        return 0
+    fi
+
+    return 1 # no matches in ignore lists. Need to scan.
+}
+
+read_tags_list() {
+    local _t
+    while read -r t; do
+        tags+=("${t}")
+    done < <(grep --extended-regexp --invert-match '^#|^ *$')
 }
 
 scan_image() {
@@ -101,6 +146,10 @@ scan_image() {
 
     if [ "${DRY_RUN:-false}" != "false" ]; then
         echo "${TRIVY_BIN}" image "${_opts[@]}" "${_image}"
+        return 0
+    fi
+
+    if should_ignore "${_image}"; then
         return 0
     fi
 
@@ -148,12 +197,24 @@ if [ -n "${REPORT_FILE}" ]; then
     printf "" > "${REPORT_FILE}"
 fi
 
+# Read tags list from action inputs
+if [ -n "${TAGS}" ]; then
+    read_tags_list <<< "${TAGS}"
+fi
+
+# Read tags list from file
+if [ -n "${TAG_FILE}" ]; then
+    read_tags_list < <(cat "${TAG_FILE}")
+fi
+
 cmd_example=$(DRY_RUN="y" scan_image "<image-tag>")
 logf "Analysis command:\n  ${cmd_example}\n\n"
 
 success=true
-if [ -n "${tag}" ]; then
-    scan_image "${registry}/${repository}:${tag}" || success=false
+if [ -n "${tags}" ]; then
+    for tag in "${tags[@]}"; do
+        scan_image "${registry}/${repository}:${tag}" || success=false
+    done
 else
     log "Scanning images in ${registry}/${repository}..."
     list_images "${registry}" "${repository}" "${SCAN_IMAGES_LIMIT}" |

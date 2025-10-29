@@ -17,20 +17,44 @@ inputs:
       Repository inside the registry (i.e. milaboratories/pl-containers)
     required: true
 
-  tag:
+  mode:
     description: |
-      Tag to scan. Empty value starts all tags scanning within limit.
+      Planning parallel scan or start the scanner.
+       - 'scan' - start the scanner
+       - 'plan' - plan the scan
+    default: 'scan'
+    required: false
+
+  ignore-list:
+    description: |
+      Do not scan images listed in given files for CVEs.
+      For file path:
+        Each line in a file is expected to be a full image tag.
+        I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+        Empty lines and lines starting with '#' are ignored.
+
+      For directory path:
+        All files in directory are expected to have valid format, as described above.
+        Duplicate items in several files are not a problem.
+    required: false
+    default: ''
+
+  tags:
+    description: |
+      Tags to scan. Empty value starts all tags scanning within limit.
+      Each tag is expected to be on a separate line.
+    required: false
+    default: ''
+  tag-file:
+    description: |
+      File with tags to scan. Each tag is expected to be on a separate line.
+      Empty lines and lines starting with '#' are ignored.
     required: false
     default: ''
   limit:
     description: |
       Limit number of images to scan. Empty value = 'no limit'.
-    required: false
-    default: ''
-  ignore-list-file:
-    description: | 
-      Do not scan these images for CVEs. Each line in a file is expected to be a full image tag.
-      I.e. containers.pl-open.science/milaboratories/pl-containers:milaboratories.software-pframes-conv.main.376ca2add55b
+      Use for test purposes only, there is no sence for this in production.
     required: false
     default: ''
 
@@ -119,11 +143,17 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
 
+        # Debug options
+        SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
+
+        # Script options
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
-        TAG: ${{ inputs.tag }}
-        SCAN_IMAGES_LIMIT: ${{ inputs.limit }}
-        IGNORE_LIST_FILE: ${{ inputs.ignore-list-file }}
+        IGNORE_LIST: ${{ inputs.ignore-list }}
+
+        TAGS: ${{ inputs.tags }}
+        TAG_FILE: ${{ inputs.tag-file }}
+
         SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
 
         TRIVY_BIN: ${{ steps.init.outputs.trivy }}
@@ -135,4 +165,4 @@ runs:
         REPORT_FORMAT: ${{ inputs.report-format }}
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
-        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAG}"
+        "${ACTION_PATH}/scan-images.sh" "${REGISTRY}" "${REPOSITORY}" "${TAGS}"
