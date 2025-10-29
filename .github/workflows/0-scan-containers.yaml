@@ -99,6 +99,12 @@ jobs:
           merge-multiple: true
           path: ./consolidated
 
+      - name: Summarize all reports
+        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+        with:
+          mode: summarize
+          summarize-dir: ./consolidated
+
       - name: Upload consolidated report
         uses: actions/upload-artifact@v4
         with:

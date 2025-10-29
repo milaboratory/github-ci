@@ -128,50 +128,7 @@ log "# ====================================================== #"
 log "#             Found issues in scanned images             #"
 log "# ====================================================== #"
 if [ -n "${REPORT_FILE}" ] && [ "${REPORT_FORMAT}" == "json" ]; then
-
-    log ""
-    log "CVEs found:"
-    cat "${REPORT_FILE}" |
-        jq -r '
-            select(.Results[].Vulnerabilities) |
-            [
-                .ArtifactName,
-                (
-                    [
-                        .Results[] |
-                        select(.Vulnerabilities) |
-                        .Vulnerabilities[] |
-                        .Severity
-                    ] |
-                        group_by(.) |
-                        map({key: .[0], value: length}) |
-                        map("\(.key): \(.value)") |
-                        join(", ")
-                )
-            ] |
-                .[0] + " (" + .[1] + ")"' >&2
-
-    log ""
-    log "Misconfigurations found: "
-    cat "${REPORT_FILE}" |
-        jq -r '
-            select(.Results | any(.Misconfigurations)) |
-            [
-                .ArtifactName,
-                (
-                    [
-                        .Results[] |
-                        select(.Misconfigurations) |
-                        .Misconfigurations[] |
-                        .Severity
-                    ] |
-                        group_by(.) |
-                        map({key: .[0], value: length}) |
-                        map("\(.key): \(.value)") |
-                        join(", ")
-                )
-            ] |
-                .[0] + " (" + .[1] + ")"' >&2
+    "${script_dir}/summarize.sh" "${REPORT_FILE}" >&2
 fi
 
 exit 1

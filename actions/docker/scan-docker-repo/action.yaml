@@ -10,6 +10,7 @@ inputs:
       Planning parallel scan or start the scanner.
        - 'scan' - start the scanner
        - 'plan' - plan the scan
+       - 'summarize' - create summary for all reports
     default: 'scan'
     required: false
 
@@ -65,9 +66,6 @@ inputs:
     required: false
     default: ''
 
-  #
-  # Scan settings
-  #
   pkg-types:
     description: |
       Type of packages to scan.
@@ -102,6 +100,15 @@ inputs:
       Format of the report.
     required: false
     default: 'json'
+
+  #
+  # Summarize mode settings
+  #
+  summarize-dir:
+    description: |
+      Directory with reports to summarize.
+    required: false
+    default: './reports'
 
 outputs:
   report-file:
@@ -229,3 +236,16 @@ runs:
         REPORT_FILE: ${{ steps.init.outputs.report-file }}
       run: |
         "${ACTION_PATH}/scan-images.sh"
+
+    - name: Summarize all reports
+      id: summarize
+      if: inputs.mode == 'summarize'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        SUMMARIZE_DIR: ${{ inputs.summarize-dir }}
+      run: |
+        find "${SUMMARIZE_DIR}" -name 'report-*' -type f |
+          while read -r report_file; do
+            "${ACTION_PATH}/summarize.sh" "${report_file}" >> "${SUMMARIZE_DIR}/00-reports-summary.txt"
+          done
