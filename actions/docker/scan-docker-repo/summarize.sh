@@ -9,7 +9,7 @@ echo ""
 echo "CVEs found:"
 cat "${report_file}" |
     jq -r '
-        select(.Results[].Vulnerabilities) |
+        select(.Results) | select(.Results[].Vulnerabilities) |
         [
             .ArtifactName,
             (
@@ -31,7 +31,7 @@ echo ""
 echo "Misconfigurations found: "
 cat "${report_file}" |
     jq -r '
-        select(.Results | any(.Misconfigurations)) |
+        select(.Results) | select(.Results | any(.Misconfigurations)) |
         [
             .ArtifactName,
             (
