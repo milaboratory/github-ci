@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: 00_scanning-plan
+          name: 00-scanning-plan
           path: ${{ steps.plan.outputs.plan-dir }}
 
     outputs:
@@ -48,7 +48,7 @@ jobs:
       - name: Download plan
         uses: actions/download-artifact@v4
         with:
-          name: 00_scanning-plan
+          name: 00-scanning-plan
           path: "scan-chunks"
 
       - shell: bash
@@ -60,7 +60,7 @@ jobs:
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         with:
           mode: scan
-          report-name: "chunk-report-${{ matrix.plan-file }}"
+          report-name: "report-${{ matrix.plan-file }}"
           tag-file: scan-chunks/${{ matrix.plan-file }}
           limit: 2
 
@@ -69,15 +69,21 @@ jobs:
     needs: scan
     if: always()
     steps:
+      - name: Download skipped list
+        uses: actions/download-artifact@v4
+        with:
+          name: skipped-images
+          path: ./consolidated
+
       - name: Download all reports
         uses: actions/download-artifact@v4
         with:
-          pattern: '*'
+          pattern: 'report-*'
           merge-multiple: true
-          path: ./reports
+          path: ./consolidated
 
       - name: Upload consolidated report
         uses: actions/upload-artifact@v4
         with:
           name: 00-consolidated-report
-          path: ./reports
+          path: ./consolidated
