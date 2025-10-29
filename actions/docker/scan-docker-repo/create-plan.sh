@@ -60,11 +60,14 @@ if [ ! -d "${target_dir}" ]; then
     mkdir -p "${target_dir}"
 fi
 
+if [ !-f "${SKIPPED_FILE}" ]; then
+    touch "${SKIPPED_FILE}"
+fi
+
 # Split list of tags into ${chunks_count} files inside ${target_dir}
 # Files are rotated in round-robin manner to avoid large images bias: if some software is large,
 # it is sperad across several chunks and is treated by CI in parallel, providing better
 # execution time equality for all chunks.
-
 "${script_dir}/list-images.sh" "${registry}" "${repository}" |
     skip_ignored |
     awk \
