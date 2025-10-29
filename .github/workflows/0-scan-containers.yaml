@@ -12,12 +12,33 @@ on:
     branches: [ 'v4-beta' ]
 
 jobs:
-  run-test:
+  plan:
     runs-on: ubuntu-latest
 
     steps:
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+        id: plan
         with:
+          mode: plan
+
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
-          limit: 5
+          concurrency: 20
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plan
+          path: ${{ steps.plan.outputs.plan-dir }}
+
+    outputs:
+      plan-matrix: ${{ steps.plan.outputs.plan-matrix }}
+
+  # run-test:
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+  #       with:
+  #         registry: containers.pl-open.science
+  #         repository: milaboratories/pl-containers
+  #         limit: 5

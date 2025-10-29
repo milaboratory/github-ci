@@ -39,6 +39,18 @@ inputs:
     required: false
     default: ''
 
+  #
+  # Plan mode settings
+  #
+  concurrency:
+    description: |
+      Number of concurrent jobs to plan (when mode == 'plan')
+    required: false
+    default: '1'
+
+  #
+  # Scan mode settings
+  #
   tags:
     description: |
       Tags to scan. Empty value starts all tags scanning within limit.
@@ -96,10 +108,22 @@ outputs:
     description: |
       Scan report file path.
     value: ${{ steps.init.outputs.report-file }}
+
   skipped-list-file:
     description: |
       List of skipped images.
     value: ${{ steps.init.outputs.skipped-list-file }}
+
+  plan-dir:
+    description: |
+      Directory with scanning plan (list of images split into chunks).
+    value: ${{ steps.init.outputs.plan-dir }}
+
+  plan-matrix:
+    description: |
+      JSON plan for matirx builds. Provides path to 'plan-file' as matrix item.
+      Path to plan file includes plan-dir prefix, i.e. 'plan/chunk_1'
+    value: ${{ steps.plan.outputs.matrix }}
 
 runs:
   using: "composite"
@@ -124,21 +148,57 @@ runs:
 
         "${trivy_bin}" version
 
+        echo "trivy-dir=${trivy_dir}" >> "${GITHUB_OUTPUT}"
         echo "trivy=${trivy_bin}" >> "${GITHUB_OUTPUT}"
         echo "report-file=${report_file}" >> "${GITHUB_OUTPUT}"
         echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
+    - name: Post save plan
+      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      if: inputs.mode == 'plan'
+      with:
+        name: skipped-images
+        archive: true
+        path: |
+          ${{ steps.init.outputs.skipped-file }}
+
     - name: Post save report
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      if: inputs.mode == 'scan'
       with:
         name: trivy-report
         archive: true
         path: |
           ${{ steps.init.outputs.report-file }}
-          ${{ steps.init.outputs.skipped-file }}
+
+    - name: Create scanning plan
+      id: plan
+      if: inputs.mode == 'plan'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+
+        REGISTRY: ${{ inputs.registry }}
+        REPOSITORY: ${{ inputs.repository }}
+        CONCURRENCY: ${{ inputs.concurrency }}
+        TRIVY_DIR: ${{ steps.init.outputs.trivy-dir }}
+        IGNORE_LIST: ${{ inputs.ignore-list }}
+        SKIPPED_LIST_FILE: ${{ steps.init.outputs.skipped-file }}
+      run: |
+        PLAN_DIR="${TRIVY_DIR}/plan"
+
+        "${ACTION_PATH}/create-plan.sh" "${REGISTRY}" "${REPOSITORY}" "${PLAN_DIR}" "${CONCURRENCY}"
+        matrix="$(
+          find ./plan -type f |
+            jq --raw-input '{"plan-file": .}' |
+            jq --compact-output --slurp
+        )"
+
+        echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
 
     - name: Scan images
       id: scan-images
+      if: inputs.mode == 'scan'
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
@@ -149,7 +209,6 @@ runs:
         # Script options
         REGISTRY: ${{ inputs.registry }}
         REPOSITORY: ${{ inputs.repository }}
-        IGNORE_LIST: ${{ inputs.ignore-list }}
 
         TAGS: ${{ inputs.tags }}
         TAG_FILE: ${{ inputs.tag-file }}
