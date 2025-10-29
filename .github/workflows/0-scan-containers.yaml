@@ -20,7 +20,7 @@ jobs:
         id: plan
         with:
           mode: plan
-          report-name: "00_skipped-images"
+          report-name: "skipped-images"
 
           registry: containers.pl-open.science
           repository: milaboratories/pl-containers
@@ -48,7 +48,7 @@ jobs:
       - name: Download plan
         uses: actions/download-artifact@v4
         with:
-          name: scanning-plan
+          name: 00_scanning-plan
           path: "scan-chunks"
 
       - shell: bash
