@@ -60,7 +60,7 @@ if [ ! -d "${target_dir}" ]; then
     mkdir -p "${target_dir}"
 fi
 
-if [ !-f "${SKIPPED_FILE}" ]; then
+if [ ! -f "${SKIPPED_FILE}" ]; then
     touch "${SKIPPED_FILE}"
 fi
 
