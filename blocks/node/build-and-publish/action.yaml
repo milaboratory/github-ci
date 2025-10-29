@@ -1,0 +1,236 @@
+name: Upload re-packed artifact to platforma's registry
+author: 'MiLaboratories'
+description: |
+  Re-pack artifact as .tgz archive, sign with gcloud kms asymmetric-sign
+  and upload archive to platforma's registry bin bucket.
+
+inputs:
+  build-version:
+    description: |
+      Set version number in 'package.json' file to given value.
+    required: false
+
+  artifact-name:
+    description: |
+      Name of artifact to work with. This artifact will be downloaded
+      from GitHub, all its contents will be uploaded to S3.
+    required: false
+
+  pl-bin-registry-upload-url:
+    description: |
+      Specifies the URL of Platforma's binary registry where the signed package will be uploaded.
+    required: false
+
+  is-release:
+    description: |
+      Indicates whether the current run is intended for a release.
+    required: false
+
+  #
+  # NodeJS Control
+  #
+  publish-script-name:
+    description: |
+      Run 'npm run <script>' instead of 'npm publish'
+    required: false
+    default: ""
+
+  publish-to-public:
+    description: |
+      Whether or not the npm package should be published as public.
+    required: false
+    default: 'false'
+
+  execution-path:
+    description: |
+      Specify the path where to execute release script.
+    required: false
+
+  node-version:
+    description: |
+      Node version to use.
+      Examples: '20.x', '18.x'.
+    required: false
+    default: '20.x'
+
+  node-cache-version:
+    description: |
+      Simple hack, that allows to 'reset' cache for particular job.
+
+      Just change the value of this parameter and the next run will
+      not find build cache and will have to start from scratch.
+
+    required: false
+    default: 'v1'
+
+  hashfiles-search-path:
+    description: |
+      Hashfiles search path for package-lock.json.
+    required: false
+    default: '**/package-lock.json'
+
+  is-electron-application:
+    description: |
+      If 'true' enables cache for an Electron application,
+      if 'false', enables cache for a generic NodeJS application.
+    required: false
+    default: 'false'
+
+  registry-url:
+    description: |
+      The npm registry url to set up for auth
+      and publication of the node js package.
+    required: false
+    default: 'https://npm.pkg.github.com'
+
+  scope:
+    description: |
+      Scope for authenticating against npm registries.
+    required: false
+    default: ${{ format('{0}{1}', '@', github.repository_owner) }}
+
+  npm-auth-token:
+    description: |
+      Specify auth token for the npm private registry.
+    required: false
+
+  always-auth:
+    description: |
+      Set always-auth in npmrc.
+    required: false
+    default: 'false'
+
+  #
+  # AWS Control
+  #
+  s3-iam-role-to-assume:
+    description: |
+      The ARN of a IAM role to assume and configure the Actions environment with
+      assumed role credentials.
+    required: false
+
+  s3-region:
+    description: |
+      AWS region for Registry's S3 bucket
+    required: false
+    default: 'eu-central-1'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
+        aws-region: ${{ inputs.s3-region }}
+
+    - name: Login to Quay.io
+      if: env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ env.QUAY_USERNAME }}
+        password: ${{ env.QUAY_ROBOT_TOKEN }}
+        ecr: false
+
+    - name: Login to Docker GA
+      if: env.QUAY_USERNAME != '' && env.QUAY_ROBOT_TOKEN != ''
+      uses: docker/login-action@v3
+      with:
+        registry: containers.pl-open.science
+        username: ${{ env.QUAY_USERNAME }}
+        password: ${{ env.QUAY_ROBOT_TOKEN }}
+        ecr: false
+
+    - name: Add MiLab shell utils to PATH
+      uses: milaboratory/github-ci/actions/milab-shell-utils@v4
+
+    - id: artifact-path
+      uses: milaboratory/github-ci/actions/shell@v4
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+      with:
+        run: echo "${GITHUB_WORKSPACE}/${WORKING_DIRECTORY}/release-artifact"
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.artifact-path.outputs.stdout }}
+
+    - name: Prepare environment for building a NodeJS application
+      uses: milaboratory/github-ci/actions/node/prepare@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache-version: ${{ inputs.node-cache-version }}
+        hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
+        is-electron-application: ${{ inputs.is-electron-application }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+        always-auth: ${{ inputs.always-auth }}
+
+    - name: Update npm to latest available version
+      shell: bash
+      run: |
+        npm i -g npm@latest
+
+    - name: Install NodeJS packages with npm
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        ARCHIVE_PATH: ${{ steps.artifact-path.outputs.stdout }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        npm ci
+
+    - name: Patch package version
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
+      with:
+        package_json: ${{ format('{0}/{1}/package.json', github.workspace, inputs.execution-path) }}
+        version: ${{ inputs.build-version }}
+
+    - name: Build the package
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        npm run build
+
+    - name: Perform security scan checks before publication
+      uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
+      with:
+        package-paths: |
+          ${{ inputs.execution-path }}
+
+    - name: Publish npm package
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.execution-path }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        PL_REGISTRY_MILABORATORIES_UPLOAD_URL: ${{ inputs.pl-bin-registry-upload-url }}
+        PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
+        PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
+        IS_RELEASE: ${{ inputs.is-release }}
+      run: |
+        cd "${WORKING_DIRECTORY}"
+        if [ -z "${PUBLISH_SCRIPT}" ]; then
+          if [ "${PUBLISH_TO_PUBLIC}" == "true" ]; then
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish --access public
+            else
+              npm publish --tag beta --access public
+            fi
+          else
+            if [ "${IS_RELEASE}" == "true" ];then
+              npm publish
+            else
+              npm publish --tag beta
+            fi
+          fi
+        else
+            npm run "${PUBLISH_SCRIPT}"
+        fi
