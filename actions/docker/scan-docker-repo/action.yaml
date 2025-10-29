@@ -140,6 +140,7 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         WORKSPACE_PATH: ${{ runner.workspace }}
+        REPORT_NAME: ${{ inputs.report-name }}
       run: |
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
@@ -148,8 +149,8 @@ runs:
         # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
 
         trivy_bin="${trivy_dir}/trivy"
-        report_file="${trivy_dir}/report-file"
-        skipped_file="${trivy_dir}/skipped-file"
+        report_file="./${REPORT_NAME}"
+        skipped_file="./skipped-images"
 
         "${trivy_bin}" version
 
@@ -163,18 +164,16 @@ runs:
       if: inputs.mode == 'plan'
       with:
         name: ${{ inputs.report-name }}
-        archive: true
-        path: |
-          ${{ steps.init.outputs.skipped-file }}
+        archive: false
+        path: ${{ steps.init.outputs.skipped-file }}
 
     - name: Post save report
       uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       if: inputs.mode == 'scan'
       with:
         name: ${{ inputs.report-name }}
-        archive: true
-        path: |
-          ${{ steps.init.outputs.report-file }}
+        archive: false
+        path: ${{ steps.init.outputs.report-file }}
 
     - name: Create scanning plan
       id: plan
