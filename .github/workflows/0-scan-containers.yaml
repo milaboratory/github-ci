@@ -39,9 +39,9 @@ jobs:
           mode: plan
           report-name: "skipped-images"
 
-          registry: ${{ github.event.inputs.registry }}
-          repository: ${{ github.event.inputs.repository }}
-          concurrency: ${{ github.event.inputs.concurrency }}
+          registry: ${{ github.event.inputs.registry || 'containers.pl-open.science' }}
+          repository: ${{ github.event.inputs.repository || 'milaboratories/pl-containers' }}
+          concurrency: ${{ github.event.inputs.concurrency || 3 }}
 
       - uses: actions/upload-artifact@v4
         with:
