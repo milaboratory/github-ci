@@ -1,4 +1,4 @@
-name: Build and Test portable R executable bundle
+name: Matrix NPM
 
 on:
   workflow_call:
