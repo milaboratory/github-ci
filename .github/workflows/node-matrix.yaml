@@ -1,4 +1,4 @@
-name: Build and Test portable R executable bundle
+name: Matrix NPM
 
 on:
   workflow_call:
@@ -550,6 +550,13 @@ jobs:
           kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        if: inputs.aws-login-enable
+        with:
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
+          aws-region: ${{ secrets.AWS_ASSUME_REGION }}
 
       - name: Run after-prebuild for - ${{ matrix.os }}-${{ matrix.arch }}
         id: after-prebuild
