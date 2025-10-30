@@ -551,6 +551,14 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
+      - name: Run after-prebuild for - ${{ matrix.selector }}
+        id: after-prebuild
+        shell: bash
+        env:
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
+        run: |
+          npm run --if-present after-prebuild
+
       - name: Saving build artifacts for publish step
         uses: milaboratory/github-ci/actions/artifact/save@v4-beta
         id: build-artifacts
