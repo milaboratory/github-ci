@@ -551,11 +551,11 @@ jobs:
           kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
           access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Run after-prebuild for - ${{ matrix.selector }}
+      - name: Run after-prebuild for - ${{ matrix.os }}-${{ matrix.arch }}
         id: after-prebuild
         shell: bash
         env:
-          PRE_CALCULATED_STEP: ${{ matrix.selector }}
+          PRE_CALCULATED_STEP: ${{ matrix.os }}-${{ matrix.arch }}
         run: |
           npm run --if-present after-prebuild
 
