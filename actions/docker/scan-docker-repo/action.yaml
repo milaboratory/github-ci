@@ -152,7 +152,7 @@ runs:
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
-          sh -s -- -b "${trivy_dir}"
+          sh -s -- -b "${trivy_dir}" latest
         # to fix the version used, put it as a value after trivy_dir, i.e. '-b "${trivy_dir}" v0.67.0'
 
         trivy_bin="${trivy_dir}/trivy"
