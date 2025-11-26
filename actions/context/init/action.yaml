@@ -33,6 +33,9 @@ runs:
     - uses: milaboratory/github-ci/actions/context/create@v4-beta
 
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ inputs.version-fetch-depth }}
+        fetch-tags: true
     - id: versions
       uses: milaboratory/github-ci/actions/detect-version@v4-beta
       with:
