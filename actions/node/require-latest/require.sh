@@ -55,7 +55,7 @@ check_package() {
   fi
 
   for _current_version in "${_versions[@]}"; do
-    if [ -z "${_current_version}" || "${_current_version}" == "null" ]; then
+    if [ -z "${_current_version}" ] || [ "${_current_version}" == "null" ]; then
       continue
     fi
 
