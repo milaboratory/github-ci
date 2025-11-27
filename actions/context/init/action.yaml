@@ -35,8 +35,6 @@ runs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: ${{ inputs.version-fetch-depth }}
-        fetch-tags: true
-        ref: ${{ github.ref }}
     - id: versions
       uses: milaboratory/github-ci/actions/detect-version@v4
       with:
