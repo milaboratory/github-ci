@@ -774,7 +774,7 @@ jobs:
 
       - name: Run tests
         id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@test-ci
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"

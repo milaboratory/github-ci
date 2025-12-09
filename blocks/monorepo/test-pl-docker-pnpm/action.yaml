@@ -105,6 +105,10 @@ runs:
         pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
         pl-log-level: ${{ inputs.pl-log-level }}
 
+    - shell: bash
+      run: |
+        sleep 100000000000
+
     - name: Run test - ${{ inputs.test-script-name}}
       if: inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
       env:
