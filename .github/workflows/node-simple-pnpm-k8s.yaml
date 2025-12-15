@@ -132,7 +132,10 @@ on:
 
       helm-release-name:
         description: |
-          Helm chart release name
+          Helm chart release name.
+          May also affect location of main platforma files on storages mounted to the instance,
+          i.e. files on NFS in Google Cloud.
+          Defaults to 'ci-${ inputs.pl-version }-${ github.run_id }'
         type: string
         required: false
         default: ''
@@ -323,12 +326,13 @@ jobs:
           PL_VERSION: ${{ inputs.pl-version }}
         with:
           run: |
-            PL_SAN_VERSION="${PL_VERSION}-${GITHUB_RUN_ID}"
+            if [ -z "${HELM_RELEASE_NAME}" ]; then
+              HELM_RELEASE_NAME="ci-${PL_VERSION}-${GITHUB_RUN_ID}"
+            fi
 
-            ghwa_set_env HELM_RELEASE_NAME "${HELM_RELEASE_NAME}-${PL_SAN_VERSION}"
+            ghwa_set_env HELM_RELEASE_NAME "${HELM_RELEASE_NAME}"
             ghwa_set_env NAMESPACE "${NAMESPACE}"
             ghwa_set_env PL_VERSION "${PL_VERSION}"
-            ghwa_set_env PL_SAN_VERSION "${PL_SAN_VERSION}"
 
       - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
         with:
@@ -343,10 +347,10 @@ jobs:
           namespace: ${{ inputs.namespace }}
           helm-chart-values: |
             image.tag=${{ env.PL_VERSION }}
-            primaryStorage.gcs.url=${{ format('gs://{0}/{1}-platforma-ci-primary/', env.GCLOUD_CI_GKE_BUCKET_NAME, env.PL_SAN_VERSION) }}
-            googleBatch.jobNamePrefix=${{ env.PL_SAN_VERSION }}
-            googleBatch.volumes.workDirName=${{ format('{0}/work', env.PL_SAN_VERSION) }}
-            googleBatch.volumes.packagesDirName=${{ format('{0}/packages', env.PL_SAN_VERSION) }}
+            primaryStorage.gcs.url=${{ format('gs://{0}/ci/{1}/primary', env.GCLOUD_CI_GKE_BUCKET_NAME, env.HELM_RELEASE_NAME) }}
+            googleBatch.jobNamePrefix=${{ env.HELM_RELEASE_NAME }}
+            googleBatch.volumes.workDirName=${{ format('ci/{0}/work', env.HELM_RELEASE_NAME) }}
+            googleBatch.volumes.packagesDirName=${{ format('ci/{0}/packages', env.HELM_RELEASE_NAME) }}
 
       - uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
