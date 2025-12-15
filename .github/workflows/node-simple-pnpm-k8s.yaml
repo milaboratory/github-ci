@@ -319,20 +319,20 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - shell: bash
         env:
           HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
           NAMESPACE: ${{ inputs.namespace }}
           PL_VERSION: ${{ inputs.pl-version }}
-        with:
-          run: |
-            if [ -z "${HELM_RELEASE_NAME}" ]; then
-              HELM_RELEASE_NAME="ci-${PL_VERSION}-${GITHUB_RUN_ID}"
-            fi
+        run: |
+          # Export pl version, helm namespace and release name as env variables
+          if [ -z "${HELM_RELEASE_NAME}" ]; then
+            HELM_RELEASE_NAME="ci-${PL_VERSION}-${GITHUB_RUN_ID}"
+          fi
 
-            ghwa_set_env HELM_RELEASE_NAME "${HELM_RELEASE_NAME}"
-            ghwa_set_env NAMESPACE "${NAMESPACE}"
-            ghwa_set_env PL_VERSION "${PL_VERSION}"
+          echo "HELM_RELEASE_NAME=${HELM_RELEASE_NAME}" >> "${GITHUB_ENV}"
+          echo "NAMESPACE=${NAMESPACE}" >> "${GITHUB_ENV}"
+          echo "PL_VERSION=${PL_VERSION}" >> "${GITHUB_ENV}"
 
       - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
         with:
