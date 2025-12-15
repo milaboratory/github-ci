@@ -292,16 +292,17 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
 
-      - uses: milaboratory/github-ci/actions/shell@v4-beta
+      - shell: bash
         id: npm-pkg-metadata
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
-        with:
-          run: |
-            NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
-            PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
-            ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
-            ghwa_set_output pnpm-version "${PNPM_VERSION}"
+        run: |
+          # Get NPM package metadata
+          NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/${PACKAGE_PATH}/package.json" | jq --raw-output '.version')"
+          PNPM_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output 'if .packageManager and (.packageManager | length > 0) then .packageManager | split("@")[1] else empty end')"
+
+          echo "npm-pkg-version=${NPM_PKG_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "pnpm-version=${PNPM_VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Login to Quay.io
         uses: docker/login-action@v3
@@ -404,8 +405,8 @@ jobs:
               --namespace "${{ env.NAMESPACE }}"
     
     outputs:
-      npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
-      pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
+      npm-pkg-version: ${{ steps.npm-pkg-metadata.outputs.npm-pkg-version }}
+      pnpm-version: ${{ steps.npm-pkg-metadata.outputs.pnpm-version }}
 
   notify-test:
     name: notify integration tests
