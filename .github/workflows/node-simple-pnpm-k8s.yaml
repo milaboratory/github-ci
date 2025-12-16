@@ -22,49 +22,34 @@ on:
           Platform version
         type: string
         required: true
-        default: 'main'
+        default: "main"
 
       pnpm-build-command:
         description: |
           Command to build the application.
         type: string
         required: false
-        default: 'build'
+        default: "build"
 
       pnpm-test-command:
         description: |
           Command to test the application.
         type: string
         required: false
-        default: 'test'
+        default: "test"
 
       pnpm-version:
         description: |
           Version of pnpm to install.
         type: string
         required: false
-        default: 'latest'
+        default: "latest"
 
       pl-test-storage-id:
-        description:
-          Platforma test assets storage id.
+        description: Platforma test assets storage id.
         type: string
         required: false
-        default: 'test-assets'
-
-      pl-test-user:
-        description: |
-          PLatforma test username.
-        type: string
-        required: false
-        default: 'testuser1'
-
-      pl-test-password:
-        description: |
-          Password for the Platforma's test user.
-        type: string
-        required: false
-        default: 'testpassword1'
+        default: "test-assets"
 
       pl-api-request-timeout:
         description: |
@@ -72,14 +57,14 @@ on:
           Set this value in seconds.
         type: string
         required: false
-        default: '3000'
+        default: "3000"
 
       pl-api-port:
         description: |
           Platforma API port.
         type: string
         required: false
-        default: '6345'
+        default: "6345"
 
       checkout-submodules:
         description: |
@@ -89,14 +74,14 @@ on:
           'recursive' - checkout submodules recursive
         type: string
         required: false
-        default: ''
+        default: ""
 
       package-path:
         description: |
           Relative path to the package.json with package version.
         type: string
         required: false
-        default: '.'
+        default: "."
 
       node-version:
         description: |
@@ -115,20 +100,31 @@ on:
           Kubectl version
         type: string
         required: false
-        default: 'v1.32.6'
+        default: "v1.32.6"
 
       gha-runner-label:
         description: |
           The label for github actions hosted runner
         type: string
-        default: 'ubuntu-latest'
+        default: "ubuntu-latest"
+
+      #
+      # Platforma helm deployment settings
+      #
+
+      namespace:
+        description: |
+          Kubernetes namespace name
+        type: string
+        required: false
+        default: "dev-gke"
 
       helm-version:
         description: |
           Helm version
         type: string
         required: false
-        default: '3.15.4'
+        default: "3.15.4"
 
       helm-release-name:
         description: |
@@ -138,14 +134,14 @@ on:
           Defaults to 'ci-${ inputs.pl-version }-${ github.run_id }'
         type: string
         required: false
-        default: ''
+        default: ""
 
       helm-chart-name:
         description: |
           Helm chart name
         type: string
         required: false
-        default: 'platforma'
+        default: "platforma"
 
       helm-chart-registry:
         description: |
@@ -153,14 +149,14 @@ on:
           Helm Charts are stored as OCI images.
         type: string
         required: false
-        default: ''
+        default: ""
 
       helm-chart-values-file:
         description: |
           Path to Helm chart values (in YAML format)
         type: string
         required: false
-        default: ''
+        default: ""
 
       helm-chart-atomic-upgrade:
         description: |
@@ -189,7 +185,7 @@ on:
           (like Jobs for hooks) (default 5m0s)
         type: string
         required: false
-        default: '5m0s'
+        default: "5m0s"
 
       helm-chart-values:
         description: |
@@ -197,7 +193,7 @@ on:
           they are passed with --set flag for each value.
         type: string
         required: false
-        default: ''
+        default: ""
 
       helm-chart-render-template:
         description: |
@@ -206,25 +202,45 @@ on:
         required: false
         default: false
 
-      namespace:
+      #
+      # Turbo cache settings
+      #
+
+      team-id:
         description: |
-          Kubernetes namespace name
+          The Team ID for turbo cache.
+          Controls the directory where turbo cache entries will be saved.
         type: string
         required: false
-        default: 'dev-gke'
+        default: "ci"
+
+      aws-region:
+        description: |
+          The AWS region
+        type: string
+        required: false
+        default: "eu-central-1"
+
+      aws-login-duration:
+        description: |
+          Maximum time AWS credentials will be valid until expiration.
+          Defaults to 1 hour.
+        type: number
+        required: false
+        default: 3600
 
       env:
-          description: |
-            custom environment variables to set for all jobs in workflow
-            as JSON-encoded map:
-              { "MY_VAR_1": "awesome value",
-                "VARIABLE_2": "not so awesome :)" }
+        description: |
+          custom environment variables to set for all jobs in workflow
+          as JSON-encoded map:
+            { "MY_VAR_1": "awesome value",
+              "VARIABLE_2": "not so awesome :)" }
 
-            This input's envs are merged with secrets.env
-            This input's envs have lower priority compared than secrets.env
-          type: string
-          required: false
-          default: '{}'
+          This input's envs are merged with secrets.env
+          This input's envs have lower priority compared than secrets.env
+        type: string
+        required: false
+        default: "{}"
 
       notify-slack:
         description: |
@@ -243,7 +259,7 @@ on:
            - 'false' - don't send notifications about tests results at all.
         required: false
         type: string
-        default: 'true'
+        default: "true"
 
     secrets:
       env:
@@ -290,7 +306,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
-          fetch-depth: '0'
+          fetch-depth: "0"
 
       - shell: bash
         id: npm-pkg-metadata
@@ -320,13 +336,28 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
+      - name: Configure AWS credentials
+        if: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
+          role-duration-seconds: ${{ inputs.aws-login-duration }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        if: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET != '' }}
+        with:
+          storage-provider: "s3"
+          storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
+
       - shell: bash
         env:
           HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
           NAMESPACE: ${{ inputs.namespace }}
           PL_VERSION: ${{ inputs.pl-version }}
         run: |
-          # Export pl version, helm namespace and release name as env variables
+          # Export helm and test settings as env variables
           if [ -z "${HELM_RELEASE_NAME}" ]; then
             HELM_RELEASE_NAME="ci-${PL_VERSION}-${GITHUB_RUN_ID}"
           fi
@@ -334,6 +365,9 @@ jobs:
           echo "HELM_RELEASE_NAME=${HELM_RELEASE_NAME}" >> "${GITHUB_ENV}"
           echo "NAMESPACE=${NAMESPACE}" >> "${GITHUB_ENV}"
           echo "PL_VERSION=${PL_VERSION}" >> "${GITHUB_ENV}"
+
+          echo "PL_TEST_USER=${PL_CI_TEST_USER:-testuser1}" >> "${GITHUB_ENV}"
+          echo "PL_TEST_PASSWORD=${PL_CI_TEST_PASSWORD:-testpassword1}" >> "${GITHUB_ENV}"
 
       - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4
         with:
@@ -377,15 +411,15 @@ jobs:
       - id: test
         uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4
         #env:
-          # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
+        # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
 
         with:
-          pl-api-addr: ${{ inputs.pl-api-addr || format('{0}-platforma.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
+          pl-api-addr: ${{ inputs.pl-api-addr || format('{0}.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
           pl-api-port: ${{ inputs.pl-api-port }}
           pl-api-request-timeout: ${{ inputs.pl-api-request-timeout }}
           pl-test-storage-id: ${{ inputs.pl-test-storage-id }}
-          pl-test-user: ${{ inputs.pl-test-user }}
-          pl-test-password: ${{ inputs.pl-test-password }}
+          pl-test-user: ${{ env.PL_TEST_USER }}
+          pl-test-password: ${{ env.PL_TEST_PASSWORD }}
           pnpm-build-command: ${{ inputs.pnpm-build-command }}
           pnpm-test-command: ${{ inputs.pnpm-test-command }}
           pnpm-version: ${{ env.PNPM_VERSION }}
@@ -403,7 +437,7 @@ jobs:
             --wait \
             --timeout "${{ inputs.helm-chart-wait-timeout }}" \
             --namespace "${{ env.NAMESPACE }}"
-    
+
     outputs:
       npm-pkg-version: ${{ steps.npm-pkg-metadata.outputs.npm-pkg-version }}
       pnpm-version: ${{ steps.npm-pkg-metadata.outputs.pnpm-version }}
@@ -412,7 +446,7 @@ jobs:
     name: notify integration tests
     runs-on: ubuntu-latest
 
-    if:  always()
+    if: always()
       && inputs.notify-slack
     needs:
       - run-tests
@@ -436,6 +470,6 @@ jobs:
           build-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           notification-mode: ${{ inputs.notify-tests }}
           tests-status: ${{ needs.run-tests.result }}
-          tests-type: 'Integration'
+          tests-type: "Integration"
           search-tags: ${{ steps.search-tags.outputs.result }}
           product-name: ${{ inputs.app-name }}
