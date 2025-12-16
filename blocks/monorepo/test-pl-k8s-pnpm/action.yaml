@@ -1,5 +1,5 @@
 name: Build and Test NodeJS PNPM application
-author: 'MiLaboratories'
+author: "MiLaboratories"
 description: |
   Prepare agent for building the NodeJS application.
   Install NodeJS specific version, download package, create cache e.t.c
@@ -14,44 +14,43 @@ inputs:
     description: |
       Platforma API port.
     required: false
-    default: '6345'
+    default: "6345"
 
   pl-api-request-timeout:
     description: |
       Platforma API request timeout.
       Set this value in seconds.
     required: false
-    default: '3000'
+    default: "3000"
 
   pl-test-storage-id:
-    description:
-      Platforma test assets storage id.
+    description: Platforma test assets storage id.
     required: false
-    default: 'test-assets'
+    default: "test-assets"
 
   pl-test-user:
     description: |
       PLatforma test username.
     required: false
-    default: 'testuser1'
+    default: "testuser1"
 
   pl-test-password:
     description: |
       Password for the Platforma's test user.
     required: false
-    default: 'testpassword1'
+    default: "testpassword1"
 
   pnpm-build-command:
     description: |
       Command to build the application.
     required: false
-    default: 'build'
+    default: "build"
 
   pnpm-test-command:
     description: |
       Command to test the application.
     required: false
-    default: 'test'
+    default: "test"
 
   node-version:
     description: |
@@ -67,19 +66,19 @@ inputs:
       not find build cache and will have to start from scratch.
 
     required: false
-    default: 'v1'
+    default: "v1"
 
   cache-hashfiles-search-path:
     description: |
       Hashfiles search path for pnpm-lock.yaml.
     required: false
-    default: '**/pnpm-lock.yaml'
+    default: "**/pnpm-lock.yaml"
 
   pnpm-version:
     description: |
       Version of pnpm to install.
     required: false
-    default: 'latest'
+    default: "latest"
 
   pnpm-recursive-tests:
     description: |
@@ -96,7 +95,7 @@ inputs:
     description: |
       JSON-formatted string listing of the specific tests to run.
     required: false
-    default: '[]'
+    default: "[]"
 
   npmrc-config:
     description: |
@@ -116,11 +115,9 @@ runs:
         npmrc-config: ${{ inputs.npmrc-config }}
 
     - name: Install NodeJS packages with pnpm
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      with:
-        dump-stdout: false
-        run: |
-          pnpm install --frozen-lockfile --prefer-offline
+      shell: bash
+      run: |
+        pnpm install --frozen-lockfile --prefer-offline
 
     - name: Run build
       shell: bash

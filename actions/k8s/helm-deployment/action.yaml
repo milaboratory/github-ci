@@ -1,5 +1,5 @@
 name: Run 'helm' CLI utility
-author: 'MiLaboratories'
+author: "MiLaboratories"
 description: |
   Run 'helm' CLI utility in action
 
@@ -8,23 +8,23 @@ inputs:
     description: |
       Helm chart release name
     required: false
-    default: ''
+    default: ""
   helm-chart-name:
     description: |
       Helm chart name
     required: false
-    default: ''
+    default: ""
   helm-chart-registry:
     description: |
       The URI of the AWS ECR Private registry.
       Helm Charts are stored as OCI images.
     required: false
-    default: ''
+    default: ""
   helm-chart-values-file:
     description: |
       Path to Helm chart values (in YAML format)
     required: false
-    default: ''
+    default: ""
   helm-chart-atomic-upgrade:
     description: |
       If set, upgrade process rolls back changes
@@ -36,34 +36,34 @@ inputs:
       or ReplicaSet are in a ready state before marking
       the release as successful. It will wait for as long as --timeout
     required: false
-    default: 'true'
+    default: "true"
   helm-chart-debug:
     description: |
       Enable verbose output (debug)
     required: false
-    default: 'false'
+    default: "false"
   helm-chart-wait-timeout:
     description: |
       Time to wait for any individual Kubernetes operation
       (like Jobs for hooks) (default 5m0s)
     required: false
-    default: '5m0s'
+    default: "5m0s"
   helm-chart-values:
     description: |
       A list of override values,
       they are passed with --set flag for each value.
     required: false
-    default: ''
+    default: ""
   helm-chart-render-template:
     description: |
       Template helm chart before deployment
     required: false
-    default: 'false'
+    default: "false"
   namespace:
     description: |
       Kubernetes namespace name
     required: false
-    default: ''
+    default: ""
 
 runs:
   using: "composite"
@@ -140,4 +140,3 @@ runs:
             --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
             --namespace "${NAMESPACE}"
           fi
-
