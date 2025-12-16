@@ -79,7 +79,7 @@ runs:
           helm repo update
 
     - name: Helm Upgrade
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      shell: bash
       env:
         HELM_RELEASE_NAME: ${{ inputs.helm-release-name }}
         HELM_CHART_NAME: ${{ inputs.helm-chart-name }}
@@ -91,52 +91,51 @@ runs:
         HELM_CHART_RENDER_TEMPLATE: ${{ inputs.helm-chart-render-template }}
         HELM_CHART_VALUES: ${{ inputs.helm-chart-values }}
         NAMESPACE: ${{ inputs.namespace }}
-      with:
-        dump-stdout: false
-        run: |
+      run: |
+        # Running 'helm upgrade' for ${{ inputs.helm-release-name }} (chart ${{ inputs.helm-chart-name }})
 
-          options=()
-          if [ "${HELM_CHART_ATOMIC_UPGRADE}" == "true" ];then
-            options+=( --atomic )
-          fi
+        options=()
+        if [ "${HELM_CHART_ATOMIC_UPGRADE}" == "true" ];then
+          options+=( --atomic )
+        fi
 
-          if [ "${HELM_CHART_DEBUG}" == "true" ];then
-            options+=( --debug )
-          fi
+        if [ "${HELM_CHART_DEBUG}" == "true" ];then
+          options+=( --debug )
+        fi
 
-          if [ -n "${HELM_CHART_VALUES_FILE}" ];then
-            options+=( --values "${HELM_CHART_VALUES_FILE}" )
-          fi
+        if [ -n "${HELM_CHART_VALUES_FILE}" ];then
+          options+=( --values "${HELM_CHART_VALUES_FILE}" )
+        fi
 
-          set_values=()
-          if [ -n "${HELM_CHART_VALUES}" ]; then
-            while IFS= read -r _set_values; do
-              if [ -n "${_set_values}" ]; then
-                set_values+=( --set "${_set_values}" )
-              fi
-            done <<<"${HELM_CHART_VALUES}"
-          fi
+        set_values=()
+        if [ -n "${HELM_CHART_VALUES}" ]; then
+          while IFS= read -r _set_values; do
+            if [ -n "${_set_values}" ]; then
+              set_values+=( --set "${_set_values}" )
+            fi
+          done <<<"${HELM_CHART_VALUES}"
+        fi
 
-          if [ "${HELM_CHART_RENDER_TEMPLATE}" == "true" ] && [ "${HELM_CHART_NAME}" == "platforma" ];then
-            helm template "${HELM_RELEASE_NAME}" \
-            "platforma/${HELM_CHART_NAME}" \
-            "${options[@]}" \
-            "${set_values[@]}" \
-            --namespace "${NAMESPACE}"
-          fi
+        if [ "${HELM_CHART_RENDER_TEMPLATE}" == "true" ] && [ "${HELM_CHART_NAME}" == "platforma" ];then
+          helm template "${HELM_RELEASE_NAME}" \
+          "platforma/${HELM_CHART_NAME}" \
+          "${options[@]}" \
+          "${set_values[@]}" \
+          --namespace "${NAMESPACE}"
+        fi
 
-          if [ "${HELM_CHART_NAME}" == "platforma" ];then
-            helm upgrade --install "${HELM_RELEASE_NAME}" \
-            "platforma/${HELM_CHART_NAME}" \
-            "${options[@]}" \
-            "${set_values[@]}" \
-            --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
-            --namespace "${NAMESPACE}"
-          else
-            helm upgrade --install "${HELM_RELEASE_NAME}" \
-            "oci://${HELM_CHART_REGISTRY}/${HELM_CHART_NAME}" \
-            "${options[@]}" \
-            "${set_values[@]}" \
-            --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
-            --namespace "${NAMESPACE}"
-          fi
+        if [ "${HELM_CHART_NAME}" == "platforma" ];then
+          helm upgrade --install "${HELM_RELEASE_NAME}" \
+          "platforma/${HELM_CHART_NAME}" \
+          "${options[@]}" \
+          "${set_values[@]}" \
+          --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
+          --namespace "${NAMESPACE}"
+        else
+          helm upgrade --install "${HELM_RELEASE_NAME}" \
+          "oci://${HELM_CHART_REGISTRY}/${HELM_CHART_NAME}" \
+          "${options[@]}" \
+          "${set_values[@]}" \
+          --timeout "${HELM_CHART_WAIT_TIMEOUT}" \
+          --namespace "${NAMESPACE}"
+        fi

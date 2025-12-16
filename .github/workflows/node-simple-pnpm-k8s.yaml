@@ -219,6 +219,7 @@ on:
       #
       # Turbo cache settings
       #
+
       team-id:
         description: |
           The Team ID for turbo cache.
@@ -350,6 +351,7 @@ jobs:
           ecr: false
 
       - name: Configure AWS credentials
+        if: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
@@ -357,6 +359,7 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        if: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET != '' }}
         with:
           storage-provider: "s3"
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
