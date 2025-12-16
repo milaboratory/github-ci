@@ -51,20 +51,6 @@ on:
         required: false
         default: "test-assets"
 
-      pl-test-user:
-        description: |
-          PLatforma test username.
-        type: string
-        required: false
-        default: "testuser1"
-
-      pl-test-password:
-        description: |
-          Password for the Platforma's test user.
-        type: string
-        required: false
-        default: "testpassword1"
-
       pl-api-request-timeout:
         description: |
           Platforma API request timeout.
@@ -371,7 +357,7 @@ jobs:
           NAMESPACE: ${{ inputs.namespace }}
           PL_VERSION: ${{ inputs.pl-version }}
         run: |
-          # Export pl version, helm namespace and release name as env variables
+          # Export helm and test settings as env variables
           if [ -z "${HELM_RELEASE_NAME}" ]; then
             HELM_RELEASE_NAME="ci-${PL_VERSION}-${GITHUB_RUN_ID}"
           fi
@@ -379,6 +365,9 @@ jobs:
           echo "HELM_RELEASE_NAME=${HELM_RELEASE_NAME}" >> "${GITHUB_ENV}"
           echo "NAMESPACE=${NAMESPACE}" >> "${GITHUB_ENV}"
           echo "PL_VERSION=${PL_VERSION}" >> "${GITHUB_ENV}"
+
+          echo "PL_TEST_USER=${PL_CI_TEST_USER:-testuser1}" >> "${GITHUB_ENV}"
+          echo "PL_TEST_PASSWORD=${PL_CI_TEST_PASSWORD:-testpassword1}" >> "${GITHUB_ENV}"
 
       - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
         with:
@@ -429,8 +418,8 @@ jobs:
           pl-api-port: ${{ inputs.pl-api-port }}
           pl-api-request-timeout: ${{ inputs.pl-api-request-timeout }}
           pl-test-storage-id: ${{ inputs.pl-test-storage-id }}
-          pl-test-user: ${{ inputs.pl-test-user }}
-          pl-test-password: ${{ inputs.pl-test-password }}
+          pl-test-user: ${{ env.PL_TEST_USER }}
+          pl-test-password: ${{ env.PL_TEST_PASSWORD }}
           pnpm-build-command: ${{ inputs.pnpm-build-command }}
           pnpm-test-command: ${{ inputs.pnpm-test-command }}
           pnpm-version: ${{ env.PNPM_VERSION }}
