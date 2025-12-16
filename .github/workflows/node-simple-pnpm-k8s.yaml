@@ -380,7 +380,7 @@ jobs:
           echo "NAMESPACE=${NAMESPACE}" >> "${GITHUB_ENV}"
           echo "PL_VERSION=${PL_VERSION}" >> "${GITHUB_ENV}"
 
-      - uses: ./actions/k8s/helm-deployment
+      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
         with:
           helm-release-name: ${{ env.HELM_RELEASE_NAME }}
           helm-chart-name: ${{ inputs.helm-chart-name }}
