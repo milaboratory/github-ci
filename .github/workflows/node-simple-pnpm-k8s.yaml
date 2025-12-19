@@ -344,7 +344,7 @@ jobs:
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         if: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET != '' }}
         with:
           storage-provider: "s3"
