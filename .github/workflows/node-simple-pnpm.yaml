@@ -231,6 +231,21 @@ on:
         required: false
         default: 'false'
 
+      test-coverage:
+        description: |
+          Whether to upload coverage reports to Codecov.
+        type: boolean
+        required: false
+        default: false
+
+      test-coverage-reports:
+        description: |
+          Comma-separated list of coverage report files to upload to Codecov.
+          If empty, no coverage reports will be uploaded.
+        type: string
+        required: false
+        default: ''
+
       #
       # NPM registry settings
       #
@@ -772,6 +787,8 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-build-args: ${{ inputs.pnpm-build-args }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+          test-coverage: ${{ inputs.test-coverage }}
+          test-coverage-reports: ${{ inputs.test-coverage-reports }}
 
       - name: Run tests
         id: test
@@ -796,6 +813,8 @@ jobs:
           pl-docker-tag: ${{ inputs.pl-docker-tag }}
           pl-test-assets-dir: ${{ inputs.pl-test-assets-dir }}
           pl-log-level: ${{ inputs.pl-log-level }}
+          test-coverage: ${{ inputs.test-coverage }}
+          test-coverage-reports: ${{ inputs.test-coverage-reports }}
 
       - name: Run build (before publish)
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
@@ -812,6 +831,8 @@ jobs:
           pnpm-recursive-tests: ${{ inputs.pnpm-recursive-tests }}
           pnpm-build-args: ${{ inputs.pnpm-build-args }}
           pnpm-tests-args: ${{ inputs.pnpm-tests-args }}
+          test-coverage: ${{ inputs.test-coverage }}
+          test-coverage-reports: ${{ inputs.test-coverage-reports }}
 
       - name: Perform security scan checks before publication
         uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
