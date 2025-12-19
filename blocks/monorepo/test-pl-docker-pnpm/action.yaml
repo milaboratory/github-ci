@@ -72,6 +72,19 @@ inputs:
     required: false
     default: 'info'
 
+  test-coverage:
+    description: |
+      Whether to upload coverage reports to Codecov.
+    required: false
+    default: 'false'
+
+  test-coverage-reports:
+    description: |
+      Comma-separated list of coverage report files to upload to Codecov.
+      If empty, no coverage reports will be uploaded.
+    required: false
+    default: ''
+
 runs:
   using: "composite"
   steps:
@@ -124,6 +137,14 @@ runs:
 
           pnpm run ${{ inputs.test-script-name }} "${set_args[@]}"
         fi
+
+    - name: Upload coverage reports to Codecov
+      if: inputs.test-coverage == 'true' && inputs.test-coverage-reports != '' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      uses: codecov/codecov-action@v5
+      with:
+        use_oidc: true
+        report_type: coverage
+        files: ${{ inputs.test-coverage-reports }}
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
