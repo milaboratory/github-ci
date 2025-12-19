@@ -109,7 +109,7 @@ runs:
         fi
 
     - name: Upload coverage reports to Codecov
-      if: inputs.tests == 'true' && inputs.test-coverage == 'true'
+      if: inputs.test-coverage == 'true'
       uses: milaboratory/github-ci/actions/node/upload-coverage@v4
       with:
         test-coverage-reports: ${{ inputs.test-coverage-reports }}
