@@ -85,6 +85,13 @@ inputs:
     required: false
     default: ''
 
+  test-results-reports:
+    description: |
+      Comma-separated list of test results report files to upload to Codecov.
+      If empty, no test results reports will be uploaded.
+    required: false
+    default: ''
+
 runs:
   using: "composite"
   steps:
@@ -145,6 +152,14 @@ runs:
         use_oidc: true
         report_type: coverage
         files: ${{ inputs.test-coverage-reports }}
+
+    - name: Upload test results to Codecov
+      if: inputs.test-coverage == 'true' && inputs.test-results-reports != '' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
+      uses: codecov/codecov-action@v5
+      with:
+        use_oidc: true
+        report_type: test_results
+        files: ${{ inputs.test-results-reports }}
 
     - name: Restore assets ownership
       if: always() && inputs.pl-start-service != 'false' && (env.SKIP_TESTS != 'true' || inputs.test-skip-dry-run == 'true')
