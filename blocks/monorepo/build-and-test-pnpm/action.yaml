@@ -109,17 +109,8 @@ runs:
         fi
 
     - name: Upload coverage reports to Codecov
-      if: inputs.tests == 'true' && inputs.test-coverage == 'true' && inputs.test-coverage-reports != ''
-      uses: codecov/codecov-action@v5
+      if: inputs.tests == 'true' && inputs.test-coverage == 'true'
+      uses: milaboratory/github-ci/actions/node/upload-coverage@v4-beta
       with:
-        use_oidc: true
-        report_type: coverage
-        files: ${{ inputs.test-coverage-reports }}
-
-    - name: Upload test results to Codecov
-      if: inputs.tests == 'true' && inputs.test-coverage == 'true' && inputs.test-results-reports != ''
-      uses: codecov/codecov-action@v5
-      with:
-        use_oidc: true
-        report_type: test_results
-        files: ${{ inputs.test-results-reports }}
+        test-coverage-reports: ${{ inputs.test-coverage-reports }}
+        test-results-reports: ${{ inputs.test-results-reports }}

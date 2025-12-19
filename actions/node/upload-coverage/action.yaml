@@ -1,0 +1,66 @@
+name: Upload coverage and test results to Codecov
+author: 'MiLaboratories'
+description: |
+  Refactored action to expand report globs and upload them to Codecov.
+
+inputs:
+  test-coverage-reports:
+    description: |
+      Comma-separated list of coverage report files/globs to upload to Codecov.
+    required: false
+    default: ''
+
+  test-results-reports:
+    description: |
+      Comma-separated list of test results report files/globs to upload to Codecov.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Expand report globs
+      shell: bash
+      id: expand-globs
+      env:
+        COVERAGE_REPORTS: ${{ inputs.test-coverage-reports }}
+        RESULTS_REPORTS: ${{ inputs.test-results-reports }}
+      run: |
+        shopt -s globstar nullglob
+        expand_globs() {
+          local input="$1"
+          local result=""
+          IFS=',' read -ra patterns <<< "$input"
+          for pattern in "${patterns[@]}"; do
+            # Trim whitespace and trailing newline from <<<
+            pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+            pattern="${pattern%"${pattern##*[![:space:]]}"}"
+            [ -z "$pattern" ] && continue
+            for file in $pattern; do
+              if [ -f "$file" ]; then
+                result="${result}${result:+,}${file}"
+              fi
+            done
+          done
+          echo "$result"
+        }
+
+        echo "coverage-reports=$(expand_globs "$COVERAGE_REPORTS")" >> $GITHUB_OUTPUT
+        echo "results-reports=$(expand_globs "$RESULTS_REPORTS")" >> $GITHUB_OUTPUT
+
+    - name: Upload coverage reports to Codecov
+      if: steps.expand-globs.outputs.coverage-reports != ''
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+      with:
+        use_oidc: true
+        report_type: coverage
+        files: ${{ steps.expand-globs.outputs.coverage-reports }}
+
+    - name: Upload test results to Codecov
+      if: steps.expand-globs.outputs.results-reports != ''
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+      with:
+        use_oidc: true
+        report_type: test_results
+        files: ${{ steps.expand-globs.outputs.results-reports }}
