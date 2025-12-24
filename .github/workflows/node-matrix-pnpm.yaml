@@ -682,6 +682,10 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
+      - uses: fawazahmed0/action-debug-vscode@main
+        env:
+          PRE_CALCULATED_STEP: ${{ matrix.selector }}
+
       - name: Run build for - ${{ matrix.selector }}
         shell: bash
         env:
