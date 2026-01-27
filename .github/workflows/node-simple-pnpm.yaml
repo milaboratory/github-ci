@@ -364,16 +364,6 @@ on:
         required: false
         default: true
 
-      #
-      # Notifications
-      #
-      notify-telegram:
-        description: |
-          Enable Telegram notifications
-        required: false
-        type: boolean
-        default: false
-
       notify-slack:
         description: |
           Enable Slack notifications
@@ -393,14 +383,6 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      TELEGRAM_NOTIFICATION_TARGET:
-        description: |
-          ID of Telegram Channel or User to notify on build results.
-        required: false
-      TELEGRAM_API_TOKEN:
-        description: |
-          Telegram Bot API authorization token
-        required: false
       SLACK_BOT_TOKEN:
         description: |
           Slack bot token for notifications
@@ -949,39 +931,6 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-
-  notify-release:
-    name: notify release
-    runs-on: ubuntu-latest
-    if: always() && inputs.notify-telegram
-    needs:
-      - init
-      - metadata
-      - check-changesets
-      - build-test-publish
-      - pre-calculated-build
-    steps:
-      - id: search-tags
-        if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
-        with:
-          input: |
-            release
-
-      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
-        env:
-          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-          job-status: |
-            ${{ needs.pre-calculated-build.result }}
-            ${{ needs.build-test-publish.result }}
-            ${{ needs.check-changesets.result }}
-          product-name: ${{ inputs.app-name }}
-          override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
-          override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          search-tags: ${{ steps.search-tags.outputs.result }}
 
   notify-slack-release:
     name: notify slack release
