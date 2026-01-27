@@ -825,6 +825,36 @@ jobs:
           test-coverage-reports: ${{ inputs.test-coverage-reports }}
           test-results-reports: ${{ inputs.test-results-reports }}
 
+      - name: Save Turbo S3 cache status for monitoring
+        if: always() && inputs.test && inputs.test-skip-dry-run != 'true'
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            if [ -f ./test-dry-run.json ]; then
+              CACHE_STATUS=$(tail -n +5 ./test-dry-run.json | jq -c '{
+                ran_without_cache: (.tasks | map(select(.task == "test")) | any((.cache.status == "MISS") and (.command != "<NONEXISTENT>"))),
+                cache_stats: (.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)),
+                cache_type: "turbo-remote-s3",
+                workflow_run_id: ${{ github.run_id }},
+                workflow_run_number: ${{ github.run_number }},
+                event_name: "${{ github.event_name }}",
+                ref: "${{ github.ref }}",
+                sha: "${{ github.sha }}",
+                timestamp: now
+              }')
+              echo "${CACHE_STATUS}" > cache-status.json
+              echo "Turbo S3 cache status saved: ${CACHE_STATUS}"
+            fi
+
+      - name: Upload Turbo S3 cache status artifact
+        if: always() && inputs.test && inputs.test-skip-dry-run != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-s3-cache-status-${{ github.run_id }}
+          path: cache-status.json
+          retention-days: 30
+          if-no-files-found: ignore
+
       - name: Run build (before publish)
         uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
         env:
@@ -985,3 +1015,193 @@ jobs:
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
+
+  monitor-cache-status:
+    name: monitor Turbo S3 cache status
+    runs-on: ubuntu-latest
+    if: always() && inputs.test && inputs.test-skip-dry-run != 'true' && github.event_name == 'merge_group'
+    needs:
+      - build-test-publish
+    permissions:
+      actions: read
+      contents: read
+    # For testing: Temporarily lower threshold by adding env variable:
+    # env:
+    #   CACHE_MONITOR_THRESHOLD: '1'  # Default is 3, use 1 for testing
+    steps:
+      - name: Install GitHub CLI (if needed)
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            # Check if gh is installed
+            if command -v gh &> /dev/null; then
+              echo "GitHub CLI (gh) is already installed: $(gh --version)"
+            else
+              echo "Installing GitHub CLI (gh)..."
+              # Use official GitHub CLI action for installation
+              # This works on both GitHub-hosted and self-hosted runners
+              curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+              sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+              sudo apt-get update
+              sudo apt-get install gh -y
+            fi
+            
+            # Verify gh installation
+            gh --version || (echo "::error::Failed to install or verify gh. Please install manually on self-hosted runner." && exit 1)
+
+      - name: Generate Zen Artisan Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_ZEN_APP_ID }}
+          private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
+
+      - name: Check recent merge queue runs for Turbo S3 cache misses
+        id: check-cache
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          EVENT_TYPE: ${{ github.event_name }}
+          CACHE_MONITOR_THRESHOLD: ${{ env.CACHE_MONITOR_THRESHOLD || '3' }}
+        with:
+          run: |
+            echo "=== Turbo S3 Cache Monitoring ==="
+            echo "Checking recent merge queue workflow runs for Turbo S3 remote cache misses..."
+            echo "Event type: ${EVENT_TYPE}"
+            echo "Branch: ${BRANCH}"
+            echo "Workflow: ${WORKFLOW_NAME}"
+            echo "Repository: ${REPO}"
+            echo "Alert threshold: ${CACHE_MONITOR_THRESHOLD} consecutive misses"
+            echo ""
+            
+            # For merge_queue, we want to track consecutive runs in the merge queue
+            # Get recent workflow runs filtered by merge_group event (last 15 runs to account for filtering)
+            RUNS=$(gh run list \
+              --workflow "${WORKFLOW_NAME}" \
+              --repo "${REPO}" \
+              --limit 15 \
+              --json databaseId,conclusion,displayTitle,createdAt,event,headBranch \
+              --jq 'map(select(.event == "merge_group")) | sort_by(.createdAt) | reverse | .[0:10]')
+            
+            RUN_COUNT=$(echo "${RUNS}" | jq 'length')
+            echo "Found ${RUN_COUNT} recent merge_group runs"
+            
+            if [ "${RUN_COUNT}" -eq 0 ]; then
+              echo "⚠️ No merge_group runs found - skipping cache monitoring"
+              echo "This is normal if this is one of the first merge queue runs"
+              {
+                echo "alert=false"
+                echo "consecutive_misses=0"
+              } >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "Analyzing cache status for these runs..."
+            echo ""
+            
+            # Count consecutive merge queue runs without Turbo S3 cache
+            CONSECUTIVE_MISSES=0
+            MISS_RUNS=()
+            
+            for run_id in $(echo "${RUNS}" | jq -r '.[].databaseId'); do
+              # Try to download Turbo S3 cache status artifact
+              ARTIFACTS=$(gh run view "${run_id}" --repo "${REPO}" --json artifacts --jq '.artifacts[] | select(.name | startswith("turbo-s3-cache-status-")) | .name' | head -1)
+              
+              if [ -n "${ARTIFACTS}" ]; then
+                echo "Checking merge queue run ${run_id} for Turbo S3 cache status..."
+                gh run download "${run_id}" --repo "${REPO}" --name "${ARTIFACTS}" --dir "/tmp/artifacts-${run_id}" || true
+                
+                if [ -f "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json" ]; then
+                  CACHE_TYPE=$(jq -r '.cache_type // "unknown"' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                  RAN_WITHOUT_CACHE=$(jq -r '.ran_without_cache' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                  EVENT_NAME=$(jq -r '.event_name' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                  
+                  # Only count merge_group runs with Turbo S3 cache misses
+                  if [ "${CACHE_TYPE}" == "turbo-remote-s3" ] && [ "${EVENT_NAME}" == "merge_group" ] && [ "${RAN_WITHOUT_CACHE}" == "true" ]; then
+                    CONSECUTIVE_MISSES=$((CONSECUTIVE_MISSES + 1))
+                    RUN_NUMBER=$(jq -r '.workflow_run_number' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                    CACHE_STATS=$(jq -r '.cache_stats' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                    MISS_RUNS+=("Merge queue run #${RUN_NUMBER} (${CACHE_STATS})")
+                    echo "Merge queue run #${RUN_NUMBER} ran without Turbo S3 cache"
+                  elif [ "${RAN_WITHOUT_CACHE}" == "false" ] && [ "${EVENT_NAME}" == "merge_group" ]; then
+                    # Found a merge queue run with cache hits, stop counting
+                    RUN_NUMBER=$(jq -r '.workflow_run_number' "/tmp/artifacts-${run_id}/${ARTIFACTS}/cache-status.json")
+                    echo "Merge queue run #${RUN_NUMBER} had Turbo S3 cache hits - stopping consecutive count"
+                    break
+                  fi
+                fi
+              fi
+            done
+            
+            echo ""
+            echo "=== Summary ==="
+            echo "Consecutive merge queue runs without Turbo S3 cache: ${CONSECUTIVE_MISSES}"
+            echo "Alert threshold: ${CACHE_MONITOR_THRESHOLD}"
+            
+            if [ "${#MISS_RUNS[@]}" -gt 0 ]; then
+              echo "Affected runs:"
+              for run_info in "${MISS_RUNS[@]}"; do
+                echo "  - ${run_info}"
+              done
+            fi
+            
+            # Alert if threshold or more consecutive merge queue runs without cache
+            if [ "${CONSECUTIVE_MISSES}" -ge "${CACHE_MONITOR_THRESHOLD}" ]; then
+              echo ""
+              echo "::warning::Multiple consecutive merge queue runs (${CONSECUTIVE_MISSES}) executed without Turbo S3 remote cache"
+              echo "::notice::This may indicate Turbo S3 cache connectivity issues, cache invalidation, or S3 bucket/configuration problems"
+              echo "Affected merge queue runs: ${MISS_RUNS[*]}"
+              echo "::notice::Check Turbo remote cache server logs and S3 bucket access/permissions"
+              echo "::notice::Merge queue runs are sequential, so cache misses can significantly impact CI/CD performance"
+              
+              # Set output for potential notification
+              {
+                echo "alert=true"
+                echo "consecutive_misses=${CONSECUTIVE_MISSES}"
+              } >> $GITHUB_OUTPUT
+            else
+              echo ""
+              echo "✅ Turbo S3 cache status for merge queue is healthy (${CONSECUTIVE_MISSES} consecutive misses, threshold: ${CACHE_MONITOR_THRESHOLD})"
+              {
+                echo "alert=false"
+                echo "consecutive_misses=${CONSECUTIVE_MISSES}"
+              } >> $GITHUB_OUTPUT
+            fi
+
+      - name: Prepare Slack notification payload
+        if: steps.check-cache.outputs.alert == 'true' && inputs.notify-slack
+        id: slack-payload
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        env:
+          CONSECUTIVE_MISSES: ${{ steps.check-cache.outputs.consecutive_misses }}
+          BRANCH: ${{ github.ref_name }}
+          WORKFLOW: ${{ github.workflow }}
+          REPO: ${{ github.repository }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+        with:
+          run: |
+            # Use jq to safely construct JSON payload (jq is used elsewhere in monitoring script)
+            PAYLOAD=$(jq -n \
+              --arg channel "${SLACK_CHANNEL}" \
+              --arg misses "${CONSECUTIVE_MISSES}" \
+              --arg repo "${REPO}" \
+              --arg workflow "${WORKFLOW}" \
+              --arg branch "${BRANCH}" \
+              '{
+                channel: $channel,
+                text: "⚠️ *Turbo S3 Remote Cache Alert - Merge Queue*\n\n\($misses) consecutive merge queue runs executed without Turbo S3 cache in \($repo)\n\n*Workflow:* \($workflow)\n*Branch:* \($branch)\n\n⚠️ *Impact:* Merge queue runs are sequential, so cache misses significantly slow down CI/CD pipeline\n\n*This may indicate:*\n• Turbo remote cache server connectivity issues\n• S3 bucket access/permission problems\n• Cache invalidation or configuration issues\n• Merge queue runs happening too quickly for cache to populate\n\n*Recommended actions:*\n• Check Turbo remote cache server logs\n• Verify S3 bucket access/permissions\n• Review cache configuration and team-id settings"
+              }')
+            
+            ghwa_set_output "payload" "${PAYLOAD}"
+
+      - name: Notify on Turbo S3 cache issues in merge queue (Slack)
+        if: steps.check-cache.outputs.alert == 'true' && inputs.notify-slack
+        uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          method: chat.postMessage
+          payload: ${{ steps.slack-payload.outputs.payload }}
