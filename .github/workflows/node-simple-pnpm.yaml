@@ -1148,36 +1148,58 @@ jobs:
               ghwa_set_output "consecutive_misses" "${CONSECUTIVE_MISSES}"
             fi
 
-      - name: Prepare Slack notification payload
-        if: fromJSON(steps.check-cache.outputs.data).alert == 'true' && inputs.notify-slack
-        id: slack-payload
-        uses: milaboratory/github-ci/actions/shell@v4-beta
-        env:
-          CONSECUTIVE_MISSES: ${{ fromJSON(steps.check-cache.outputs.data).consecutive_misses }}
-          BRANCH: ${{ github.ref_name }}
-          WORKFLOW: ${{ github.workflow }}
-          REPO: ${{ github.repository }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
-        with:
-          run: |
-            # Use jq to safely construct JSON payload (jq is used elsewhere in monitoring script)
-            PAYLOAD=$(jq -n \
-              --arg channel "${SLACK_CHANNEL}" \
-              --arg misses "${CONSECUTIVE_MISSES}" \
-              --arg repo "${REPO}" \
-              --arg workflow "${WORKFLOW}" \
-              --arg branch "${BRANCH}" \
-              '{
-                channel: $channel,
-                text: "⚠️ *Turbo S3 Remote Cache Alert - Merge Queue*\n\n\($misses) consecutive merge queue runs executed without Turbo S3 cache in \($repo)\n\n*Workflow:* \($workflow)\n*Branch:* \($branch)\n\n⚠️ *Impact:* Merge queue runs are sequential, so cache misses significantly slow down CI/CD pipeline\n\n*This may indicate:*\n• Turbo remote cache server connectivity issues\n• S3 bucket access/permission problems\n• Cache invalidation or configuration issues\n• Merge queue runs happening too quickly for cache to populate\n\n*Recommended actions:*\n• Check Turbo remote cache server logs\n• Verify S3 bucket access/permissions\n• Review cache configuration and team-id settings"
-              }')
-            
-            ghwa_set_output "payload" "${PAYLOAD}"
-
-      - name: Notify on Turbo S3 cache issues in merge queue (Slack)
+      - name: Send Slack notification for cache issues
         if: fromJSON(steps.check-cache.outputs.data).alert == 'true' && inputs.notify-slack
         uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           method: chat.postMessage
-          payload: ${{ steps.slack-payload.outputs.payload }}
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "text": "⚠️ Turbo S3 Remote Cache Alert - Merge Queue: ${{ fromJSON(steps.check-cache.outputs.data).consecutive_misses }} consecutive cache misses in ${{ github.repository }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚠️ Turbo S3 Remote Cache Alert - Merge Queue"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ fromJSON(steps.check-cache.outputs.data).consecutive_misses }} consecutive merge queue runs* executed without Turbo S3 cache in *${{ github.repository }}*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Workflow:*\n${{ github.workflow }}"},
+                    {"type": "mrkdwn", "text": "*Branch:*\n${{ github.ref_name }}"}
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "⚠️ *Impact:* Merge queue runs are sequential, so cache misses significantly slow down CI/CD pipeline"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*This may indicate:*\n• Turbo remote cache server connectivity issues\n• S3 bucket access/permission problems\n• Cache invalidation or configuration issues"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Recommended actions:*\n• Check Turbo remote cache server logs\n• Verify S3 bucket access/permissions\n• Review cache configuration and team-id settings"
+                  }
+                }
+              ]
+            }
