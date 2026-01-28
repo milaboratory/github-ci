@@ -1139,25 +1139,21 @@ jobs:
               echo "::notice::Merge queue runs are sequential, so cache misses can significantly impact CI/CD performance"
               
               # Set output for potential notification
-              {
-                echo "alert=true"
-                echo "consecutive_misses=${CONSECUTIVE_MISSES}"
-              } >> $GITHUB_OUTPUT
+              ghwa_set_output "alert" "true"
+              ghwa_set_output "consecutive_misses" "${CONSECUTIVE_MISSES}"
             else
               echo ""
               echo "✅ Turbo S3 cache status for merge queue is healthy (${CONSECUTIVE_MISSES} consecutive misses, threshold: ${CACHE_MONITOR_THRESHOLD})"
-              {
-                echo "alert=false"
-                echo "consecutive_misses=${CONSECUTIVE_MISSES}"
-              } >> $GITHUB_OUTPUT
+              ghwa_set_output "alert" "false"
+              ghwa_set_output "consecutive_misses" "${CONSECUTIVE_MISSES}"
             fi
 
       - name: Prepare Slack notification payload
-        if: steps.check-cache.outputs.alert == 'true' && inputs.notify-slack
+        if: fromJSON(steps.check-cache.outputs.data).alert == 'true' && inputs.notify-slack
         id: slack-payload
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          CONSECUTIVE_MISSES: ${{ steps.check-cache.outputs.consecutive_misses }}
+          CONSECUTIVE_MISSES: ${{ fromJSON(steps.check-cache.outputs.data).consecutive_misses }}
           BRANCH: ${{ github.ref_name }}
           WORKFLOW: ${{ github.workflow }}
           REPO: ${{ github.repository }}
@@ -1179,7 +1175,7 @@ jobs:
             ghwa_set_output "payload" "${PAYLOAD}"
 
       - name: Notify on Turbo S3 cache issues in merge queue (Slack)
-        if: steps.check-cache.outputs.alert == 'true' && inputs.notify-slack
+        if: fromJSON(steps.check-cache.outputs.data).alert == 'true' && inputs.notify-slack
         uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
