@@ -1081,34 +1081,39 @@ jobs:
             MISS_RUNS=()
             
             for run_id in $(echo "${RUNS}" | jq -r '.[].databaseId'); do
-              # Try to download Turbo S3 cache status artifact
-              ARTIFACTS=$(gh run view "${run_id}" --repo "${REPO}" --json artifacts --jq '.artifacts[] | select(.name | startswith("turbo-s3-cache-status-")) | .name' | head -1)
+              # Try to get Turbo S3 cache status artifact using GitHub API
+              ARTIFACT_NAME=$(gh api "repos/${REPO}/actions/runs/${run_id}/artifacts" --jq '.artifacts[] | select(.name | startswith("turbo-s3-cache-status-")) | .name' 2>/dev/null | head -1)
               
-              if [ -n "${ARTIFACTS}" ]; then
-                echo "Checking merge queue run ${run_id} for Turbo S3 cache status..."
-                ARTIFACT_DIR="/tmp/artifacts-${run_id}"
-                gh run download "${run_id}" --repo "${REPO}" --name "${ARTIFACTS}" --dir "${ARTIFACT_DIR}" || true
+              if [ -z "${ARTIFACT_NAME}" ]; then
+                echo "Run ${run_id}: No cache-status artifact found (cache monitoring may not have been enabled)"
+                continue
+              fi
+              
+              echo "Checking merge queue run ${run_id} for Turbo S3 cache status..."
+              ARTIFACT_DIR="/tmp/artifacts-${run_id}"
+              gh run download "${run_id}" --repo "${REPO}" --name "${ARTIFACT_NAME}" --dir "${ARTIFACT_DIR}" || true
+              
+              # gh run download places files directly in target directory
+              if [ -f "${ARTIFACT_DIR}/cache-status.json" ]; then
+                CACHE_TYPE=$(jq -r '.cache_type // "unknown"' "${ARTIFACT_DIR}/cache-status.json")
+                RAN_WITHOUT_CACHE=$(jq -r '.ran_without_cache' "${ARTIFACT_DIR}/cache-status.json")
+                EVENT_NAME=$(jq -r '.event_name' "${ARTIFACT_DIR}/cache-status.json")
                 
-                # gh run download places files directly in target directory
-                if [ -f "${ARTIFACT_DIR}/cache-status.json" ]; then
-                  CACHE_TYPE=$(jq -r '.cache_type // "unknown"' "${ARTIFACT_DIR}/cache-status.json")
-                  RAN_WITHOUT_CACHE=$(jq -r '.ran_without_cache' "${ARTIFACT_DIR}/cache-status.json")
-                  EVENT_NAME=$(jq -r '.event_name' "${ARTIFACT_DIR}/cache-status.json")
-                  
-                  # Only count merge_group runs with Turbo S3 cache misses
-                  if [ "${CACHE_TYPE}" == "turbo-remote-s3" ] && [ "${EVENT_NAME}" == "merge_group" ] && [ "${RAN_WITHOUT_CACHE}" == "true" ]; then
-                    CONSECUTIVE_MISSES=$((CONSECUTIVE_MISSES + 1))
-                    RUN_NUMBER=$(jq -r '.workflow_run_number' "${ARTIFACT_DIR}/cache-status.json")
-                    CACHE_STATS=$(jq -r '.cache_stats' "${ARTIFACT_DIR}/cache-status.json")
-                    MISS_RUNS+=("Merge queue run #${RUN_NUMBER} (${CACHE_STATS})")
-                    echo "Merge queue run #${RUN_NUMBER} ran without Turbo S3 cache"
-                  elif [ "${RAN_WITHOUT_CACHE}" == "false" ] && [ "${EVENT_NAME}" == "merge_group" ]; then
-                    # Found a merge queue run with cache hits, stop counting
-                    RUN_NUMBER=$(jq -r '.workflow_run_number' "${ARTIFACT_DIR}/cache-status.json")
-                    echo "Merge queue run #${RUN_NUMBER} had Turbo S3 cache hits - stopping consecutive count"
-                    break
-                  fi
+                # Only count merge_group runs with Turbo S3 cache misses
+                if [ "${CACHE_TYPE}" == "turbo-remote-s3" ] && [ "${EVENT_NAME}" == "merge_group" ] && [ "${RAN_WITHOUT_CACHE}" == "true" ]; then
+                  CONSECUTIVE_MISSES=$((CONSECUTIVE_MISSES + 1))
+                  RUN_NUMBER=$(jq -r '.workflow_run_number' "${ARTIFACT_DIR}/cache-status.json")
+                  CACHE_STATS=$(jq -r '.cache_stats' "${ARTIFACT_DIR}/cache-status.json")
+                  MISS_RUNS+=("Merge queue run #${RUN_NUMBER} (${CACHE_STATS})")
+                  echo "Merge queue run #${RUN_NUMBER} ran without Turbo S3 cache"
+                elif [ "${RAN_WITHOUT_CACHE}" == "false" ] && [ "${EVENT_NAME}" == "merge_group" ]; then
+                  # Found a merge queue run with cache hits, stop counting
+                  RUN_NUMBER=$(jq -r '.workflow_run_number' "${ARTIFACT_DIR}/cache-status.json")
+                  echo "Merge queue run #${RUN_NUMBER} had Turbo S3 cache hits - stopping consecutive count"
+                  break
                 fi
+              else
+                echo "Run ${run_id}: Failed to download cache-status.json"
               fi
             done
             
