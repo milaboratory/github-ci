@@ -389,6 +389,15 @@ on:
         type: boolean
         default: false
 
+      cache-monitoring-threshold:
+        description: |
+          Number of consecutive merge queue runs with cache misses
+          before triggering an alert. Lower this value for testing.
+          Default is 3.
+        required: false
+        type: number
+        default: 3
+
     secrets:
       env:
         description: |
@@ -992,9 +1001,6 @@ jobs:
     permissions:
       actions: read
       contents: read
-    # For testing: Temporarily lower threshold by adding env variable:
-    # env:
-    #   CACHE_MONITOR_THRESHOLD: '1'  # Default is 3, use 1 for testing
     steps:
       - name: Install GitHub CLI (if needed)
         uses: milaboratory/github-ci/actions/shell@v4-beta
@@ -1033,7 +1039,7 @@ jobs:
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
           EVENT_TYPE: ${{ github.event_name }}
-          CACHE_MONITOR_THRESHOLD: ${{ env.CACHE_MONITOR_THRESHOLD || '3' }}
+          CACHE_MONITOR_THRESHOLD: ${{ inputs.cache-monitoring-threshold }}
         with:
           run: |
             echo "=== Turbo S3 Cache Monitoring ==="
