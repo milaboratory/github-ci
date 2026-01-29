@@ -330,6 +330,14 @@ on:
         required: false
         default: 'assets'
 
+      pl-log-level:
+        description: |
+          Platforma log level for tests.
+          Examples: 'debug', 'info', 'warn', 'error'
+        type: string
+        required: false
+        default: 'info'
+
       #
       # Changed files
       #
@@ -364,22 +372,30 @@ on:
         required: false
         default: true
 
-      #
-      # Notifications
-      #
-      notify-telegram:
-        description: |
-          Enable Telegram notifications
-        required: false
-        type: boolean
-        default: false
-
       notify-slack:
         description: |
           Enable Slack notifications
         required: false
         type: boolean
         default: true
+
+      cache-monitoring:
+        description: |
+          Enable merge queue duration monitoring.
+          When enabled, alerts if merge queue takes longer than
+          the specified threshold (indicating potential cache issues).
+        required: false
+        type: boolean
+        default: false
+
+      cache-monitoring-duration-minutes:
+        description: |
+          Maximum expected duration in minutes for merge queue runs.
+          If a run exceeds this duration, a Slack alert is sent.
+          Default is 10 minutes.
+        required: false
+        type: number
+        default: 10
 
     secrets:
       env:
@@ -393,14 +409,6 @@ on:
           This input's envs have HIGHER priority compared than inputs.env
         required: false
 
-      TELEGRAM_NOTIFICATION_TARGET:
-        description: |
-          ID of Telegram Channel or User to notify on build results.
-        required: false
-      TELEGRAM_API_TOKEN:
-        description: |
-          Telegram Bot API authorization token
-        required: false
       SLACK_BOT_TOKEN:
         description: |
           Slack bot token for notifications
@@ -921,39 +929,6 @@ jobs:
       # All outputs of skipped jobs are always empty.
       started: 'true'
 
-  notify-release:
-    name: notify release
-    runs-on: ubuntu-latest
-    if: always() && inputs.notify-telegram
-    needs:
-      - init
-      - metadata
-      - check-changesets
-      - build-test-publish
-      - pre-calculated-build
-    steps:
-      - id: search-tags
-        if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
-        with:
-          input: |
-            release
-
-      - uses: milaboratory/github-ci/blocks/notify/release@v4
-        env:
-          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
-        with:
-          telegram-target: ${{ secrets.TELEGRAM_NOTIFICATION_TARGET }}
-          telegram-token: ${{ secrets.TELEGRAM_API_TOKEN }}
-          job-status: |
-            ${{ needs.pre-calculated-build.result }}
-            ${{ needs.build-test-publish.result }}
-            ${{ needs.check-changesets.result }}
-          product-name: ${{ inputs.app-name }}
-          override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
-          override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          search-tags: ${{ steps.search-tags.outputs.result }}
-
   notify-slack-release:
     name: notify slack release
     runs-on: ubuntu-latest
@@ -986,3 +961,103 @@ jobs:
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
+
+  monitor-merge-queue-duration:
+    name: monitor merge queue duration
+    runs-on: ubuntu-latest
+    if: always() && inputs.cache-monitoring && github.event_name == 'merge_group'
+    needs:
+      - build-test-publish
+    steps:
+      - name: Check workflow duration
+        id: check-duration
+        uses: milaboratory/github-ci/actions/shell@v4
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          DURATION_THRESHOLD_MINUTES: ${{ inputs.cache-monitoring-duration-minutes }}
+        with:
+          run: |
+            echo "=== Merge Queue Duration Monitoring ==="
+
+            # Get workflow run start time from GitHub API (most reliable source)
+            RUN_STARTED_AT=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq '.run_started_at')
+
+            if [ -z "${RUN_STARTED_AT}" ] || [ "${RUN_STARTED_AT}" = "null" ]; then
+              echo "::error::Failed to get workflow run start time from GitHub API"
+              exit 1
+            fi
+
+            echo "Workflow started at: ${RUN_STARTED_AT}"
+
+            # Convert ISO 8601 timestamp to epoch seconds
+            START_EPOCH=$(date -d "${RUN_STARTED_AT}" +%s)
+            CURRENT_EPOCH=$(date +%s)
+            DURATION_SECONDS=$((CURRENT_EPOCH - START_EPOCH))
+            DURATION_MINUTES=$((DURATION_SECONDS / 60))
+            
+            echo "Workflow duration: ${DURATION_MINUTES} minutes (${DURATION_SECONDS} seconds)"
+            echo "Duration threshold: ${DURATION_THRESHOLD_MINUTES} minutes"
+            
+            if [ "${DURATION_MINUTES}" -gt "${DURATION_THRESHOLD_MINUTES}" ]; then
+              echo ""
+              echo "::warning::Merge queue run took ${DURATION_MINUTES} minutes, exceeding threshold of ${DURATION_THRESHOLD_MINUTES} minutes"
+              echo "::notice::This may indicate Turbo cache issues or other performance problems"
+              ghwa_set_output "alert" "true"
+              ghwa_set_output "duration_minutes" "${DURATION_MINUTES}"
+            else
+              echo ""
+              echo "✅ Merge queue duration is within threshold (${DURATION_MINUTES}/${DURATION_THRESHOLD_MINUTES} minutes)"
+              ghwa_set_output "alert" "false"
+              ghwa_set_output "duration_minutes" "${DURATION_MINUTES}"
+            fi
+
+      - name: Send Slack notification for slow merge queue
+        if: fromJSON(steps.check-duration.outputs.data).alert == 'true' && inputs.notify-slack
+        uses: milaboratory/github-ci/actions/notify/slack/send@v4
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          method: chat.postMessage
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "text": "⚠️ Slow Merge Queue Alert: ${{ github.repository }} took ${{ fromJSON(steps.check-duration.outputs.data).duration_minutes }} minutes (threshold: ${{ inputs.cache-monitoring-duration-minutes }} min)",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚠️ Slow Merge Queue Alert"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ github.repository }}* merge queue took *${{ fromJSON(steps.check-duration.outputs.data).duration_minutes }} minutes*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Threshold:*\n${{ inputs.cache-monitoring-duration-minutes }} minutes"},
+                    {"type": "mrkdwn", "text": "*Workflow:*\n${{ github.workflow }}"}
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*This may indicate:*\n• Turbo remote cache not working\n• Cache invalidation issues\n• Infrastructure performance problems"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Recommended actions:*\n• Check Turbo cache configuration\n• Verify S3 bucket connectivity\n• Review recent changes that may have invalidated cache"
+                  }
+                }
+              ]
+            }
