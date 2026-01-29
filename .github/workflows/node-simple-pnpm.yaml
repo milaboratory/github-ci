@@ -972,23 +972,26 @@ jobs:
         id: check-duration
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
-          RUN_STARTED_AT: ${{ github.event.workflow_run.run_started_at }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           DURATION_THRESHOLD_MINUTES: ${{ inputs.cache-monitoring-duration-minutes }}
         with:
           run: |
             echo "=== Merge Queue Duration Monitoring ==="
-            
-            # Get workflow start time from GitHub context
-            START_TIME="${{ github.event.repository.pushed_at }}"
-            
-            # If not available, use current time minus a default
-            if [ -z "${START_TIME}" ]; then
-              # Fallback: calculate from run creation
-              START_EPOCH=$(date -d "${{ github.event.head_commit.timestamp }}" +%s 2>/dev/null || date +%s)
-            else
-              START_EPOCH=$(date -d "${START_TIME}" +%s 2>/dev/null || date +%s)
+
+            # Get workflow run start time from GitHub API (most reliable source)
+            RUN_STARTED_AT=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq '.run_started_at')
+
+            if [ -z "${RUN_STARTED_AT}" ] || [ "${RUN_STARTED_AT}" = "null" ]; then
+              echo "::error::Failed to get workflow run start time from GitHub API"
+              exit 1
             fi
-            
+
+            echo "Workflow started at: ${RUN_STARTED_AT}"
+
+            # Convert ISO 8601 timestamp to epoch seconds
+            START_EPOCH=$(date -d "${RUN_STARTED_AT}" +%s)
             CURRENT_EPOCH=$(date +%s)
             DURATION_SECONDS=$((CURRENT_EPOCH - START_EPOCH))
             DURATION_MINUTES=$((DURATION_SECONDS / 60))
