@@ -96,6 +96,7 @@ runs:
   using: "composite"
   steps:
     - name: Run turbo tests dry-run
+      id: turbo-dry-run
       uses: milaboratory/github-ci/actions/shell@v4
       if: inputs.test-skip-dry-run != 'true'
       env:
@@ -106,9 +107,11 @@ runs:
           SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all((.cache.status == "HIT") or (.cache.status == "MISS" and .command == "<NONEXISTENT>"))')
           STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
           STATS_FULL=$(tail -n +5 ./test-dry-run.json | jq -r ' .tasks | map(select(.task == "test")) | sort_by(if .cache.status == "HIT" then 0 elif .cache.status == "MISS" and .command == "<NONEXISTENT>" then 1 else 2 end) | .[] | "\(.package): \(.cache.status) (command: \(.command))"')
+
           echo "Stats: ${STATS}"
           echo "Skip tests: ${SKIP_TESTS}"
           echo "Stats full: ${STATS_FULL}"
+
           if [ "${SKIP_TESTS}" == "true" ]; then
             echo "Tests are cached, skipping"
             ghwa_set_env "SKIP_TESTS" "${SKIP_TESTS}"
