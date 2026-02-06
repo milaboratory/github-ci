@@ -93,6 +93,15 @@ scan_image() {
 #
 # Script body
 #
+log "Trivy DB status before update:"
+"${TRIVY_BIN}" db status >&2 || true
+
+log "Updating Trivy DB..."
+"${TRIVY_BIN}" db update >&2
+
+log "Trivy DB status after update:"
+"${TRIVY_BIN}" db status >&2 || true
+
 if [ -n "${REPORT_FILE}" ]; then
     log "Report file: ${REPORT_FILE}"
     printf "" > "${REPORT_FILE}"
