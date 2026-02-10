@@ -59,7 +59,11 @@ check_package() {
       continue
     fi
 
-    if [ "${_latest_version}" != "${_current_version}" ]; then
+    # Compare only major.minor, ignoring patch version differences
+    local _latest_major_minor="${_latest_version%.*}"
+    local _current_major_minor="${_current_version%.*}"
+
+    if [ "${_latest_major_minor}" != "${_current_major_minor}" ]; then
       logf "%s\n%s\n%s\n" \
         "Old package '${_package}' detected:" \
         "  latest version: ${_latest_version}" \
