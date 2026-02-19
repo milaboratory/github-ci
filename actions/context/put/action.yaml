@@ -47,8 +47,15 @@ runs:
         CTX_VALUE: ${{ inputs.value }}
 
       run: |
-        # Put value into context key
-        printf "%s" "${CTX_VALUE}" > "${CTX_PATH}/${CTX_KEY}"
+        random="$(printf "%05d" "${RANDOM}")"
+        file_path="${CTX_PATH}/${CTX_KEY}.${random}"
+
+        if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
+          echo "::error::Key '${CTX_KEY}' already is set in context artifact"
+          exit 1
+        fi
+
+        printf "%s" "${CTX_VALUE}" > "${file_path}"
 
     - uses: actions/upload-artifact@v6
       with:
