@@ -39,7 +39,7 @@ afterAll(async () => {
 
 test("expandPaths", async () => {
   // Test expanding a directory path
-  const paths = await util.expandPaths("test-dir");
+  const paths = await util.expandPaths(["test-dir"]);
 
   // Sort paths for consistent comparison
   const sortedPaths = paths.sort();
@@ -54,13 +54,13 @@ test("expandPaths", async () => {
 
 test("expandPaths with single file", async () => {
   // Test expanding a single file path
-  const paths = await util.expandPaths("test-dir/test1.txt");
+  const paths = await util.expandPaths(["test-dir/test1.txt"]);
   expect(paths).toEqual(["test-dir/test1.txt"]);
 });
 
 test("expandPaths with multiple paths", async () => {
   // Test expanding multiple paths
-  const paths = await util.expandPaths("test-dir/test1.txt", "test-dir/subdir");
+  const paths = await util.expandPaths(["test-dir/test1.txt", "test-dir/subdir"]);
 
   // Sort paths for consistent comparison
   const sortedPaths = paths.sort();
@@ -71,6 +71,6 @@ test("expandPaths with multiple paths", async () => {
 
 test("expandPaths with non-existent path", async () => {
   // Test expanding a non-existent path
-  const paths = await util.expandPaths("non-existent-dir");
+  const paths = await util.expandPaths(["non-existent-dir"]);
   expect(paths).toEqual([]);
 });

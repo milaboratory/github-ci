@@ -57,10 +57,6 @@ runs:
 
         printf "%s" "${CTX_VALUE}" > "${file_path}"
 
-        # spoil context with custom data on each update to avoid artifact upload
-        # conflict errors on action re-runs.
-        echo "${random}" > "${CTX_PATH}/init"
-
     - uses: actions/upload-artifact@v6
       with:
         name: context

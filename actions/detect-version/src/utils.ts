@@ -1,4 +1,4 @@
-import {git, version} from 'milib'
+import {git, version} from '@milaboratories/github-ci-actions-milib'
 import * as semver from 'semver'
 
 // <tag name> -> <version>
