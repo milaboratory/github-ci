@@ -24,20 +24,25 @@ runs:
   using: "composite"
 
   steps:
-    - shell: bash
+    - id: clean-ctx
+      shell: bash
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
 
-      run: rm -rf "${CTX_PATH}"
+      run: |
+        # Clean target ctx directory (just for integrity and safety) and resolve its abs path
+        rm -rf "${CTX_PATH}"
+
+        echo "path=$(realpath "${CTX_PATH}")" >> $GITHUB_OUTPUT
 
     - uses: actions/download-artifact@v6
       with:
         name: context
-        path: ${{ github.action_path }}/../ctx
+        path: ${{ steps.clean-ctx.outputs.path }}
 
     - shell: bash
       env:
-        CTX_PATH: ${{ github.action_path }}/../ctx
+        CTX_PATH: ${{ steps.clean-ctx.outputs.path }}
         CTX_KEY: ${{ inputs.key }}
         CTX_VALUE: ${{ inputs.value }}
 
@@ -59,5 +64,5 @@ runs:
     - uses: actions/upload-artifact@v6
       with:
         name: context
-        path: ${{ github.action_path }}/../ctx
+        path: ${{ steps.clean-ctx.outputs.path }}
         overwrite: true
