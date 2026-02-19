@@ -3,10 +3,8 @@
   "version": "1.0.1",
   "private": true,
   "description": "MiLaboratory TypeScript Library for GitHub Actions",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.js"
-  },
+  "types": "./src/index.ts",
+  "main": "./dist/index.js",
   "scripts": {
     "build": "rm -rf dist && tsc",
     "format": "prettier --write '**/*.ts'",

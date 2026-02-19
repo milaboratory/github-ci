@@ -1,6 +1,6 @@
-import {expect, test} from '@jest/globals'
-import * as utils from '../src/utils'
-import {version} from 'milib'
+import {expect, test} from 'vitest'
+import * as utils from './utils'
+import {version} from '@milaboratories/github-ci-actions-milib'
 
 const latestVersionTestMap: utils.versionsMap = {
   '0.1': version.parse('0.1'),

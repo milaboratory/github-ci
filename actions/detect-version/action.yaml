@@ -86,6 +86,12 @@ outputs:
       'is-latest-major' would be 'true' for 1.4.2 (the latest known v1)
       and 2.0.1 (the latest known v2)
 
+  run-attempt:
+    description: |
+      The attempt number of the current workflow run.
+      Spoils version report, making it unique for each run.
+      Helps with artifact upload conflict errors.
+
 runs:
   using: 'node20'
-  main: 'dist/index.js'
+  main: 'lib/index.js'

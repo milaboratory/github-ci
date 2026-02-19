@@ -2,6 +2,7 @@ packages:
   - lib/build-configs
   - lib/milib
 
+  - actions/detect-version
   - actions/post/shell
   - actions/post/artifact
 

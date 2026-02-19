@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 
 import * as utils from './utils'
-import {git, version} from 'milib'
+import {git, version} from '@milaboratories/github-ci-actions-milib'
 
 async function prepareRepository(depth: number): Promise<void> {
   // We have to do black magic here because of
@@ -220,6 +220,7 @@ latest tag: '${p.latest.tag}'
   core.setOutput('is-branch-head', p.isBranchHead)
   core.setOutput('is-latest-version', p.isLatestVersion)
   core.setOutput('is-latest-major', p.isLatestMajor)
+  core.setOutput('run-attempt', process.env.GITHUB_RUN_ATTEMPT ?? '')
 }
 
 async function detectVersions(): Promise<void> {
