@@ -283,6 +283,16 @@ export function toString(v: versionInfo): string {
 }
 
 /**
+ * Replace characters not allowed in semver with '-' (hyphen).
+ *
+ * @param v: string to sanitize
+ * @returns sanitized string
+ */
+export function sanitizeString(v: string): string {
+  return v.replace(/[^0-9A-Za-z.+-]/g, "-");
+}
+
+/**
  * Sanitize version, trying to make versiuon to be valid semver.
  *   - replace 'non-semver' symbols with '-' (hyphen)
  *   - parse sanitized string as version number once again
@@ -304,8 +314,7 @@ export function sanitize(v: string | versionInfo): versionInfo {
     return v;
   }
 
-  const regex = /[^0-9A-Za-z.+-]/g;
-  const sanitized = versionString.replace(regex, "-");
+  const sanitized = sanitizeString(versionString);
   const result = parse(sanitized);
   result.original = versionString;
 
