@@ -32,6 +32,7 @@ runs:
       run: |
         # Clean target ctx directory (just for integrity and safety) and resolve its abs path
         rm -rf "${CTX_PATH}"
+        mkdir -p "${CTX_PATH}"
 
         echo "path=$(realpath "${CTX_PATH}")" >> $GITHUB_OUTPUT
 
