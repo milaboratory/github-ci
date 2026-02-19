@@ -30,7 +30,7 @@ runs:
 
       run: rm -rf "${CTX_PATH}"
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v6
       with:
         name: context
         path: ${{ github.action_path }}/../ctx
@@ -55,7 +55,7 @@ runs:
           printf "%s" "${CTX_VALUE}" > "${file_path}"
           echo "$(mish_abspath "${file_path}")"
 
-    - uses: actions/upload-artifact@v4.6.2
+    - uses: actions/upload-artifact@v6
       with:
         name: context
         path: ${{ steps.create_key.outputs.stdout }}
