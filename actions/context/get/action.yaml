@@ -65,9 +65,9 @@ runs:
 
         if [ -r "${ctx_file}" ]; then
           {
-            echo "value<<CTXEOF"
+            echo "value<<CTXEOF-he3aazahQuai4aeje3o"
             cat "${ctx_file}"
-            echo "CTXEOF"
+            echo "CTXEOF-he3aazahQuai4aeje3o"
           } >> $GITHUB_OUTPUT
         else
           {
