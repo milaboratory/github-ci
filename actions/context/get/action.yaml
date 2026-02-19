@@ -92,29 +92,18 @@ runs:
       with:
         dump-stdout: false
         run: |
-          key_files=()
-          if [ -e "${CTX_PATH}" ]; then
-            key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
+          key_file_path="${CTX_PATH}/${CTX_KEY}"
+
+          if [ -r "${key_file_path}" ]; then
+            ghwa_set_output 'value' "$(cat "${key_file_path}")"
+            exit 0
           fi
 
-          keys_count="${#key_files[@]}"
+          ghwa_set_output 'value' "${DEFAULT_VALUE}"
 
-          if [ "${keys_count}" -eq 0 ]; then
-            ghwa_set_output 'value' "${DEFAULT_VALUE}"
-
-            if [ "${IGNORE_MISSING}" = "true" ]; then
-              exit 0
-            else
-              ghwa_error "Key '${CTX_KEY}' is missing in context artifact"
-              exit 1
-            fi
-          fi
-
-          if [ "${keys_count}" -gt 1 ]; then
-            ghwa_set_output 'value' "${DEFAULT_VALUE}"
-
-            ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
+          if [ "${IGNORE_MISSING}" = "true" ]; then
+            exit 0
+          else
+            ghwa_error "Key '${CTX_KEY}' is missing in context artifact"
             exit 1
           fi
-
-          ghwa_set_output 'value' "$(cat "${key_files[${keys_count}-1]}")"
