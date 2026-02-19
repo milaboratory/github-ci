@@ -57,7 +57,7 @@ runs:
     - shell: bash
       env:
         CTX_PATH: ${{ steps.clean-ctx.outputs.path }}
-        CTX_VALUE: ${{ inputs.value }}
+        CTX_VALUE: ${{ toJson(steps.versions.outputs) }}
 
       run: |
         # Write context data into file
