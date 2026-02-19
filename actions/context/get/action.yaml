@@ -9,16 +9,6 @@ description: |
         as 'context' bases on 'artifacts' and is slow on big files.
 
 inputs:
-  ignore-missing:
-    description: |
-      Don't fail on attempt to read missing key from context.
-      This affects only action's status on attemt to read missing key.
-
-      Use 'default-value' to control the value returned for
-      missing keys and races.
-    required: false
-    default: 'false'
-
   default-value:
     description: |
       Default value to return when no key found in context or race detected.
@@ -63,28 +53,18 @@ runs:
 
     - id: value
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      shell: bash
 
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
-        IGNORE_MISSING: ${{ inputs.ignore-missing }}
         DEFAULT_VALUE: ${{ inputs.default-value }}
 
-      with:
-        dump-stdout: false
-        run: |
-          ctx_file="${CTX_PATH}/context.json"
+      run: |
+        # Read context or default value into outputs
+        ctx_file="${CTX_PATH}/context.json"
 
-          if [ -r "${ctx_file}" ]; then
-            ghwa_set_output 'value' "$(cat "${ctx_file}")"
-            exit 0
-          fi
-
-          ghwa_set_output 'value' "${DEFAULT_VALUE}"
-
-          if [ "${IGNORE_MISSING}" = "true" ]; then
-            exit 0
-          else
-            ghwa_error "Key '${CTX_KEY}' is missing in context artifact"
-            exit 1
-          fi
+        if [ -r "${ctx_file}" ]; then
+          echo "value=$(cat "${ctx_file}")" >> $GITHUB_OUTPUT
+        else
+          echo "value=${DEFAULT_VALUE}"" >> $GITHUB_OUTPUT
+        fi

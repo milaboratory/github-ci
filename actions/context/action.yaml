@@ -57,5 +57,3 @@ runs:
   steps:
     - id: versions
       uses: milaboratory/github-ci/actions/context/get@v4-beta
-      with:
-        default-value: '{}'
