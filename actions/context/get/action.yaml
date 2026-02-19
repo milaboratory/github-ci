@@ -67,14 +67,14 @@ runs:
 
         if [ -r "${ctx_file}" ]; then
           {
-            echo data<<${delimiter}"
+            echo "data<<${delimiter}"
             cat "${ctx_file}"
             echo ""
             echo "${delimiter}"
           } >> $GITHUB_OUTPUT
         else
           {
-            echo data<<${delimiter}"
+            echo "data<<${delimiter}"
             echo "${DEFAULT_VALUE}"
             echo "${delimiter}"
           } >> $GITHUB_OUTPUT
