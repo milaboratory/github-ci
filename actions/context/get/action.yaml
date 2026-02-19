@@ -64,7 +64,15 @@ runs:
         ctx_file="${CTX_PATH}/context.json"
 
         if [ -r "${ctx_file}" ]; then
-          echo "value=$(cat "${ctx_file}")" >> $GITHUB_OUTPUT
+          {
+            echo "value<<CTXEOF"
+            cat "${ctx_file}"
+            echo "CTXEOF"
+          } >> $GITHUB_OUTPUT
         else
-          echo "value=${DEFAULT_VALUE}" >> $GITHUB_OUTPUT
+          {
+            echo "value<<CTXEOF-he3aazahQuai4aeje3o"
+            echo "${DEFAULT_VALUE}"
+            echo "CTXEOF-he3aazahQuai4aeje3o"
+          } >> $GITHUB_OUTPUT
         fi
