@@ -107,27 +107,16 @@ runs:
           SKIP_TESTS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | all((.cache.status == "HIT") or (.cache.status == "MISS" and .command == "<NONEXISTENT>"))')
           STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
           STATS_FULL=$(tail -n +5 ./test-dry-run.json | jq -r ' .tasks | map(select(.task == "test")) | sort_by(if .cache.status == "HIT" then 0 elif .cache.status == "MISS" and .command == "<NONEXISTENT>" then 1 else 2 end) | .[] | "\(.package): \(.cache.status) (command: \(.command))"')
-          
-          # Check if any tests ran without cache (MISS status, excluding NONEXISTENT)
-          RAN_WITHOUT_CACHE=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | any((.cache.status == "MISS") and (.command != "<NONEXISTENT>"))')
-          
+
           echo "Stats: ${STATS}"
           echo "Skip tests: ${SKIP_TESTS}"
           echo "Stats full: ${STATS_FULL}"
-          echo "Ran without cache: ${RAN_WITHOUT_CACHE}"
-          
-          # Set outputs for later use
-          ghwa_set_output "ran_without_cache" "${RAN_WITHOUT_CACHE}"
-          ghwa_set_output "cache_stats" "${STATS}"
-          
+
           if [ "${SKIP_TESTS}" == "true" ]; then
             echo "Tests are cached, skipping"
             ghwa_set_env "SKIP_TESTS" "${SKIP_TESTS}"
             exit 0
           fi
-          
-          # Set environment variable to track cache status
-          ghwa_set_env "TESTS_RAN_WITHOUT_CACHE" "${RAN_WITHOUT_CACHE}"
 
     - uses: milaboratory/github-ci/actions/docker/pl-compose@v4-beta
       name: Launch Platforma docker container
@@ -176,22 +165,3 @@ runs:
         run: |
           user_name="$(whoami)"
           sudo chown -R "${user_name}:${user_name}" "${PL_ASSETS_DIR}"
-
-    - name: Notify on failure without Turbo S3 cache
-      if: failure() && env.TESTS_RAN_WITHOUT_CACHE == 'true' && inputs.test-skip-dry-run != 'true'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
-      with:
-        run: |
-          echo "::warning::Tests failed and ran without Turbo remote cache (S3 cache MISS)"
-          echo "::notice::This may indicate Turbo S3 cache invalidation, connectivity issues, or cache configuration problems"
-          if [ -f ./test-dry-run.json ]; then
-            CACHE_STATS=$(tail -n +5 ./test-dry-run.json | jq '.tasks | map(select(.task == "test")) | map(.cache.status) | reduce .[] as $status ({HIT: 0, MISS: 0}; .[$status] += 1)')
-            echo "Turbo S3 cache statistics: ${CACHE_STATS}"
-            
-            # Show which packages missed cache
-            MISS_PACKAGES=$(tail -n +5 ./test-dry-run.json | jq -r '.tasks | map(select(.task == "test" and .cache.status == "MISS" and .command != "<NONEXISTENT>")) | .[] | "  - \(.package): \(.cache.status)"')
-            if [ -n "${MISS_PACKAGES}" ]; then
-              echo "Packages that missed Turbo S3 cache:"
-              echo "${MISS_PACKAGES}"
-            fi
-          fi
