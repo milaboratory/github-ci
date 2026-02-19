@@ -63,16 +63,19 @@ runs:
         # Read context or default value into outputs
         ctx_file="${CTX_PATH}/context.json"
 
+        delimiter="CTXEOF_aim3ohghohh2ohkahfaeq" # unique-enough to never intersect with data
+
         if [ -r "${ctx_file}" ]; then
           {
-            echo "value<<CTXEOF-he3aazahQuai4aeje3o"
+            echo "value<<${delimiter}"
             cat "${ctx_file}"
-            echo "CTXEOF-he3aazahQuai4aeje3o"
+            echo ""
+            echo "${delimiter}"
           } >> $GITHUB_OUTPUT
         else
           {
-            echo "value<<CTXEOF-he3aazahQuai4aeje3o"
+            echo "value<<${delimiter}"
             echo "${DEFAULT_VALUE}"
-            echo "CTXEOF-he3aazahQuai4aeje3o"
+            echo "${delimiter}"
           } >> $GITHUB_OUTPUT
         fi
