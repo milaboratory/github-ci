@@ -58,5 +58,4 @@ runs:
     - id: versions
       uses: milaboratory/github-ci/actions/context/get@v4-beta
       with:
-        key: "context.json"
         default-value: '{}'

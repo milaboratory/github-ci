@@ -67,7 +67,6 @@ runs:
 
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
-        CTX_KEY: ${{ inputs.key }}
         IGNORE_MISSING: ${{ inputs.ignore-missing }}
         DEFAULT_VALUE: ${{ inputs.default-value }}
 
