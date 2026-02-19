@@ -54,10 +54,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         OVERRIDE_VERSION: ${{ inputs.override-version }}
         CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
@@ -70,7 +70,7 @@ runs:
           fi
 
     - id: define-tag
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         OVERRIDE_TAG: ${{ inputs.override-tag }}
         CURRENT_TAG: ${{ steps.context.outputs.current-version-tag }}
@@ -84,12 +84,12 @@ runs:
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
       with:
         statuses: ${{ inputs.job-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
