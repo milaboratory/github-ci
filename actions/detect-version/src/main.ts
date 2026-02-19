@@ -28,7 +28,7 @@ async function genDevVersion(
   baseRef: string
 ): Promise<version.versionInfo> {
   const currentRefName = process.env.GITHUB_REF_NAME as string
-  const sanitizedRefName = version.sanitize(currentRefName)
+  const sanitizedRefName = version.sanitizeString(currentRefName)
   const count = await git.countCommits(baseRef, 'HEAD')
 
   return {
