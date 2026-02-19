@@ -30,11 +30,11 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/context/create@v4
-
     - uses: actions/checkout@v4
       with:
         fetch-depth: ${{ inputs.version-fetch-depth }}
+        fetch-tags: true
+
     - id: versions
       uses: milaboratory/github-ci/actions/detect-version@v4
       with:
@@ -42,7 +42,29 @@ runs:
         fetch-depth: ${{ inputs.version-fetch-depth }}
         branch-versioning: ${{ inputs.branch-versioning }}
 
-    - uses: milaboratory/github-ci/actions/context/put@v4
+    - id: clean-ctx
+      shell: bash
+      env:
+        CTX_PATH: ${{ github.action_path }}/ctx
+
+      run: |
+        # Create clean target ctx directory
+        rm -rf "${CTX_PATH}"
+        mkdir -p "${CTX_PATH}"
+
+        echo "path=$(realpath "${CTX_PATH}")" >> $GITHUB_OUTPUT
+
+    - shell: bash
+      env:
+        CTX_PATH: ${{ steps.clean-ctx.outputs.path }}
+        CTX_VALUE: ${{ toJson(steps.versions.outputs) }}
+
+      run: |
+        # Write context data into file
+        printf "%s" "${CTX_VALUE}" > "${CTX_PATH}/context.json"
+
+    - uses: actions/upload-artifact@v6
       with:
-        key: "versions.json"
-        value: ${{ toJSON( steps.versions.outputs ) }}
+        name: context
+        path: ${{ steps.clean-ctx.outputs.path }}
+        overwrite: false
