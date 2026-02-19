@@ -23,7 +23,7 @@ outputs:
   value:
     description:
       The value loaded from context
-    value: ${{ fromJSON(steps.value.outputs.data).value }}
+    value: ${{ steps.value.outputs.data }}
 
 runs:
   using: "composite"
@@ -67,14 +67,14 @@ runs:
 
         if [ -r "${ctx_file}" ]; then
           {
-            echo "value<<${delimiter}"
+            echo data<<${delimiter}"
             cat "${ctx_file}"
             echo ""
             echo "${delimiter}"
           } >> $GITHUB_OUTPUT
         else
           {
-            echo "value<<${delimiter}"
+            echo data<<${delimiter}"
             echo "${DEFAULT_VALUE}"
             echo "${delimiter}"
           } >> $GITHUB_OUTPUT
