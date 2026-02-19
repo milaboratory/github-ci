@@ -35,28 +35,29 @@ runs:
         name: context
         path: ${{ github.action_path }}/../ctx
 
-    - id: create_key
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+    - shell: bash
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
         CTX_KEY: ${{ inputs.key }}
         CTX_VALUE: ${{ inputs.value }}
 
-      with:
-        run: |
-          random="$(printf "%05d" "${RANDOM}")"
-          file_path="${CTX_PATH}/${CTX_KEY}.${random}"
+      run: |
+        random="$(printf "%05d" "${RANDOM}")"
+        file_path="${CTX_PATH}/${CTX_KEY}.${random}"
 
-          if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
-            ghwa_error "Key '${CTX_KEY}' already is set in context artifact"
-            exit 1
-          fi
+        if find "${CTX_PATH}" -name "${CTX_KEY}.[0-9][0-9][0-9][0-9][0-9][0-9]" | grep -vq '^$'; then
+          echo "::error::Key '${CTX_KEY}' already is set in context artifact"
+          exit 1
+        fi
 
-          printf "%s" "${CTX_VALUE}" > "${file_path}"
-          echo "$(mish_abspath "${file_path}")"
+        printf "%s" "${CTX_VALUE}" > "${file_path}"
+
+        # spoil context with custom data on each update to avoid artifact upload
+        # conflict errors on action re-runs.
+        echo "${random}" > "${CTX_PATH}/init"
 
     - uses: actions/upload-artifact@v6
       with:
         name: context
-        path: ${{ steps.create_key.outputs.stdout }}
+        path: ${{ github.action_path }}/../ctx
         overwrite: true
