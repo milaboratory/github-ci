@@ -57,6 +57,3 @@ runs:
   steps:
     - id: versions
       uses: milaboratory/github-ci/actions/context/get@v4
-      with:
-        key: "versions.json"
-        default-value: '{}'

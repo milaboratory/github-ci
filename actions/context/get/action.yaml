@@ -9,28 +9,6 @@ description: |
         as 'context' bases on 'artifacts' and is slow on big files.
 
 inputs:
-  key:
-    description: |
-      The key to use for value storage.
-      The value could be retreived from context by this key.
-    required: true
-
-  ignore-missing:
-    description: |
-      Don't fail on attempt to read missing key from context.
-      This affects only action's status on attemt to read missing key.
-
-      Use 'default-value' to control the value returned for
-      missing keys and races.
-    required: false
-    default: 'false'
-
-  force-update:
-    description: |
-      Force context refresh from remote server before getting value.
-    required: false
-    default: 'false'
-
   default-value:
     description: |
       Default value to return when no key found in context or race detected.
@@ -45,7 +23,7 @@ outputs:
   value:
     description:
       The value loaded from context
-    value: ${{ fromJSON(steps.value.outputs.data).value }}
+    value: ${{ steps.value.outputs.data }}
 
 runs:
   using: "composite"
@@ -54,7 +32,6 @@ runs:
     - id: needs_update
       uses: milaboratory/github-ci/actions/shell@v4
       env:
-        FORCE_UPDATE: ${{ inputs.force-update }}
         CTX_PATH: ${{ github.action_path }}/../ctx
 
       with:
@@ -64,14 +41,9 @@ runs:
             exit 0
           fi
 
-          if [ "${FORCE_UPDATE}" = 'true' ]; then
-            echo 'true'
-            exit 0
-          fi
-
           echo 'false'
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v6
       # There is no 'continue-on-error' in composite actions,
       # that is why we can't make action be 'ok' for absent artifact.
       if: steps.needs_update.outputs.stdout == 'true'
@@ -81,40 +53,29 @@ runs:
 
     - id: value
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4
+      shell: bash
 
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
-        CTX_KEY: ${{ inputs.key }}
-        IGNORE_MISSING: ${{ inputs.ignore-missing }}
         DEFAULT_VALUE: ${{ inputs.default-value }}
 
-      with:
-        dump-stdout: false
-        run: |
-          key_files=()
-          if [ -e "${CTX_PATH}" ]; then
-            key_files=( $(find "${CTX_PATH}" -name "${CTX_KEY}.*") )
-          fi
+      run: |
+        # Read context or default value into outputs
+        ctx_file="${CTX_PATH}/context.json"
 
-          keys_count="${#key_files[@]}"
+        delimiter="CTXEOF_aim3ohghohh2ohkahfaeq" # unique-enough to never intersect with data
 
-          if [ "${keys_count}" -eq 0 ]; then
-            ghwa_set_output 'value' "${DEFAULT_VALUE}"
-
-            if [ "${IGNORE_MISSING}" = "true" ]; then
-              exit 0
-            else
-              ghwa_error "Key '${CTX_KEY}' is missing in context artifact"
-              exit 1
-            fi
-          fi
-
-          if [ "${keys_count}" -gt 1 ]; then
-            ghwa_set_output 'value' "${DEFAULT_VALUE}"
-
-            ghwa_error "Race detected: key '${CTX_KEY}' was set more than once in context artifact"
-            exit 1
-          fi
-
-          ghwa_set_output 'value' "$(cat "${key_files[${keys_count}-1]}")"
+        if [ -r "${ctx_file}" ]; then
+          {
+            echo "data<<${delimiter}"
+            cat "${ctx_file}"
+            echo ""
+            echo "${delimiter}"
+          } >> $GITHUB_OUTPUT
+        else
+          {
+            echo "data<<${delimiter}"
+            echo "${DEFAULT_VALUE}"
+            echo "${delimiter}"
+          } >> $GITHUB_OUTPUT
+        fi
