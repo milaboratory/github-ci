@@ -27640,11 +27640,14 @@ async function run() {
   const electronBuilderArgs = getActionInput('electron-builder-args') || '';
   const workingDirectory = getActionInput('working-directory', true);
   const githubToken = getActionInput('github-token', true);
+  const packageManager = getActionInput('package-manager') || 'npm';
   const platform = getCurrentOS();
   const macosCertificate = getActionInput('macos-certs');
   const macosCertificatePassword = getActionInput('macos-certs-password');
   const windowsCertificate = getActionInput('windows-certs');
   const windowsCertificatePassword = getActionInput('windows-certs-password');
+
+  log(`Using package manager: ${packageManager}`);
 
   const packageJsonPath = path.join(workingDirectory, 'package.json');
 
@@ -27667,25 +27670,32 @@ async function run() {
   setEnv('NODE_AUTH_TOKEN', githubToken);
 
   // Install dependencies with retry
+  const installCmd =
+    packageManager === 'pnpm' ? 'pnpm install --frozen-lockfile --prefer-offline' : 'npm ci';
   await withRetry(async () => {
-    await executeShellCommand('npm ci', workingDirectory);
+    await executeShellCommand(installCmd, workingDirectory);
   }, 'Dependencies installation');
 
   if (!skipBuild) {
     // Build script with retry
+    const buildCmd =
+      packageManager === 'pnpm'
+        ? `pnpm run ${buildScriptName}`
+        : `npm run ${buildScriptName} --if-present`;
     await withRetry(async () => {
-      await executeShellCommand(`npm run ${buildScriptName} --if-present`, workingDirectory);
+      await executeShellCommand(buildCmd, workingDirectory);
     }, 'Build script execution');
   } else {
     log('Skipping build script because `skip-build` option is set');
   }
 
   // Electron builder with retry
+  const ebCmd =
+    packageManager === 'pnpm'
+      ? `pnpm exec electron-builder --${platform} ${release ? '--publish always' : ''} ${electronBuilderArgs}`
+      : `npx --no-install electron-builder --${platform} ${release ? '--publish always' : ''} ${electronBuilderArgs}`;
   await withRetry(async () => {
-    await executeShellCommand(
-      `npx --no-install electron-builder --${platform} ${release ? '--publish always' : ''} ${electronBuilderArgs}`,
-      workingDirectory,
-    );
+    await executeShellCommand(ebCmd, workingDirectory);
   }, 'Electron builder execution');
 
   log('Electron application built and signed successfully');
