@@ -28,9 +28,10 @@ inputs:
 
   pnpm-version:
     description: |
-      Version of pnpm to install
+      Version of pnpm to install.
+      Leave empty to use version from packageManager field in package.json.
     required: false
-    default: 'latest'
+    default: ''
 
   npmrc-config:
     description: |
@@ -53,9 +54,15 @@ runs:
         npmrcConfig: ${{ inputs.npmrc-config }}
 
     - name: Install pnpm - ${{ inputs.pnpm-version }}
+      if: inputs.pnpm-version != ''
       uses: pnpm/action-setup@v4
       with:
         version: ${{ inputs.pnpm-version }}
+
+    - name: Install pnpm from packageManager field in package.json
+      if: inputs.pnpm-version == ''
+      shell: bash
+      run: corepack enable pnpm
 
     - name:  Set up cache for a NodeJS PNPM application
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4

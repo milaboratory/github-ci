@@ -38,6 +38,10 @@ inputs:
     description: Other arguments to pass to the `electron-builder` command, e.g. configuration overrides
     required: false
     default: ""
+  package-manager:
+    description: "Package manager to use: 'npm' or 'pnpm'"
+    required: false
+    default: "npm"
 
 runs:
   using: node20
