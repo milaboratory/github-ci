@@ -33,7 +33,12 @@ runs:
         TARGET_REPO: https://x-access-token:${{ inputs.github-token }}@github.com/${{ inputs.target-repository }}.git
         TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
-        git clone --depth=1 --branch="${TARGET_BRANCH}" "${TARGET_REPO}" /tmp/_mirror-target
+        if git ls-remote --heads "${TARGET_REPO}" "${TARGET_BRANCH}" | grep -q "${TARGET_BRANCH}"; then
+          git clone --depth=1 --branch="${TARGET_BRANCH}" "${TARGET_REPO}" /tmp/_mirror-target
+        else
+          git clone --depth=1 "${TARGET_REPO}" /tmp/_mirror-target
+          git -C /tmp/_mirror-target checkout -b "${TARGET_BRANCH}"
+        fi
 
     - name: Sync files
       shell: bash
