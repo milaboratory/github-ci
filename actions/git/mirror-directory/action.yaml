@@ -1,0 +1,81 @@
+name: Mirror Directory
+author: 'MiLaboratories'
+description: |
+  Mirror a subdirectory to a target repository.
+  Clones the target, replaces all files with source directory contents,
+  commits and pushes. Syncs tags when triggered by a tag push.
+
+inputs:
+  source-directory:
+    description: |
+      Subdirectory to mirror to the target repository.
+    required: true
+  target-repository:
+    description: |
+      Target repository in org/repo format (e.g. milaboratory/platforma-helm).
+    required: true
+  github-token:
+    description: |
+      Token with push access to the target repository.
+    required: true
+  target-branch:
+    description: |
+      Branch to push to in the target repository.
+    required: false
+    default: 'main'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Clone target repository
+      shell: bash
+      env:
+        TARGET_REPO: https://x-access-token:${{ inputs.github-token }}@github.com/${{ inputs.target-repository }}.git
+        TARGET_BRANCH: ${{ inputs.target-branch }}
+      run: |
+        if git ls-remote --heads "${TARGET_REPO}" "${TARGET_BRANCH}" | grep -q "${TARGET_BRANCH}"; then
+          git clone --depth=1 --branch="${TARGET_BRANCH}" "${TARGET_REPO}" /tmp/_mirror-target
+        else
+          git clone --depth=1 "${TARGET_REPO}" /tmp/_mirror-target
+          git -C /tmp/_mirror-target checkout -b "${TARGET_BRANCH}"
+        fi
+
+    - name: Sync files
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ inputs.source-directory }}
+      run: |
+        # Remove old files in target (except .git)
+        find /tmp/_mirror-target -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+        # Copy source directory contents to target
+        cp -a "${SOURCE_DIR}/." /tmp/_mirror-target/
+
+    - name: Commit and push
+      shell: bash
+      working-directory: /tmp/_mirror-target
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add -A
+        if git diff --cached --quiet; then
+          echo "No changes to sync"
+          exit 0
+        fi
+        COMMIT_MSG="sync: $(git -C "${GITHUB_WORKSPACE}" log -1 --format='%s')"
+        git commit -m "${COMMIT_MSG}"
+        git push origin "${{ inputs.target-branch }}"
+
+    - name: Sync tag
+      if: startsWith(github.ref, 'refs/tags/')
+      shell: bash
+      working-directory: /tmp/_mirror-target
+      run: |
+        TAG="${GITHUB_REF#refs/tags/}"
+        git tag -f "${TAG}"
+        git push origin "${TAG}" --force
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        rm -rf /tmp/_mirror-target
