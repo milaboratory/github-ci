@@ -18,6 +18,10 @@ inputs:
     description: |
       Token with push access to the target repository.
     required: true
+  target-directory:
+    description: |
+      Subdirectory inside the target repository to mirror into.
+    required: true
   target-branch:
     description: |
       Branch to push to in the target repository.
@@ -44,11 +48,14 @@ runs:
       shell: bash
       env:
         SOURCE_DIR: ${{ inputs.source-directory }}
+        TARGET_DIR: ${{ inputs.target-directory }}
       run: |
-        # Remove old files in target (except .git)
-        find /tmp/_mirror-target -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-        # Copy source directory contents to target
-        cp -a "${SOURCE_DIR}/." /tmp/_mirror-target/
+        DEST="/tmp/_mirror-target/${TARGET_DIR}"
+        mkdir -p "${DEST}"
+        # Remove old files in destination (except .git)
+        find "${DEST}" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+        # Copy source directory contents to destination
+        cp -a "${SOURCE_DIR}/." "${DEST}/"
 
     - name: Commit and push
       shell: bash
