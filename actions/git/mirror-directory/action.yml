@@ -2,8 +2,28 @@ name: Mirror Directory
 author: 'MiLaboratories'
 description: |
   Mirror a subdirectory to a target repository.
-  Clones the target, replaces all files with source directory contents,
-  commits and pushes. Syncs tags when triggered by a tag push.
+
+  Replays each source commit that touches the source directory into the
+  target repository, preserving original authors, dates, and messages.
+  The number of commits in the target mirrors the source repo's merge
+  strategy: squash merges produce one commit, regular merges preserve
+  the full commit chain.
+
+  Commit range selection:
+  - By default, reads the `Source-Commit:` trailer from the target repo's
+    latest commit to determine where the last sync left off. Good for
+    continuous sync on main.
+  - When `source-base-branch` is set, syncs commits from
+    `source-base-branch..HEAD` instead. Good for branch/tag releases where
+    you want to sync only the branch-specific commits.
+
+  Every commit written to the target includes a `Source-Commit: <sha>`
+  trailer for traceability and sync tracking.
+
+  Syncs tags when triggered by a tag push.
+
+  The source repository must be checked out with full history
+  (actions/checkout with fetch-depth: 0).
 
 inputs:
   source-directory:
@@ -27,10 +47,29 @@ inputs:
       Branch to push to in the target repository.
     required: false
     default: 'main'
+  source-base-branch:
+    description: |
+      When set, sync commits between this branch and HEAD instead of using
+      the Source-Commit trailer from the target's latest commit. Useful for
+      branch/tag releases where you want to push only branch-specific
+      commits to a new target branch.
+
+      Example: set to 'main' when releasing from a feature branch to sync
+      only the commits that diverged from main.
+    required: false
+    default: 'main'
 
 runs:
   using: "composite"
   steps:
+    - name: Check source history depth
+      shell: bash
+      run: |
+        if git -C "${GITHUB_WORKSPACE}" rev-parse --is-shallow-repository | grep -q true; then
+          echo "::error::mirror-directory requires the source repository to be checked out with full history (fetch-depth: 0)"
+          exit 1
+        fi
+
     - name: Clone target repository
       shell: bash
       env:
@@ -38,39 +77,141 @@ runs:
         TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
         if git ls-remote --heads "${TARGET_REPO}" "${TARGET_BRANCH}" | grep -q "${TARGET_BRANCH}"; then
-          git clone --depth=1 --branch="${TARGET_BRANCH}" "${TARGET_REPO}" /tmp/_mirror-target
+          git clone --branch="${TARGET_BRANCH}" "${TARGET_REPO}" /tmp/_mirror-target
         else
-          git clone --depth=1 "${TARGET_REPO}" /tmp/_mirror-target
+          git clone "${TARGET_REPO}" /tmp/_mirror-target
           git -C /tmp/_mirror-target checkout -b "${TARGET_BRANCH}"
         fi
 
-    - name: Sync files
-      shell: bash
-      env:
-        SOURCE_DIR: ${{ inputs.source-directory }}
-        TARGET_DIR: ${{ inputs.target-directory }}
-      run: |
-        DEST="/tmp/_mirror-target/${TARGET_DIR}"
-        mkdir -p "${DEST}"
-        # Remove old files in destination (except .git)
-        find "${DEST}" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-        # Copy source directory contents to destination
-        cp -a "${SOURCE_DIR}/." "${DEST}/"
-
-    - name: Commit and push
+    - name: Configure git
       shell: bash
       working-directory: /tmp/_mirror-target
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add -A
-        if git diff --cached --quiet; then
-          echo "No changes to sync"
+
+    - name: Compute commit range
+      id: commits
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ inputs.source-directory }}
+        SOURCE_BASE_BRANCH: ${{ inputs.source-base-branch }}
+      run: |
+        set -euo pipefail
+
+        if [[ -n "${SOURCE_BASE_BRANCH}" ]]; then
+          #
+          # Branch/tag release mode: sync commits between base branch and HEAD.
+          #
+          echo "Using source-base-branch '${SOURCE_BASE_BRANCH}' to compute commit range"
+          RANGE="origin/${SOURCE_BASE_BRANCH}..HEAD"
+        else
+          #
+          # Continuous sync mode: read Source-Commit trailer from the target
+          # repo's latest commit to find where the last sync left off.
+          #
+          LAST_SYNCED_SHA=""
+          LAST_MSG=$(git -C /tmp/_mirror-target log -1 --format='%B' 2>/dev/null || true)
+          if [[ -n "${LAST_MSG}" ]]; then
+            LAST_SYNCED_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          fi
+
+          if [[ -n "${LAST_SYNCED_SHA}" ]]; then
+            echo "Last synced source SHA (from target commit): ${LAST_SYNCED_SHA}"
+
+            if ! git -C "${GITHUB_WORKSPACE}" cat-file -e "${LAST_SYNCED_SHA}" 2>/dev/null; then
+              echo "::warning::Last synced SHA ${LAST_SYNCED_SHA} not found in source repo. Will sync all commits."
+              LAST_SYNCED_SHA=""
+            fi
+          else
+            echo "No Source-Commit trailer found in target. Will sync all commits touching source directory."
+          fi
+
+          if [[ -n "${LAST_SYNCED_SHA}" ]]; then
+            RANGE="${LAST_SYNCED_SHA}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+        fi
+
+        COMMITS=$(git -C "${GITHUB_WORKSPACE}" log --reverse --format='%H' \
+          ${RANGE} -- "${SOURCE_DIR}")
+
+        if [[ -z "${COMMITS}" ]]; then
+          echo "No new commits to sync"
+          echo "count=0" >> "${GITHUB_OUTPUT}"
           exit 0
         fi
-        COMMIT_MSG="sync: $(git -C "${GITHUB_WORKSPACE}" log -1 --format='%s')"
-        git commit -m "${COMMIT_MSG}"
-        git push origin "${{ inputs.target-branch }}"
+
+        COMMIT_COUNT=$(echo "${COMMITS}" | wc -l | tr -d ' ')
+        echo "Found ${COMMIT_COUNT} commit(s) to replay"
+        echo "count=${COMMIT_COUNT}" >> "${GITHUB_OUTPUT}"
+
+        # Write commit list to a temp file for the next step
+        echo "${COMMITS}" > /tmp/_mirror-commits.txt
+
+    - name: Replay commits
+      if: steps.commits.outputs.count != '0'
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ inputs.source-directory }}
+        TARGET_DIR: ${{ inputs.target-directory }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
+      run: |
+        set -euo pipefail
+
+        COMMIT_COUNT=$(wc -l < /tmp/_mirror-commits.txt | tr -d ' ')
+        CURRENT=0
+
+        while IFS= read -r SHA; do
+          CURRENT=$((CURRENT + 1))
+
+          # Extract original commit metadata
+          AUTHOR_NAME=$(git -C "${GITHUB_WORKSPACE}" log -1 --format='%an' "${SHA}")
+          AUTHOR_EMAIL=$(git -C "${GITHUB_WORKSPACE}" log -1 --format='%ae' "${SHA}")
+          AUTHOR_DATE=$(git -C "${GITHUB_WORKSPACE}" log -1 --format='%aI' "${SHA}")
+          COMMIT_MSG=$(git -C "${GITHUB_WORKSPACE}" log -1 --format='%B' "${SHA}")
+          COMMIT_SUBJECT=$(git -C "${GITHUB_WORKSPACE}" log -1 --format='%s' "${SHA}")
+
+          echo "[${CURRENT}/${COMMIT_COUNT}] Replaying: ${COMMIT_SUBJECT}"
+
+          # Prepare target directory
+          DEST="/tmp/_mirror-target/${TARGET_DIR}"
+          mkdir -p "${DEST}"
+
+          # Remove old files (except .git)
+          find "${DEST}" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          # Extract source directory at this commit
+          rm -rf /tmp/_mirror-extract
+          mkdir -p /tmp/_mirror-extract
+          git -C "${GITHUB_WORKSPACE}" archive "${SHA}" -- "${SOURCE_DIR}" \
+            | tar -x -C /tmp/_mirror-extract/
+
+          # Copy extracted files to target
+          if [[ -d "/tmp/_mirror-extract/${SOURCE_DIR}" ]]; then
+            cp -a "/tmp/_mirror-extract/${SOURCE_DIR}/." "${DEST}/"
+          fi
+
+          cd /tmp/_mirror-target
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "  Skipped (no effective changes in target)"
+            continue
+          fi
+
+          FULL_MSG="$(printf '%s\nSource-Commit: %s' "${COMMIT_MSG}" "${SHA}")"
+
+          GIT_AUTHOR_NAME="${AUTHOR_NAME}" \
+          GIT_AUTHOR_EMAIL="${AUTHOR_EMAIL}" \
+          GIT_AUTHOR_DATE="${AUTHOR_DATE}" \
+          git commit -m "${FULL_MSG}"
+
+        done < /tmp/_mirror-commits.txt
+
+        # Push all replayed commits at once
+        git -C /tmp/_mirror-target push origin "${TARGET_BRANCH}"
 
     - name: Sync tag
       if: startsWith(github.ref, 'refs/tags/')
@@ -85,4 +226,4 @@ runs:
       if: always()
       shell: bash
       run: |
-        rm -rf /tmp/_mirror-target
+        rm -rf /tmp/_mirror-target /tmp/_mirror-extract /tmp/_mirror-commits.txt
