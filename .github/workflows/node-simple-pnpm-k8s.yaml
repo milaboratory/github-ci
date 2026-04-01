@@ -66,6 +66,14 @@ on:
         required: false
         default: "6345"
 
+      pl-docker-registry-push-to:
+        description: |
+          Docker registry to push platforma containers to.
+          Set to empty string to disable pushing.
+        type: string
+        required: false
+        default: 'quay.io/milaboratories/pl-containers'
+
       checkout-submodules:
         description: |
           'Submodules' mode for 'actions/checkout' action
@@ -410,9 +418,8 @@ jobs:
 
       - id: test
         uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4-beta
-        #env:
-        # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
-
+        env:
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
         with:
           pl-api-addr: ${{ inputs.pl-api-addr || format('{0}.{1}.{2}', env.HELM_RELEASE_NAME, env.NAMESPACE, 'svc.cluster.local') }}
           pl-api-port: ${{ inputs.pl-api-port }}
