@@ -319,6 +319,14 @@ on:
         required: false
         default: 'main'
 
+      pl-docker-registry-push-to:
+        description: |
+          Docker registry to push platforma containers to.
+          Set to empty string to disable pushing.
+        type: string
+        required: false
+        default: 'quay.io/milaboratories/pl-containers'
+
       pl-test-assets-dir:
         description: |
           Platforma test assets directory;
@@ -794,7 +802,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-          PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers" # until MILAB-4008 is resolved
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
         with:
           build-script-name: ${{ inputs.build-script-name }}
           tests: 'false'
@@ -818,7 +826,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-          # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers" # until MILAB-4008 is resolved
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
         with:
           test-script-name: ${{ inputs.test-script-name }}
           test-dry-run-script-name: ${{ inputs.test-dry-run-script-name }}
@@ -840,7 +848,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-          # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers" # until MILAB-4008 is resolved
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
         with:
           build-script-name: ${{ inputs.build-before-publish-script-name || inputs.build-script-name }}
           tests: 'false'
@@ -887,7 +895,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-          # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
 
         uses: changesets/action@v1
         with:
@@ -902,7 +910,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-          # PL_DOCKER_REGISTRY_PUSH_TO: "quay.io/milaboratories/pl-containers"  # until MILAB-4008 is resolved
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
 
         uses: changesets/action@v1
         with:
