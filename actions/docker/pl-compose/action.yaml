@@ -52,7 +52,7 @@ runs:
 
   steps:
     - name: Install Docker Compose
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
 
       with:
         run: |
@@ -116,7 +116,7 @@ runs:
     #
     # Ordering of post-steps is reversed. We need to declare the last step first.
     #
-    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/post/shell@v4
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
       with:
@@ -125,14 +125,14 @@ runs:
           echo "Removing '${PL_MAIN_ROOT}'"
           rm -rf "${PL_MAIN_ROOT}"
 
-    - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+    - uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
         name: platforma-dump
         archive: true
         path: |
           ${{ steps.launch-pl.outputs.main-root }}
 
-    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
+    - uses: milaboratory/github-ci/actions/post/shell@v4
       env:
         ACTION_PATH: ${{ github.action_path }}
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}

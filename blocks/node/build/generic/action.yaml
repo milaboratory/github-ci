@@ -88,7 +88,7 @@ runs:
 
   steps:
     - name: Prepare environment for building a NodeJS application
-      uses: milaboratory/github-ci/actions/node/prepare@v4-beta
+      uses: milaboratory/github-ci/actions/node/prepare@v4
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
       with:
@@ -105,7 +105,7 @@ runs:
         install-deps: true
 
     - name: Patch package version
-      uses: milaboratory/github-ci/actions/node/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/node/patch-version@v4
       if: inputs.build-version != ''
       with:
         working-directory: ${{ inputs.working-directory }}

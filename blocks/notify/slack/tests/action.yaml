@@ -87,7 +87,7 @@ runs:
            && inputs.notification-mode == 'failure-only' )
         && !( steps.tests-status.outputs.status != 'success'
            && inputs.notification-mode == 'success-only' )
-      uses: milaboratory/github-ci/actions/notify/slack/tests@v4-beta
+      uses: milaboratory/github-ci/actions/notify/slack/tests@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

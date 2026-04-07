@@ -81,7 +81,7 @@ runs:
         echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
     - name: Post save report
-      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
         name: trivy-report
         archive: true

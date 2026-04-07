@@ -54,10 +54,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         OVERRIDE_VERSION: ${{ inputs.override-version }}
         CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
@@ -70,7 +70,7 @@ runs:
           fi
 
     - id: define-tag
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         OVERRIDE_TAG: ${{ inputs.override-tag }}
         CURRENT_TAG: ${{ steps.context.outputs.current-version-tag }}
@@ -84,12 +84,12 @@ runs:
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
       with:
         statuses: ${{ inputs.job-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
@@ -105,7 +105,7 @@ runs:
 
     - name: Notify on release success
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/slack/release-ready@v4-beta
+      uses: milaboratory/github-ci/actions/notify/slack/release-ready@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -120,7 +120,7 @@ runs:
 
     - name: Notify on release failure
       if: steps.job-status.outputs.status == 'failure'
-      uses: milaboratory/github-ci/actions/notify/slack/release-failed@v4-beta
+      uses: milaboratory/github-ci/actions/notify/slack/release-failed@v4
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}

@@ -64,13 +64,9 @@ is_software_package() {
 
 is_tengo_package() {
     local _package_path="$1"
-    if [ -d "${_package_path}/src" ]; then
-        find "${_package_path}/src" -type f -name '*.tengo' 2>/dev/null |
-            head -n 1 |
-            grep -q '.'
-    else
-        return 1
-    fi
+    find "${_package_path}/src" -type f -name '*.tengo' 2>/dev/null |
+        head -n 1 |
+        grep -q '.'
 }
 
 # Gets input from list_packages() and selects only pl software packages.

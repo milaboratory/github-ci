@@ -20,7 +20,7 @@ if git status --porcelain | grep -q .; then
 fi
 
 if [ "${__REAL_RUN:-}" != "true" ]; then
-    echo "Copying script to temporary file to not loose original code during checkouts..."
+    echo "Copying script to temporary file to not lose original code during checkouts..."
     tmp_script="$(mktemp)"
     cat "${0}" > "${tmp_script}"
     chmod +x "${tmp_script}"

@@ -1,0 +1,354 @@
+# Test mirror-directory sync in 3 modes:
+#   1. multi-commit  — multiple commits replayed from branch to target
+#   2. pr-merge      — squash-merge (single commit) replayed to target
+#   3. tag           — commits synced + tag pushed to target
+#
+# Jobs run sequentially because `-b` (bind mount) shares the workdir.
+# Jobs that need different git state (pr-merge) clone to /tmp to avoid
+# mutating the bind-mounted workdir.
+#
+# All jobs push to throwaway branches on platforma-helm; a final cleanup job
+# deletes them.
+#
+# This file lives next to action.yml but must be run from the pl/ repo
+# (the source repo that contains helm/charts/platforma/).
+#
+# See README.md in this directory for full setup and launch instructions.
+#
+name: "Test: Helm Sync (mirror-directory)"
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["helm/**"]
+
+env:
+  TARGET_REPO: milaboratory/platforma-helm
+  SOURCE_DIR: helm/charts/platforma
+  TARGET_DIR: charts/platforma
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Test 1: Multiple commits replayed one-by-one
+  # ──────────────────────────────────────────────
+  multi-commit:
+    runs-on: dev-ci-pl
+    env:
+      TARGET_BRANCH: _test-sync-multi-commit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: ${{ env.SOURCE_DIR }}
+          target-directory: ${{ env.TARGET_DIR }}
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify multi-commit sync
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 1: multi-commit ==="
+
+          git clone --branch="${TARGET_BRANCH}" \
+            "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+            /tmp/_verify
+          cd /tmp/_verify
+
+          # Count replayed commits (those with Source-Commit trailer)
+          SYNCED=$(git log --format='%B' | grep -c '^Source-Commit:' || true)
+          echo "Synced commits with trailer: ${SYNCED}"
+
+          if [[ "${SYNCED}" -lt 4 ]]; then
+            echo "FAIL: expected >= 4 synced commits, got ${SYNCED}"
+            exit 1
+          fi
+
+          # Verify all 3 test commit subjects are present
+          SUBJECTS=$(git log --format='%s')
+          for EXPECTED in "test: add test configmap (commit 1/3)" \
+                          "test: update chart description (commit 2/3)" \
+                          "test: add test secret template (commit 3/3)"; do
+            if ! echo "${SUBJECTS}" | grep -qF "${EXPECTED}"; then
+              echo "FAIL: missing commit '${EXPECTED}'"
+              exit 1
+            fi
+            echo "  ✓ found: ${EXPECTED}"
+          done
+
+          # Verify order: commit 1 before 2 before 3
+          POS1=$(git log --reverse --format='%s' | grep -n "commit 1/3" | cut -d: -f1)
+          POS2=$(git log --reverse --format='%s' | grep -n "commit 2/3" | cut -d: -f1)
+          POS3=$(git log --reverse --format='%s' | grep -n "commit 3/3" | cut -d: -f1)
+          if [[ "${POS1}" -lt "${POS2}" && "${POS2}" -lt "${POS3}" ]]; then
+            echo "  ✓ commit order preserved"
+          else
+            echo "FAIL: commit order wrong (${POS1}, ${POS2}, ${POS3})"
+            exit 1
+          fi
+
+          # Verify files exist
+          for F in templates/test-configmap.yaml templates/test-secret.yaml Chart.yaml; do
+            if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
+              echo "FAIL: missing file ${TARGET_DIR}/${F}"
+              exit 1
+            fi
+            echo "  ✓ file exists: ${F}"
+          done
+
+          # Verify Chart.yaml has updated description
+          if grep -q "sync test" "${TARGET_DIR}/Chart.yaml"; then
+            echo "  ✓ Chart.yaml description updated"
+          else
+            echo "FAIL: Chart.yaml description not updated"
+            exit 1
+          fi
+
+          echo "=== PASSED ==="
+          rm -rf /tmp/_verify
+
+  # ──────────────────────────────────────────────
+  # Test 2: PR-style squash merge (single commit)
+  #
+  # Simulates a PR squash-merge: one commit with
+  # the full diff lands on main, sync replays it
+  # as a single commit to the target.
+  #
+  # Creates a temp branch in the workdir with a
+  # squash commit, points HEAD at it, runs
+  # mirror-directory, then restores HEAD.
+  # ──────────────────────────────────────────────
+  pr-merge:
+    needs: [multi-commit]
+    runs-on: dev-ci-pl
+    env:
+      TARGET_BRANCH: _test-sync-pr-merge
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Create a single squash commit containing only helm/ changes.
+      # Uses checkout + add instead of merge to avoid conflicts in
+      # non-helm files that diverged between the branch and main.
+      - name: Simulate squash merge
+        id: squash
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "merge-bot"
+          git config user.email "bot@test"
+
+          ORIGINAL_REF=$(git rev-parse HEAD)
+          echo "original-ref=${ORIGINAL_REF}" >> "${GITHUB_OUTPUT}"
+          echo "Saved original HEAD: ${ORIGINAL_REF}"
+
+          # Create temp branch from origin/main
+          git checkout -b _squash-temp origin/main
+
+          # Overlay helm dir from the feature branch
+          git checkout "${ORIGINAL_REF}" -- helm/charts/platforma/
+          git add helm/charts/platforma/
+          git commit -m "feat: squash merge helm changes (#999)"
+
+          SQUASH_SHA=$(git rev-parse HEAD)
+          echo "squash-sha=${SQUASH_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "Created squash commit: ${SQUASH_SHA}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: ${{ env.SOURCE_DIR }}
+          target-directory: ${{ env.TARGET_DIR }}
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify PR merge sync
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+          SQUASH_SHA: ${{ steps.squash.outputs.squash-sha }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 2: pr-merge ==="
+
+          git clone --branch="${TARGET_BRANCH}" \
+            "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+            /tmp/_verify
+          cd /tmp/_verify
+
+          LAST_MSG=$(git log -1 --format='%B')
+          echo "Last commit message:"
+          echo "${LAST_MSG}"
+          echo ""
+
+          # Verify Source-Commit trailer points to squash SHA
+          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          if [[ "${TRAILER_SHA}" == "${SQUASH_SHA}" ]]; then
+            echo "  ✓ Source-Commit trailer matches squash SHA"
+          else
+            echo "FAIL: trailer '${TRAILER_SHA}' != squash '${SQUASH_SHA}'"
+            exit 1
+          fi
+
+          # Verify the squash brought all files
+          for F in templates/test-configmap.yaml templates/test-secret.yaml; do
+            if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
+              echo "FAIL: missing file ${TARGET_DIR}/${F}"
+              exit 1
+            fi
+            echo "  ✓ file exists: ${F}"
+          done
+
+          # Verify commit subject preserved
+          SUBJECT=$(git log -1 --format='%s')
+          if [[ "${SUBJECT}" == *"squash merge helm changes"* ]]; then
+            echo "  ✓ squash commit subject preserved"
+          else
+            echo "FAIL: unexpected subject '${SUBJECT}'"
+            exit 1
+          fi
+
+          echo "=== PASSED ==="
+          rm -rf /tmp/_verify
+
+      # Restore HEAD to original branch so subsequent jobs are unaffected
+      - name: Restore git state
+        if: always()
+        shell: bash
+        env:
+          ORIGINAL_REF: ${{ steps.squash.outputs.original-ref }}
+        run: |
+          git checkout "${ORIGINAL_REF}" 2>/dev/null || true
+          git branch -D _squash-temp 2>/dev/null || true
+          echo "Restored HEAD to ${ORIGINAL_REF}"
+
+  # ──────────────────────────────────────────────
+  # Test 3: Commits + tag sync
+  #
+  # First syncs commits (same as multi-commit),
+  # then verifies mirror-directory also pushes a
+  # tag to the target when GITHUB_REF is a tag.
+  # Tag is created in a temp clone to avoid
+  # persisting in the bind-mounted workdir.
+  # ──────────────────────────────────────────────
+  tag-sync:
+    needs: [pr-merge]
+    runs-on: dev-ci-pl
+    env:
+      TARGET_BRANCH: _test-sync-tag
+      TEST_TAG: v99.0.0-sync-test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Create tag locally
+      - name: Create source tag
+        run: git tag -f "${{ env.TEST_TAG }}"
+
+      # Run mirror-directory with GITHUB_REF set to tag ref.
+      # This triggers both: commit replay + tag push to target.
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: ${{ env.SOURCE_DIR }}
+          target-directory: ${{ env.TARGET_DIR }}
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
+        env:
+          GITHUB_REF: refs/tags/${{ env.TEST_TAG }}
+
+      - name: Verify tag sync
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 3: tag-sync ==="
+
+          REPO_URL="https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git"
+
+          git clone --branch="${TARGET_BRANCH}" "${REPO_URL}" /tmp/_verify
+          cd /tmp/_verify
+
+          # --- Verify commits were synced ---
+          SYNCED=$(git log --format='%B' | grep -c '^Source-Commit:' || true)
+          echo "Synced commits: ${SYNCED}"
+          if [[ "${SYNCED}" -lt 4 ]]; then
+            echo "FAIL: expected >= 4 synced commits, got ${SYNCED}"
+            exit 1
+          fi
+          echo "  ✓ commits replayed (${SYNCED})"
+
+          # Verify test files present
+          for F in templates/test-configmap.yaml templates/test-secret.yaml Chart.yaml; do
+            if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
+              echo "FAIL: missing file ${TARGET_DIR}/${F}"
+              exit 1
+            fi
+            echo "  ✓ file exists: ${F}"
+          done
+
+          # --- Verify tag exists on remote ---
+          if git ls-remote --tags origin "${TEST_TAG}" | grep -q "${TEST_TAG}"; then
+            echo "  ✓ tag ${TEST_TAG} exists on target remote"
+          else
+            echo "FAIL: tag ${TEST_TAG} not found on target"
+            exit 1
+          fi
+
+          # Verify tag points to the same tree as the branch HEAD
+          git fetch origin "refs/tags/${TEST_TAG}:refs/tags/${TEST_TAG}"
+          BRANCH_TREE=$(git rev-parse HEAD^{tree})
+          TAG_TREE=$(git rev-parse "${TEST_TAG}^{tree}")
+          if [[ "${BRANCH_TREE}" == "${TAG_TREE}" ]]; then
+            echo "  ✓ tag tree matches branch HEAD tree"
+          else
+            echo "FAIL: tag tree (${TAG_TREE}) != branch tree (${BRANCH_TREE})"
+            exit 1
+          fi
+
+          echo "=== PASSED ==="
+          rm -rf /tmp/_verify
+
+      # Remove local tag so it doesn't persist in bind-mounted workdir
+      - name: Cleanup local tag
+        if: always()
+        run: git tag -d "${{ env.TEST_TAG }}" 2>/dev/null || true
+
+  # ──────────────────────────────────────────────
+  # Cleanup: delete all throwaway branches and tags
+  # ──────────────────────────────────────────────
+  cleanup:
+    runs-on: dev-ci-pl
+    needs: [multi-commit, pr-merge, tag-sync]
+    if: always()
+    steps:
+      - name: Delete test branches and tags
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git"
+
+          for BRANCH in _test-sync-multi-commit _test-sync-pr-merge _test-sync-tag; do
+            if git ls-remote --heads "${REPO}" "${BRANCH}" | grep -q "${BRANCH}"; then
+              git push "${REPO}" --delete "${BRANCH}" && echo "✓ deleted branch ${BRANCH}" || true
+            fi
+          done
+
+          TAG="v99.0.0-sync-test"
+          if git ls-remote --tags "${REPO}" "${TAG}" | grep -q "${TAG}"; then
+            git push "${REPO}" --delete "${TAG}" && echo "✓ deleted tag ${TAG}" || true
+          fi
+
+          echo "Cleanup done."
