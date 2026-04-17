@@ -1,9 +1,9 @@
 # mirror-directory
 
-Mirror a subdirectory from one repository to another, replaying each commit
-that touches the source directory into the target repo. Preserves original
-authors, dates, and messages. Every target commit includes a `Source-Commit:`
-trailer for traceability.
+Mirror a subdirectory from one repository to another as a snapshot. Each
+run wipes the target directory, copies the current source directory on top,
+and pushes one commit carrying a `Source-Commit: <sha>` trailer that points
+at the source commit producing the snapshot. Source history is not replayed.
 
 ## Testing with act
 
@@ -13,9 +13,9 @@ The workflow (`test-helm-sync.yaml`) covers three scenarios:
 
 | Test | Scenario | What it verifies |
 |------|----------|------------------|
-| **multi-commit** | 4 individual commits on a branch | All commits replayed in order, files correct, `Source-Commit` trailers present |
-| **pr-merge** | Single squash commit (simulates PR merge) | 1 commit replayed, trailer matches squash SHA, commit subject preserved |
-| **tag-sync** | Commits + tag via `GITHUB_REF` override | Commits replayed, tag pushed to target, tag tree matches branch HEAD |
+| **snapshot** | Current source dir pushed to empty/existing target | One commit in target, files match source, `Source-Commit` trailer present |
+| **no-op** | Re-run with no source changes | No new commit in target |
+| **tag-sync** | Snapshot push + tag via `GITHUB_REF` override | Commit pushed, tag pushed to target, tag tree matches branch HEAD |
 
 A **cleanup** job runs after all tests (`if: always()`) and deletes the
 throwaway branches and tags from the target repo.
