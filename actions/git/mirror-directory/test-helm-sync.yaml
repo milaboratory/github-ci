@@ -1,14 +1,12 @@
-# Test mirror-directory sync in 3 modes:
-#   1. multi-commit  — multiple commits replayed from branch to target
-#   2. pr-merge      — squash-merge (single commit) replayed to target
-#   3. tag           — commits synced + tag pushed to target
+# Test mirror-directory in snapshot mode:
+#   1. snapshot        — push current source dir, verify one commit + trailer + files
+#   2. no-op           — second push with no source change adds no commit
+#   3. tag-sync        — snapshot push + tag synced when GITHUB_REF is a tag
+#   4. multi-directory — two source:target pairs synced in a single commit
 #
 # Jobs run sequentially because `-b` (bind mount) shares the workdir.
-# Jobs that need different git state (pr-merge) clone to /tmp to avoid
-# mutating the bind-mounted workdir.
-#
-# All jobs push to throwaway branches on platforma-helm; a final cleanup job
-# deletes them.
+# All jobs push to throwaway branches on platforma-helm; a final cleanup
+# job deletes them.
 #
 # This file lives next to action.yml but must be run from the pl/ repo
 # (the source repo that contains helm/charts/platforma/).
@@ -29,16 +27,14 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────
-  # Test 1: Multiple commits replayed one-by-one
+  # Test 1: Snapshot push — one commit, trailer, files
   # ──────────────────────────────────────────────
-  multi-commit:
+  snapshot:
     runs-on: dev-ci-pl
     env:
-      TARGET_BRANCH: _test-sync-multi-commit
+      TARGET_BRANCH: _test-sync-snapshot
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
         with:
@@ -48,52 +44,33 @@ jobs:
           github-token: ${{ secrets.HELM_SYNC_TOKEN }}
           target-branch: ${{ env.TARGET_BRANCH }}
 
-      - name: Verify multi-commit sync
+      - name: Verify snapshot sync
         shell: bash
         env:
           TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
         run: |
           set -euo pipefail
-          echo "=== Test 1: multi-commit ==="
+          echo "=== Test 1: snapshot ==="
 
           git clone --branch="${TARGET_BRANCH}" \
             "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
             /tmp/_verify
           cd /tmp/_verify
 
-          # Count replayed commits (those with Source-Commit trailer)
-          SYNCED=$(git log --format='%B' | grep -c '^Source-Commit:' || true)
-          echo "Synced commits with trailer: ${SYNCED}"
+          # The snapshot mode pushes exactly one commit per invocation.
+          LAST_MSG=$(git log -1 --format='%B')
+          echo "Last commit message:"
+          echo "${LAST_MSG}"
+          echo ""
 
-          if [[ "${SYNCED}" -lt 4 ]]; then
-            echo "FAIL: expected >= 4 synced commits, got ${SYNCED}"
-            exit 1
-          fi
-
-          # Verify all 3 test commit subjects are present
-          SUBJECTS=$(git log --format='%s')
-          for EXPECTED in "test: add test configmap (commit 1/3)" \
-                          "test: update chart description (commit 2/3)" \
-                          "test: add test secret template (commit 3/3)"; do
-            if ! echo "${SUBJECTS}" | grep -qF "${EXPECTED}"; then
-              echo "FAIL: missing commit '${EXPECTED}'"
-              exit 1
-            fi
-            echo "  ✓ found: ${EXPECTED}"
-          done
-
-          # Verify order: commit 1 before 2 before 3
-          POS1=$(git log --reverse --format='%s' | grep -n "commit 1/3" | cut -d: -f1)
-          POS2=$(git log --reverse --format='%s' | grep -n "commit 2/3" | cut -d: -f1)
-          POS3=$(git log --reverse --format='%s' | grep -n "commit 3/3" | cut -d: -f1)
-          if [[ "${POS1}" -lt "${POS2}" && "${POS2}" -lt "${POS3}" ]]; then
-            echo "  ✓ commit order preserved"
+          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          if [[ "${TRAILER_SHA}" == "${GITHUB_SHA}" ]]; then
+            echo "  ✓ Source-Commit trailer matches GITHUB_SHA"
           else
-            echo "FAIL: commit order wrong (${POS1}, ${POS2}, ${POS3})"
+            echo "FAIL: trailer '${TRAILER_SHA}' != GITHUB_SHA '${GITHUB_SHA}'"
             exit 1
           fi
 
-          # Verify files exist
           for F in templates/test-configmap.yaml templates/test-secret.yaml Chart.yaml; do
             if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
               echo "FAIL: missing file ${TARGET_DIR}/${F}"
@@ -102,7 +79,6 @@ jobs:
             echo "  ✓ file exists: ${F}"
           done
 
-          # Verify Chart.yaml has updated description
           if grep -q "sync test" "${TARGET_DIR}/Chart.yaml"; then
             echo "  ✓ Chart.yaml description updated"
           else
@@ -114,53 +90,15 @@ jobs:
           rm -rf /tmp/_verify
 
   # ──────────────────────────────────────────────
-  # Test 2: PR-style squash merge (single commit)
-  #
-  # Simulates a PR squash-merge: one commit with
-  # the full diff lands on main, sync replays it
-  # as a single commit to the target.
-  #
-  # Creates a temp branch in the workdir with a
-  # squash commit, points HEAD at it, runs
-  # mirror-directory, then restores HEAD.
+  # Test 2: No-op re-sync — second run adds no commit
   # ──────────────────────────────────────────────
-  pr-merge:
-    needs: [multi-commit]
+  no-op:
+    needs: [snapshot]
     runs-on: dev-ci-pl
     env:
-      TARGET_BRANCH: _test-sync-pr-merge
+      TARGET_BRANCH: _test-sync-no-op
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # Create a single squash commit containing only helm/ changes.
-      # Uses checkout + add instead of merge to avoid conflicts in
-      # non-helm files that diverged between the branch and main.
-      - name: Simulate squash merge
-        id: squash
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name "merge-bot"
-          git config user.email "bot@test"
-
-          ORIGINAL_REF=$(git rev-parse HEAD)
-          echo "original-ref=${ORIGINAL_REF}" >> "${GITHUB_OUTPUT}"
-          echo "Saved original HEAD: ${ORIGINAL_REF}"
-
-          # Create temp branch from origin/main
-          git checkout -b _squash-temp origin/main
-
-          # Overlay helm dir from the feature branch
-          git checkout "${ORIGINAL_REF}" -- helm/charts/platforma/
-          git add helm/charts/platforma/
-          git commit -m "feat: squash merge helm changes (#999)"
-
-          SQUASH_SHA=$(git rev-parse HEAD)
-          echo "squash-sha=${SQUASH_SHA}" >> "${GITHUB_OUTPUT}"
-          echo "Created squash commit: ${SQUASH_SHA}"
 
       - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
         with:
@@ -170,92 +108,63 @@ jobs:
           github-token: ${{ secrets.HELM_SYNC_TOKEN }}
           target-branch: ${{ env.TARGET_BRANCH }}
 
-      - name: Verify PR merge sync
+      - name: Snapshot target SHA after first sync
+        id: after-first
         shell: bash
         env:
           TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
-          SQUASH_SHA: ${{ steps.squash.outputs.squash-sha }}
         run: |
           set -euo pipefail
-          echo "=== Test 2: pr-merge ==="
+          SHA=$(git ls-remote "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+                "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')
+          echo "first-sha=${SHA}" >> "${GITHUB_OUTPUT}"
+          echo "First-sync target SHA: ${SHA}"
 
-          git clone --branch="${TARGET_BRANCH}" \
-            "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
-            /tmp/_verify
-          cd /tmp/_verify
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: ${{ env.SOURCE_DIR }}
+          target-directory: ${{ env.TARGET_DIR }}
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
 
-          LAST_MSG=$(git log -1 --format='%B')
-          echo "Last commit message:"
-          echo "${LAST_MSG}"
-          echo ""
+      - name: Verify no new commit on re-sync
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+          FIRST_SHA: ${{ steps.after-first.outputs.first-sha }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 2: no-op ==="
 
-          # Verify Source-Commit trailer points to squash SHA
-          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
-          if [[ "${TRAILER_SHA}" == "${SQUASH_SHA}" ]]; then
-            echo "  ✓ Source-Commit trailer matches squash SHA"
+          SECOND_SHA=$(git ls-remote "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+                       "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')
+          echo "Second-sync target SHA: ${SECOND_SHA}"
+
+          if [[ "${FIRST_SHA}" == "${SECOND_SHA}" ]]; then
+            echo "  ✓ target HEAD unchanged after no-op re-sync"
           else
-            echo "FAIL: trailer '${TRAILER_SHA}' != squash '${SQUASH_SHA}'"
-            exit 1
-          fi
-
-          # Verify the squash brought all files
-          for F in templates/test-configmap.yaml templates/test-secret.yaml; do
-            if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
-              echo "FAIL: missing file ${TARGET_DIR}/${F}"
-              exit 1
-            fi
-            echo "  ✓ file exists: ${F}"
-          done
-
-          # Verify commit subject preserved
-          SUBJECT=$(git log -1 --format='%s')
-          if [[ "${SUBJECT}" == *"squash merge helm changes"* ]]; then
-            echo "  ✓ squash commit subject preserved"
-          else
-            echo "FAIL: unexpected subject '${SUBJECT}'"
+            echo "FAIL: HEAD moved from ${FIRST_SHA} to ${SECOND_SHA} despite identical source"
             exit 1
           fi
 
           echo "=== PASSED ==="
-          rm -rf /tmp/_verify
-
-      # Restore HEAD to original branch so subsequent jobs are unaffected
-      - name: Restore git state
-        if: always()
-        shell: bash
-        env:
-          ORIGINAL_REF: ${{ steps.squash.outputs.original-ref }}
-        run: |
-          git checkout "${ORIGINAL_REF}" 2>/dev/null || true
-          git branch -D _squash-temp 2>/dev/null || true
-          echo "Restored HEAD to ${ORIGINAL_REF}"
 
   # ──────────────────────────────────────────────
-  # Test 3: Commits + tag sync
-  #
-  # First syncs commits (same as multi-commit),
-  # then verifies mirror-directory also pushes a
-  # tag to the target when GITHUB_REF is a tag.
-  # Tag is created in a temp clone to avoid
-  # persisting in the bind-mounted workdir.
+  # Test 3: Snapshot + tag sync
   # ──────────────────────────────────────────────
   tag-sync:
-    needs: [pr-merge]
+    needs: [no-op]
     runs-on: dev-ci-pl
     env:
       TARGET_BRANCH: _test-sync-tag
       TEST_TAG: v99.0.0-sync-test
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # Create tag locally
       - name: Create source tag
         run: git tag -f "${{ env.TEST_TAG }}"
 
-      # Run mirror-directory with GITHUB_REF set to tag ref.
-      # This triggers both: commit replay + tag push to target.
       - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
         with:
           target-repository: ${{ env.TARGET_REPO }}
@@ -279,16 +188,15 @@ jobs:
           git clone --branch="${TARGET_BRANCH}" "${REPO_URL}" /tmp/_verify
           cd /tmp/_verify
 
-          # --- Verify commits were synced ---
-          SYNCED=$(git log --format='%B' | grep -c '^Source-Commit:' || true)
-          echo "Synced commits: ${SYNCED}"
-          if [[ "${SYNCED}" -lt 4 ]]; then
-            echo "FAIL: expected >= 4 synced commits, got ${SYNCED}"
+          LAST_MSG=$(git log -1 --format='%B')
+          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          if [[ "${TRAILER_SHA}" == "${GITHUB_SHA}" ]]; then
+            echo "  ✓ Source-Commit trailer matches GITHUB_SHA"
+          else
+            echo "FAIL: trailer '${TRAILER_SHA}' != GITHUB_SHA '${GITHUB_SHA}'"
             exit 1
           fi
-          echo "  ✓ commits replayed (${SYNCED})"
 
-          # Verify test files present
           for F in templates/test-configmap.yaml templates/test-secret.yaml Chart.yaml; do
             if [[ ! -f "${TARGET_DIR}/${F}" ]]; then
               echo "FAIL: missing file ${TARGET_DIR}/${F}"
@@ -297,7 +205,6 @@ jobs:
             echo "  ✓ file exists: ${F}"
           done
 
-          # --- Verify tag exists on remote ---
           if git ls-remote --tags origin "${TEST_TAG}" | grep -q "${TEST_TAG}"; then
             echo "  ✓ tag ${TEST_TAG} exists on target remote"
           else
@@ -305,7 +212,6 @@ jobs:
             exit 1
           fi
 
-          # Verify tag points to the same tree as the branch HEAD
           git fetch origin "refs/tags/${TEST_TAG}:refs/tags/${TEST_TAG}"
           BRANCH_TREE=$(git rev-parse HEAD^{tree})
           TAG_TREE=$(git rev-parse "${TEST_TAG}^{tree}")
@@ -319,17 +225,105 @@ jobs:
           echo "=== PASSED ==="
           rm -rf /tmp/_verify
 
-      # Remove local tag so it doesn't persist in bind-mounted workdir
       - name: Cleanup local tag
         if: always()
         run: git tag -d "${{ env.TEST_TAG }}" 2>/dev/null || true
+
+  # ──────────────────────────────────────────────
+  # Test 4: Multi-directory mapping — two pairs in one commit
+  # ──────────────────────────────────────────────
+  multi-directory:
+    needs: [tag-sync]
+    runs-on: dev-ci-pl
+    env:
+      TARGET_BRANCH: _test-sync-multi
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create second source directory
+        run: |
+          mkdir -p installation/aws
+          echo "cfn-test-content" > installation/aws/cloudformation-test.yaml
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          directory-mappings: |
+            helm/charts/platforma:charts/platforma
+            installation/aws:infrastructure/aws
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify multi-directory sync
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 4: multi-directory ==="
+
+          git clone --branch="${TARGET_BRANCH}" \
+            "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+            /tmp/_verify
+          cd /tmp/_verify
+
+          # Verify helm chart files synced
+          if [[ ! -f "charts/platforma/Chart.yaml" ]]; then
+            echo "FAIL: missing charts/platforma/Chart.yaml"
+            exit 1
+          fi
+          echo "  ✓ charts/platforma/Chart.yaml exists"
+
+          # Verify CFN files synced
+          if [[ ! -f "infrastructure/aws/cloudformation-test.yaml" ]]; then
+            echo "FAIL: missing infrastructure/aws/cloudformation-test.yaml"
+            exit 1
+          fi
+          echo "  ✓ infrastructure/aws/cloudformation-test.yaml exists"
+
+          if [[ "$(cat infrastructure/aws/cloudformation-test.yaml)" == "cfn-test-content" ]]; then
+            echo "  ✓ CFN file content matches"
+          else
+            echo "FAIL: CFN file content mismatch"
+            exit 1
+          fi
+
+          # Verify both directories landed in a single commit
+          COMMIT_COUNT=$(git log --oneline "${TARGET_BRANCH}" | wc -l | tr -d ' ')
+          # Branch was freshly created, so expect exactly 1 sync commit
+          # (plus the initial commit from the clone base)
+          LAST_MSG=$(git log -1 --format='%B')
+          echo "Last commit:"
+          echo "${LAST_MSG}"
+
+          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          if [[ "${TRAILER_SHA}" == "${GITHUB_SHA}" ]]; then
+            echo "  ✓ Source-Commit trailer present — single commit for both dirs"
+          else
+            echo "FAIL: trailer '${TRAILER_SHA}' != GITHUB_SHA '${GITHUB_SHA}'"
+            exit 1
+          fi
+
+          # Verify both dirs are in the same commit's changed files
+          CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          if echo "${CHANGED}" | grep -q "^charts/platforma/" && \
+             echo "${CHANGED}" | grep -q "^infrastructure/aws/"; then
+            echo "  ✓ both directories changed in the same commit"
+          else
+            echo "FAIL: expected both directories in one commit, got:"
+            echo "${CHANGED}"
+            exit 1
+          fi
+
+          echo "=== PASSED ==="
+          rm -rf /tmp/_verify
 
   # ──────────────────────────────────────────────
   # Cleanup: delete all throwaway branches and tags
   # ──────────────────────────────────────────────
   cleanup:
     runs-on: dev-ci-pl
-    needs: [multi-commit, pr-merge, tag-sync]
+    needs: [snapshot, no-op, tag-sync, multi-directory]
     if: always()
     steps:
       - name: Delete test branches and tags
@@ -340,7 +334,7 @@ jobs:
           set -euo pipefail
           REPO="https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git"
 
-          for BRANCH in _test-sync-multi-commit _test-sync-pr-merge _test-sync-tag; do
+          for BRANCH in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi; do
             if git ls-remote --heads "${REPO}" "${BRANCH}" | grep -q "${BRANCH}"; then
               git push "${REPO}" --delete "${BRANCH}" && echo "✓ deleted branch ${BRANCH}" || true
             fi

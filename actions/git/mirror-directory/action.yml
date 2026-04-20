@@ -1,21 +1,33 @@
 name: Mirror Directory
 author: 'MiLaboratories'
 description: |
-  Mirror a subdirectory to a target repository.
+  Mirror subdirectories to a target repository.
 
-  Pushes a snapshot of the source directory as a single commit on top of
+  Pushes a snapshot of the source directories as a single commit on top of
   the target branch. The source repository's history is not replayed;
   each run produces exactly one commit in the target whose message
   carries a `Source-Commit: <sha>` trailer pointing at the source commit
   that produced this snapshot.
 
+  Supports multiple directory pairs via directory-mappings input.
   Syncs tags when triggered by a tag push.
 
 inputs:
+  directory-mappings:
+    description: |
+      Newline-separated list of source:target directory pairs to mirror.
+      Example:
+        helm/charts/platforma:charts/platforma
+        installation/aws:infrastructure/aws
+      Takes precedence over source-directory/target-directory when set.
+    required: false
+    default: ''
   source-directory:
     description: |
+      Deprecated: use directory-mappings instead.
       Subdirectory in the source repository to mirror.
-    required: true
+    required: false
+    default: ''
   target-repository:
     description: |
       Target repository in org/repo format (e.g. milaboratory/platforma-helm).
@@ -26,8 +38,10 @@ inputs:
     required: true
   target-directory:
     description: |
+      Deprecated: use directory-mappings instead.
       Subdirectory inside the target repository to mirror into.
-    required: true
+    required: false
+    default: ''
   target-branch:
     description: |
       Branch to push to in the target repository. Created if missing.
@@ -61,27 +75,54 @@ runs:
     - name: Sync snapshot
       shell: bash
       env:
+        MAPPINGS: ${{ inputs.directory-mappings }}
         SOURCE_DIR: ${{ inputs.source-directory }}
         TARGET_DIR: ${{ inputs.target-directory }}
         TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
         set -euo pipefail
 
-        if [[ ! -d "${GITHUB_WORKSPACE}/${SOURCE_DIR}" ]]; then
-          echo "::error::source directory '${SOURCE_DIR}' not found in checkout"
+        # Build directory pairs from inputs
+        PAIRS=()
+        if [[ -n "${MAPPINGS}" ]]; then
+          while IFS= read -r line; do
+            line=$(echo "${line}" | xargs)
+            [[ -n "${line}" ]] && PAIRS+=("${line}")
+          done <<< "${MAPPINGS}"
+        elif [[ -n "${SOURCE_DIR}" && -n "${TARGET_DIR}" ]]; then
+          echo "::warning::source-directory/target-directory inputs are deprecated. Use directory-mappings instead."
+          PAIRS+=("${SOURCE_DIR}:${TARGET_DIR}")
+        else
+          echo "::error::Either directory-mappings or both source-directory and target-directory must be set"
           exit 1
         fi
 
-        DEST="/tmp/_mirror-target/${TARGET_DIR}"
-        mkdir -p "$(dirname "${DEST}")"
-        rm -rf "${DEST}"
-        cp -a "${GITHUB_WORKSPACE}/${SOURCE_DIR}" "${DEST}"
+        for pair in "${PAIRS[@]}"; do
+          SRC="${pair%%:*}"
+          TGT="${pair#*:}"
+
+          if [[ -z "${SRC}" || -z "${TGT}" || "${SRC}" == "${pair}" ]]; then
+            echo "::error::Invalid mapping '${pair}' — expected format 'source:target'"
+            exit 1
+          fi
+
+          if [[ ! -d "${GITHUB_WORKSPACE}/${SRC}" ]]; then
+            echo "::error::source directory '${SRC}' not found in checkout"
+            exit 1
+          fi
+
+          DEST="/tmp/_mirror-target/${TGT}"
+          mkdir -p "$(dirname "${DEST}")"
+          rm -rf "${DEST}"
+          cp -a "${GITHUB_WORKSPACE}/${SRC}" "${DEST}"
+
+          git -C /tmp/_mirror-target add -A "${TGT}"
+          echo "Synced ${SRC} -> ${TGT}"
+        done
 
         cd /tmp/_mirror-target
-        git add -A "${TARGET_DIR}"
-
         if git diff --cached --quiet; then
-          echo "No changes in ${TARGET_DIR}, nothing to push"
+          echo "No changes in any synced directories, nothing to push"
           exit 0
         fi
 

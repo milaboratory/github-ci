@@ -3,14 +3,14 @@
 # Test the mirror-directory action end-to-end using act.
 #
 # This script:
-#   1. Creates a test branch in pl/ with 3 helm commits
-#   2. Runs the test workflow (multi-commit, pr-merge, tag-sync + cleanup)
+#   1. Creates a test branch in pl/ with 3 helm commits (source snapshot)
+#   2. Runs the test workflow (snapshot, no-op, tag-sync + cleanup)
 #   3. Cleans up the local test branch
 #
 # Usage:
 #   ./test-helm-sync.sh                    # full run (all 3 tests)
 #   ./test-helm-sync.sh --dry-run          # validate YAML only
-#   ./test-helm-sync.sh --job multi-commit # run a single job
+#   ./test-helm-sync.sh --job snapshot     # run a single job
 #   ./test-helm-sync.sh --setup-only       # create test branch, don't run
 #   ./test-helm-sync.sh --cleanup-only     # delete test branch + remote leftovers
 #
@@ -82,7 +82,7 @@ TARGET_REPO="milaboratory/platforma-helm"
 # ── Helpers ────────────────────────────────────────────────────
 cleanup_remote() {
   echo "Cleaning up remote leftovers..."
-  for b in _test-sync-multi-commit _test-sync-pr-merge _test-sync-tag; do
+  for b in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi; do
     gh api -X DELETE "repos/${TARGET_REPO}/git/refs/heads/${b}" 2>/dev/null && \
       echo "  ✓ deleted branch ${b}" || true
   done
@@ -149,8 +149,14 @@ YAML
   git add helm/charts/platforma/templates/test-secret.yaml
   git commit -m "test: add test secret template (commit 3/3)"
 
-  COMMIT_COUNT=$(git log --oneline "origin/main..HEAD" -- helm/charts/platforma/ | wc -l | tr -d ' ')
-  echo "  ✓ Created ${TEST_BRANCH} with ${COMMIT_COUNT} helm commits"
+  # Commit 4: add installation/aws test data for multi-directory test
+  mkdir -p installation/aws
+  echo "cfn-test-content" > installation/aws/cloudformation-test.yaml
+  git add installation/aws/cloudformation-test.yaml
+  git commit -m "test: add installation/aws test data (commit 4/4)"
+
+  COMMIT_COUNT=$(git log --oneline "origin/main..HEAD" | wc -l | tr -d ' ')
+  echo "  ✓ Created ${TEST_BRANCH} with ${COMMIT_COUNT} test commits"
 }
 
 run_act() {
