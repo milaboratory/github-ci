@@ -82,7 +82,7 @@ TARGET_REPO="milaboratory/platforma-helm"
 # ── Helpers ────────────────────────────────────────────────────
 cleanup_remote() {
   echo "Cleaning up remote leftovers..."
-  for b in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi; do
+  for b in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi _test-sync-root; do
     gh api -X DELETE "repos/${TARGET_REPO}/git/refs/heads/${b}" 2>/dev/null && \
       echo "  ✓ deleted branch ${b}" || true
   done
