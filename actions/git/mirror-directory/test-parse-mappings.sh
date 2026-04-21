@@ -105,45 +105,42 @@ run_sync() {
         exit 1
       fi
 
-      if [[ "${TGT}" == "." ]]; then
-        cd /tmp/_mirror-target
+      cd /tmp/_mirror-target
 
-        # Move kept paths to temp location
-        KEEP_TMP=$(mktemp -d)
-        for kp in "${KEEP[@]}"; do
+      # Save kept paths that fall under this target
+      KEEP_TMP=$(mktemp -d)
+      for kp in "${KEEP[@]}"; do
+        if [[ "${TGT}" == "." ]] || [[ "${kp}" == "${TGT}/"* ]] || [[ "${kp}" == "${TGT}" ]]; then
           if [[ -e "${kp}" ]]; then
             mkdir -p "${KEEP_TMP}/$(dirname "${kp}")"
             mv "${kp}" "${KEEP_TMP}/${kp}"
           fi
-        done
+        fi
+      done
 
-        # Remove everything except .git
+      # Prune and copy
+      if [[ "${TGT}" == "." ]]; then
         find . -maxdepth 1 -mindepth 1 ! -name ".git" -exec rm -rf {} +
-
-        # Copy source contents
         cp -a "${GITHUB_WORKSPACE}/${SRC}/." ./
-
-        # Restore kept paths
-        for kp in "${KEEP[@]}"; do
-          if [[ -e "${KEEP_TMP}/${kp}" ]]; then
-            mkdir -p "$(dirname "${kp}")"
-            rm -rf "${kp}"
-            mv "${KEEP_TMP}/${kp}" "${kp}"
-          fi
-        done
-        rm -rf "${KEEP_TMP}"
-
-        cd - > /dev/null
-        git -C /tmp/_mirror-target add -A .
-        echo "Synced ${SRC} -> . (root)"
       else
-        DEST="/tmp/_mirror-target/${TGT}"
-        mkdir -p "$(dirname "${DEST}")"
-        rm -rf "${DEST}"
-        cp -a "${GITHUB_WORKSPACE}/${SRC}" "${DEST}"
-        git -C /tmp/_mirror-target add -A "${TGT}"
-        echo "Synced ${SRC} -> ${TGT}"
+        rm -rf "${TGT}"
+        mkdir -p "$(dirname "${TGT}")"
+        cp -a "${GITHUB_WORKSPACE}/${SRC}" "${TGT}"
       fi
+
+      # Restore kept paths
+      for kp in "${KEEP[@]}"; do
+        if [[ -e "${KEEP_TMP}/${kp}" ]]; then
+          mkdir -p "$(dirname "${kp}")"
+          rm -rf "${kp}"
+          mv "${KEEP_TMP}/${kp}" "${kp}"
+        fi
+      done
+      rm -rf "${KEEP_TMP}"
+
+      cd - > /dev/null
+      git -C /tmp/_mirror-target add -A "${TGT}"
+      echo "Synced ${SRC} -> ${TGT}"
     done
 
     # Process file mappings
@@ -346,7 +343,7 @@ test_root_mapping() {
   run_sync "helm/charts/platforma:." "" ""
   rc=$?
   assert_exit "exit 0" 0 "${rc}"
-  assert_contains "synced root" "Synced helm/charts/platforma -> . (root)"
+  assert_contains "synced root" "Synced helm/charts/platforma -> ."
   assert_contains "committed" "COMMITTED"
   assert_file_exists "file at target root" "/tmp/_mirror-target/Chart.yaml"
   teardown
@@ -441,8 +438,46 @@ test_keep_without_changes_nested() {
   teardown
 }
 
+test_keep_without_changes_non_root() {
+  echo "Test 15: keep-without-changes with non-root target"
+  setup
+  # Target has charts/platforma (will be replaced) and charts/platforma-local (keep)
+  mkdir -p /tmp/_mirror-target/charts/platforma
+  echo "old" > /tmp/_mirror-target/charts/platforma/Chart.yaml
+  mkdir -p /tmp/_mirror-target/charts/platforma-local/templates
+  echo "local" > /tmp/_mirror-target/charts/platforma-local/Chart.yaml
+  echo "tpl" > /tmp/_mirror-target/charts/platforma-local/templates/svc.yaml
+  git -C /tmp/_mirror-target add charts/
+  git -C /tmp/_mirror-target -c user.name=test -c user.email=test@test -c core.hooksPath=/dev/null \
+    commit -m "add charts" -q
+
+  # Source only has platforma (not platforma-local)
+  mkdir -p "${GITHUB_WORKSPACE}/src/platforma"
+  echo "new-chart" > "${GITHUB_WORKSPACE}/src/platforma/Chart.yaml"
+  git -C "${GITHUB_WORKSPACE}" add -A
+  git -C "${GITHUB_WORKSPACE}" -c user.name=test -c user.email=test@test -c core.hooksPath=/dev/null \
+    commit --amend -m "update" -q
+
+  run_sync "src:charts" "" "" "charts/platforma-local"
+  rc=$?
+  assert_exit "exit 0" 0 "${rc}"
+  # Source content synced
+  CONTENT=$(cat /tmp/_mirror-target/charts/platforma/Chart.yaml 2>/dev/null || echo "MISSING")
+  if [[ "${CONTENT}" == "new-chart" ]]; then
+    echo "  PASS: source chart updated"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: expected new-chart, got: ${CONTENT}"
+    FAIL=$((FAIL + 1))
+  fi
+  # Kept path preserved
+  assert_file_exists "kept platforma-local Chart" "/tmp/_mirror-target/charts/platforma-local/Chart.yaml"
+  assert_file_exists "kept platforma-local template" "/tmp/_mirror-target/charts/platforma-local/templates/svc.yaml"
+  teardown
+}
+
 test_file_mappings() {
-  echo "Test 15: file-mappings copies individual files"
+  echo "Test 17: file-mappings copies individual files"
   setup
   # Create a source file
   echo "readme content" > "${GITHUB_WORKSPACE}/helm/README.md"
@@ -459,7 +494,7 @@ test_file_mappings() {
 }
 
 test_file_mapping_overwrites_dir_mapping() {
-  echo "Test 16: file-mappings overwrites file from directory sync"
+  echo "Test 18: file-mappings overwrites file from directory sync"
   setup
   # Create a .gitignore in source dir and a separate override
   echo "pl-specific-ignore" > "${GITHUB_WORKSPACE}/helm/charts/platforma/.gitignore"
@@ -502,6 +537,7 @@ test_root_mapping_prunes_old_files;   echo ""
 test_keep_without_changes;            echo ""
 test_keep_without_changes_multiple;   echo ""
 test_keep_without_changes_nested;     echo ""
+test_keep_without_changes_non_root;   echo ""
 test_file_mappings;                   echo ""
 test_file_mapping_overwrites_dir_mapping; echo ""
 

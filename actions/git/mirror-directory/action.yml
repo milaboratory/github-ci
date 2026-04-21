@@ -57,7 +57,7 @@ inputs:
       Newline-separated list of paths in the target repo to preserve
       during sync. These paths will not be pruned even if they are
       absent from the source. Supports both top-level and nested paths.
-      Only applies when target is root (.).
+      For non-root targets, only paths under the target are matched.
       Example:
         .github
         charts/platforma-local
@@ -143,47 +143,43 @@ runs:
             exit 1
           fi
 
-          if [[ "${TGT}" == "." ]]; then
-            # Root mapping: prune target, preserving .git and keep-without-changes paths
-            cd /tmp/_mirror-target
+          cd /tmp/_mirror-target
 
-            # Move kept paths to temp location
-            KEEP_TMP=$(mktemp -d)
-            for kp in "${KEEP[@]}"; do
+          # Save kept paths that fall under this target
+          KEEP_TMP=$(mktemp -d)
+          for kp in "${KEEP[@]}"; do
+            if [[ "${TGT}" == "." ]] || [[ "${kp}" == "${TGT}/"* ]] || [[ "${kp}" == "${TGT}" ]]; then
               if [[ -e "${kp}" ]]; then
                 mkdir -p "${KEEP_TMP}/$(dirname "${kp}")"
                 mv "${kp}" "${KEEP_TMP}/${kp}"
                 echo "  preserved: ${kp}"
               fi
-            done
+            fi
+          done
 
-            # Remove everything except .git
+          # Prune and copy
+          if [[ "${TGT}" == "." ]]; then
             find . -maxdepth 1 -mindepth 1 ! -name '.git' -exec rm -rf {} +
-
-            # Copy source contents
             cp -a "${GITHUB_WORKSPACE}/${SRC}/." ./
-
-            # Restore kept paths
-            for kp in "${KEEP[@]}"; do
-              if [[ -e "${KEEP_TMP}/${kp}" ]]; then
-                mkdir -p "$(dirname "${kp}")"
-                rm -rf "${kp}"
-                mv "${KEEP_TMP}/${kp}" "${kp}"
-              fi
-            done
-            rm -rf "${KEEP_TMP}"
-
-            cd - > /dev/null
-            git -C /tmp/_mirror-target add -A .
-            echo "Synced ${SRC} -> . (root)"
           else
-            DEST="/tmp/_mirror-target/${TGT}"
-            mkdir -p "$(dirname "${DEST}")"
-            rm -rf "${DEST}"
-            cp -a "${GITHUB_WORKSPACE}/${SRC}" "${DEST}"
-            git -C /tmp/_mirror-target add -A "${TGT}"
-            echo "Synced ${SRC} -> ${TGT}"
+            rm -rf "${TGT}"
+            mkdir -p "$(dirname "${TGT}")"
+            cp -a "${GITHUB_WORKSPACE}/${SRC}" "${TGT}"
           fi
+
+          # Restore kept paths
+          for kp in "${KEEP[@]}"; do
+            if [[ -e "${KEEP_TMP}/${kp}" ]]; then
+              mkdir -p "$(dirname "${kp}")"
+              rm -rf "${kp}"
+              mv "${KEEP_TMP}/${kp}" "${kp}"
+            fi
+          done
+          rm -rf "${KEEP_TMP}"
+
+          cd - > /dev/null
+          git -C /tmp/_mirror-target add -A "${TGT}"
+          echo "Synced ${SRC} -> ${TGT}"
         done
 
         # Process file mappings
