@@ -319,11 +319,99 @@ jobs:
           rm -rf /tmp/_verify
 
   # ──────────────────────────────────────────────
+  # Test 5: Root mapping with keep-without-changes
+  # ──────────────────────────────────────────────
+  root-mapping:
+    needs: [multi-directory]
+    runs-on: dev-ci-pl
+    env:
+      TARGET_BRANCH: _test-sync-root
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pre-populate target with protected .github dir
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git"
+
+          git clone --depth=1 "${REPO_URL}" /tmp/_setup
+          cd /tmp/_setup
+          git checkout -b "${TARGET_BRANCH}"
+
+          mkdir -p .github/workflows
+          cat > .github/workflows/publish.yaml << 'YAML'
+          name: test-publish
+          on: push
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "protected workflow"
+          YAML
+
+          git add .github/
+          git -c user.name=test -c user.email=test@test commit -m "setup: add protected .github"
+          git push origin "${TARGET_BRANCH}"
+          rm -rf /tmp/_setup
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          directory-mappings: |
+            helm/:.
+          keep-without-changes: |
+            .github
+          github-token: ${{ secrets.HELM_SYNC_TOKEN }}
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify root sync + keep-without-changes
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.HELM_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "=== Test 5: root-mapping + keep-without-changes ==="
+
+          git clone --branch="${TARGET_BRANCH}" \
+            "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" \
+            /tmp/_verify
+          cd /tmp/_verify
+
+          # Verify helm chart synced to root
+          if [[ ! -f "charts/platforma/Chart.yaml" ]]; then
+            echo "FAIL: missing charts/platforma/Chart.yaml"
+            exit 1
+          fi
+          echo "  ✓ charts/platforma/Chart.yaml exists at root"
+
+          # Verify .github was preserved (not deleted by prune)
+          if [[ ! -f ".github/workflows/publish.yaml" ]]; then
+            echo "FAIL: .github/workflows/publish.yaml was pruned"
+            exit 1
+          fi
+          echo "  ✓ .github/workflows/publish.yaml preserved"
+
+          # Verify Source-Commit trailer
+          LAST_MSG=$(git log -1 --format='%B')
+          TRAILER_SHA=$(echo "${LAST_MSG}" | grep -oP '^Source-Commit:\s*\K[0-9a-f]+' | tail -1 || true)
+          if [[ "${TRAILER_SHA}" == "${GITHUB_SHA}" ]]; then
+            echo "  ✓ Source-Commit trailer matches"
+          else
+            echo "FAIL: trailer '${TRAILER_SHA}' != GITHUB_SHA '${GITHUB_SHA}'"
+            exit 1
+          fi
+
+          echo "=== PASSED ==="
+          rm -rf /tmp/_verify
+
+  # ──────────────────────────────────────────────
   # Cleanup: delete all throwaway branches and tags
   # ──────────────────────────────────────────────
   cleanup:
     runs-on: dev-ci-pl
-    needs: [snapshot, no-op, tag-sync, multi-directory]
+    needs: [snapshot, no-op, tag-sync, multi-directory, root-mapping]
     if: always()
     steps:
       - name: Delete test branches and tags
@@ -334,7 +422,7 @@ jobs:
           set -euo pipefail
           REPO="https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git"
 
-          for BRANCH in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi; do
+          for BRANCH in _test-sync-snapshot _test-sync-no-op _test-sync-tag _test-sync-multi _test-sync-root; do
             if git ls-remote --heads "${REPO}" "${BRANCH}" | grep -q "${BRANCH}"; then
               git push "${REPO}" --delete "${BRANCH}" && echo "✓ deleted branch ${BRANCH}" || true
             fi
