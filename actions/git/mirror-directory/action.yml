@@ -42,6 +42,27 @@ inputs:
       Subdirectory inside the target repository to mirror into.
     required: false
     default: ''
+  file-mappings:
+    description: |
+      Newline-separated list of source:target file pairs to mirror.
+      Unlike directory-mappings, these copy individual files.
+      Processed after directory-mappings, so can overwrite files from dir sync.
+      Example:
+        helm/README.md:README.md
+        helm/.gitignore.platforma-helm:.gitignore
+    required: false
+    default: ''
+  keep-without-changes:
+    description: |
+      Newline-separated list of paths in the target repo to preserve
+      during sync. These paths will not be pruned even if they are
+      absent from the source. Supports both top-level and nested paths.
+      For non-root targets, only paths under the target are matched.
+      Example:
+        .github
+        charts/platforma-local
+    required: false
+    default: ''
   target-branch:
     description: |
       Branch to push to in the target repository. Created if missing.
@@ -76,6 +97,8 @@ runs:
       shell: bash
       env:
         MAPPINGS: ${{ inputs.directory-mappings }}
+        FILE_MAPPINGS: ${{ inputs.file-mappings }}
+        KEEP_PATHS: ${{ inputs.keep-without-changes }}
         SOURCE_DIR: ${{ inputs.source-directory }}
         TARGET_DIR: ${{ inputs.target-directory }}
         TARGET_BRANCH: ${{ inputs.target-branch }}
@@ -97,6 +120,15 @@ runs:
           exit 1
         fi
 
+        # Parse keep-without-changes paths
+        KEEP=()
+        if [[ -n "${KEEP_PATHS}" ]]; then
+          while IFS= read -r kp; do
+            kp=$(echo "${kp}" | xargs)
+            [[ -n "${kp}" ]] && KEEP+=("${kp}")
+          done <<< "${KEEP_PATHS}"
+        fi
+
         for pair in "${PAIRS[@]}"; do
           SRC="${pair%%:*}"
           TGT="${pair#*:}"
@@ -111,14 +143,71 @@ runs:
             exit 1
           fi
 
-          DEST="/tmp/_mirror-target/${TGT}"
-          mkdir -p "$(dirname "${DEST}")"
-          rm -rf "${DEST}"
-          cp -a "${GITHUB_WORKSPACE}/${SRC}" "${DEST}"
+          cd /tmp/_mirror-target
 
+          # Save kept paths that fall under this target
+          KEEP_TMP=$(mktemp -d)
+          for kp in "${KEEP[@]}"; do
+            if [[ "${TGT}" == "." ]] || [[ "${kp}" == "${TGT}/"* ]] || [[ "${kp}" == "${TGT}" ]]; then
+              if [[ -e "${kp}" ]]; then
+                mkdir -p "${KEEP_TMP}/$(dirname "${kp}")"
+                mv "${kp}" "${KEEP_TMP}/${kp}"
+                echo "  preserved: ${kp}"
+              fi
+            fi
+          done
+
+          # Prune and copy
+          if [[ "${TGT}" == "." ]]; then
+            find . -maxdepth 1 -mindepth 1 ! -name '.git' -exec rm -rf {} +
+            cp -a "${GITHUB_WORKSPACE}/${SRC}/." ./
+          else
+            rm -rf "${TGT}"
+            mkdir -p "$(dirname "${TGT}")"
+            cp -a "${GITHUB_WORKSPACE}/${SRC}" "${TGT}"
+          fi
+
+          # Restore kept paths
+          for kp in "${KEEP[@]}"; do
+            if [[ -e "${KEEP_TMP}/${kp}" ]]; then
+              mkdir -p "$(dirname "${kp}")"
+              rm -rf "${kp}"
+              mv "${KEEP_TMP}/${kp}" "${kp}"
+            fi
+          done
+          rm -rf "${KEEP_TMP}"
+
+          cd - > /dev/null
           git -C /tmp/_mirror-target add -A "${TGT}"
           echo "Synced ${SRC} -> ${TGT}"
         done
+
+        # Process file mappings
+        if [[ -n "${FILE_MAPPINGS}" ]]; then
+          while IFS= read -r line; do
+            line=$(echo "${line}" | xargs)
+            [[ -z "${line}" ]] && continue
+
+            SRC="${line%%:*}"
+            TGT="${line#*:}"
+
+            if [[ -z "${SRC}" || -z "${TGT}" || "${SRC}" == "${line}" ]]; then
+              echo "::error::Invalid file mapping '${line}' — expected format 'source:target'"
+              exit 1
+            fi
+
+            if [[ ! -f "${GITHUB_WORKSPACE}/${SRC}" ]]; then
+              echo "::error::source file '${SRC}' not found in checkout"
+              exit 1
+            fi
+
+            DEST="/tmp/_mirror-target/${TGT}"
+            mkdir -p "$(dirname "${DEST}")"
+            cp -a "${GITHUB_WORKSPACE}/${SRC}" "${DEST}"
+            git -C /tmp/_mirror-target add "${TGT}"
+            echo "Synced file ${SRC} -> ${TGT}"
+          done <<< "${FILE_MAPPINGS}"
+        fi
 
         cd /tmp/_mirror-target
         if git diff --cached --quiet; then
