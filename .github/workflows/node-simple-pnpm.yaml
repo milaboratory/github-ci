@@ -474,9 +474,9 @@ jobs:
   check-changesets:
     name: check for changesets
     runs-on: ubuntu-latest
+    continue-on-error: ${{ github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group' }}
     needs:
       - metadata
-    if: github.ref_name == 'main' || github.event_name == 'merge_group'
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4
