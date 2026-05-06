@@ -5,17 +5,52 @@ run wipes the target directory, copies the current source directory on top,
 and pushes one commit carrying a `Source-Commit: <sha>` trailer that points
 at the source commit producing the snapshot. Source history is not replayed.
 
-## Testing with act
+## Testing
 
-`test-helm-sync.sh` is a self-contained script that sets up test data, runs
-the test workflow via [act](https://github.com/nektos/act), and cleans up.
-The workflow (`test-helm-sync.yaml`) covers three scenarios:
+There are two test suites:
+
+1. **`test-act.sh`** — fast, hermetic act-based tests. Pushes to a local
+   bare git repo bind-mounted into the container; no network access, no
+   real GitHub repo, no token required.
+2. **`test-helm-sync.sh`** — integration test against the real
+   `milaboratory/platforma-helm` repo. Use for final smoke-checks of
+   tag sync and other GitHub-specific behaviour.
+
+### `test-act.sh` (recommended for development)
+
+Runs `test-act.yaml` against a fake git remote — `git push` is mocked
+by initialising a bare repo at `/tmp/_mirror-test-remote.git` and
+configuring git to redirect the GitHub HTTPS URL to it via
+`url.<path>.insteadOf`. The action code is unchanged; git resolves URLs
+through `insteadOf` transparently on every clone/fetch/push.
+
+| Test | Scenario | What it verifies |
+|------|----------|------------------|
+| **snapshot** | Single mapping pushed to empty target | Files materialise in target, `Source-Commit` trailer present |
+| **no-op** | Re-run with no source changes | Target HEAD SHA unchanged |
+| **multi-dir** | Two `directory-mappings` entries | Both directories committed atomically in one commit |
+| **exclude** | Two exclude patterns across two mappings | Excluded files absent, kept files present |
+| **exclude-removes-existing** | First sync without exclude, second with exclude | Excluded file removed from target on re-sync (`rsync --delete-excluded`) |
+
+```bash
+./test-act.sh                  # full suite
+./test-act.sh --job exclude    # single job
+./test-act.sh --dry-run        # validate workflow only
+./test-act.sh --keep           # don't delete fixture/bare repo on exit
+```
+
+Requirements: `act`, `docker`, `git`. Nothing else — no GitHub token, no remote repo.
+
+### `test-helm-sync.sh` (integration)
+
+`test-helm-sync.yaml` covers three scenarios against the real target repo:
 
 | Test | Scenario | What it verifies |
 |------|----------|------------------|
 | **snapshot** | Current source dir pushed to empty/existing target | One commit in target, files match source, `Source-Commit` trailer present |
 | **no-op** | Re-run with no source changes | No new commit in target |
 | **tag-sync** | Snapshot push + tag via `GITHUB_REF` override | Commit pushed, tag pushed to target, tag tree matches branch HEAD |
+| **multi-directory** | Two source:target pairs | Both pairs synced in a single commit |
 
 A **cleanup** job runs after all tests (`if: always()`) and deletes the
 throwaway branches and tags from the target repo.
