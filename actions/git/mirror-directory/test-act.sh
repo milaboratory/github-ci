@@ -85,7 +85,10 @@ setup_fixture() {
 }
 
 # ── Initialise fake remote (bare repo) ─────────────────────────
-# Seed with one empty commit on `main` so a fresh clone has a base to branch from.
+# Seed with a single commit on `main` containing a target-only file
+# (charts/platforma/target-only.yaml). That file lives ONLY in the
+# target repo — never in source — and is used by the keep-without-changes
+# test to verify that listed paths survive the sync.
 setup_fake_remote() {
   rm -rf "${FAKE_REMOTE}"
   git init --bare -q -b main "${FAKE_REMOTE}"
@@ -93,8 +96,19 @@ setup_fake_remote() {
   local SEED
   SEED=$(mktemp -d)
   git -C "${SEED}" init -q -b main
+
+  mkdir -p "${SEED}/charts/platforma"
+  cat > "${SEED}/charts/platforma/target-only.yaml" <<'YAML'
+# Lives only in the target repo; never in source.
+# Used to test keep-without-changes preservation.
+maintained-by: target
+content: target-only-marker
+YAML
+
   git -C "${SEED}" -c user.email=test@test -c user.name=test \
-    -c commit.gpgsign=false commit -q --allow-empty -m "seed"
+    -c commit.gpgsign=false add -A
+  git -C "${SEED}" -c user.email=test@test -c user.name=test \
+    -c commit.gpgsign=false commit -q -m "seed: target-only fixture"
   git -C "${SEED}" remote add origin "${FAKE_REMOTE}"
   git -C "${SEED}" push -q origin main
   rm -rf "${SEED}"

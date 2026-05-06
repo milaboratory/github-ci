@@ -267,3 +267,89 @@ jobs:
           [[ -f "/tmp/_verify2/charts/platforma/templates/configmap.yaml" ]] \
             || { echo "FAIL: configmap.yaml should still be there"; exit 1; }
           echo "PASS: exclude-removes-existing"
+
+  # ──────────────────────────────────────────────
+  # Test 6: keep-without-changes — target-only path survives the sync.
+  # Also asserts the *control*: without keep-without-changes, the same
+  # path is wiped (so we know the keep input is what's protecting it).
+  # The fake remote is seeded with charts/platforma/target-only.yaml
+  # (see test-act.sh setup_fake_remote).
+  # ──────────────────────────────────────────────
+  keep-without-changes:
+    needs: [exclude-removes-existing]
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH_KEEP: _t-keep
+      TARGET_BRANCH_CTRL: _t-keep-control
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      - name: Sanity-check seed (main has the target-only fixture)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_seed-check
+          git clone --branch main "${FAKE_REMOTE}" /tmp/_seed-check
+          [[ -f /tmp/_seed-check/charts/platforma/target-only.yaml ]] \
+            || { echo "FAIL: seed missing target-only.yaml"; exit 1; }
+
+      # Control: sync WITHOUT keep — target-only.yaml must be wiped.
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH_CTRL }}
+
+      - name: Control — without keep, target-only.yaml is deleted
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify-ctrl
+          git clone --branch "${TARGET_BRANCH_CTRL}" "${FAKE_REMOTE}" /tmp/_verify-ctrl
+          if [[ -e /tmp/_verify-ctrl/charts/platforma/target-only.yaml ]]; then
+            echo "FAIL: control — target-only.yaml should have been deleted without keep input"
+            exit 1
+          fi
+          [[ -f /tmp/_verify-ctrl/charts/platforma/Chart.yaml ]] \
+            || { echo "FAIL: control — source files not synced"; exit 1; }
+          echo "PASS: control (without keep, file deleted)"
+
+      # Real test: sync WITH keep — target-only.yaml must survive.
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH_KEEP }}
+          keep-without-changes: |
+            charts/platforma/target-only.yaml
+
+      - name: Verify keep — target-only.yaml preserved AND source synced
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify-keep
+          git clone --branch "${TARGET_BRANCH_KEEP}" "${FAKE_REMOTE}" /tmp/_verify-keep
+          cd /tmp/_verify-keep
+
+          # Source files synced
+          for F in Chart.yaml templates/secrets.yaml templates/configmap.yaml; do
+            [[ -f "charts/platforma/${F}" ]] \
+              || { echo "FAIL: source file charts/platforma/${F} missing"; exit 1; }
+          done
+
+          # Target-only file preserved
+          [[ -f "charts/platforma/target-only.yaml" ]] \
+            || { echo "FAIL: target-only.yaml should have been preserved by keep input"; exit 1; }
+
+          # And its content must be the seed's content (not anything from source)
+          grep -q "target-only-marker" "charts/platforma/target-only.yaml" \
+            || { echo "FAIL: target-only.yaml content was overwritten"; exit 1; }
+
+          echo "PASS: keep-without-changes (preserved + source synced)"
