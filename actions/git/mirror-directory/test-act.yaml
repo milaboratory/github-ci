@@ -1,0 +1,269 @@
+# End-to-end tests for mirror-directory using act with a mocked git remote.
+#
+# git push is "mocked" by initializing a local bare repo and redirecting
+# GitHub HTTPS URLs to it via git's `insteadOf` rewrite. The action code
+# is unchanged — git resolves URLs through insteadOf transparently on
+# every clone/fetch/push, so no real network access happens.
+#
+# Each job runs sequentially via `needs:` because act's `-b` (bind mount)
+# shares the workdir across jobs. Jobs use distinct target branches so
+# they don't collide on the fake remote.
+#
+# Run via test-act.sh (it sets up the fixture, bare remote, and bind mounts).
+#
+name: "Test mirror-directory (act, mocked remote)"
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  # Bind-mounted into the container by test-act.sh
+  FAKE_REMOTE: /tmp/_mirror-test-remote.git
+  TARGET_REPO: test-org/test-repo
+  # action.yml constructs: https://x-access-token:<token>@github.com/<target-repository>.git
+  # We rewrite that prefix to point at the local bare repo.
+  GITHUB_FAKE_URL: https://x-access-token:fake-token@github.com/test-org/test-repo.git
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Test 1: Snapshot push — one commit, trailer, file present
+  # ──────────────────────────────────────────────
+  snapshot:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: _t-snapshot
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify
+          git clone --branch "${TARGET_BRANCH}" "${FAKE_REMOTE}" /tmp/_verify
+          cd /tmp/_verify
+
+          for F in Chart.yaml templates/secrets.yaml templates/configmap.yaml values.local.yaml; do
+            if [[ ! -f "charts/platforma/${F}" ]]; then
+              echo "FAIL: missing charts/platforma/${F}"; exit 1
+            fi
+          done
+
+          LAST_MSG=$(git log -1 --format='%B')
+          if ! echo "${LAST_MSG}" | grep -q '^Source-Commit:'; then
+            echo "FAIL: missing Source-Commit trailer"; echo "${LAST_MSG}"; exit 1
+          fi
+          echo "PASS: snapshot"
+
+  # ──────────────────────────────────────────────
+  # Test 2: No-op re-sync — second push with no source change adds no commit
+  # ──────────────────────────────────────────────
+  no-op:
+    needs: [snapshot]
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: _t-no-op
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Capture HEAD after first sync
+        id: first
+        shell: bash
+        run: |
+          SHA=$(git ls-remote "${FAKE_REMOTE}" "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify HEAD unchanged
+        shell: bash
+        env:
+          FIRST_SHA: ${{ steps.first.outputs.sha }}
+        run: |
+          set -euo pipefail
+          SECOND_SHA=$(git ls-remote "${FAKE_REMOTE}" "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')
+          if [[ "${FIRST_SHA}" != "${SECOND_SHA}" ]]; then
+            echo "FAIL: HEAD moved ${FIRST_SHA} → ${SECOND_SHA}"; exit 1
+          fi
+          echo "PASS: no-op"
+
+  # ──────────────────────────────────────────────
+  # Test 3: Multi-directory mapping — two source:target pairs in one commit
+  # ──────────────────────────────────────────────
+  multi-dir:
+    needs: [no-op]
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: _t-multi
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          directory-mappings: |
+            helm/charts/platforma:charts/platforma
+            installation/aws:infrastructure/aws
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Verify multi-dir
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify
+          git clone --branch "${TARGET_BRANCH}" "${FAKE_REMOTE}" /tmp/_verify
+          cd /tmp/_verify
+
+          [[ -f "charts/platforma/Chart.yaml" ]] || { echo "FAIL: charts/platforma/Chart.yaml missing"; exit 1; }
+          [[ -f "infrastructure/aws/cloudformation.yaml" ]] || { echo "FAIL: infrastructure/aws/cloudformation.yaml missing"; exit 1; }
+
+          CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          if echo "${CHANGED}" | grep -q "^charts/platforma/" && echo "${CHANGED}" | grep -q "^infrastructure/aws/"; then
+            echo "PASS: multi-dir (both pairs in one commit)"
+          else
+            echo "FAIL: expected both directories in one commit, got:"
+            echo "${CHANGED}"; exit 1
+          fi
+
+  # ──────────────────────────────────────────────
+  # Test 4: Exclude patterns — excluded files do not land in target
+  # ──────────────────────────────────────────────
+  exclude:
+    needs: [multi-dir]
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: _t-exclude
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          directory-mappings: |
+            helm/charts/platforma:charts/platforma
+            installation/aws:infrastructure/aws
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+          exclude-patterns: |
+            secrets.yaml
+            *.local.yaml
+
+      - name: Verify exclude
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify
+          git clone --branch "${TARGET_BRANCH}" "${FAKE_REMOTE}" /tmp/_verify
+          cd /tmp/_verify
+
+          # kept
+          for F in charts/platforma/Chart.yaml \
+                   charts/platforma/templates/configmap.yaml \
+                   infrastructure/aws/cloudformation.yaml; do
+            [[ -f "${F}" ]] || { echo "FAIL: missing ${F}"; exit 1; }
+          done
+
+          # excluded by basename
+          if [[ -e "charts/platforma/templates/secrets.yaml" ]]; then
+            echo "FAIL: secrets.yaml should be excluded"; exit 1
+          fi
+          # excluded by glob (helm side)
+          if [[ -e "charts/platforma/values.local.yaml" ]]; then
+            echo "FAIL: helm values.local.yaml should be excluded"; exit 1
+          fi
+          # excluded by glob (aws side — pattern applies to all mappings)
+          if [[ -e "infrastructure/aws/values.local.yaml" ]]; then
+            echo "FAIL: aws values.local.yaml should be excluded"; exit 1
+          fi
+          echo "PASS: exclude"
+
+  # ──────────────────────────────────────────────
+  # Test 5: Exclude removes file already in target (--delete-excluded)
+  # ──────────────────────────────────────────────
+  exclude-removes-existing:
+    needs: [exclude]
+    runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: _t-exclude-remove
+    steps:
+      - name: Redirect GitHub URL to local bare repo
+        shell: bash
+        run: |
+          git config --global url."${FAKE_REMOTE}".insteadOf "${GITHUB_FAKE_URL}"
+
+      # First sync without exclude — target should contain secrets.yaml
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+
+      - name: Confirm secrets.yaml present after first sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify1
+          git clone --branch "${TARGET_BRANCH}" "${FAKE_REMOTE}" /tmp/_verify1
+          [[ -f "/tmp/_verify1/charts/platforma/templates/secrets.yaml" ]] \
+            || { echo "FAIL: secrets.yaml missing after first sync"; exit 1; }
+
+      # Second sync WITH exclude — secrets.yaml should be removed from target
+      - uses: milaboratory/github-ci/actions/git/mirror-directory@v4
+        with:
+          target-repository: ${{ env.TARGET_REPO }}
+          source-directory: helm/charts/platforma
+          target-directory: charts/platforma
+          github-token: fake-token
+          target-branch: ${{ env.TARGET_BRANCH }}
+          exclude-patterns: secrets.yaml
+
+      - name: Verify secrets.yaml removed from target
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/_verify2
+          git clone --branch "${TARGET_BRANCH}" "${FAKE_REMOTE}" /tmp/_verify2
+          if [[ -e "/tmp/_verify2/charts/platforma/templates/secrets.yaml" ]]; then
+            echo "FAIL: secrets.yaml should have been removed by --delete-excluded"; exit 1
+          fi
+          [[ -f "/tmp/_verify2/charts/platforma/templates/configmap.yaml" ]] \
+            || { echo "FAIL: configmap.yaml should still be there"; exit 1; }
+          echo "PASS: exclude-removes-existing"

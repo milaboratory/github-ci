@@ -68,10 +68,45 @@ inputs:
       Branch to push to in the target repository. Created if missing.
     required: false
     default: 'main'
+  exclude-patterns:
+    description: |
+      Newline-separated gitignore-style patterns. Matching files are
+      excluded from the snapshot and removed from the target if present.
+      Patterns are passed to `rsync --exclude` and apply to every mapping.
+      Example:
+        *.local.yaml
+        secrets/
+        **/private.env
+    required: false
+    default: ''
 
 runs:
   using: "composite"
   steps:
+    - name: Ensure rsync is installed
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v rsync >/dev/null 2>&1; then
+          exit 0
+        fi
+        echo "rsync not found, installing..."
+        if command -v apt-get >/dev/null 2>&1; then
+          SUDO=""
+          [[ "$(id -u)" -ne 0 ]] && SUDO="sudo"
+          ${SUDO} apt-get update -y
+          ${SUDO} apt-get install -y --no-install-recommends rsync
+        elif command -v apk >/dev/null 2>&1; then
+          apk add --no-cache rsync
+        elif command -v dnf >/dev/null 2>&1; then
+          dnf install -y rsync
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y rsync
+        else
+          echo "::error::rsync is required but no supported package manager (apt/apk/dnf/yum) was found"
+          exit 1
+        fi
+
     - name: Clone target repository
       shell: bash
       env:
@@ -102,6 +137,7 @@ runs:
         SOURCE_DIR: ${{ inputs.source-directory }}
         TARGET_DIR: ${{ inputs.target-directory }}
         TARGET_BRANCH: ${{ inputs.target-branch }}
+        EXCLUDE_PATTERNS: ${{ inputs.exclude-patterns }}
       run: |
         set -euo pipefail
 
@@ -120,13 +156,15 @@ runs:
           exit 1
         fi
 
-        # Parse keep-without-changes paths
-        KEEP=()
-        if [[ -n "${KEEP_PATHS}" ]]; then
-          while IFS= read -r kp; do
-            kp=$(echo "${kp}" | xargs)
-            [[ -n "${kp}" ]] && KEEP+=("${kp}")
-          done <<< "${KEEP_PATHS}"
+        # Build rsync exclude flags once; reused for every mapping.
+        # --delete + --delete-excluded ensure target = source minus excludes,
+        # even on re-syncs where the target already contained excluded files.
+        RSYNC_OPTS=(-a --delete --delete-excluded)
+        if [[ -n "${EXCLUDE_PATTERNS}" ]]; then
+          while IFS= read -r pattern; do
+            pattern=$(echo "${pattern}" | xargs)
+            [[ -n "${pattern}" ]] && RSYNC_OPTS+=(--exclude="${pattern}")
+          done <<< "${EXCLUDE_PATTERNS}"
         fi
 
         for pair in "${PAIRS[@]}"; do
@@ -143,7 +181,9 @@ runs:
             exit 1
           fi
 
-          cd /tmp/_mirror-target
+          DEST="/tmp/_mirror-target/${TGT}"
+          mkdir -p "${DEST}"
+          rsync "${RSYNC_OPTS[@]}" "${GITHUB_WORKSPACE}/${SRC}/" "${DEST}/"
 
           # Save kept paths that fall under this target
           KEEP_TMP=$(mktemp -d)

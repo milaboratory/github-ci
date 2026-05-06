@@ -1,0 +1,4 @@
+replicaCount: 1
+image:
+  tag: dev-local
+debug: true
