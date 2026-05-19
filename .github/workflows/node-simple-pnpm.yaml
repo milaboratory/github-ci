@@ -689,6 +689,7 @@ jobs:
         with:
           packages: |
             @platforma-sdk/block-tools
+            @platforma-sdk/tengo-builder
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
