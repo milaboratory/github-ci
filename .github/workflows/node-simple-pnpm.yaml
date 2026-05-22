@@ -440,7 +440,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
@@ -451,13 +451,13 @@ jobs:
     needs:
       - init
     steps:
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -479,21 +479,21 @@ jobs:
       - metadata
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -504,13 +504,13 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check for Changesets
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
@@ -538,7 +538,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -550,14 +550,14 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -586,14 +586,14 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -623,7 +623,7 @@ jobs:
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             pnpm run version-packages
@@ -663,9 +663,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -677,7 +677,7 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -685,14 +685,14 @@ jobs:
           fetch-depth: '0'
 
       - name: Check infrastructure requirements for publication
-        uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
+        uses: milaboratory/github-ci/actions/node/require-latest@v4
         with:
           packages: |
             @platforma-sdk/block-tools
             @platforma-sdk/tengo-builder
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -723,14 +723,14 @@ jobs:
 
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
-        uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+        uses: milaboratory/github-ci/actions/golang/prepare@v4
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
           cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -740,7 +740,7 @@ jobs:
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
@@ -798,7 +798,7 @@ jobs:
           fi
 
       - name: Run build
-        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -818,7 +818,7 @@ jobs:
 
       - name: Run tests
         id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
@@ -844,7 +844,7 @@ jobs:
           test-results-reports: ${{ inputs.test-results-reports }}
 
       - name: Run build (before publish)
-        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -863,7 +863,7 @@ jobs:
           test-results-reports: ${{ inputs.test-results-reports }}
 
       - name: Perform security scan checks before publication
-        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
@@ -873,7 +873,7 @@ jobs:
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
       - name: Commit changed files to main
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         if: steps.check-changes.outputs.has-changes == '1'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
@@ -921,7 +921,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.create-tag == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -951,12 +951,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -980,7 +980,7 @@ jobs:
     steps:
       - name: Check workflow duration
         id: check-duration
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -1024,7 +1024,7 @@ jobs:
 
       - name: Send Slack notification for slow merge queue
         if: fromJSON(steps.check-duration.outputs.data).alert == 'true' && inputs.notify-slack
-        uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
+        uses: milaboratory/github-ci/actions/notify/slack/send@v4
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           method: chat.postMessage

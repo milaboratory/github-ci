@@ -59,7 +59,7 @@ runs:
         components: ${{ inputs.rust-components }}
 
     - name: Setup Cache for Rust project
-      uses: milaboratory/github-ci/actions/rust/cache@v4-beta
+      uses: milaboratory/github-ci/actions/rust/cache@v4
       with:
         cache-version: ${{ inputs.cache-version }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}

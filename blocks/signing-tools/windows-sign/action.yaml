@@ -84,7 +84,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4-beta
+    - uses: milaboratory/github-ci/actions/files/list@v4
       id: binaries-list
       with:
         patterns: ${{ inputs.binaries }}
@@ -96,7 +96,7 @@ runs:
 
     - name: Install Java
       if: steps.binaries-list.outputs.has-matches == 'true'
-      uses: actions/setup-java@v4-beta
+      uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}

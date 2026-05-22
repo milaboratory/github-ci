@@ -43,19 +43,19 @@ runs:
 
   steps:
     - name: Install NodeJS - ${{ inputs.node-version }}
-      uses: actions/setup-node@v4-beta
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
 
     - name: Re-Write .npmrc config
-      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
 
     - name: Install pnpm - ${{ inputs.pnpm-version }}
       if: inputs.pnpm-version != ''
-      uses: pnpm/action-setup@v4-beta
+      uses: pnpm/action-setup@v4
       with:
         version: ${{ inputs.pnpm-version }}
 
@@ -65,7 +65,7 @@ runs:
       run: corepack enable pnpm
 
     - name:  Set up cache for a NodeJS PNPM application
-      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       with:
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}

@@ -3,6 +3,9 @@ name: "platform"
 services:
   minio:
     image: quay.io/minio/minio
+    # Run as the runner UID/GID — keeps all files in PL_MAIN_ROOT owned by
+    # one user so cleanup (rm -rf) works without sudo.
+    user: "${PL_UID}:${PL_GID}"
     command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
 
     ports:
