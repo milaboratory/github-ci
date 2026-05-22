@@ -471,7 +471,7 @@ jobs:
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
-  preflight:
+  preflight-require-latest:
     name: preflight (require-latest)
     runs-on: ubuntu-latest
     # Surface SDK-version drift on PRs as a non-blocking check, but enforce it
@@ -500,6 +500,29 @@ jobs:
           packages: |
             @platforma-sdk/block-tools
             @platforma-sdk/tengo-builder
+
+  preflight-pnpm-lock-sync:
+    name: preflight (pnpm-lock-sync)
+    runs-on: ubuntu-latest
+    # Surface pnpm-workspace.yaml / pnpm-lock.yaml drift on PRs as a
+    # non-blocking check, but enforce it on the default branch and in the
+    # merge queue so publish cannot proceed with a stale lockfile.
+    continue-on-error: ${{ github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group' }}
+    needs:
+      - init
+    steps:
+      - uses: milaboratory/github-ci/actions/context@v4
+
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ inputs.checkout-git-lfs }}
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'
 
       - name: Check pnpm-lock.yaml is in sync with pnpm-workspace.yaml
         shell: bash
@@ -567,15 +590,20 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.pre-calculated-task-list) }}
     needs:
-      - preflight
+      - preflight-require-latest
+      - preflight-pnpm-lock-sync
       - check-changesets
       - metadata
     if: >
       inputs.pre-calculated && inputs.pre-calculated-task-list != '[]' &&
       !failure() && !cancelled() &&
       (
-        needs.preflight.result == 'success' ||
-        needs.preflight.result == 'skipped'
+        needs.preflight-require-latest.result == 'success' ||
+        needs.preflight-require-latest.result == 'skipped'
+      ) &&
+      (
+        needs.preflight-pnpm-lock-sync.result == 'success' ||
+        needs.preflight-pnpm-lock-sync.result == 'skipped'
       ) &&
       (
         needs.check-changesets.result == 'success' ||
@@ -678,15 +706,20 @@ jobs:
     name: unified (build test publish)
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
-      - preflight
+      - preflight-require-latest
+      - preflight-pnpm-lock-sync
       - check-changesets
       - metadata
       - pre-calculated-build
     if: >
       !failure() && !cancelled() &&
       (
-        needs.preflight.result == 'success' ||
-        needs.preflight.result == 'skipped'
+        needs.preflight-require-latest.result == 'success' ||
+        needs.preflight-require-latest.result == 'skipped'
+      ) &&
+      (
+        needs.preflight-pnpm-lock-sync.result == 'success' ||
+        needs.preflight-pnpm-lock-sync.result == 'skipped'
       ) &&
       (
         needs.pre-calculated-build.result == 'success' ||
@@ -970,7 +1003,8 @@ jobs:
     needs:
       - init
       - metadata
-      - preflight
+      - preflight-require-latest
+      - preflight-pnpm-lock-sync
       - check-changesets
       - build-test-publish
       - pre-calculated-build
@@ -992,7 +1026,8 @@ jobs:
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
             ${{ needs.check-changesets.result }}
-            ${{ needs.preflight.result }}
+            ${{ needs.preflight-require-latest.result }}
+            ${{ needs.preflight-pnpm-lock-sync.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
