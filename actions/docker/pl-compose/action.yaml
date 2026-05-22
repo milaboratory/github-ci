@@ -112,6 +112,16 @@ runs:
         export PL_GID="$(id -g)"
         echo "Platforma container will run as ${PL_UID}:${PL_GID}"
 
+        # pl entrypoint (run-pl.sh) calls `id --user --name` under `set -o errexit`,
+        # which fails when the runner UID has no /etc/passwd entry.
+        # Synthesize minimal passwd + group files for the chosen UID/GID and
+        # bind-mount them into the container (paths exported for compose).
+        mkdir -p "${PL_MAIN_ROOT}/.users"
+        printf 'root:x:0:0:root:/root:/bin/sh\npl:x:%s:%s:pl:/pl-home:/bin/sh\n' "${PL_UID}" "${PL_GID}" > "${PL_MAIN_ROOT}/.users/passwd"
+        printf 'root:x:0:\npl:x:%s:\n' "${PL_GID}" > "${PL_MAIN_ROOT}/.users/group"
+        export PL_PASSWD_PATH="${PL_MAIN_ROOT}/.users/passwd"
+        export PL_GROUP_PATH="${PL_MAIN_ROOT}/.users/group"
+
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"

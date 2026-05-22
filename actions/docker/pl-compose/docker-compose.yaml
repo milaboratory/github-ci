@@ -52,6 +52,10 @@ services:
       - ${PL_TEST_ASSETS_DIR}:/library
       - ${PL_WORKSPACE}:${PL_WORKSPACE}
       - ${HTPASSWD_PATH}:/etc/htpasswd
+      # Inject passwd/group so the runner UID resolves to a name —
+      # required by pl entrypoint's `id --user --name` check.
+      - ${PL_PASSWD_PATH}:/etc/passwd:ro
+      - ${PL_GROUP_PATH}:/etc/group:ro
 
     restart: always
 
