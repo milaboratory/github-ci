@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         id: plan
         with:
           mode: plan
@@ -43,7 +43,7 @@ jobs:
           repository: ${{ github.event.inputs.repository || 'milaboratories/pl-containers' }}
           concurrency: ${{ github.event.inputs.concurrency || 3 }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4-beta
         with:
           name: 00-scanning-plan
           path: ${{ steps.plan.outputs.plan-dir }}
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Download plan
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4-beta
         with:
           name: 00-scanning-plan
           path: "scan-chunks"
@@ -74,7 +74,7 @@ jobs:
           sl=$((RANDOM % 10))
           sleep ${sl}
 
-      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         with:
           mode: scan
           report-name: "report-${{ matrix.plan-file }}"
@@ -87,26 +87,26 @@ jobs:
     if: always()
     steps:
       - name: Download skipped list
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4-beta
         with:
           name: skipped-images
           path: ./consolidated
 
       - name: Download all reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4-beta
         with:
           pattern: 'report-*'
           merge-multiple: true
           path: ./consolidated
 
       - name: Summarize all reports
-        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
         with:
           mode: summarize
           summarize-dir: ./consolidated
 
       - name: Upload consolidated report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4-beta
         with:
           name: 00-consolidated-report
           path: ./consolidated

@@ -25,7 +25,7 @@ runs:
 
   steps:
     - name: Cache Rust Cargo modules
-      uses: actions/cache@v4
+      uses: actions/cache@v4-beta
       with:
         path: |
           ~/.cargo/bin/

@@ -35,7 +35,7 @@ runs:
   steps:
     - name: Cache Golang modules on Linux
       if: runner.os == 'Linux'
-      uses: actions/cache@v4
+      uses: actions/cache@v4-beta
       with:
         save-always: ${{ inputs.cache-save-always }}
         path: |
@@ -47,7 +47,7 @@ runs:
 
     - name: Cache Golang modules on macOS
       if: runner.os == 'macOS'
-      uses: actions/cache@v4
+      uses: actions/cache@v4-beta
       with:
         save-always: ${{ inputs.cache-save-always }}
         path: |
@@ -59,7 +59,7 @@ runs:
 
     - name: Cache Golang modules on Windows
       if: runner.os == 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v4-beta
       with:
         save-always: ${{ inputs.cache-save-always }}
         path: |

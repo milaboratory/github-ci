@@ -59,13 +59,13 @@ runs:
 
   steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v4-beta
       with:
         role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
         aws-region: ${{ inputs.s3-region }}
 
     - name: Update website-redirect-location metadata in the file
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         S3_BUCKET: ${{ inputs.s3-bucket }}
         S3_KEY: ${{ inputs.s3-bucket-path }}/${{ inputs.s3-bucket-key }}

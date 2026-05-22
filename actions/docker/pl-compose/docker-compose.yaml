@@ -18,7 +18,7 @@ services:
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
-    user: root
+    user: "${PL_UID}:${PL_GID}"
 
     # Packages can be large. We don't want to save them after execution.
     command: |
@@ -38,9 +38,11 @@ services:
     ports:
       - "6345:6345"
 
-    tmpfs: [ /tmp ]
+    # tmpfs HOME so pl/child processes have a writable home with no host pollution.
+    tmpfs: [ /tmp, /pl-home ]
 
     environment:
+      - "HOME=/pl-home"
       - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
       - "PL_LICENSE=${PL_LICENSE:-}"
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"

@@ -60,7 +60,7 @@ runs:
         archive_name="artifact-5b3513f5"
         echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v4-beta
       with:
         name: ${{ inputs.name }}
         pattern: ${{ inputs.pattern }}

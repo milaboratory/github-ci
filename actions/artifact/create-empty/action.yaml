@@ -2,14 +2,14 @@ name: Create empty artifact for regression tests
 author: 'MiLaboratories'
 description: |
   Create empty artifact for regression tests because now
-  actions/upload-artifact/merge@v4 doesn't support option
+  actions/upload-artifact/merge@v4-beta doesn't support option
   if-no-files-found: ignore
 
 runs:
   using: "composite"
 
   steps:
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4-beta
       with:
         name: test-regression-empty
         path: ${{ github.action_path }}/init.txt

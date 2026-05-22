@@ -94,7 +94,7 @@ runs:
         archive_name="artifact-5b3513f5"
         echo "name=${archive_name}" >> "${GITHUB_OUTPUT}"
 
-    - uses: milaboratory/github-ci/actions/files/list@v4
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: artifact-files
       with:
         patterns: ${{ inputs.path }}
@@ -128,7 +128,7 @@ runs:
     # - uses: fawazahmed0/action-debug-vscode@main
     #   if: inputs.interactive-debug == 'true'
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4-beta
       with:
         name: ${{ inputs.name }}
         if-no-files-found: ${{ inputs.if-no-files-found }}

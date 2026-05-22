@@ -52,7 +52,7 @@ runs:
 
   steps:
     - name: Install Docker Compose
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
 
       with:
         run: |
@@ -105,6 +105,13 @@ runs:
         # depending on moon phases and mood of the scheduler god. :(
         export PL_MAIN_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
 
+        # Run platforma as the runner user (not root) so OS file-mode permissions
+        # are enforced inside the container (required by exec.writable tests).
+        # PL_UID/PL_GID are consumed by docker-compose.yaml.
+        export PL_UID="$(id -u)"
+        export PL_GID="$(id -g)"
+        echo "Platforma container will run as ${PL_UID}:${PL_GID}"
+
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
@@ -116,7 +123,7 @@ runs:
     #
     # Ordering of post-steps is reversed. We need to declare the last step first.
     #
-    - uses: milaboratory/github-ci/actions/post/shell@v4
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
       with:
@@ -125,14 +132,14 @@ runs:
           echo "Removing '${PL_MAIN_ROOT}'"
           rm -rf "${PL_MAIN_ROOT}"
 
-    - uses: milaboratory/github-ci/actions/post/artifact@v4
+    - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       with:
         name: platforma-dump
         archive: true
         path: |
           ${{ steps.launch-pl.outputs.main-root }}
 
-    - uses: milaboratory/github-ci/actions/post/shell@v4
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         ACTION_PATH: ${{ github.action_path }}
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
