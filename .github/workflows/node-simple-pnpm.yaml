@@ -471,6 +471,48 @@ jobs:
       npm-pkg-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).npm-pkg-version }}
       pnpm-version: ${{ fromJSON(steps.npm-pkg-metadata.outputs.data).pnpm-version }}
 
+  preflight:
+    name: preflight (require-latest)
+    runs-on: ubuntu-latest
+    # Surface SDK-version drift on PRs as a non-blocking check, but enforce it
+    # on the default branch and in the merge queue so publish cannot proceed
+    # with a stale @platforma-sdk dependency.
+    continue-on-error: ${{ github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group' }}
+    needs:
+      - init
+    steps:
+      - uses: milaboratory/github-ci/actions/context@v4
+
+      - uses: milaboratory/github-ci/actions/env@v4
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ inputs.checkout-git-lfs }}
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'
+
+      - name: Check infrastructure requirements for publication
+        uses: milaboratory/github-ci/actions/node/require-latest@v4
+        with:
+          packages: |
+            @platforma-sdk/block-tools
+            @platforma-sdk/tengo-builder
+
+      - name: Check pnpm-lock.yaml is in sync with pnpm-workspace.yaml
+        shell: bash
+        env:
+          DEFAULT_BRANCH: origin/${{ inputs.changeset-default-branch }}
+        run: |
+          if git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-workspace.yaml$'; then
+            if ! git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-lock.yaml$'; then
+              echo "Changes in pnpm-workspace.yaml detected, but no updates in pnpm-lock.yaml were found in current branch"
+              exit 1
+            fi
+          fi
+
   check-changesets:
     name: check for changesets
     runs-on: ubuntu-latest
@@ -525,11 +567,16 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.pre-calculated-task-list) }}
     needs:
+      - preflight
       - check-changesets
       - metadata
     if: >
       inputs.pre-calculated && inputs.pre-calculated-task-list != '[]' &&
       !failure() && !cancelled() &&
+      (
+        needs.preflight.result == 'success' ||
+        needs.preflight.result == 'skipped'
+      ) &&
       (
         needs.check-changesets.result == 'success' ||
         needs.check-changesets.result == 'skipped'
@@ -608,17 +655,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          DEFAULT_BRANCH: origin/${{ inputs.changeset-default-branch }}
-
         run: |
-          if git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-workspace.yaml$'; then
-            # Changes in pnpm-workspace.yaml have to be accompanied by pnpm-lock.yaml update
-            if ! git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-lock.yaml$'; then
-              echo "Changes in pnpm-workspace.yaml detected, but no updates in pnpm-lock.yaml were found in current branch"
-              exit 1
-            fi
-          fi
-
           pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run changeset version
@@ -641,11 +678,16 @@ jobs:
     name: unified (build test publish)
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
+      - preflight
       - check-changesets
       - metadata
       - pre-calculated-build
     if: >
       !failure() && !cancelled() &&
+      (
+        needs.preflight.result == 'success' ||
+        needs.preflight.result == 'skipped'
+      ) &&
       (
         needs.pre-calculated-build.result == 'success' ||
         needs.pre-calculated-build.result == 'skipped'
@@ -683,13 +725,6 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: '0'
-
-      - name: Check infrastructure requirements for publication
-        uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
-        with:
-          packages: |
-            @platforma-sdk/block-tools
-            @platforma-sdk/tengo-builder
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4-beta
@@ -751,17 +786,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
-          DEFAULT_BRANCH: origin/${{ inputs.changeset-default-branch }}
-
         run: |
-          if git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-workspace.yaml$'; then
-            # Changes in pnpm-workspace.yaml have to be accompanied by pnpm-lock.yaml update
-            if ! git diff --name-only ${DEFAULT_BRANCH}..HEAD | grep -q -E '^pnpm-lock.yaml$'; then
-              echo "Changes in pnpm-workspace.yaml detected, but no updates in pnpm-lock.yaml were found in current branch"
-              exit 1
-            fi
-          fi
-
           pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run changeset version
@@ -863,7 +888,7 @@ jobs:
           test-results-reports: ${{ inputs.test-results-reports }}
 
       - name: Perform security scan checks before publication
-        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
@@ -945,6 +970,7 @@ jobs:
     needs:
       - init
       - metadata
+      - preflight
       - check-changesets
       - build-test-publish
       - pre-calculated-build
@@ -966,6 +992,7 @@ jobs:
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
             ${{ needs.check-changesets.result }}
+            ${{ needs.preflight.result }}
           product-name: ${{ inputs.app-name }}
           override-version: ${{ format('{0}', env.NPM_PKG_VERSION) }}
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
