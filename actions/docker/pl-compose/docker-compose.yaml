@@ -3,6 +3,9 @@ name: "platform"
 services:
   minio:
     image: quay.io/minio/minio
+    # Run as the runner UID/GID — keeps all files in PL_MAIN_ROOT owned by
+    # one user so cleanup (rm -rf) works without sudo.
+    user: "${PL_UID}:${PL_GID}"
     command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
 
     ports:
@@ -18,7 +21,7 @@ services:
 
   platforma:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
-    user: root
+    user: "${PL_UID}:${PL_GID}"
 
     # Packages can be large. We don't want to save them after execution.
     command: |
@@ -28,7 +31,7 @@ services:
        --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --main-root="/storage"
-       --packages-dir="/packages"
+       --packages-dir="/storage/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
@@ -38,9 +41,11 @@ services:
     ports:
       - "6345:6345"
 
-    tmpfs: [ /tmp ]
+    # tmpfs HOME so pl/child processes have a writable home with no host pollution.
+    tmpfs: [ /tmp, /pl-home ]
 
     environment:
+      - "HOME=/pl-home"
       - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
       - "PL_LICENSE=${PL_LICENSE:-}"
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
@@ -50,6 +55,10 @@ services:
       - ${PL_TEST_ASSETS_DIR}:/library
       - ${PL_WORKSPACE}:${PL_WORKSPACE}
       - ${HTPASSWD_PATH}:/etc/htpasswd
+      # Inject passwd/group so the runner UID resolves to a name —
+      # required by pl entrypoint's `id --user --name` check.
+      - ${PL_PASSWD_PATH}:/etc/passwd:ro
+      - ${PL_GROUP_PATH}:/etc/group:ro
 
     restart: always
 
