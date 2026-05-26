@@ -488,7 +488,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4-beta
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -518,7 +518,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4-beta
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
