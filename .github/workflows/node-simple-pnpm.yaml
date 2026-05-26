@@ -582,6 +582,15 @@ jobs:
           run: |
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
+      - name: Check changeset coverage
+        if: |
+          always() &&
+          (github.event_name == 'pull_request' || github.event_name == 'merge_group')
+        continue-on-error: true
+        uses: milaboratory/github-ci/actions/changeset/check-coverage@v4-beta
+        with:
+          base-branch: ${{ inputs.changeset-default-branch }}
+
   pre-calculated-build:
     name: pre-build
     runs-on: ${{ inputs.gha-runner-label }}

@@ -1,0 +1,26 @@
+name: Check changeset coverage
+author: 'MiLaboratories'
+description: |
+  Fail if a PR's changesets don't cover every workspace package it modifies.
+
+  Catches the common gap: bumping a catalog version in pnpm-workspace.yaml
+  (e.g. a software package) without a matching changeset bump for the
+  workflow package that consumes it.
+
+  Runs after `pnpm install` — needs `pnpm m ls` to resolve the workspace.
+
+inputs:
+  base-branch:
+    description: Base branch to diff against (e.g. main).
+    required: true
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Check changeset coverage
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+      run: '${ACTION_PATH}/check-coverage.sh'
