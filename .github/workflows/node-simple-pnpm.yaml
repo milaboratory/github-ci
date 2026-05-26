@@ -587,7 +587,10 @@ jobs:
           always() &&
           (github.event_name == 'pull_request' || github.event_name == 'merge_group')
         continue-on-error: true
-        uses: milaboratory/github-ci/actions/changeset/check-coverage@v4-beta
+        # TODO REVERT BEFORE MERGE: flip @feat/changeset-coverage-check back to
+        # @v4-beta. Self-reference points at this PR branch so consumer PRs can
+        # canary-test it without v4-beta containing the action yet.
+        uses: milaboratory/github-ci/actions/changeset/check-coverage@feat/changeset-coverage-check
         with:
           base-branch: ${{ inputs.changeset-default-branch }}
 
