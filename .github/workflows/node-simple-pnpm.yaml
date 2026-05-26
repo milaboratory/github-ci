@@ -451,7 +451,7 @@ jobs:
     needs:
       - init
     steps:
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -551,7 +551,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -637,14 +637,14 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -764,7 +764,7 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -772,7 +772,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
