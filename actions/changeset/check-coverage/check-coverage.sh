@@ -27,8 +27,10 @@ set -o pipefail
 log()  { printf '%s\n' "$*" >&2; }
 err()  { printf '::error::%s\n' "$*" >&2; }
 
-# Associative arrays (`declare -A`) require bash 4+. macOS ships bash 3.2 at
-# /bin/bash; without homebrew's bash earlier on PATH, the script would abort
+# Associative arrays (`declare -A`) require bash 4+. The GitHub-hosted
+# ubuntu-latest runners ship bash 5+, so this guard is a no-op in CI today.
+# It matters when running locally on macOS: /bin/bash is still 3.2, and
+# without homebrew's bash earlier on PATH the script would otherwise abort
 # at the first `declare -A` with a cryptic `invalid option`. Fail fast with
 # a useful message instead.
 if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
