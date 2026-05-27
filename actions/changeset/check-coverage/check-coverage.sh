@@ -5,8 +5,9 @@
 #
 # Two sources of "modified":
 #
-#   1. Direct edits to a workspace package's files (longest-prefix match
-#      against the workspace package roots from `pnpm m ls`).
+#   1. Direct edits to a workspace package's files, detected via
+#      `pnpm --filter '[<base>]' list` — pnpm runs the per-package
+#      git-diff check itself.
 #
 #   2. Catalog version bumps in pnpm-workspace.yaml: for each touched
 #      catalog key, find workspace packages that consume it via
@@ -86,118 +87,83 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 2. Workspace package map.
-# ---------------------------------------------------------------------------
-pnpm m ls --depth -1 --json >"${pkg_list_json}"
-
-# pnpm returns canonical paths (e.g. macOS resolves /var → /private/var).
-# Raw `pwd` doesn't, so the prefix-strip below would silently drop every
-# workspace package. `pwd -P` matches pnpm's view.
-workspace_root="$(pwd -P)"
-declare -A pkg_dir_to_name=()
-declare -A pkg_name_to_dir=()
-declare -A pkg_is_private=()
-
-while IFS=$'\t' read -r pkg_name pkg_path pkg_private; do
-  [ -z "${pkg_name}" ] && continue            # workspace root has no name
-  rel="${pkg_path#${workspace_root}/}"
-  [ "${rel}" = "${pkg_path}" ] && continue    # workspace root itself
-  pkg_dir_to_name["${rel}"]="${pkg_name}"
-  pkg_name_to_dir["${pkg_name}"]="${rel}"
-  pkg_is_private["${pkg_name}"]="${pkg_private}"
-done < <(jq -r '
-    .[]
-    | select(.name != null and .name != "")
-    | [.name, .path, (.private // false | tostring)]
-    | @tsv
-  ' "${pkg_list_json}")
-
-log "Workspace packages: ${#pkg_dir_to_name[@]}"
-
-# ---------------------------------------------------------------------------
-# 3. Modified files vs base branch.
-# ---------------------------------------------------------------------------
-mapfile -t changed_files < <(git diff --name-only "origin/${BASE_BRANCH}...HEAD")
-log "Changed files: ${#changed_files[@]}"
-
-# ---------------------------------------------------------------------------
-# 4. Build required-bump set.
+# 2. Required-bump set.
 # ---------------------------------------------------------------------------
 declare -A required_set=()
 declare -A required_reason=()
-# Track the first (file, line) that triggered each required pkg, so the
-# `::error file=…,line=…::` annotation lands on the PR's Files Changed tab
-# rather than only in the job log.
-declare -A required_file=()
-declare -A required_line=()
-
-# Paths that never imply a package bump, regardless of which package directory
-# they happen to live under. Bash `case` globs — `*` does not cross `/`.
-ignore_patterns=(
-  '.changeset/*'
-  '.github/*'
-  'docs/*'
-  'logos/*'
-  'README*'
-  'CHANGELOG*'
-  '.gitignore'
-  '.npmrc'
-)
-
-is_ignored() {
-  local file="$1" pat
-  for pat in "${ignore_patterns[@]}"; do
-    # shellcheck disable=SC2254
-    case "${file}" in ${pat}) return 0 ;; esac
-  done
-  return 1
-}
 
 require_pkg() {
-  local pkg="$1" reason="$2" file="${3:-}" line="${4:-1}"
+  local pkg="$1" reason="$2"
   [ -z "${pkg}" ] && return 0
-  [ "${pkg_is_private[${pkg}]:-false}" = 'true' ] && return 0
   required_set["${pkg}"]=1
   required_reason["${pkg}"]="${required_reason[${pkg}]:-}${reason}; "
-  # Keep the first (file, line). 4a (direct edits) runs before 4b (catalog),
-  # so when both apply the annotation lands on the actual source change.
-  if [ -z "${required_file[${pkg}]:-}" ] && [ -n "${file}" ]; then
-    required_file["${pkg}"]="${file}"
-    required_line["${pkg}"]="${line}"
-  fi
 }
 
-file_to_pkg() {
-  local file="$1" dir longest=''
-  for dir in "${!pkg_dir_to_name[@]}"; do
-    if [[ "${file}" == "${dir}/"* ]]; then
-      if [ "${#dir}" -gt "${#longest}" ]; then longest="${dir}"; fi
-    fi
-  done
-  if [ -n "${longest}" ]; then
-    printf '%s' "${pkg_dir_to_name[${longest}]}"
-  fi
-  return 0
-}
+# 2a. Direct workspace-package edits.
+#
+# `pnpm --filter '[<since>]' list` selects packages whose own files changed
+# (pnpm runs the per-package `git diff` itself). Root-level paths like
+# `.github/`, `docs/`, `pnpm-workspace.yaml`, or `README.md` are not in any
+# package directory and so don't trigger inclusion — no manual ignore list
+# needed.
+#
+# The jq filter drops private packages here (they never appear in a
+# changeset's release set), so `require_pkg` doesn't need to re-check.
+while IFS= read -r pkg; do
+  [ -n "${pkg}" ] && require_pkg "${pkg}" 'direct edit'
+done < <(
+  pnpm -r --filter "[origin/${BASE_BRANCH}]" list --depth -1 --json 2>/dev/null \
+    | jq -r '.[] | select(.name != null and .name != "" and .private != true) | .name'
+)
 
-# 4a. Direct workspace-package edits.
-for file in "${changed_files[@]}"; do
-  [ -z "${file}" ] && continue
-  is_ignored "${file}" && continue
-  [ "${file}" = 'pnpm-workspace.yaml' ] && continue   # handled in 4b
-  pkg="$(file_to_pkg "${file}")"
-  [ -n "${pkg}" ] && require_pkg "${pkg}" "edit in ${file}" "${file}" 1
-done
+log "Direct-edit packages: ${#required_set[@]}"
 
-# 4b. Catalog version bumps in pnpm-workspace.yaml.
-if printf '%s\n' "${changed_files[@]}" | grep -qx 'pnpm-workspace.yaml'; then
-  # Extract catalog keys touched in the diff. Regex matches `'<scope>/<name>':`
-  # and `<name>:`. Structural-yaml false positives (`packages:`, `catalog:`)
-  # self-correct: no package.json depends on them via `catalog:`.
+# 2b. Catalog version bumps in pnpm-workspace.yaml.
+#
+# Only runs when the workspace yaml itself changed. Builds a full
+# workspace map so we can find every consumer of each touched catalog key.
+if git diff --name-only "origin/${BASE_BRANCH}...HEAD" | grep -qx 'pnpm-workspace.yaml'; then
+  pnpm -r list --depth -1 --json >"${pkg_list_json}"
+
+  # pnpm returns canonical absolute paths; strip the workspace root via
+  # `pwd -P` so the result matches the workspace's view on either platform.
+  workspace_root="$(pwd -P)"
+  declare -A pkg_name_to_dir=()
+  declare -A pkg_is_private=()
+
+  while IFS=$'\t' read -r pkg_name pkg_path pkg_private; do
+    [ -z "${pkg_name}" ] && continue           # workspace root has no name
+    rel="${pkg_path#${workspace_root}/}"
+    [ "${rel}" = "${pkg_path}" ] && continue   # workspace root itself
+    pkg_name_to_dir["${pkg_name}"]="${rel}"
+    pkg_is_private["${pkg_name}"]="${pkg_private}"
+  done < <(jq -r '
+      .[]
+      | select(.name != null and .name != "")
+      | [.name, .path, (.private // false | tostring)]
+      | @tsv
+    ' "${pkg_list_json}")
+
+  # Extract catalog keys whose value changed (added, removed, or bumped).
+  # Parse both the base and head versions structurally with yq, flatten the
+  # default catalog and any named catalogs to `key=value` lines, then take
+  # entries unique to either side. Avoids the false-positive surface of a
+  # line-level regex on the raw diff.
+  cat_pairs() {
+    yq -e '
+      [
+        (.catalog // {} | to_entries[]),
+        (.catalogs // {} | to_entries[].value // {} | to_entries[])
+      ] | .[] | .key + "=" + .value
+    ' 2>/dev/null || true
+  }
+  old_pairs="$(git show "origin/${BASE_BRANCH}:pnpm-workspace.yaml" 2>/dev/null | cat_pairs || true)"
+  new_pairs="$(cat_pairs <pnpm-workspace.yaml || true)"
   mapfile -t catalog_keys < <(
-    git diff "origin/${BASE_BRANCH}...HEAD" -- pnpm-workspace.yaml \
-      | grep -E "^[-+][[:space:]]+'?[@A-Za-z0-9._/-]+'?:" \
-      | sed -E "s/^[-+][[:space:]]+'?([^':]+)'?:.*/\1/" \
+    { printf '%s\n' "${old_pairs}"; printf '%s\n' "${new_pairs}"; } \
+      | sed '/^$/d' \
+      | sort | uniq -u \
+      | sed -E 's/=.*//' \
       | sort -u
   )
 
@@ -205,19 +171,9 @@ if printf '%s\n' "${changed_files[@]}" | grep -qx 'pnpm-workspace.yaml'; then
     log "Catalog keys touched: ${catalog_keys[*]}"
     # For each catalog key, find workspace pkgs that depend on it with "catalog:".
     for key in "${catalog_keys[@]}"; do
-      # Find this key's line in pnpm-workspace.yaml so the annotation lands
-      # there. Three subtleties:
-      #   - `grep -F` (fixed string): pkg names contain regex specials (`.`, `/`, `-`).
-      #   - Search the bare key, not `key:` — quoted entries (`'foo':`) put the
-      #     closing quote between key and colon, so `grep -F 'foo:'` misses.
-      #   - `|| true` swallows grep's exit 1 on no-match; pipefail would
-      #     otherwise trip errexit. Falls through to line=1 below.
-      key_line="$(grep -nF -- "${key}" pnpm-workspace.yaml 2>/dev/null | head -1 | cut -d: -f1 || true)"
-      [ -z "${key_line}" ] && key_line=1
-
       for name in "${!pkg_name_to_dir[@]}"; do
-        dir="${pkg_name_to_dir[${name}]}"
-        pj="${dir}/package.json"
+        [ "${pkg_is_private[${name}]:-false}" = 'true' ] && continue
+        pj="${pkg_name_to_dir[${name}]}/package.json"
         [ -f "${pj}" ] || continue
         if jq -e --arg k "${key}" '
             [.dependencies?, .devDependencies?, .peerDependencies?, .optionalDependencies?]
@@ -225,8 +181,7 @@ if printf '%s\n' "${changed_files[@]}" | grep -qx 'pnpm-workspace.yaml'; then
             | map(select(.key == $k and ((.value // "") | startswith("catalog"))))
             | length > 0
           ' "${pj}" >/dev/null 2>&1; then
-          require_pkg "${name}" "catalog dep '${key}' bumped" \
-            'pnpm-workspace.yaml' "${key_line}"
+          require_pkg "${name}" "catalog dep '${key}' bumped"
         fi
       done
     done
@@ -234,7 +189,7 @@ if printf '%s\n' "${changed_files[@]}" | grep -qx 'pnpm-workspace.yaml'; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Compare required vs bumped.
+# 3. Compare required vs bumped.
 # ---------------------------------------------------------------------------
 missing=()
 for pkg in "${!required_set[@]}"; do
@@ -246,17 +201,6 @@ if [ "${#missing[@]}" -eq 0 ]; then
   exit 0
 fi
 
-# Per-file annotations land inline on the PR's Files Changed tab via the
-# `::error file=…,line=…::` worker protocol.
-for pkg in "${missing[@]}"; do
-  file="${required_file[${pkg}]:-}"
-  line="${required_line[${pkg}]:-1}"
-  [ -z "${file}" ] && continue
-  printf "::error file=%s,line=%s::Package '%s' is modified but missing from any changeset. Add a '%s: patch' (or minor/major) entry to a file under .changeset/.\n" \
-    "${file}" "${line}" "${pkg}" "${pkg}" >&2
-done
-
-# Summary block — appears in the step log for anyone reading job output.
 err 'Changeset coverage gap. The following packages were modified but not bumped:'
 for pkg in "${missing[@]}"; do
   reason="${required_reason[${pkg}]%; }"

@@ -7,7 +7,9 @@ description: |
   (e.g. a software package) without a matching changeset bump for the
   workflow package that consumes it.
 
-  Runs after `pnpm install` — needs `pnpm m ls` to resolve the workspace.
+  Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq`, and
+  `yq` (mikefarah, v4+) on PATH — all pre-installed on GitHub-hosted
+  ubuntu-latest images.
 
 inputs:
   base-branch:

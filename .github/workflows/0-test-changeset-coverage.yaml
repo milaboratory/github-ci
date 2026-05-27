@@ -1,0 +1,42 @@
+name: 'Test: changeset/check-coverage'
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'actions/changeset/check-coverage/**'
+      - '.github/workflows/0-test-changeset-coverage.yaml'
+  push:
+    paths:
+      - 'actions/changeset/check-coverage/**'
+      - '.github/workflows/0-test-changeset-coverage.yaml'
+    branches: ['v4', 'v4-beta']
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Verify required tools are present
+        run: |
+          which jq yq pnpm bats
+          jq --version
+          yq --version
+          pnpm --version
+          bats --version
+
+      - name: Run changeset/check-coverage bats suite
+        working-directory: actions/changeset/check-coverage
+        run: bats test/coverage.bats
