@@ -2,14 +2,13 @@ name: 'Test: changeset/check-coverage'
 
 on:
   workflow_call:
+  workflow_dispatch:   # manual escape hatch — also lets us re-run after a workflow edit
   pull_request:
     paths:
       - 'actions/changeset/check-coverage/**'
-      - '.github/workflows/0-test-changeset-coverage.yaml'
   push:
     paths:
       - 'actions/changeset/check-coverage/**'
-      - '.github/workflows/0-test-changeset-coverage.yaml'
     branches: ['v4', 'v4-beta']
 
 jobs:
