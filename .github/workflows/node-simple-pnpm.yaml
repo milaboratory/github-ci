@@ -584,7 +584,7 @@ jobs:
 
       - name: Check changeset coverage
         if: |
-          always() &&
+          always() && !cancelled() &&
           (github.event_name == 'pull_request' || github.event_name == 'merge_group')
         continue-on-error: true
         uses: milaboratory/github-ci/actions/changeset/check-coverage@v4-beta

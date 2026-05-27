@@ -189,7 +189,7 @@ if git diff --name-only "origin/${BASE_BRANCH}...HEAD" | grep -qx 'pnpm-workspac
         if jq -e --arg k "${key}" '
             [.dependencies?, .devDependencies?, .peerDependencies?, .optionalDependencies?]
             | map(select(. != null) | to_entries) | add // []
-            | map(select(.key == $k and ((.value // "") | startswith("catalog"))))
+            | map(select(.key == $k and ((.value // "") | startswith("catalog:"))))
             | length > 0
           ' "${pj}" >/dev/null 2>&1; then
           require_pkg "${name}" "catalog dep '${key}' bumped"

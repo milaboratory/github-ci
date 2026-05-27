@@ -17,9 +17,15 @@ _build_base_workspace() {
   rm -rf "${base}"
   cp -R "${FIXTURE_SRC}" "${base}"
 
-  (
+  # Capture output to a log file; only emit on failure. Without `set -e`
+  # inside the subshell, a failing `pnpm install` would corrupt the base
+  # silently and every test would then fail with a confusing error pointing
+  # at the script under test, not the install.
+  local log="${BATS_FILE_TMPDIR}/base-setup.log"
+  if ! (
+    set -e
     cd "${base}"
-    pnpm install --silent --ignore-scripts >/dev/null
+    pnpm install --silent --ignore-scripts
     git init --quiet --initial-branch=main
     git config gc.auto 0
     git config gc.autoDetach false
@@ -28,7 +34,11 @@ _build_base_workspace() {
     git add -A
     git commit --quiet -m 'initial'
     git update-ref refs/remotes/origin/main main
-  ) >/dev/null 2>&1
+  ) >"${log}" 2>&1; then
+    echo "base workspace setup failed; full log:" >&2
+    cat "${log}" >&2
+    return 1
+  fi
 }
 
 # Per-test: copy the base into a fresh workspace and switch to a feature
