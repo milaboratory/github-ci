@@ -27,6 +27,15 @@ set -o pipefail
 log()  { printf '%s\n' "$*" >&2; }
 err()  { printf '::error::%s\n' "$*" >&2; }
 
+# Associative arrays (`declare -A`) require bash 4+. macOS ships bash 3.2 at
+# /bin/bash; without homebrew's bash earlier on PATH, the script would abort
+# at the first `declare -A` with a cryptic `invalid option`. Fail fast with
+# a useful message instead.
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+  err "check-coverage requires bash 4+ (found ${BASH_VERSION:-unknown})."
+  exit 2
+fi
+
 # Use cwd-relative paths for tmp files — changeset's --output mis-handles
 # absolute paths on macOS (prepends cwd, causing ENOENT). Cwd-relative is
 # safe on every platform.
