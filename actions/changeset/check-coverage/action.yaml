@@ -3,9 +3,11 @@ author: 'MiLaboratories'
 description: |
   Fail if a PR's changesets don't cover every workspace package it modifies.
 
-  Catches the common gap: bumping a catalog version in pnpm-workspace.yaml
-  (e.g. a software package) without a matching changeset bump for the
-  workflow package that consumes it.
+  Catches two common gaps:
+    - editing files inside a workspace package (e.g. block code under
+      packages/<pkg>/) without adding that package to the changeset;
+    - bumping a catalog version in pnpm-workspace.yaml without a matching
+      bump for the workflow packages that consume it via `catalog:`.
 
   Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq`, and
   `yq` (mikefarah, v4+) on PATH — all pre-installed on GitHub-hosted
