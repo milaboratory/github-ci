@@ -18,9 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` — the repo's root package.json sets `packageManager`,
+      # and pnpm/action-setup errors if both are specified.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
