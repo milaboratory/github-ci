@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+
+catalog:
+  is-number: ^7.0.0
+  is-string: ^1.0.7

@@ -1,0 +1,41 @@
+name: 'Test: changeset/check-coverage'
+
+on:
+  workflow_call:
+  workflow_dispatch:   # manual escape hatch — also lets us re-run after a workflow edit
+  pull_request:
+    paths:
+      - 'actions/changeset/check-coverage/**'
+  push:
+    paths:
+      - 'actions/changeset/check-coverage/**'
+    branches: ['v4', 'v4-beta']
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — the repo's root package.json sets `packageManager`,
+      # and pnpm/action-setup errors if both are specified.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Verify required tools are present
+        run: |
+          which jq yq pnpm bats
+          jq --version
+          yq --version
+          pnpm --version
+          bats --version
+
+      - name: Run changeset/check-coverage bats suite
+        working-directory: actions/changeset/check-coverage
+        run: bats test/coverage.bats
