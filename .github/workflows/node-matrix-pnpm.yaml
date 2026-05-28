@@ -479,7 +479,7 @@ jobs:
     needs:
       - init
     steps:
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -513,7 +513,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: '0'
@@ -575,7 +575,7 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
@@ -590,7 +590,7 @@ jobs:
             sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -655,7 +655,7 @@ jobs:
           options: ${{ inputs.ccache-options }}
 
       - name: Cache additional paths
-        uses: actions/cache@v4-beta
+        uses: actions/cache@v4
         if: inputs.cache-paths != ''
         with:
           path: ${{ inputs.cache-paths }}
@@ -793,7 +793,7 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
@@ -809,7 +809,7 @@ jobs:
             sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev cmake pkg-config
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}

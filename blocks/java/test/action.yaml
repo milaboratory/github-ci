@@ -236,7 +236,7 @@ runs:
       uses: milaboratory/github-ci/actions/context@v4-beta
 
     - name: Prepare env for Java application build
-      uses: actions/setup-java@v4-beta
+      uses: actions/setup-java@v4
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
@@ -291,7 +291,7 @@ runs:
 
     - name: Download cached test data
       if: inputs.test-data-cache-enabled == 'true' && inputs.test-data-cache-paths != '' && inputs.test-data-cache-key != ''
-      uses: actions/cache@v4-beta
+      uses: actions/cache@v4
       with:
         path: ${{ inputs.test-data-cache-paths }}
         key: ${{ inputs.test-data-cache-key }}

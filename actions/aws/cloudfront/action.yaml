@@ -45,7 +45,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: aws-actions/configure-aws-credentials@v4-beta
+    - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ inputs.aws-iam-role-to-assume }}
         aws-region: ${{ inputs.aws-region }}

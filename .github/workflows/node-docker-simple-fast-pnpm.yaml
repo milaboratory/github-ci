@@ -406,7 +406,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -415,7 +415,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -431,7 +431,7 @@ jobs:
             ghwa_set_output npm-pkg-version "${NPM_PKG_VERSION}"
             ghwa_set_output pnpm-pkg-version "${PNPM_PKG_VERSION}"
 
-      - uses: aws-actions/configure-aws-credentials@v4-beta
+      - uses: aws-actions/configure-aws-credentials@v4
         if: inputs.aws-login-enable
         with:
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE || env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}

@@ -43,7 +43,7 @@ jobs:
           repository: ${{ github.event.inputs.repository || 'milaboratories/pl-containers' }}
           concurrency: ${{ github.event.inputs.concurrency || 3 }}
 
-      - uses: actions/upload-artifact@v4-beta
+      - uses: actions/upload-artifact@v4
         with:
           name: 00-scanning-plan
           path: ${{ steps.plan.outputs.plan-dir }}
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Download plan
-        uses: actions/download-artifact@v4-beta
+        uses: actions/download-artifact@v4
         with:
           name: 00-scanning-plan
           path: "scan-chunks"
@@ -87,13 +87,13 @@ jobs:
     if: always()
     steps:
       - name: Download skipped list
-        uses: actions/download-artifact@v4-beta
+        uses: actions/download-artifact@v4
         with:
           name: skipped-images
           path: ./consolidated
 
       - name: Download all reports
-        uses: actions/download-artifact@v4-beta
+        uses: actions/download-artifact@v4
         with:
           pattern: 'report-*'
           merge-multiple: true
@@ -106,7 +106,7 @@ jobs:
           summarize-dir: ./consolidated
 
       - name: Upload consolidated report
-        uses: actions/upload-artifact@v4-beta
+        uses: actions/upload-artifact@v4
         with:
           name: 00-consolidated-report
           path: ./consolidated
