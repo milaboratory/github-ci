@@ -191,7 +191,7 @@ jobs:
       - init
 
     steps:
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 

@@ -1058,7 +1058,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1069,7 +1069,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1132,7 +1132,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1184,7 +1184,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1195,7 +1195,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1295,7 +1295,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1306,7 +1306,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1409,7 +1409,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
           fetch-depth: 0
@@ -1421,7 +1421,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.test-s3-iam-role-to-assume  }}
           aws-region: ${{ inputs.test-s3-region }}
@@ -1491,7 +1491,7 @@ jobs:
             echo "Wait random number of second before saving the artifact."
             sleep "${RAN_SEC}"
 
-      - uses: actions/upload-artifact@v4-beta
+      - uses: actions/upload-artifact@v4
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         with:
           name: test-regression-${{ matrix.test }}
@@ -1524,7 +1524,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -1547,14 +1547,14 @@ jobs:
       - uses: milaboratory/github-ci/actions/artifact/create-empty@v4-beta
 
       - id: merged-artifact
-        uses: actions/upload-artifact/merge@v4-beta
+        uses: actions/upload-artifact/merge@v4
         with:
           name: test-regression
           pattern: test-regression-*
           separate-directories: false
           delete-merged: true
 
-      - uses: actions/download-artifact@v4-beta
+      - uses: actions/download-artifact@v4
         if: steps.merged-artifact.outputs.artifact-id != ''
         with:
           name: test-regression
@@ -1694,7 +1694,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1705,7 +1705,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1813,7 +1813,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1824,7 +1824,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-archive-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-archive-s3-region }}
@@ -1914,7 +1914,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -1925,7 +1925,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.dist-library-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.dist-library-s3-region }}
@@ -2023,7 +2023,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -2217,7 +2217,7 @@ jobs:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: actions/download-artifact@v4-beta
+      - uses: actions/download-artifact@v4
         if: inputs.dist-archive
         with:
           name: ${{ inputs.product-name-slug }}
@@ -2294,7 +2294,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -2305,7 +2305,7 @@ jobs:
           gpg-key-password: ${{ secrets.GIT_CRYPT_KEY_PASSWORD }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.release-s3-iam-role-to-assume }}
           aws-region: ${{ inputs.release-s3-region }}

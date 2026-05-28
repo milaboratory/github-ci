@@ -19,9 +19,17 @@
 #
 # Inverse of merge-beta.sh.
 #
-# Sed safety: @v4 is a prefix of @v4-beta. Naive `s|@v4|@v4-beta|g` would
-# produce @v4-beta-beta. Two scoped patterns are used instead: match @v4 at
-# end-of-line, and @v4 followed by whitespace.
+# Sed safety, two concerns:
+#   1. Prefix collision. @v4 is a prefix of @v4-beta, so a naive
+#      `s|@v4|@v4-beta|g` would produce @v4-beta-beta. We match @v4 only at
+#      end-of-line or followed by whitespace.
+#   2. Path scope. We must rewrite only milaboratory/github-ci self-refs.
+#      Third-party action pins (actions/checkout@v4, aws-actions/...@v4,
+#      pnpm/action-setup@v4, etc.) must stay at their upstream tags — those
+#      repos do not publish a v4-beta tag, and flipping them produced the
+#      "Unable to resolve action ...@v4-beta" failures fixed in this branch.
+# Both patterns therefore anchor the substitution to a leading
+# `milaboratory/github-ci...` path.
 
 set -o nounset
 set -o errexit
@@ -63,13 +71,13 @@ git merge \
     "origin/${SOURCE_BRANCH}" \
     --strategy-option theirs
 
-echo "Flipping @${SOURCE_BRANCH} -> @${TARGET_BRANCH} in action.yaml and workflows..."
+echo "Flipping @${SOURCE_BRANCH} -> @${TARGET_BRANCH} in milaboratory/github-ci self-refs..."
 {
     find . -type f -name "action.yaml"
     find .github/workflows -type f -name "*.yaml"
 } |
     while read -r file; do
-        sed "s|@${SOURCE_BRANCH}\$|@${TARGET_BRANCH}|g; s|@${SOURCE_BRANCH}\([[:space:]]\)|@${TARGET_BRANCH}\1|g" "${file}" > "${file}.tmp"
+        sed "s|\(milaboratory/github-ci[^[:space:]@]*\)@${SOURCE_BRANCH}\$|\1@${TARGET_BRANCH}|g; s|\(milaboratory/github-ci[^[:space:]@]*\)@${SOURCE_BRANCH}\([[:space:]]\)|\1@${TARGET_BRANCH}\2|g" "${file}" > "${file}.tmp"
         mv "${file}.tmp" "${file}"
     done
 

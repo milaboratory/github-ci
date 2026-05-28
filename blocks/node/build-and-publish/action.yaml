@@ -120,7 +120,7 @@ runs:
 
   steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4-beta
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ inputs.s3-iam-role-to-assume }}
         aws-region: ${{ inputs.s3-region }}
@@ -154,7 +154,7 @@ runs:
         run: echo "${GITHUB_WORKSPACE}/${WORKING_DIRECTORY}/release-artifact"
 
     - name: Download artifact
-      uses: actions/download-artifact@v4-beta
+      uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ steps.artifact-path.outputs.stdout }}

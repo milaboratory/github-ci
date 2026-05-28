@@ -353,7 +353,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -443,7 +443,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -589,7 +589,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
@@ -627,7 +627,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         if: inputs.aws-login-enable
           && steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'

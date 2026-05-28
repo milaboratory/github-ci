@@ -451,7 +451,7 @@ jobs:
     needs:
       - init
     steps:
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -481,9 +481,9 @@ jobs:
     needs:
       - init
     steps:
-      - uses: milaboratory/github-ci/actions/context@v4
+      - uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -495,7 +495,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Check infrastructure requirements for publication
-        uses: milaboratory/github-ci/actions/node/require-latest@v4
+        uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
         with:
           packages: |
             @platforma-sdk/block-tools
@@ -511,9 +511,9 @@ jobs:
     needs:
       - init
     steps:
-      - uses: milaboratory/github-ci/actions/context@v4
+      - uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -551,7 +551,7 @@ jobs:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -634,14 +634,14 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -761,7 +761,7 @@ jobs:
           app-id: ${{ secrets.GH_ZEN_APP_ID }}
           private-key: ${{ secrets.GH_ZEN_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4-beta
+      - uses: actions/checkout@v4
         with:
           lfs: ${{ inputs.checkout-git-lfs }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -769,7 +769,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4-beta
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_CI_IAM_MONOREPO_SIMPLE_ROLE }}
           role-duration-seconds: ${{ inputs.aws-login-duration }}
@@ -930,7 +930,7 @@ jobs:
           test-results-reports: ${{ inputs.test-results-reports }}
 
       - name: Perform security scan checks before publication
-        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
