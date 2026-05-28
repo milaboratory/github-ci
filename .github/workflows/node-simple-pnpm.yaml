@@ -582,11 +582,51 @@ jobs:
           run: |
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
+  changeset-coverage:
+    name: changeset coverage (diagnostic)
+    runs-on: ubuntu-latest
+    # Diagnostic only: surface per-package changeset gaps as a red check, never block.
+    # The check-coverage step omits continue-on-error, so a gap (exit 1) fails this
+    # job and its check turns red. Job-level continue-on-error keeps the run green and
+    # the merge available. Separate from check-changesets so the native
+    # `changeset status` gate keeps blocking. Keep this job out of required checks.
+    continue-on-error: true
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    needs:
+      - metadata
+    steps:
+      - id: context
+        uses: milaboratory/github-ci/actions/context@v4-beta
+
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        with:
+          inputs: ${{ inputs.env }}
+          secrets: ${{ secrets.env }}
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ inputs.checkout-git-lfs }}
+          submodules: ${{ inputs.checkout-submodules }}
+          fetch-depth: '0'
+
+      - name: Prepare environment for building a NodeJS application
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        env:
+          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-version: ${{ inputs.cache-version }}
+          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
+          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+          npmrc-config: ${{ inputs.npmrc-config }}
+
+      - name: Install NodeJS packages with pnpm
+        uses: milaboratory/github-ci/actions/shell@v4-beta
+        with:
+          run: |
+            pnpm install --frozen-lockfile --prefer-offline
+
       - name: Check changeset coverage
-        if: |
-          always() && !cancelled() &&
-          (github.event_name == 'pull_request' || github.event_name == 'merge_group')
-        continue-on-error: true
         uses: milaboratory/github-ci/actions/changeset/check-coverage@v4-beta
         with:
           base-branch: ${{ inputs.changeset-default-branch }}
