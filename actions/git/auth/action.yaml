@@ -24,7 +24,8 @@ runs:
         GH_URL_REWRITE: ${{ inputs.github-url-rewrite }}
       with:
         run: |
-          BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64)
+          # tr -d strips the col-76 wrap GNU base64 inserts; an embedded newline in the auth header makes GitHub return HTTP 400.
+          BASE64_ENCODED=$(printf "%s" "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')
           echo "Set auth header."
           git config --global http."https://github.com/".extraHeader "AUTHORIZATION: basic ${BASE64_ENCODED}"
 
