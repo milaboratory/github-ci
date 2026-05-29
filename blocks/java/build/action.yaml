@@ -203,7 +203,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - name: Prepare env for Java application build
       if: inputs.java-version != ''
@@ -223,7 +223,7 @@ runs:
 
     - name: Set gradle.properties
       if: inputs.properties != ''
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
       with:
         properties: |
           ${{ inputs.properties }}
@@ -233,7 +233,7 @@ runs:
 
     - name: Generate list of tasks to exclude
       id: excludes
-      uses: milaboratory/github-ci/actions/strings/prefix@v4
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
       with:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
@@ -242,13 +242,13 @@ runs:
 
     - name: Generate build tasks
       id: tasks
-      uses: milaboratory/github-ci/actions/strings/prefix@v4
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
       with:
         input: ${{ inputs.tasks }}
         prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Build project
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
       with:
         build-root-directory: ${{ inputs.project-dir }}
         gradle-home-cache-includes: ${{ inputs.gradle-home-cache-includes }}
@@ -265,14 +265,14 @@ runs:
 
     - name: Read actual project properties
       id: gradle-props
-      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
       with:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
 
     - name: Generate artifacts paths
       id: artifact-paths
-      uses: milaboratory/github-ci/actions/strings/convert-paths@v4
+      uses: milaboratory/github-ci/actions/strings/convert-paths@v4-beta
       with:
         rel-root: ${{ steps.gradle-props.outputs.buildDir }}/
         abs-root: .
@@ -286,7 +286,7 @@ runs:
         path: ${{ steps.artifact-paths.outputs.result }}
         retention-days: ${{ inputs.artifact-retention }}
 
-    - uses: milaboratory/github-ci/actions/shell@v4
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
       if: inputs.upload-obfuscation-mapping
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-obfuscation-mapping }}
@@ -309,7 +309,7 @@ runs:
           ghwa_set_env "OBFUS_MAPPING_LOCAL_PATH" "${OBFUS_MAPPING_LOCAL_PATH}"
           ghwa_set_env "UPLOAD_MAPPING" "true"
 
-    - uses: milaboratory/github-ci/actions/shell@v4
+    - uses: milaboratory/github-ci/actions/shell@v4-beta
       if: always() && env.UPLOAD_MAPPING == 'true'
       id: upload-mapping
       env:

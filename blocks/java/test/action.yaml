@@ -233,7 +233,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - name: Prepare env for Java application build
       uses: actions/setup-java@v4
@@ -248,7 +248,7 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - name: Set gradle.properties
-      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4
+      uses: milaboratory/github-ci/actions/java/gradle/properties/set@v4-beta
       with:
         properties: |
           ${{ inputs.properties }}
@@ -258,7 +258,7 @@ runs:
 
     - name: Read actual project properties
       id: gradle-props
-      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4
+      uses: milaboratory/github-ci/actions/java/gradle/properties/read@v4-beta
       with:
         project-dir: ${{ inputs.project-dir }}
         project-name: ${{ inputs.project }}
@@ -270,7 +270,7 @@ runs:
 
     - name: Generate upload path
       id: upload-path
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
           rand="$(
@@ -282,7 +282,7 @@ runs:
 
     - name: Generate list of tasks to exclude
       id: excludes
-      uses: milaboratory/github-ci/actions/strings/prefix@v4
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
       with:
         input: ${{ inputs.exclude-tasks }}
         prefix: |-
@@ -299,14 +299,14 @@ runs:
     - name: Generate before-hooks tasks
       id: before-hooks-tasks
       if: inputs.before-hooks-tasks != ''
-      uses: milaboratory/github-ci/actions/strings/prefix@v4
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
       with:
         input: ${{ inputs.before-hooks-tasks }}
         prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run before-hooks tasks
       if: steps.before-hooks-tasks.outputs.result != ''
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
       with:
         build-root-directory: ${{ inputs.project-dir }}
         arguments: |-
@@ -319,21 +319,21 @@ runs:
 
     - name: Run 'before-tests' hook
       if: inputs.hook-before != ''
-      uses: milaboratory/github-ci/actions/helpers/safe-run@v4
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
       with:
         script-path: ${{ inputs.hook-before }}
 
     - name: Generate test tasks
       id: test-tasks
       if: inputs.tasks != ''
-      uses: milaboratory/github-ci/actions/strings/prefix@v4
+      uses: milaboratory/github-ci/actions/strings/prefix@v4-beta
       with:
         input: ${{ inputs.tasks }}
         prefix: ${{ inputs.project && format(':{0}:', inputs.project) || ':' }}
 
     - name: Run tests
       if: steps.test-tasks.outputs.result != ''
-      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4
+      uses: milaboratory/github-ci/actions/java/gradle/gradlew@v4-beta
       with:
         build-root-directory: ${{ inputs.project-dir }}
         arguments: |-
@@ -346,7 +346,7 @@ runs:
 
     - name: Run test command
       if: inputs.hook-after == '' && inputs.test-command != ''
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         TEST_CMD: ${{ inputs.test-command }}
         TEST_DIR: ${{ inputs.test-directory }}
@@ -366,14 +366,14 @@ runs:
 
     - name: Run 'after-tests' hook
       if: inputs.hook-after != '' && inputs.test-command == ''
-      uses: milaboratory/github-ci/actions/helpers/safe-run@v4
+      uses: milaboratory/github-ci/actions/helpers/safe-run@v4-beta
       with:
         script-path: ${{ inputs.hook-after }}
 
     - name: Check if we should upload results to S3
       id: should-upload
       if: always()
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         UPLOAD_ENABLED: ${{ inputs.upload-report }}
         BUILD_DIR: ${{ steps.gradle-props.outputs.buildDir }}
@@ -404,7 +404,7 @@ runs:
     - name: Upload test results
       id: upload-report
       if: always() && env.UPLOAD_REPORT == 'true'
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       with:
         run: |
           aws s3 cp --recursive \

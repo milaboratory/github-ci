@@ -35,7 +35,7 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/files/list@v4
+    - uses: milaboratory/github-ci/actions/files/list@v4-beta
       id: artifacts-list
       with:
         patterns: ${{ inputs.paths }}
