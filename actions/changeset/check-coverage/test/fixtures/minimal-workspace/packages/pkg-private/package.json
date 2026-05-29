@@ -1,0 +1,9 @@
+{
+  "name": "@check-coverage-test/pkg-private",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "is-number": "catalog:"
+  }
+}

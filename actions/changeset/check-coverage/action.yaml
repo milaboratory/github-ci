@@ -1,0 +1,30 @@
+name: Check changeset coverage
+author: 'MiLaboratories'
+description: |
+  Fail if a PR's changesets don't cover every workspace package it modifies.
+
+  Catches two common gaps:
+    - editing files inside a workspace package (e.g. block code under
+      packages/<pkg>/) without adding that package to the changeset;
+    - bumping a catalog version in pnpm-workspace.yaml without a matching
+      bump for the workflow packages that consume it via `catalog:`.
+
+  Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq`, and
+  `yq` (mikefarah, v4+) on PATH — all pre-installed on GitHub-hosted
+  ubuntu-latest images.
+
+inputs:
+  base-branch:
+    description: Base branch to diff against (e.g. main).
+    required: true
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Check changeset coverage
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+      run: '${ACTION_PATH}/check-coverage.sh'
