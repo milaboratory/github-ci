@@ -8,7 +8,7 @@ description: |
       packages/<pkg>/) without adding that package to the changeset;
     - bumping a catalog version in pnpm-workspace.yaml without a matching
       bump for packages that consume it as a runtime dependency via
-      `catalog:` (devDependencies / build-only tooling are not flagged).
+      `catalog:` — build-tool bumps in devDependencies are ignored.
 
   Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq`, and
   `yq` (mikefarah, v4+) on PATH — all pre-installed on GitHub-hosted
