@@ -116,6 +116,19 @@ setup() {
   [ "${status}" -eq 0 ]
 }
 
+@test "catalog bump consumed only as a devDependency does not flag the consumer" {
+  # is-string is a runtime dep of pkg-c but only a devDependency of pkg-dev.
+  # Bumping it flags pkg-c and leaves pkg-dev alone — the block case where a
+  # build-tool catalog dep (block-tools, tengo-builder) bumps while the
+  # package stays untouched. Runtime-only scoping fixed this; pkg-dev was
+  # flagged before.
+  bump_catalog 'is-string' '^1.0.8'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'@check-coverage-test/pkg-c'* ]]
+  [[ "${output}" != *'@check-coverage-test/pkg-dev'* ]]
+}
+
 # ---------------------------------------------------------------------------
 # Empty-changeset corner case.
 # ---------------------------------------------------------------------------
