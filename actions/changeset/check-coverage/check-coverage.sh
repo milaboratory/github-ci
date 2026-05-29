@@ -10,8 +10,17 @@
 #      git-diff check itself.
 #
 #   2. Catalog version bumps in pnpm-workspace.yaml: for each touched
-#      catalog key, find workspace packages that consume it via
+#      catalog key, find workspace packages that consume it as a *runtime*
+#      dependency (`dependencies` or `peerDependencies`) via
 #      `"<key>": "catalog:..."` and require those packages to bump.
+#
+#      devDependencies and optionalDependencies are intentionally NOT
+#      considered. A bump to build-only tooling (e.g. @platforma-sdk/block-tools
+#      in a block's model, @platforma-sdk/tengo-builder in its workflow) does
+#      not change the published artifact's runtime, and `pnpm changeset` does
+#      not flag those packages either. Requiring a bump for them produced
+#      false positives on PRs that only touched an unrelated package (e.g. the
+#      UI) but happened to carry a catalog bump for shared build tooling.
 #
 # Skips private (unpublished) workspace packages — they never appear in
 # the changeset's release set.
@@ -186,8 +195,12 @@ if git diff --name-only "origin/${BASE_BRANCH}...HEAD" | grep -qx 'pnpm-workspac
         [ "${pkg_is_private[${name}]:-false}" = 'true' ] && continue
         pj="${pkg_name_to_dir[${name}]}/package.json"
         [ -f "${pj}" ] || continue
+        # Runtime sections only. devDependencies/optionalDependencies are
+        # excluded on purpose — bumping build-only tooling consumed via
+        # `catalog:` (block-tools, tengo-builder, …) doesn't alter the
+        # published runtime, so requiring a release for it is a false positive.
         if jq -e --arg k "${key}" '
-            [.dependencies?, .devDependencies?, .peerDependencies?, .optionalDependencies?]
+            [.dependencies?, .peerDependencies?]
             | map(select(. != null) | to_entries) | add // []
             | map(select(.key == $k and ((.value // "") | startswith("catalog:"))))
             | length > 0
