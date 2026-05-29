@@ -69,13 +69,18 @@ git merge \
     "${SOURCE_BRANCH}" \
     --strategy-option theirs
 
-# Replace all v4-beta with v4 in all action.yaml and all workflows
+# Replace @v4-beta -> @v4 in milaboratory/github-ci self-refs only.
+# The substitution is anchored to the self-ref repo path so that third-party
+# action pins (actions/checkout@v4-beta, aws-actions/...@v4-beta, etc.) are
+# left alone. Without the anchor the sed would happily rewrite any token
+# ending in @v4-beta, which corrupts third-party refs on v4-beta when the
+# inverse sed (fix-beta.sh) flipped them from @v4 in the first place.
 {
     find . -type f -name "action.yaml"
     find .github/workflows -type f -name "*.yaml"
 } |
     while read -r file; do
-        sed "s/@${SOURCE_BRANCH}/@${TARGET_BRANCH}/g" "${file}" > "${file}.tmp"
+        sed "s|\(milaboratory/github-ci[^[:space:]@]*\)@${SOURCE_BRANCH}|\1@${TARGET_BRANCH}|g" "${file}" > "${file}.tmp"
         mv "${file}.tmp" "${file}"
     done
 
