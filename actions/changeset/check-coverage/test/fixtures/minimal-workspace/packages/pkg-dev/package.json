@@ -1,0 +1,8 @@
+{
+  "name": "@check-coverage-test/pkg-dev",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {
+    "is-string": "catalog:"
+  }
+}
