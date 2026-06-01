@@ -26,6 +26,7 @@ services:
     # Packages can be large. We don't want to save them after execution.
     command: |
        --auth-htpasswd="/etc/htpasswd"
+       --master-secret="cGxhdGZvcm1hLWNpLW1hc3Rlci1zZWNyZXQtc3RhdGljLWRvLW5vdC11c2UtaW4tcHJvZA"
        --listen-address="0.0.0.0"
        --listen-port="6345"
        --log-dst="file:///storage/log/platforma.log"
