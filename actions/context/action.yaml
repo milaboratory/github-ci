@@ -56,4 +56,4 @@ runs:
 
   steps:
     - id: versions
-      uses: milaboratory/github-ci/actions/context/get@v4-beta
+      uses: milaboratory/github-ci/actions/context/get@v4

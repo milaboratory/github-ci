@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
         id: plan
         with:
           mode: plan
@@ -74,7 +74,7 @@ jobs:
           sl=$((RANDOM % 10))
           sleep ${sl}
 
-      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
         with:
           mode: scan
           report-name: "report-${{ matrix.plan-file }}"
@@ -100,7 +100,7 @@ jobs:
           path: ./consolidated
 
       - name: Summarize all reports
-        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4-beta
+        uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
         with:
           mode: summarize
           summarize-dir: ./consolidated
