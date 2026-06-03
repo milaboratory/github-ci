@@ -38,3 +38,14 @@ runs:
         toolset: ${{ inputs.toolset }}
         uwp: ${{ inputs.uwp }}
         vsversion: ${{ inputs.vsversion }}
+
+    # Bypass setuptools/distutils' independent VS lookup. Without this,
+    # `_msvccompiler.initialize()` runs its own vswhere+registry probe
+    # and raises "Microsoft Visual C++ 14.0 or greater is required."
+    # even though INCLUDE/LIB/PATH are already populated by vcvarsall.
+    # `MSSdk` is the legacy partner flag distutils also accepts.
+    - name: Tell distutils that MSVC is already set up
+      shell: bash
+      run: |
+        echo "DISTUTILS_USE_SDK=1" >> "$GITHUB_ENV"
+        echo "MSSdk=1" >> "$GITHUB_ENV"
