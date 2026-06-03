@@ -495,7 +495,7 @@ jobs:
       # on non-Windows runners.
       - name: Setup MSVC Dev Cmd
         if: runner.os == 'Windows'
-        uses: milaboratory/github-ci/actions/setup-msvc-dev-cmd@v4
+        uses: milaboratory/github-ci/actions/setup-msvc-dev-cmd@v4-beta
         with:
           arch: ${{ matrix.arch == 'arm64' && 'arm64' || 'amd64' }}
 
