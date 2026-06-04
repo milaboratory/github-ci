@@ -648,6 +648,18 @@ jobs:
           brew install pipx
           pipx ensurepath
 
+      # Activate vcvars on Windows runners so any subsequent step that
+      # builds a C / C++ extension from source (e.g. `pip wheel` against
+      # a setuptools/distutils sdist) finds `cl.exe` and the SDK headers.
+      # The action also sets `DISTUTILS_USE_SDK=1`, which tells
+      # setuptools' MSVC compiler shim to skip its own VS lookup. No-op
+      # on non-Windows runners.
+      - name: Setup MSVC Dev Cmd
+        if: runner.os == 'Windows'
+        uses: milaboratory/github-ci/actions/setup-msvc-dev-cmd@v4
+        with:
+          arch: ${{ matrix.arch == 'arm64' && 'arm64' || 'amd64' }}
+
       - name: Configure ccache
         if: inputs.enable-ccache
         uses: milaboratory/github-ci/actions/ccache@v4
