@@ -50,16 +50,21 @@ runs:
         echo "DISTUTILS_USE_SDK=1" >> "$GITHUB_ENV"
         echo "MSSdk=1" >> "$GITHUB_ENV"
 
-    # Git for Windows' `C:\Program Files\Git\usr\bin` ships a coreutils
-    # `link.exe` (GNU `ln`-style hardlink tool) that shadows MSVC's
-    # `link.exe` when setuptools' _msvccompiler resolves the linker via
-    # PATH search. cl.exe still resolves to MSVC because Git has no cl,
-    # but link.exe collides and breaks every `pip wheel` link step on
-    # Windows runners. Move that dir to the END of PATH so MSVC wins.
-    - name: Demote Git\usr\bin in PATH so MSVC link.exe wins
+    # Git for Windows' `C:\Program Files\Git\usr\bin\link.exe` is a coreutils
+    # `link` tool (GNU `ln`-style hardlinker) that shadows MSVC's `link.exe`
+    # whenever setuptools' _msvccompiler resolves the linker via PATH search.
+    # `cl.exe` still resolves to MSVC because Git has no `cl`, but `link.exe`
+    # collides and breaks every `pip wheel` link step on Windows runners.
+    # PATH-via-$GITHUB_ENV reordering is brittle (later steps like
+    # setup-node and pnpm/action-setup rewrite PATH), so we just rename the
+    # offending binary out of the way. Runner user has write access.
+    - name: Hide Git\usr\bin\link.exe so MSVC link.exe wins on PATH
       shell: pwsh
       run: |
-        $gitUsrBin = 'C:\Program Files\Git\usr\bin'
-        $parts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne $gitUsrBin) }
-        $newPath = ($parts + $gitUsrBin) -join ';'
-        "PATH=$newPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $gitLink = 'C:\Program Files\Git\usr\bin\link.exe'
+        if (Test-Path -LiteralPath $gitLink) {
+          Move-Item -LiteralPath $gitLink "$gitLink.disabled" -Force
+          Write-Host "Renamed $gitLink -> $gitLink.disabled"
+        } else {
+          Write-Host "Not found: $gitLink (nothing to do)"
+        }
