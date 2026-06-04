@@ -49,3 +49,17 @@ runs:
       run: |
         echo "DISTUTILS_USE_SDK=1" >> "$GITHUB_ENV"
         echo "MSSdk=1" >> "$GITHUB_ENV"
+
+    # Git for Windows' `C:\Program Files\Git\usr\bin` ships a coreutils
+    # `link.exe` (GNU `ln`-style hardlink tool) that shadows MSVC's
+    # `link.exe` when setuptools' _msvccompiler resolves the linker via
+    # PATH search. cl.exe still resolves to MSVC because Git has no cl,
+    # but link.exe collides and breaks every `pip wheel` link step on
+    # Windows runners. Move that dir to the END of PATH so MSVC wins.
+    - name: Demote Git\usr\bin in PATH so MSVC link.exe wins
+      shell: pwsh
+      run: |
+        $gitUsrBin = 'C:\Program Files\Git\usr\bin'
+        $parts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne $gitUsrBin) }
+        $newPath = ($parts + $gitUsrBin) -join ';'
+        "PATH=$newPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
