@@ -38,3 +38,33 @@ runs:
         toolset: ${{ inputs.toolset }}
         uwp: ${{ inputs.uwp }}
         vsversion: ${{ inputs.vsversion }}
+
+    # Bypass setuptools/distutils' independent VS lookup. Without this,
+    # `_msvccompiler.initialize()` runs its own vswhere+registry probe
+    # and raises "Microsoft Visual C++ 14.0 or greater is required."
+    # even though INCLUDE/LIB/PATH are already populated by vcvarsall.
+    # `MSSdk` is the legacy partner flag distutils also accepts.
+    - name: Tell distutils that MSVC is already set up
+      shell: bash
+      run: |
+        echo "DISTUTILS_USE_SDK=1" >> "$GITHUB_ENV"
+        echo "MSSdk=1" >> "$GITHUB_ENV"
+
+    # Git for Windows' `C:\Program Files\Git\usr\bin\link.exe` is a coreutils
+    # `link` tool (GNU `ln`-style hardlinker) that shadows MSVC's `link.exe`
+    # whenever setuptools' _msvccompiler resolves the linker via PATH search.
+    # `cl.exe` still resolves to MSVC because Git has no `cl`, but `link.exe`
+    # collides and breaks every `pip wheel` link step on Windows runners.
+    # PATH-via-$GITHUB_ENV reordering is brittle (later steps like
+    # setup-node and pnpm/action-setup rewrite PATH), so we just rename the
+    # offending binary out of the way. Runner user has write access.
+    - name: Hide Git\usr\bin\link.exe so MSVC link.exe wins on PATH
+      shell: pwsh
+      run: |
+        $gitLink = 'C:\Program Files\Git\usr\bin\link.exe'
+        if (Test-Path -LiteralPath $gitLink) {
+          Move-Item -LiteralPath $gitLink "$gitLink.disabled" -Force
+          Write-Host "Renamed $gitLink -> $gitLink.disabled"
+        } else {
+          Write-Host "Not found: $gitLink (nothing to do)"
+        }
