@@ -9,12 +9,12 @@
 # check itself. Root-level paths (`.github/`, `docs/`, `pnpm-workspace.yaml`,
 # `README.md`) live in no package directory, so they never trigger inclusion.
 #
-# Dependency-version bumps are deliberately NOT a requirement — including
-# catalog bumps in pnpm-workspace.yaml. A catalog entry always pins an
-# *external* package (workspace packages are referenced via `workspace:*`,
-# never `catalog:`), and `pnpm changeset` never adds a package to its release
-# plan because an external dependency's version changed. It also propagates
-# bumps through the internal dependency chain automatically at
+# Dependency-version bumps never require a changeset — including catalog
+# bumps in pnpm-workspace.yaml. A catalog entry always pins an *external*
+# package (workspace packages are referenced via `workspace:*`, never
+# `catalog:`). `pnpm changeset` ignores such a bump twice over: it never
+# releases a package because an external dependency's version changed, and it
+# propagates internal bumps through the dependency chain automatically at
 # `changeset version` time. So requiring a hand-written changeset for a
 # package that only "changed" via a dependency bump over-reports relative to
 # `pnpm changeset` — see platforma-open/clonotype-space#95, where a
@@ -123,8 +123,7 @@ require_pkg() {
 # (pnpm runs the per-package `git diff` itself). Root-level paths like
 # `.github/`, `docs/`, `pnpm-workspace.yaml`, or `README.md` are not in any
 # package directory and so don't trigger inclusion — no manual ignore list
-# needed. This is also why a dependency-only change (a catalog bump in
-# pnpm-workspace.yaml) requires nothing here: no package's own files changed.
+# needed, and a catalog bump in pnpm-workspace.yaml never reaches this filter.
 #
 # The jq filter drops private packages here (they never appear in a
 # changeset's release set), so `require_pkg` doesn't need to re-check.
