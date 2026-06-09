@@ -67,66 +67,59 @@ setup() {
 }
 
 # ---------------------------------------------------------------------------
-# Catalog bumps.
+# Catalog / dependency bumps — intentionally NOT a coverage requirement.
+#
+# A catalog entry always pins an *external* package: workspace packages are
+# referenced via `workspace:*`, never `catalog:`. `pnpm changeset` never adds
+# a package to its release plan because an external dependency's version
+# changed, and it propagates version bumps through the internal dependency
+# chain automatically at `changeset version` time. So a catalog bump on its
+# own requires no hand-written changeset — requiring one over-reports relative
+# to `pnpm changeset`.
+#
+# Regression: platforma-open/clonotype-space#95. The `.workflow` package listed
+# `@platforma-sdk/workflow-tengo` under `dependencies` as `catalog:`; the
+# catalog bumped it (5.25.0 → 6.3.2) while the package's own files were
+# untouched. The PR's changeset (model/ui/block) was complete per
+# `pnpm changeset`, yet the old check failed the PR on `.workflow`.
 # ---------------------------------------------------------------------------
 
-@test "catalog bump without consumer bumps fails and names every consumer" {
+@test "catalog bump alone requires no changeset (consumer files untouched)" {
+  # pkg-a and pkg-b both consume is-number via `dependencies: { is-number: catalog: }`
+  # — exactly the clonotype-space `.workflow` → workflow-tengo shape. Bumping
+  # the catalog without touching either package must pass.
   bump_catalog 'is-number' '^7.0.1'
-  run_check
-  [ "${status}" -eq 1 ]
-  [[ "${output}" == *'@check-coverage-test/pkg-a'* ]]
-  [[ "${output}" == *'@check-coverage-test/pkg-b'* ]]
-  # pkg-c consumes is-string, not is-number — should not be flagged.
-  [[ "${output}" != *'@check-coverage-test/pkg-c'* ]]
-}
-
-@test "catalog bump with both consumers bumped passes" {
-  bump_catalog 'is-number' '^7.0.1'
-  add_changeset '"@check-coverage-test/pkg-a": patch
-"@check-coverage-test/pkg-b": patch' 'bump is-number'
   run_check
   [ "${status}" -eq 0 ]
 }
 
-@test "catalog bump where only one consumer is bumped still fails for the other" {
-  bump_catalog 'is-number' '^7.0.1'
-  add_changeset '"@check-coverage-test/pkg-a": patch' 'bump is-number partial'
-  run_check
-  [ "${status}" -eq 1 ]
-  [[ "${output}" == *'@check-coverage-test/pkg-b'* ]]
-  [[ "${output}" != *'- @check-coverage-test/pkg-a'* ]]
-}
-
-@test "non-catalog YAML edits in pnpm-workspace.yaml don't trigger requirements" {
-  # An `overrides` entry that happens to share a name with a catalog key.
-  # Bumping it must NOT be treated as a catalog change — yq's structural
-  # parse ignores anything outside .catalog / .catalogs.
-  yq -i '.overrides."is-number" = "^7.0.5"' "${WORKSPACE}/pnpm-workspace.yaml"
-  git -C "${WORKSPACE}" commit --quiet -am 'bump override (not catalog)'
-  run_check
-  [ "${status}" -eq 0 ]
-}
-
-@test "catalog bump for an unused key does not require any package" {
-  # Add then bump a catalog entry no one consumes.
-  yq -i '.catalog."unused-pkg" = "^1.0.0"' "${WORKSPACE}/pnpm-workspace.yaml"
-  git -C "${WORKSPACE}" commit --quiet -am 'add unused catalog key'
-  bump_catalog 'unused-pkg' '^1.0.1'
-  run_check
-  [ "${status}" -eq 0 ]
-}
-
-@test "catalog bump consumed only as a devDependency does not flag the consumer" {
-  # is-string is a runtime dep of pkg-c but only a devDependency of pkg-dev.
-  # Bumping it flags pkg-c and leaves pkg-dev alone — the block case where a
-  # build-tool catalog dep (block-tools, tengo-builder) bumps while the
-  # package stays untouched. Runtime-only scoping fixed this; pkg-dev was
-  # flagged before.
+@test "runtime vs dev catalog dep is irrelevant — neither is flagged" {
+  # is-string is a runtime dep of pkg-c and a devDependency of pkg-dev. Bumping
+  # it flags neither: a dependency-version bump never requires a changeset.
   bump_catalog 'is-string' '^1.0.8'
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+@test "catalog bump alongside a direct edit only requires the edited package" {
+  # The simultaneous is-number catalog bump adds no requirements: only pkg-c,
+  # whose own files changed, must be covered. pkg-a/pkg-b consume is-number but
+  # were not edited.
+  touch_file 'packages/pkg-c/index.js'
+  bump_catalog 'is-number' '^7.0.1'
   run_check
   [ "${status}" -eq 1 ]
   [[ "${output}" == *'@check-coverage-test/pkg-c'* ]]
-  [[ "${output}" != *'@check-coverage-test/pkg-dev'* ]]
+  [[ "${output}" != *'@check-coverage-test/pkg-a'* ]]
+  [[ "${output}" != *'@check-coverage-test/pkg-b'* ]]
+}
+
+@test "direct edit covered by a changeset passes even with a concurrent catalog bump" {
+  touch_file 'packages/pkg-c/index.js'
+  bump_catalog 'is-number' '^7.0.1'
+  add_changeset '"@check-coverage-test/pkg-c": patch' 'edit pkg-c'
+  run_check
+  [ "${status}" -eq 0 ]
 }
 
 # ---------------------------------------------------------------------------
@@ -177,43 +170,4 @@ setup() {
   run_check
   [ "${status}" -eq 2 ]
   [[ "${output}" == *'changeset binary not found'* ]]
-}
-
-# ---------------------------------------------------------------------------
-# Known limitations (skipped — document deferred follow-ups).
-# ---------------------------------------------------------------------------
-
-# Documents the deferred bug from PR #168: the catalog-key flatten in
-# check-coverage.sh collapses `.catalogs.alpha.<key>` and `.catalogs.beta.<key>`
-# into a single key=value stream, losing which named catalog owns each entry.
-# When two named catalogs both pin the same package and only one bumps, the
-# symmetric diff still emits the bare key — so consumers of the *unchanged*
-# catalog get spuriously flagged. Un-skip once the script tracks the
-# catalog-name discriminator.
-@test "named-catalog change should not flag consumers of unchanged catalog" {
-  skip "Known limitation: catalog flatten loses named-catalog discriminator (PR #168 follow-up)"
-
-  yq -i '
-    .catalogs.alpha."is-number" = "^7.0.0" |
-    .catalogs.beta."is-number"  = "^7.0.0"
-  ' "${WORKSPACE}/pnpm-workspace.yaml"
-
-  # pkg-a → catalog:alpha; pkg-b → catalog:beta.
-  for pair in 'pkg-a:alpha' 'pkg-b:beta'; do
-    name="${pair%:*}"; cat="${pair#*:}"
-    pj="${WORKSPACE}/packages/${name}/package.json"
-    jq --arg c "catalog:${cat}" '.dependencies."is-number" = $c' "${pj}" >"${pj}.tmp"
-    mv "${pj}.tmp" "${pj}"
-  done
-  git -C "${WORKSPACE}" commit --quiet -am 'add named catalogs (alpha, beta)'
-
-  # Bump alpha only — beta is untouched.
-  yq -i '.catalogs.alpha."is-number" = "^7.0.1"' "${WORKSPACE}/pnpm-workspace.yaml"
-  git -C "${WORKSPACE}" commit --quiet -am 'bump alpha catalog only'
-
-  run_check
-  [ "${status}" -eq 1 ]
-  [[ "${output}" == *'@check-coverage-test/pkg-a'* ]]
-  # Currently fails: pkg-b is also flagged because of the catalog flatten.
-  [[ "${output}" != *'@check-coverage-test/pkg-b'* ]]
 }
