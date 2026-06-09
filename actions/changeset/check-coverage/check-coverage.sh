@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 #
-# Verify the PR's changesets bump every workspace package the PR modifies.
-# Exit 1 on a coverage gap; exit 2 on tooling failure; exit 0 otherwise.
+# Verify the PR has a changeset for every workspace package whose own files
+# it edits. Exit 1 on a coverage gap; exit 2 on tooling failure; exit 0
+# otherwise.
 #
-# Two sources of "modified":
+# "Modified" means a direct edit to a workspace package's own files, detected
+# via `pnpm --filter '[<base>]' list` — pnpm runs the per-package git-diff
+# check itself. Root-level paths (`.github/`, `docs/`, `pnpm-workspace.yaml`,
+# `README.md`) live in no package directory, so they never trigger inclusion.
 #
-#   1. Direct edits to a workspace package's files, detected via
-#      `pnpm --filter '[<base>]' list` — pnpm runs the per-package
-#      git-diff check itself.
-#
-#   2. Catalog version bumps in pnpm-workspace.yaml: for each touched
-#      catalog key, find workspace packages that consume it as a runtime
-#      dependency (`dependencies` or `peerDependencies`) via
-#      `"<key>": "catalog:..."` and require those packages to bump.
-#
-#      Runtime sections only — skip devDependencies and optionalDependencies.
-#      A build-tool bump (e.g. @platforma-sdk/block-tools in a block's model,
-#      @platforma-sdk/tengo-builder in its workflow) leaves the published
-#      artifact unchanged, and `pnpm changeset` ignores it too. Counting it
-#      flagged packages the PR never touched — e.g. a UI-only change that
-#      carried a shared build-tool bump.
+# Dependency-version bumps never require a changeset — including catalog
+# bumps in pnpm-workspace.yaml. A catalog entry always pins an *external*
+# package (workspace packages are referenced via `workspace:*`, never
+# `catalog:`). `pnpm changeset` ignores such a bump twice over: it never
+# releases a package because an external dependency's version changed, and it
+# propagates internal bumps through the dependency chain automatically at
+# `changeset version` time. So requiring a hand-written changeset for a
+# package that only "changed" via a dependency bump over-reports relative to
+# `pnpm changeset` — see platforma-open/clonotype-space#95, where a
+# `@platforma-sdk/workflow-tengo` catalog bump spuriously failed the
+# untouched `.workflow` package.
 #
 # Skips private (unpublished) workspace packages — they never appear in
 # the changeset's release set.
@@ -50,12 +50,11 @@ fi
 # absolute paths on macOS (prepends cwd, causing ENOENT). Cwd-relative is
 # safe on every platform.
 status_json=".changeset-coverage-status-$$.json"
-pkg_list_json=".changeset-coverage-pkgs-$$.json"
 
 # ---------------------------------------------------------------------------
 # 1. Bumped set from `changeset status --output=...`.
 # ---------------------------------------------------------------------------
-trap 'rm -f "${status_json}" "${pkg_list_json}"' EXIT
+trap 'rm -f "${status_json}"' EXIT
 
 # Invoke the binary directly. `pnpm exec` and `pnpm <script>` spawn subshells
 # that lose `node_modules/.bin` from PATH on repeated invocations. The action
@@ -118,13 +117,13 @@ require_pkg() {
   required_reason["${pkg}"]="${required_reason[${pkg}]:-}${reason}; "
 }
 
-# 2a. Direct workspace-package edits.
+# Direct workspace-package edits.
 #
 # `pnpm --filter '[<since>]' list` selects packages whose own files changed
 # (pnpm runs the per-package `git diff` itself). Root-level paths like
 # `.github/`, `docs/`, `pnpm-workspace.yaml`, or `README.md` are not in any
 # package directory and so don't trigger inclusion — no manual ignore list
-# needed.
+# needed, and a catalog bump in pnpm-workspace.yaml never reaches this filter.
 #
 # The jq filter drops private packages here (they never appear in a
 # changeset's release set), so `require_pkg` doesn't need to re-check.
@@ -136,78 +135,6 @@ done < <(
 )
 
 log "Direct-edit packages: ${#required_set[@]}"
-
-# 2b. Catalog version bumps in pnpm-workspace.yaml.
-#
-# Only runs when the workspace yaml itself changed. Builds a full
-# workspace map so we can find every consumer of each touched catalog key.
-if git diff --name-only "origin/${BASE_BRANCH}...HEAD" | grep -qx 'pnpm-workspace.yaml'; then
-  pnpm -r list --depth -1 --json >"${pkg_list_json}"
-
-  # pnpm returns canonical absolute paths; strip the workspace root via
-  # `pwd -P` so the result matches the workspace's view on either platform.
-  workspace_root="$(pwd -P)"
-  declare -A pkg_name_to_dir=()
-  declare -A pkg_is_private=()
-
-  while IFS=$'\t' read -r pkg_name pkg_path pkg_private; do
-    [ -z "${pkg_name}" ] && continue           # workspace root has no name
-    rel="${pkg_path#${workspace_root}/}"
-    [ "${rel}" = "${pkg_path}" ] && continue   # workspace root itself
-    pkg_name_to_dir["${pkg_name}"]="${rel}"
-    pkg_is_private["${pkg_name}"]="${pkg_private}"
-  done < <(jq -r '
-      .[]
-      | select(.name != null and .name != "")
-      | [.name, .path, (.private // false | tostring)]
-      | @tsv
-    ' "${pkg_list_json}")
-
-  # Extract catalog keys whose value changed (added, removed, or bumped).
-  # Parse both the base and head versions structurally with yq, flatten the
-  # default catalog and any named catalogs to `key=value` lines, then take
-  # entries unique to either side. Avoids the false-positive surface of a
-  # line-level regex on the raw diff.
-  cat_pairs() {
-    yq -e '
-      [
-        (.catalog // {} | to_entries[]),
-        (.catalogs // {} | to_entries[].value // {} | to_entries[])
-      ] | .[] | .key + "=" + .value
-    ' 2>/dev/null || true
-  }
-  old_pairs="$(git show "origin/${BASE_BRANCH}:pnpm-workspace.yaml" 2>/dev/null | cat_pairs || true)"
-  new_pairs="$(cat_pairs <pnpm-workspace.yaml || true)"
-  mapfile -t catalog_keys < <(
-    { printf '%s\n' "${old_pairs}"; printf '%s\n' "${new_pairs}"; } \
-      | sed '/^$/d' \
-      | sort | uniq -u \
-      | sed -E 's/=.*//' \
-      | sort -u
-  )
-
-  if [ "${#catalog_keys[@]}" -gt 0 ]; then
-    log "Catalog keys touched: ${catalog_keys[*]}"
-    # For each catalog key, find workspace pkgs that depend on it with "catalog:".
-    for key in "${catalog_keys[@]}"; do
-      for name in "${!pkg_name_to_dir[@]}"; do
-        [ "${pkg_is_private[${name}]:-false}" = 'true' ] && continue
-        pj="${pkg_name_to_dir[${name}]}/package.json"
-        [ -f "${pj}" ] || continue
-        # Runtime sections only — a build-tool bump in devDependencies leaves
-        # the published artifact unchanged (see the header note).
-        if jq -e --arg k "${key}" '
-            [.dependencies?, .peerDependencies?]
-            | map(select(. != null) | to_entries) | add // []
-            | map(select(.key == $k and ((.value // "") | startswith("catalog:"))))
-            | length > 0
-          ' "${pj}" >/dev/null 2>&1; then
-          require_pkg "${name}" "catalog dep '${key}' bumped"
-        fi
-      done
-    done
-  fi
-fi
 
 # ---------------------------------------------------------------------------
 # 3. Compare required vs bumped.

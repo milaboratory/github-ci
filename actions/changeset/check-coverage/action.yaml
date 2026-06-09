@@ -1,18 +1,19 @@
 name: Check changeset coverage
 author: 'MiLaboratories'
 description: |
-  Fail if a PR's changesets don't cover every workspace package it modifies.
+  Fail if a PR's changesets don't cover every workspace package whose own
+  files it edits — e.g. editing block code under packages/<pkg>/ without
+  adding that package to the changeset.
 
-  Catches two common gaps:
-    - editing files inside a workspace package (e.g. block code under
-      packages/<pkg>/) without adding that package to the changeset;
-    - bumping a catalog version in pnpm-workspace.yaml without a matching
-      bump for packages that consume it as a runtime dependency via
-      `catalog:` — build-tool bumps in devDependencies are ignored.
+  Dependency-version bumps are intentionally NOT flagged, including catalog
+  bumps in pnpm-workspace.yaml. A catalog entry always pins an external
+  package, and `pnpm changeset` never requires a release for an external
+  dependency bump — it propagates versions through the internal dependency
+  chain automatically at `changeset version` time. Flagging consumers of a
+  bumped catalog dependency would over-report relative to `pnpm changeset`.
 
-  Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq`, and
-  `yq` (mikefarah, v4+) on PATH — all pre-installed on GitHub-hosted
-  ubuntu-latest images.
+  Runs after `pnpm install`. Requires the runner to have `pnpm` and `jq` on
+  PATH — both pre-installed on GitHub-hosted ubuntu-latest images.
 
 inputs:
   base-branch:
