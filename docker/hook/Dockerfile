@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as aws-installer
+FROM ubuntu:24.04 as aws-installer
 
 RUN apt-get update \
     && apt-get install --yes unzip
@@ -8,7 +8,7 @@ WORKDIR /installer
 
 RUN unzip awscli.zip
 
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 COPY --from=aws-installer /installer /aws-cli-installer
 RUN /aws-cli-installer/aws/install \
