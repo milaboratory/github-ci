@@ -29,12 +29,67 @@ inputs:
     required: false
     default: 'true'
 
+  cache-backend:
+    description: |
+      Where to store the cache: 'github' (actions/cache, the default) or 's3'
+      (an S3/RGW bucket via tespkg/actions-cache). Use 's3' on self-hosted
+      runners that can't reach the Azure-backed GitHub Actions cache. The s3
+      backend is Linux-only and caches only ~/.cache/go-build (the module cache
+      ~/go/pkg/mod is read-only and tespkg's tar --keep-old-files chokes on it;
+      modules repopulate from GOPROXY).
+    required: false
+    default: 'github'
+  s3-endpoint:
+    description: "S3 endpoint host/URL (cache-backend=s3)."
+    required: false
+    default: ''
+  s3-bucket:
+    description: "S3 bucket (cache-backend=s3)."
+    required: false
+    default: ''
+  s3-region:
+    description: "S3 region (cache-backend=s3)."
+    required: false
+    default: 'us-east-1'
+  s3-insecure:
+    description: "Use plain HTTP to the S3 endpoint (cache-backend=s3)."
+    required: false
+    default: 'false'
+  s3-access-key:
+    description: "S3 access key (cache-backend=s3; pass a masked secret)."
+    required: false
+    default: ''
+  s3-secret-key:
+    description: "S3 secret key (cache-backend=s3; pass a masked secret)."
+    required: false
+    default: ''
+
 runs:
   using: "composite"
 
   steps:
+    - name: Cache Golang modules on Linux (S3/RGW)
+      if: runner.os == 'Linux' && inputs.cache-backend == 's3'
+      uses: tespkg/actions-cache@e07e2d4953dc8c020d447363e5064e36d04f3cf9 # v1.10.2
+      with:
+        endpoint: ${{ inputs.s3-endpoint }}
+        region: ${{ inputs.s3-region }}
+        bucket: ${{ inputs.s3-bucket }}
+        insecure: ${{ inputs.s3-insecure }}
+        accessKey: ${{ inputs.s3-access-key }}
+        secretKey: ${{ inputs.s3-secret-key }}
+        use-fallback: 'false'
+        retry: 'true'
+        retry-count: '3'
+        # go-build only — see cache-backend note above.
+        path: |
+          ~/.cache/go-build
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-
+
     - name: Cache Golang modules on Linux
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && inputs.cache-backend != 's3'
       uses: actions/cache@v4
       with:
         save-always: ${{ inputs.cache-save-always }}
