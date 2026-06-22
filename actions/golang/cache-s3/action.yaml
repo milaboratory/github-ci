@@ -68,9 +68,14 @@ runs:
         use-fallback: ${{ inputs.use-fallback }}
         retry: 'true'
         retry-count: '3'
+        # Only the build cache — NOT ~/go/pkg/mod. The module cache is read-only
+        # (0444) and tespkg/actions-cache extracts with `tar --keep-old-files`,
+        # which fails ("Cannot open: File exists") on the module cache; the build
+        # cache is the real compile-time win, and modules repopulate from
+        # GOPROXY (use a cached-only proxy). (Stock actions/cache overwrote, so
+        # this only bites the S3-backed action.)
         path: |
           ~/.cache/go-build
-          ~/go/pkg/mod
         key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
         restore-keys: |
           ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-
