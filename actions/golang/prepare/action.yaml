@@ -48,34 +48,14 @@ inputs:
     required: false
     default: 'true'
 
-  cache-backend:
-    description: "Cache backend: 'github' (default) or 's3'. Passed to golang/cache."
+  cache-enabled:
+    description: |
+      Run the built-in golang/cache step (GitHub actions/cache). Set to 'false'
+      to skip it — e.g. when the caller provides its own cache (the s3/RGW
+      golang/cache-s3 sibling on self-hosted runners), to avoid two caches
+      fighting over the same paths.
     required: false
-    default: 'github'
-  s3-endpoint:
-    description: "S3 endpoint (cache-backend=s3)."
-    required: false
-    default: ''
-  s3-bucket:
-    description: "S3 bucket (cache-backend=s3)."
-    required: false
-    default: ''
-  s3-region:
-    description: "S3 region (cache-backend=s3)."
-    required: false
-    default: 'us-east-1'
-  s3-insecure:
-    description: "Plain HTTP to the S3 endpoint (cache-backend=s3)."
-    required: false
-    default: 'false'
-  s3-access-key:
-    description: "S3 access key (cache-backend=s3; masked secret)."
-    required: false
-    default: ''
-  s3-secret-key:
-    description: "S3 secret key (cache-backend=s3; masked secret)."
-    required: false
-    default: ''
+    default: 'true'
 
 runs:
   using: "composite"
@@ -89,17 +69,9 @@ runs:
         cache: ${{ inputs.cache-enabled-in-setup-go }}
 
     - name: Setup Cache for Golang project
-      # Pinned to the hz-s3-cache branch so the s3 backend is available; folds
-      # back to @v4 on merge.
-      uses: milaboratory/github-ci/actions/golang/cache@feat/hz-s3-cache-actions
+      if: inputs.cache-enabled == 'true'
+      uses: milaboratory/github-ci/actions/golang/cache@v4
       with:
         cache-version: ${{ inputs.cache-version }}
         cache-dependency-hashfiles-path: ${{ inputs.cache-dependency-hashfiles-path }}
         cache-save-always: ${{ inputs.cache-save-always }}
-        cache-backend: ${{ inputs.cache-backend }}
-        s3-endpoint: ${{ inputs.s3-endpoint }}
-        s3-bucket: ${{ inputs.s3-bucket }}
-        s3-region: ${{ inputs.s3-region }}
-        s3-insecure: ${{ inputs.s3-insecure }}
-        s3-access-key: ${{ inputs.s3-access-key }}
-        s3-secret-key: ${{ inputs.s3-secret-key }}
