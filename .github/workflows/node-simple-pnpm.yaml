@@ -753,6 +753,13 @@ jobs:
 
   build-test-publish:
     name: unified (build test publish)
+    # Serialize releases per ref so two runs cannot concurrently run
+    # `changeset version` and race the push of "Auto-generated changes" to main.
+    # cancel-in-progress must stay false: a release in flight must finish (publish/tag),
+    # never be cancelled. Same-ref runs queue instead.
+    concurrency:
+      group: release-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ${{ inputs.gha-runner-label }}
     needs:
       - preflight-require-latest
@@ -992,7 +999,33 @@ jobs:
             git checkout main
             git add .
             git commit -m "Auto-generated changes"
-            git push
+
+            # Resilient, idempotent push: `main` can advance between checkout and push
+            # (another merge, a queued run, or a concurrent twin producing the
+            # byte-identical "Auto-generated changes" commit). A bare `git push` then
+            # fails ("cannot lock ref ... is at X but expected Y"), the step exits 1,
+            # and the release is left half-done (version bumped on main, never published).
+            pushed=false
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then
+                echo "Pushed auto-generated changes on attempt ${attempt}."
+                pushed=true
+                break
+              fi
+              echo "Push rejected on attempt ${attempt}; syncing with origin/main."
+              git fetch origin main
+              if git diff --quiet FETCH_HEAD -- .; then
+                echo "origin/main already contains these changes; nothing to push."
+                pushed=true
+                break
+              fi
+              git rebase FETCH_HEAD || { git rebase --abort || true; echo "Rebase onto origin/main failed."; exit 1; }
+            done
+
+            if [ "${pushed}" != "true" ]; then
+              echo "Failed to push auto-generated changes after retries." >&2
+              exit 1
+            fi
 
       - name: Publish npm package
         id: publish-to-private
