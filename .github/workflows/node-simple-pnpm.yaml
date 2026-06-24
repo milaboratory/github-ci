@@ -753,10 +753,10 @@ jobs:
 
   build-test-publish:
     name: unified (build test publish)
-    # Serialize releases per ref so two runs cannot concurrently run
-    # `changeset version` and race the push of "Auto-generated changes" to main.
-    # cancel-in-progress must stay false: a release in flight must finish (publish/tag),
-    # never be cancelled. Same-ref runs queue instead.
+    # Serialize releases per ref: run only one at a time. Otherwise two runs race
+    # `changeset version` and the push of "Auto-generated changes" to main.
+    # Keep cancel-in-progress false so an in-flight release finishes (publish + tag);
+    # same-ref runs queue instead.
     concurrency:
       group: release-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
@@ -1000,11 +1000,12 @@ jobs:
             git add .
             git commit -m "Auto-generated changes"
 
-            # Resilient, idempotent push: `main` can advance between checkout and push
-            # (another merge, a queued run, or a concurrent twin producing the
-            # byte-identical "Auto-generated changes" commit). A bare `git push` then
-            # fails ("cannot lock ref ... is at X but expected Y"), the step exits 1,
-            # and the release is left half-done (version bumped on main, never published).
+            # Resilient, idempotent push. `main` can advance between checkout and push:
+            # another merge, a queued run, or a concurrent twin pushing the byte-identical
+            # "Auto-generated changes" commit. A bare `git push` then fails
+            # ("cannot lock ref ... is at X but expected Y") and exits 1, stranding the
+            # release half-done — main bumped, never published. Rebase, retry, and treat
+            # "already on main" as success.
             pushed=false
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then
