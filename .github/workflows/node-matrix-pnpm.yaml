@@ -778,10 +778,14 @@ jobs:
 
   build-publish:
     name: unified (build publish)
-    # Serialize releases per ref: run only one at a time. Otherwise two runs race
-    # `changeset version` and the push of "Auto-generated changes" to main.
-    # Keep cancel-in-progress false so an in-flight release finishes (publish + tag);
-    # same-ref runs queue instead.
+    # Serialize the release job per ref so two runs never race `changeset version` and
+    # the push of "Auto-generated changes" to main.
+    # cancel-in-progress: false lets an in-flight release finish (publish + tag) instead of
+    # being cut mid-publish. GitHub keeps only one run pending per group (queue: single, the
+    # default), so a burst of merges can supersede a queued publish run. That is safe: the
+    # release is two-pass and self-heals — the final bump always triggers a publish run that
+    # ships the latest versions; only an intermediate version/tag can be skipped. Set
+    # queue: max to keep every bump's own version and tag.
     concurrency:
       group: release-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
@@ -953,11 +957,11 @@ jobs:
             git add .
             git commit -m "Auto-generated changes"
 
-            # Resilient, idempotent push. `main` can advance between checkout and push:
-            # another merge, a queued run, or a concurrent twin pushing the byte-identical
-            # "Auto-generated changes" commit. A bare `git push` then fails
+            # Resilient, idempotent push. The concurrency block above stops a concurrent
+            # twin, but main can still advance between checkout and push — a human or another
+            # workflow pushes, or a retry re-enters. A bare `git push` then fails
             # ("cannot lock ref ... is at X but expected Y") and exits 1, stranding the
-            # release half-done — main bumped, never published. Rebase, retry, and treat
+            # release half-done: main bumped, never published. Rebase, retry, and treat
             # "already on main" as success.
             pushed=false
             for attempt in 1 2 3 4 5; do
