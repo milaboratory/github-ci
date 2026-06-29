@@ -48,6 +48,15 @@ inputs:
     required: false
     default: 'true'
 
+  cache-enabled:
+    description: |
+      Run the built-in golang/cache step (GitHub actions/cache). Set to 'false'
+      to skip it — e.g. when the caller provides its own cache (the s3/RGW
+      golang/cache-s3 sibling on self-hosted runners), to avoid two caches
+      fighting over the same paths.
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
 
@@ -60,6 +69,7 @@ runs:
         cache: ${{ inputs.cache-enabled-in-setup-go }}
 
     - name: Setup Cache for Golang project
+      if: inputs.cache-enabled == 'true'
       uses: milaboratory/github-ci/actions/golang/cache@v4
       with:
         cache-version: ${{ inputs.cache-version }}
