@@ -1,0 +1,80 @@
+name: Setup S3-backed cache for a Rust application (Hetzner RGW)
+author: 'MiLaboratories'
+description: |
+  S3-backed sibling of rust/cache. Restores/saves the Cargo registry/git caches
+  and the target/ dir to the Hetzner RadosGW (s3.hz.platforma.bio) via
+  tespkg/actions-cache, instead of the GitHub-hosted cache. Use on the hz
+  self-hosted runners. Linux only.
+
+  NOTE: the hz-rl8 runner image bakes CARGO_HOME=/opt/rust/cargo (the rustup
+  install lives there), so the Cargo registry cache lands under that path, not
+  ~/.cargo. Pass cargo-home accordingly when consuming on rl8.
+
+  The cache key scheme is identical to rust/cache.
+
+inputs:
+  cache-version:
+    description: "Change this value to 'reset' the cache for a job."
+    required: false
+    default: 'v1'
+  cache-hashfiles-search-path:
+    description: "hashFiles() pattern for Cargo.lock."
+    required: false
+    default: '**/Cargo.lock'
+  cargo-home:
+    description: "CARGO_HOME path (hz-rl8 image bakes /opt/rust/cargo; default assumes ~/.cargo)."
+    required: false
+    default: '~/.cargo'
+
+  # --- S3 / RadosGW ---
+  endpoint:
+    description: "S3 endpoint host, no scheme."
+    required: false
+    default: 's3.hz.platforma.bio'
+  bucket:
+    description: "S3 bucket."
+    required: false
+    default: 'ci-actions-cache'
+  region:
+    description: "S3 region."
+    required: false
+    default: 'us-east-1'
+  insecure:
+    description: "Use plain HTTP instead of TLS to the endpoint."
+    required: false
+    default: 'false'
+  access-key:
+    description: "S3 access key (pass from the org secret HZ_CI_CACHE_S3_ACCESS_KEY)."
+    required: true
+  secret-key:
+    description: "S3 secret key (pass from the org secret HZ_CI_CACHE_S3_SECRET_KEY)."
+    required: true
+  use-fallback:
+    description: "Fall back to the GitHub-hosted cache if the S3 endpoint is unreachable."
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Rust Cargo modules in S3 (RGW)
+      uses: tespkg/actions-cache@e07e2d4953dc8c020d447363e5064e36d04f3cf9 # v1.10.2
+      with:
+        endpoint: ${{ inputs.endpoint }}
+        region: ${{ inputs.region }}
+        bucket: ${{ inputs.bucket }}
+        insecure: ${{ inputs.insecure }}
+        accessKey: ${{ inputs.access-key }}
+        secretKey: ${{ inputs.secret-key }}
+        use-fallback: ${{ inputs.use-fallback }}
+        retry: 'true'
+        retry-count: '3'
+        path: |
+          ${{ inputs.cargo-home }}/bin/
+          ${{ inputs.cargo-home }}/registry/index/
+          ${{ inputs.cargo-home }}/registry/cache/
+          ${{ inputs.cargo-home }}/git/db/
+          target/
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-hashfiles-search-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-rust-${{ inputs.cache-version }}-
