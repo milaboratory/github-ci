@@ -1,0 +1,81 @@
+name: Setup S3-backed cache for a Golang application (Hetzner RGW)
+author: 'MiLaboratories'
+description: |
+  S3-backed sibling of golang/cache. Restores/saves the Go module + build
+  caches to an S3 endpoint (the Hetzner RadosGW at s3.hz.platforma.bio) via
+  tespkg/actions-cache, instead of the GitHub-hosted cache.
+
+  Use on the hz self-hosted runners (hz-rl8-*, hz-ubuntu-dind): the cache is
+  restored per-job and saved on success, so there is no shared-hostPath cache
+  on the node and therefore no cross-job contamination. Linux only (the hz
+  fleet is Linux/x86); macOS/Windows jobs keep using golang/cache.
+
+  The cache key scheme is identical to golang/cache, so switching backends
+  does not change keys.
+
+inputs:
+  cache-version:
+    description: |
+      Change this value to 'reset' the cache for a job (forces a cold build).
+    required: false
+    default: 'v1'
+  cache-dependency-hashfiles-path:
+    description: |
+      hashFiles() pattern that produces the cache key suffix.
+    required: false
+    default: '**/go.work.sum'
+
+  # --- S3 / RadosGW ---
+  endpoint:
+    description: "S3 endpoint host, no scheme (split-DNS: resolves to the in-cluster RGW on hz, public elsewhere)."
+    required: false
+    default: 's3.hz.platforma.bio'
+  bucket:
+    description: "S3 bucket."
+    required: false
+    default: 'ci-actions-cache'
+  region:
+    description: "S3 region."
+    required: false
+    default: 'us-east-1'
+  insecure:
+    description: "Use plain HTTP instead of TLS to the endpoint."
+    required: false
+    default: 'false'
+  access-key:
+    description: "S3 access key (pass from the org secret HZ_CI_CACHE_S3_ACCESS_KEY)."
+    required: true
+  secret-key:
+    description: "S3 secret key (pass from the org secret HZ_CI_CACHE_S3_SECRET_KEY)."
+    required: true
+  use-fallback:
+    description: "Fall back to the GitHub-hosted cache if the S3 endpoint is unreachable."
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Golang modules in S3 (RGW)
+      uses: tespkg/actions-cache@e07e2d4953dc8c020d447363e5064e36d04f3cf9 # v1.10.2
+      with:
+        endpoint: ${{ inputs.endpoint }}
+        region: ${{ inputs.region }}
+        bucket: ${{ inputs.bucket }}
+        insecure: ${{ inputs.insecure }}
+        accessKey: ${{ inputs.access-key }}
+        secretKey: ${{ inputs.secret-key }}
+        use-fallback: ${{ inputs.use-fallback }}
+        retry: 'true'
+        retry-count: '3'
+        # Only the build cache — NOT ~/go/pkg/mod. The module cache is read-only
+        # (0444) and tespkg/actions-cache extracts with `tar --keep-old-files`,
+        # which fails ("Cannot open: File exists") on the module cache; the build
+        # cache is the real compile-time win, and modules repopulate from
+        # GOPROXY (use a cached-only proxy). (Stock actions/cache overwrote, so
+        # this only bites the S3-backed action.)
+        path: |
+          ~/.cache/go-build
+        key: ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-${{ hashFiles(inputs.cache-dependency-hashfiles-path) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-cache-go-${{ inputs.cache-version }}-
