@@ -38,6 +38,22 @@ inputs:
       Generates a .npmrc file based on provided configuration.
     required: false
 
+  # --- Opt-in RGW/S3 pnpm store cache (self-hosted hz runners). When these keys are
+  #     set, the pnpm store is cached in RGW (node/cache-pnpm-s3, GitHub-cache fallback);
+  #     otherwise the GitHub-hosted cache is used unchanged. Bucket/endpoint/region
+  #     default inside cache-pnpm-s3 (ci-actions-cache / s3.hz.platforma.bio / us-east-1).
+  cache-s3-access-key:
+    description: |
+      S3/RGW access key for the pnpm store cache (e.g. org secret HZ_CI_CACHE_S3_ACCESS_KEY).
+      Empty = use the GitHub-hosted cache.
+    required: false
+    default: ''
+  cache-s3-secret-key:
+    description: |
+      S3/RGW secret key for the pnpm store cache (e.g. org secret HZ_CI_CACHE_S3_SECRET_KEY).
+    required: false
+    default: ''
+
 runs:
   using: "composite"
 
@@ -64,8 +80,18 @@ runs:
       shell: bash
       run: corepack enable pnpm
 
-    - name:  Set up cache for a NodeJS PNPM application
+    - name: Set up pnpm store cache (GitHub)
+      if: inputs.cache-s3-access-key == ''
       uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       with:
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - name: Set up pnpm store cache (RGW / S3)
+      if: inputs.cache-s3-access-key != ''
+      uses: milaboratory/github-ci/actions/node/cache-pnpm-s3@v4
+      with:
+        access-key: ${{ inputs.cache-s3-access-key }}
+        secret-key: ${{ inputs.cache-s3-secret-key }}
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
