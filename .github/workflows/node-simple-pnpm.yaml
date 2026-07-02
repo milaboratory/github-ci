@@ -567,6 +567,8 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
+          cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
       - name: Install NodeJS packages with pnpm
         uses: milaboratory/github-ci/actions/shell@v4
@@ -619,6 +621,8 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
+          cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
       - name: Install NodeJS packages with pnpm
         uses: milaboratory/github-ci/actions/shell@v4
@@ -710,7 +714,28 @@ jobs:
           password: ${{ env.QUAY_ROBOT_TOKEN }}
           ecr: false
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+      # Turbo remote cache. Opt-in: when HZ_CI_TURBO_S3_BUCKET is provided (self-hosted
+      # hz runners) cache to RGW; otherwise the existing AWS S3 bucket is used unchanged
+      # (backward-compatible — blocks migrate one at a time). The S3_* env is scoped to
+      # THIS step only: NEVER set it globally, or it redirects aws-cli/ECR to RGW and
+      # breaks image pulls/pushes.
+      - name: Turbo remote cache (RGW)
+        if: env.HZ_CI_TURBO_S3_BUCKET != ''
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+        env:
+          S3_ACCESS_KEY: ${{ env.HZ_CI_TURBO_S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ env.HZ_CI_TURBO_S3_SECRET_KEY }}
+          S3_REGION: ${{ env.HZ_CI_TURBO_S3_REGION }}
+          S3_ENDPOINT: https://${{ env.HZ_CI_TURBO_S3_ENDPOINT }}
+          S3_USE_PATH_STYLE: 'true'
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ env.HZ_CI_TURBO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
+
+      - name: Turbo remote cache (AWS)
+        if: env.HZ_CI_TURBO_S3_BUCKET == ''
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
@@ -726,6 +751,8 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
+          cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
       - name: Install NodeJS packages with pnpm
         shell: bash
@@ -856,8 +883,31 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
+          cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+      # Turbo remote cache. Opt-in: when HZ_CI_TURBO_S3_BUCKET is provided (self-hosted
+      # hz runners) cache to RGW; otherwise the existing AWS S3 bucket is used unchanged
+      # (backward-compatible — blocks migrate one at a time). The S3_* env is scoped to
+      # THIS step only: NEVER set it globally, or it redirects aws-cli/ECR to RGW and
+      # breaks image pulls/pushes.
+      - name: Turbo remote cache (RGW)
+        if: env.HZ_CI_TURBO_S3_BUCKET != ''
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
+        env:
+          S3_ACCESS_KEY: ${{ env.HZ_CI_TURBO_S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ env.HZ_CI_TURBO_S3_SECRET_KEY }}
+          S3_REGION: ${{ env.HZ_CI_TURBO_S3_REGION }}
+          S3_ENDPOINT: https://${{ env.HZ_CI_TURBO_S3_ENDPOINT }}
+          S3_USE_PATH_STYLE: 'true'
+        with:
+          storage-provider: 's3'
+          storage-path: ${{ env.HZ_CI_TURBO_S3_BUCKET }}
+          team-id: ${{ inputs.team-id }}
+
+      - name: Turbo remote cache (AWS)
+        if: env.HZ_CI_TURBO_S3_BUCKET == ''
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
