@@ -36,7 +36,7 @@ runs:
         fetch-tags: true
 
     - id: versions
-      uses: milaboratory/github-ci/actions/detect-version@v4-beta
+      uses: milaboratory/github-ci/actions/detect-version@v4
       with:
         canonize: ${{ inputs.version-canonize }}
         fetch-depth: ${{ inputs.version-fetch-depth }}

@@ -30,7 +30,7 @@ runs:
 
   steps:
     - id: needs_update
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         CTX_PATH: ${{ github.action_path }}/../ctx
 

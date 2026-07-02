@@ -64,7 +64,7 @@ runs:
     # configure-aws-credentials) can't leak into RGW signing. OpenDAL's S3 service defaults
     # to path-style addressing, which is what RadosGW needs (virtual-host is opt-in).
     - name: Cache pnpm store in S3 (RGW)
-      uses: everpcpc/actions-cache@v3
+      uses: everpcpc/actions-cache@69d6879ce3813758a5074ed4856c2100e5cb009f # v3
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.access-key }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.secret-key }}
