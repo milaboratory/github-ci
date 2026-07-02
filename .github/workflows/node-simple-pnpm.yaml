@@ -437,7 +437,7 @@ on:
 jobs:
   init:
     name: Init
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     steps:
       - id: context
         uses: milaboratory/github-ci/actions/context@v4-beta
@@ -447,7 +447,7 @@ jobs:
 
   metadata:
     name: get run metadata
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     needs:
       - init
     steps:
@@ -473,7 +473,7 @@ jobs:
 
   preflight-require-latest:
     name: preflight (require-latest)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     # Surface SDK-version drift on PRs as a non-blocking check, but enforce it
     # on the default branch and in the merge queue so publish cannot proceed
     # with a stale @platforma-sdk dependency.
@@ -503,7 +503,7 @@ jobs:
 
   preflight-pnpm-lock-sync:
     name: preflight (pnpm-lock-sync)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     # Surface pnpm-workspace.yaml / pnpm-lock.yaml drift on PRs as a
     # non-blocking check, but enforce it on the default branch and in the
     # merge queue so publish cannot proceed with a stale lockfile.
@@ -538,7 +538,7 @@ jobs:
 
   check-changesets:
     name: check for changesets
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     continue-on-error: ${{ github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group' }}
     needs:
       - metadata
@@ -586,7 +586,7 @@ jobs:
 
   changeset-coverage:
     name: changeset coverage (diagnostic)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     # Diagnostic only: surface per-package changeset gaps as a red check, never block.
     # The check-coverage step omits continue-on-error, so a gap (exit 1) fails this
     # job and its check turns red. Job-level continue-on-error keeps the run green and
@@ -1097,7 +1097,7 @@ jobs:
 
   notify-slack-release:
     name: notify slack release
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     if: always() && inputs.notify-slack
     needs:
       - init
@@ -1134,7 +1134,7 @@ jobs:
 
   monitor-merge-queue-duration:
     name: monitor merge queue duration
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.gha-runner-label }}
     if: always() && inputs.cache-monitoring && github.event_name == 'merge_group'
     needs:
       - build-test-publish
