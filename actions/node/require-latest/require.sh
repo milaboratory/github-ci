@@ -16,11 +16,15 @@ log() {
 
 latest_version() {
   local _package="${1}"
-  # Query the public npm registry from a scratch dir. A repo/runner .npmrc with an
-  # unexpanded ${NPMJS_TOKEN} makes npm send a broken auth header that 401s even a
-  # public scoped read -> empty result -> false "outdated". Running from an empty dir
-  # with an explicit public registry avoids that (public @platforma-sdk/* need no auth).
-  ( cd "$(mktemp -d)" && npm view "${_package}" version --registry="https://registry.npmjs.org/" ) 2>/dev/null
+  # Query the public npm registry's HTTP API directly, bypassing npm entirely. `npm view`
+  # honours the runner's global/user .npmrc, which maps the @platforma-sdk scope to an
+  # auth-requiring registry -> a broken/absent token 401s even public scoped reads ->
+  # empty result. curl to the public registry has no such config and needs no auth for
+  # public packages. Slash in the scoped name must be %2F-encoded.
+  local _enc
+  _enc=$(printf '%s' "${_package}" | sed 's,/,%2F,g')
+  curl -fsSL "https://registry.npmjs.org/${_enc}" 2>/dev/null |
+    node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{process.stdout.write(String(JSON.parse(d)["dist-tags"].latest||""))}catch(e){}})' 2>/dev/null
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
