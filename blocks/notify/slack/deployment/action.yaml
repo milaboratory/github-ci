@@ -34,16 +34,16 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4
+      uses: milaboratory/github-ci/actions/context@v4-beta
 
     - id: job-status
       name: Merge job statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
       with:
         statuses: ${{ inputs.job-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         DOCKER_IMAGES: ${{ inputs.docker-images }}
         SEARCH_TAGS: ${{ inputs.search-tags }}
@@ -55,7 +55,7 @@ runs:
 
     - name: Notify on deployment success
       if: steps.job-status.outputs.status == 'success'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-success@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-success@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -68,7 +68,7 @@ runs:
 
     - name: Notify on deployment failure
       if: steps.job-status.outputs.status == 'failure'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-failed@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-failed@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
@@ -81,7 +81,7 @@ runs:
 
     - name: Notify on deployment cancellation
       if: steps.job-status.outputs.status == 'cancelled'
-      uses: milaboratory/github-ci/actions/notify/slack/deployment-cancelled@v4
+      uses: milaboratory/github-ci/actions/notify/slack/deployment-cancelled@v4-beta
       with:
         slack-bot-token: ${{ inputs.slack-bot-token }}
         slack-channel: ${{ inputs.slack-channel }}
