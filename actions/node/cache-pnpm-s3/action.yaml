@@ -56,18 +56,26 @@ runs:
       shell: bash
       run: echo "dir=$(pnpm store path)" >> ${GITHUB_OUTPUT}
 
-    - name: Cache Node modules in S3 (RGW)
-      uses: tespkg/actions-cache@e07e2d4953dc8c020d447363e5064e36d04f3cf9 # v1.10.2
+    # everpcpc/actions-cache@v3 (OpenDAL) instead of tespkg/actions-cache: tespkg passed
+    # S3 creds via `with:` (INPUT_*), which GitHub only sets on the MAIN step — so its
+    # POST save saw no creds and every fPutObject failed (silent GitHub fallback). OpenDAL
+    # reads creds from AWS_* env, which persists into the post/save step. We set the RGW
+    # creds here and CLEAR AWS_SESSION_TOKEN so the ambient ECR-role token (from an earlier
+    # configure-aws-credentials) can't leak into RGW signing. OpenDAL's S3 service defaults
+    # to path-style addressing, which is what RadosGW needs (virtual-host is opt-in).
+    - name: Cache pnpm store in S3 (RGW)
+      uses: everpcpc/actions-cache@v3
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.access-key }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secret-key }}
+        AWS_SESSION_TOKEN: ''
+        AWS_REGION: ${{ inputs.region }}
+        AWS_DEFAULT_REGION: ${{ inputs.region }}
       with:
-        endpoint: ${{ inputs.endpoint }}
-        region: ${{ inputs.region }}
+        provider: s3
+        endpoint: ${{ inputs.insecure == 'true' && 'http://' || 'https://' }}${{ inputs.endpoint }}
         bucket: ${{ inputs.bucket }}
-        insecure: ${{ inputs.insecure }}
-        accessKey: ${{ inputs.access-key }}
-        secretKey: ${{ inputs.secret-key }}
         use-fallback: ${{ inputs.use-fallback }}
-        retry: 'true'
-        retry-count: '3'
         path: |
           ${{ steps.pnpm-store-dir.outputs.dir }}
           ~/.pnpm-store
