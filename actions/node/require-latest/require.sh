@@ -16,11 +16,20 @@ log() {
 
 latest_version() {
   local _package="${1}"
-  # Query the public npm registry from a scratch dir. A repo/runner .npmrc with an
-  # unexpanded ${NPMJS_TOKEN} makes npm send a broken auth header that 401s even a
-  # public scoped read -> empty result -> false "outdated". Running from an empty dir
-  # with an explicit public registry avoids that (public @platforma-sdk/* need no auth).
-  ( cd "$(mktemp -d)" && npm view "${_package}" version --registry="https://registry.npmjs.org/" ) 2>/dev/null
+  # Query the npm registry HTTP API directly with curl + jq, bypassing npm/pnpm. Both
+  # `npm view` and `pnpm view` honour the runner's global/user .npmrc, which maps the
+  # @platforma-sdk scope to an auth-requiring registry -> a broken/absent token 401s even
+  # public scoped reads -> empty result. curl has no such config. We send NPMJS_TOKEN as a
+  # bearer when present so this also works for private scoped packages (ignored/valid for
+  # public ones). node is NOT on PATH in the runner image, so jq (which is) does the parse.
+  # The slash in a scoped name must be %2F-encoded.
+  local _enc _auth=()
+  _enc=$(printf '%s' "${_package}" | sed 's,/,%2F,g')
+  if [ -n "${NPMJS_TOKEN:-}" ]; then
+    _auth=(-H "Authorization: Bearer ${NPMJS_TOKEN}")
+  fi
+  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null |
+    jq -r '."dist-tags".latest // empty' 2>/dev/null
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
