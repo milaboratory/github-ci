@@ -16,15 +16,20 @@ log() {
 
 latest_version() {
   local _package="${1}"
-  # Query the public npm registry's HTTP API directly, bypassing npm entirely. `npm view`
-  # honours the runner's global/user .npmrc, which maps the @platforma-sdk scope to an
-  # auth-requiring registry -> a broken/absent token 401s even public scoped reads ->
-  # empty result. curl to the public registry has no such config and needs no auth for
-  # public packages. Slash in the scoped name must be %2F-encoded.
-  local _enc
+  # Query the npm registry HTTP API directly with curl + jq, bypassing npm/pnpm. Both
+  # `npm view` and `pnpm view` honour the runner's global/user .npmrc, which maps the
+  # @platforma-sdk scope to an auth-requiring registry -> a broken/absent token 401s even
+  # public scoped reads -> empty result. curl has no such config. We send NPMJS_TOKEN as a
+  # bearer when present so this also works for private scoped packages (ignored/valid for
+  # public ones). node is NOT on PATH in the runner image, so jq (which is) does the parse.
+  # The slash in a scoped name must be %2F-encoded.
+  local _enc _auth=()
   _enc=$(printf '%s' "${_package}" | sed 's,/,%2F,g')
-  curl -fsSL "https://registry.npmjs.org/${_enc}" 2>/dev/null |
-    node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{process.stdout.write(String(JSON.parse(d)["dist-tags"].latest||""))}catch(e){}})' 2>/dev/null
+  if [ -n "${NPMJS_TOKEN:-}" ]; then
+    _auth=(-H "Authorization: Bearer ${NPMJS_TOKEN}")
+  fi
+  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null |
+    jq -r '."dist-tags".latest // empty' 2>/dev/null
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
