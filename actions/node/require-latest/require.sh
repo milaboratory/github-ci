@@ -16,7 +16,11 @@ log() {
 
 latest_version() {
   local _package="${1}"
-  npm view "${1}" version 2>/dev/null
+  # Query the public npm registry from a scratch dir. A repo/runner .npmrc with an
+  # unexpanded ${NPMJS_TOKEN} makes npm send a broken auth header that 401s even a
+  # public scoped read -> empty result -> false "outdated". Running from an empty dir
+  # with an explicit public registry avoids that (public @platforma-sdk/* need no auth).
+  ( cd "$(mktemp -d)" && npm view "${_package}" version --registry="https://registry.npmjs.org/" ) 2>/dev/null
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
@@ -42,6 +46,13 @@ check_package() {
 
   local _latest_version
   _latest_version=$(latest_version "${_package}")
+
+  # Don't fail closed on a fetch error: an empty latest means the registry lookup
+  # failed (network/auth), not that the used version is outdated. Warn and skip.
+  if [ -z "${_latest_version}" ]; then
+    log "  WARNING: could not determine latest version of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
+    return 0
+  fi
 
   local _versions
   if [ "${_recursive}" == "true" ]; then
