@@ -865,10 +865,10 @@ on:
       node-version:
         description: |
           Node version to use.
-          Examples: '20.x', '18.x'.
+          Examples: '22.x', '24.x'.
         type: string
         required: false
-        default: '20.x'
+        default: '22.x'
 
       node-cache-version:
         description: |
