@@ -22,18 +22,19 @@ inputs:
 
   github-token:
     description: |
-      Token used to look up the context artifact through the GitHub API.
+      Optional token enabling cross-attempt artifact lookup.
 
-      Passing a token switches 'download-artifact' to its API code path,
-      which resolves artifacts at the workflow-run level (across all run
-      attempts) instead of the attempt-scoped runtime service. This is what
-      lets a job read a 'context' uploaded in an earlier attempt of the same
-      run (e.g. after a manual gate + re-run of failed jobs).
+      Leave empty (default) to read the context uploaded in the CURRENT run
+      attempt via the runtime service — no extra permission needed.
 
-      The calling job must grant 'actions: read' permission for this to work.
+      Set it (e.g. to ${{ github.token }}) to switch 'download-artifact' to its
+      GitHub API code path, which resolves artifacts at the workflow-run level
+      (across ALL run attempts). This lets a job read a 'context' uploaded in an
+      earlier attempt of the same run — e.g. after a manual gate + re-run of
+      failed jobs. When set, the calling job must also grant 'actions: read'.
 
     required: false
-    default: ${{ github.token }}
+    default: ''
 
 outputs:
   value:
@@ -60,10 +61,11 @@ runs:
           echo 'false'
 
     - uses: actions/download-artifact@v6
-      # 'run-id' + 'github-token' force the API lookup path, which finds the
-      # 'context' artifact at the run level regardless of which run attempt
-      # uploaded it. Without them, only the current attempt is searched and a
-      # re-run after a manual gate fails to find the context.
+      # When 'github-token' is set, the action uses its API lookup path, which
+      # finds the 'context' artifact at the run level regardless of which run
+      # attempt uploaded it (needed for reads after a manual gate + re-run).
+      # When empty, it searches only the current attempt (default behaviour,
+      # no 'actions: read' permission required).
       #
       # If the artifact is genuinely absent this step fails; the 'value' step
       # below (if: always()) then turns that into a clear error or the default.

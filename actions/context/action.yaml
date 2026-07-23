@@ -10,10 +10,12 @@ description: |
 inputs:
   github-token:
     description: |
-      Token forwarded to 'context/get' so the context artifact can be resolved
-      across run attempts (see that action). Requires 'actions: read' on the job.
+      Optional token forwarded to 'context/get'. Leave empty (default) to read
+      the current run attempt. Set it (e.g. ${{ github.token }}) to resolve the
+      context across run attempts — required when reading after a re-run; the
+      job must then also grant 'actions: read'. See 'context/get' for details.
     required: false
-    default: ${{ github.token }}
+    default: ''
 
 outputs:
   current-version:
