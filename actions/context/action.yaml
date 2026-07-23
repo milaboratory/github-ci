@@ -7,6 +7,14 @@ description: |
   our common context's content and its structure.
   It provides a bit more convenient way to read context.
 
+inputs:
+  github-token:
+    description: |
+      Token forwarded to 'context/get' so the context artifact can be resolved
+      across run attempts (see that action). Requires 'actions: read' on the job.
+    required: false
+    default: ${{ github.token }}
+
 outputs:
   current-version:
     description: Current version number
@@ -57,3 +65,24 @@ runs:
   steps:
     - id: versions
       uses: milaboratory/github-ci/actions/context/get@v4-beta
+      with:
+        github-token: ${{ inputs.github-token }}
+
+    # (2) Guard the parsed outputs. 'context/get' guarantees a valid-JSON value
+    # ('{}' sentinel on failure), so the fromJSON() expressions below can never
+    # raise the cryptic "Error reading JToken ... template is not valid". This
+    # step turns a missing/empty context into a single clear error instead.
+    # Uses bash only (no jq); bash is already required by 'context/get' on every
+    # platform this wrapper runs on.
+    - id: check
+      if: always()
+      shell: bash
+      env:
+        CTX_VALUE: ${{ steps.versions.outputs.value }}
+      run: |
+        case "${CTX_VALUE}" in
+          ""|"{}")
+            echo "::error title=context unavailable::Could not read the 'context' artifact, so no version data is available. It is produced by 'actions/context/init' — ensure it runs earlier in this workflow run. When reading after a re-run, the job must grant 'actions: read' permission."
+            exit 1
+            ;;
+        esac

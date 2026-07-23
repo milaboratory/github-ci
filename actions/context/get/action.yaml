@@ -11,13 +11,29 @@ description: |
 inputs:
   default-value:
     description: |
-      Default value to return when no key found in context or race detected.
-      This does not affect action status for missing keys.
+      Default value to return when the context artifact is missing.
 
-      Use 'ignore-missing' input to control action's status.
+      When set (non-empty), the action returns this value and succeeds.
+      When left empty, a missing context is treated as an error: the action
+      fails with a clear message instead of returning an empty value.
 
     required: false
     default: ''
+
+  github-token:
+    description: |
+      Token used to look up the context artifact through the GitHub API.
+
+      Passing a token switches 'download-artifact' to its API code path,
+      which resolves artifacts at the workflow-run level (across all run
+      attempts) instead of the attempt-scoped runtime service. This is what
+      lets a job read a 'context' uploaded in an earlier attempt of the same
+      run (e.g. after a manual gate + re-run of failed jobs).
+
+      The calling job must grant 'actions: read' permission for this to work.
+
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   value:
@@ -44,12 +60,19 @@ runs:
           echo 'false'
 
     - uses: actions/download-artifact@v6
-      # There is no 'continue-on-error' in composite actions,
-      # that is why we can't make action be 'ok' for absent artifact.
+      # 'run-id' + 'github-token' force the API lookup path, which finds the
+      # 'context' artifact at the run level regardless of which run attempt
+      # uploaded it. Without them, only the current attempt is searched and a
+      # re-run after a manual gate fails to find the context.
+      #
+      # If the artifact is genuinely absent this step fails; the 'value' step
+      # below (if: always()) then turns that into a clear error or the default.
       if: steps.needs_update.outputs.stdout == 'true'
       with:
         name: context
         path: ${{ github.action_path }}/../ctx
+        run-id: ${{ github.run_id }}
+        github-token: ${{ inputs.github-token }}
 
     - id: value
       if: always()
@@ -65,17 +88,28 @@ runs:
 
         delimiter="CTXEOF_aim3ohghohh2ohkahfaeq" # unique-enough to never intersect with data
 
+        emit_data() {
+          {
+            echo "data<<${delimiter}"
+            printf '%s\n' "$1"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+        }
+
         if [ -r "${ctx_file}" ]; then
-          {
-            echo "data<<${delimiter}"
-            cat "${ctx_file}"
-            echo ""
-            echo "${delimiter}"
-          } >> $GITHUB_OUTPUT
-        else
-          {
-            echo "data<<${delimiter}"
-            echo "${DEFAULT_VALUE}"
-            echo "${delimiter}"
-          } >> $GITHUB_OUTPUT
+          emit_data "$(cat "${ctx_file}")"
+          exit 0
         fi
+
+        if [ -n "${DEFAULT_VALUE}" ]; then
+          emit_data "${DEFAULT_VALUE}"
+          exit 0
+        fi
+
+        # (1) Context artifact missing and no default-value provided: fail loudly
+        # with a clear message. Still emit a valid-JSON sentinel ('{}') so that a
+        # downstream fromJSON() reading this output degrades to empty fields
+        # instead of the cryptic "Error reading JToken ... template is not valid".
+        emit_data "{}"
+        echo "::error title=context artifact not found::The 'context' artifact was not found and no default-value was provided. It is created by 'actions/context/init' — make sure it runs earlier in this workflow run. When reading after a re-run, the calling job must grant 'actions: read' permission so the artifact can be fetched across run attempts."
+        exit 1
