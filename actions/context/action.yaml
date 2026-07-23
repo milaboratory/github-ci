@@ -11,8 +11,8 @@ inputs:
   github-token:
     description: |
       Optional token forwarded to 'context/get'. Leave empty (default) to read
-      the current run attempt. Set it (e.g. ${{ github.token }}) to resolve the
-      context across run attempts — required when reading after a re-run; the
+      the current run attempt. Set it (e.g. to the job's github.token) to resolve
+      the context across run attempts — required when reading after a re-run; the
       job must then also grant 'actions: read'. See 'context/get' for details.
     required: false
     default: ''

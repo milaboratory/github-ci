@@ -27,7 +27,7 @@ inputs:
       Leave empty (default) to read the context uploaded in the CURRENT run
       attempt via the runtime service — no extra permission needed.
 
-      Set it (e.g. to ${{ github.token }}) to switch 'download-artifact' to its
+      Set it (e.g. to the job's github.token) to switch 'download-artifact' to its
       GitHub API code path, which resolves artifacts at the workflow-run level
       (across ALL run attempts). This lets a job read a 'context' uploaded in an
       earlier attempt of the same run — e.g. after a manual gate + re-run of
