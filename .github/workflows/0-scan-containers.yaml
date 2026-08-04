@@ -12,25 +12,59 @@ on:
 
   workflow_dispatch:
     inputs:
+      image:
+        description: |
+          Scan a single image instead of the whole registry.
+          Provide a full image reference, i.e.
+          'containers.pl-open.science/milaboratories/pl-containers:sometag'.
+          When set, 'registry'/'repository'/'concurrency' are ignored.
+        type: string
+        default: ''
       registry:
         description: |
-          Docker registry to scan.
+          Docker registry to scan (full-registry mode only).
         type: string
         default: 'containers.pl-open.science'
       repository:
         description: |
-          Repository to scan.
+          Repository to scan (full-registry mode only).
         type: string
         default: 'milaboratories/pl-containers'
       concurrency:
         description: |
-          Number of concurrent jobs to plan.
+          Number of concurrent jobs to plan (full-registry mode only).
         type: number
         default: 50
 
 jobs:
+  # Single-image mode: scan just the image given in the 'image' input.
+  scan-single:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.image != ''
+
+    steps:
+      - name: Prepare tag file
+        shell: bash
+        env:
+          IMAGE: ${{ github.event.inputs.image }}
+        run: |
+          mkdir -p scan-chunks
+          printf '%s\n' "${IMAGE}" > scan-chunks/single-image
+
+      - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
+        with:
+          mode: scan
+          report-name: "report-single-image"
+          tag-file: scan-chunks/single-image
+
+          # Not used in scan mode, but declared as required by the action.
+          registry: ${{ github.event.inputs.registry || 'containers.pl-open.science' }}
+          repository: ${{ github.event.inputs.repository || 'milaboratories/pl-containers' }}
+
   plan:
     runs-on: ubuntu-latest
+    # Full-registry mode: skipped when a single image is requested.
+    if: github.event.inputs.image == ''
 
     steps:
       - uses: milaboratory/github-ci/actions/docker/scan-docker-repo@v4
@@ -83,11 +117,13 @@ jobs:
 
   collect:
     runs-on: ubuntu-latest
-    needs: scan
+    needs: [scan, scan-single]
     if: always()
     steps:
       - name: Download skipped list
+        # Only produced by the full-registry 'plan' job.
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: skipped-images
           path: ./consolidated

@@ -1,0 +1,8 @@
+packages:
+  - block
+  - model
+  - ui
+  - workflow
+
+catalog:
+  is-number: ^7.0.0

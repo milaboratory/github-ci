@@ -1,0 +1,46 @@
+name: Require package bump by changeset
+author: 'MiLaboratories'
+description: |
+  Fail (exit 1) unless the package at `package-path` is DIRECTLY bumped by a
+  changeset added in the current branch, or the branch adds an empty changeset.
+
+  Intended for block repos, where the only publishable package is `./block`
+  and its private `ui`/`model`/`workflow`/`test` siblings are reached only via
+  `workspace:` devDependencies. `pnpm changeset` never cascades a devDependency
+  edge, and the block has no workspace packages in `dependencies`, so a
+  `changeset status` release for the block package is equivalent to a changeset
+  that names it directly — exactly the "did you bump ./block?" gate we want.
+
+  A sibling-only changeset does NOT satisfy this check. An empty changeset
+  (`pnpm changeset --empty`) added in the branch is a deliberate, in-repo
+  "no release needed" opt-out and passes.
+
+  This action is label-agnostic; the `skip-changelog` bypass is handled by the
+  caller workflow's job-level `if` (PR labels are only available on
+  `pull_request` events).
+
+  Runs from the repo root after `pnpm install`. Requires `jq`, `git` and the
+  changeset binary (`./node_modules/.bin/changeset`) — the last provided by the
+  preceding `pnpm install`. `git` needs full history (`fetch-depth: 0`).
+
+inputs:
+  package-path:
+    description: |
+      Path (relative to the repo root) to the directory holding the
+      package.json of the package that must be bumped (e.g. `block`).
+    required: true
+  base-branch:
+    description: Base branch to diff against (e.g. main).
+    required: true
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Require package bump by changeset
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        PACKAGE_PATH: ${{ inputs.package-path }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+      run: '${ACTION_PATH}/require-package-bump.sh'
