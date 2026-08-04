@@ -356,6 +356,20 @@ on:
         required: false
         default: 'main'
 
+      require-package-path-bump:
+        description: |
+          Opt-in gate (block repos): require the package at `package-path` to
+          be DIRECTLY bumped by a changeset on `pull_request` events. When true
+          and the package is not bumped — no empty changeset present and no
+          `skip-changelog` label on the PR — the `check for changesets` check
+          goes RED and blocks merge via branch protection. Sibling/devDependency
+          cascade bumps do NOT satisfy it. Not enforced in the merge queue; the
+          build/test jobs keep running regardless so CI stays usable while
+          iterating.
+        type: boolean
+        required: false
+        default: false
+
       require-review:
         description: |
           Whether or not to require a review for the PR.
@@ -539,7 +553,20 @@ jobs:
   check-changesets:
     name: check for changesets
     runs-on: ${{ inputs.gha-runner-label }}
-    continue-on-error: ${{ github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group' }}
+    # Block mode (`require-package-path-bump`): skip the whole job — so the
+    # required check reports `skipped` (== passing) — when the PR carries the
+    # `skip-changelog` label (a single global name, not per-repo configurable).
+    # Labels are only in the `pull_request` context. Guarded by the toggle so
+    # non-block runs are unaffected (the job always runs).
+    if: >
+      !( inputs.require-package-path-bump &&
+         github.event_name == 'pull_request' &&
+         contains(github.event.pull_request.labels.*.name, 'skip-changelog') )
+    # Off (default): unchanged — non-blocking on PRs, blocking on merge_group /
+    # push-to-default. On (block mode): red-capable ONLY on pull_request (a
+    # missing bump blocks merge); non-enforcing everywhere else so the merge
+    # queue isn't re-gated.
+    continue-on-error: ${{ inputs.require-package-path-bump && github.event_name != 'pull_request' || (!inputs.require-package-path-bump && (github.ref_name != inputs.changeset-default-branch && github.event_name != 'merge_group')) }}
     needs:
       - metadata
     steps:
@@ -576,13 +603,25 @@ jobs:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
 
+      # Default gate: some changeset must exist (any package).
       - name: Check for Changesets
+        if: ${{ !inputs.require-package-path-bump }}
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
           run: |
             pnpm changeset status --since="origin/${BRANCH_NAME}"
+
+      # Block mode: the `package-path` package must be bumped DIRECTLY (empty
+      # changeset waives; the bypass label is handled by the job `if` above).
+      # PR-only — merge_group / push need no enforcement here.
+      - name: Require package bump by changeset
+        if: ${{ inputs.require-package-path-bump && github.event_name == 'pull_request' }}
+        uses: milaboratory/github-ci/actions/changeset/require-package-bump@v4-beta
+        with:
+          package-path: ${{ inputs.package-path }}
+          base-branch: ${{ inputs.changeset-default-branch }}
 
   changeset-coverage:
     name: changeset coverage (diagnostic)
@@ -647,9 +686,16 @@ jobs:
       - preflight-pnpm-lock-sync
       - check-changesets
       - metadata
+    # In block mode (`require-package-path-bump`) `check-changesets` can go RED
+    # to block merge; the build must still run, so its `!failure()` +
+    # `check-changesets` guards are toggle-gated. Toggle off → identical to the
+    # original (`!failure()` + the check-changesets clause); the always-on
+    # metadata guard is redundant then (`!failure()` already covers it).
     if: >
       inputs.pre-calculated && inputs.pre-calculated-task-list != '[]' &&
-      !failure() && !cancelled() &&
+      !cancelled() &&
+      ( needs.metadata.result == 'success' || needs.metadata.result == 'skipped' ) &&
+      ( inputs.require-package-path-bump || !failure() ) &&
       (
         needs.preflight-require-latest.result == 'success' ||
         needs.preflight-require-latest.result == 'skipped'
@@ -659,6 +705,7 @@ jobs:
         needs.preflight-pnpm-lock-sync.result == 'skipped'
       ) &&
       (
+        inputs.require-package-path-bump ||
         needs.check-changesets.result == 'success' ||
         needs.check-changesets.result == 'skipped'
       )
@@ -787,8 +834,15 @@ jobs:
       - check-changesets
       - metadata
       - pre-calculated-build
+    # In block mode (`require-package-path-bump`) `check-changesets` can go RED
+    # to block merge; build/test must still run, so its `!failure()` +
+    # `check-changesets` guards are toggle-gated. Toggle off → identical to the
+    # original (`!failure()` + the check-changesets clause); the always-on
+    # metadata guard is redundant then (`!failure()` already covers it).
     if: >
-      !failure() && !cancelled() &&
+      !cancelled() &&
+      ( needs.metadata.result == 'success' || needs.metadata.result == 'skipped' ) &&
+      ( inputs.require-package-path-bump || !failure() ) &&
       (
         needs.preflight-require-latest.result == 'success' ||
         needs.preflight-require-latest.result == 'skipped'
@@ -802,6 +856,7 @@ jobs:
         needs.pre-calculated-build.result == 'skipped'
       ) &&
       (
+        inputs.require-package-path-bump ||
         needs.check-changesets.result == 'success' ||
         needs.check-changesets.result == 'skipped'
       )
