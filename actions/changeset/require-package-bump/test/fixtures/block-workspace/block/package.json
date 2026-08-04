@@ -1,0 +1,13 @@
+{
+  "name": "@block-bump-test/block",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "dependencies": {
+    "is-number": "catalog:"
+  },
+  "devDependencies": {
+    "@block-bump-test/model": "workspace:*",
+    "@block-bump-test/ui": "workspace:*",
+    "@block-bump-test/workflow": "workspace:*"
+  }
+}
