@@ -361,21 +361,14 @@ on:
           Opt-in gate (block repos): require the package at `package-path` to
           be DIRECTLY bumped by a changeset on `pull_request` events. When true
           and the package is not bumped — no empty changeset present and no
-          bypass label — the `check for changesets` check goes RED and blocks
-          merge via branch protection. Sibling/devDependency cascade bumps do
-          NOT satisfy it. Not enforced in the merge queue; the build/test jobs
-          keep running regardless so CI stays usable while iterating.
+          `skip-changelog` label on the PR — the `check for changesets` check
+          goes RED and blocks merge via branch protection. Sibling/devDependency
+          cascade bumps do NOT satisfy it. Not enforced in the merge queue; the
+          build/test jobs keep running regardless so CI stays usable while
+          iterating.
         type: boolean
         required: false
         default: false
-
-      changeset-skip-label:
-        description: |
-          PR label that bypasses the `require-package-path-bump` gate. Only
-          consulted on `pull_request` events.
-        type: string
-        required: false
-        default: 'skip-changelog'
 
       require-review:
         description: |
@@ -562,12 +555,13 @@ jobs:
     runs-on: ${{ inputs.gha-runner-label }}
     # Block mode (`require-package-path-bump`): skip the whole job — so the
     # required check reports `skipped` (== passing) — when the PR carries the
-    # bypass label. Labels are only in the `pull_request` context. Guarded by
-    # the toggle so non-block runs are unaffected (the job always runs).
+    # `skip-changelog` label (a single global name, not per-repo configurable).
+    # Labels are only in the `pull_request` context. Guarded by the toggle so
+    # non-block runs are unaffected (the job always runs).
     if: >
       !( inputs.require-package-path-bump &&
          github.event_name == 'pull_request' &&
-         contains(github.event.pull_request.labels.*.name, inputs.changeset-skip-label) )
+         contains(github.event.pull_request.labels.*.name, 'skip-changelog') )
     # Off (default): unchanged — non-blocking on PRs, blocking on merge_group /
     # push-to-default. On (block mode): red-capable ONLY on pull_request (a
     # missing bump blocks merge); non-enforcing everywhere else so the merge
