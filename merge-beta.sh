@@ -56,17 +56,26 @@ else
     git checkout -b "${MERGE_BRANCH}"
 fi
 
+# Keep two distinct values:
+#   SOURCE_BRANCH — the bare branch NAME (e.g. "v4-beta"), used verbatim in the
+#                   `@${SOURCE_BRANCH}` self-ref rewrite below. It must never be
+#                   prefixed with "origin/", or the sed searches for the
+#                   non-existent tag "@origin/v4-beta" and silently rewrites
+#                   nothing (leaving @v4-beta self-refs on the target branch).
+#   SOURCE_REF    — the REF to merge from. When no local branch exists we merge
+#                   the remote-tracking ref "origin/${SOURCE_BRANCH}".
 if git branch | grep -qE " ${SOURCE_BRANCH}( |$)"; then
     echo "Found source branch in local repository, syncing it with remote..."
     git fetch origin "${SOURCE_BRANCH}:${SOURCE_BRANCH}" || true
+    SOURCE_REF="${SOURCE_BRANCH}"
 else
     echo "No source branch found in local repository, using remote..."
-    SOURCE_BRANCH="origin/${SOURCE_BRANCH}"
+    SOURCE_REF="origin/${SOURCE_BRANCH}"
 fi
 
 git merge \
-    --message "Merge ${SOURCE_BRANCH} into ${TARGET_BRANCH}" \
-    "${SOURCE_BRANCH}" \
+    --message "Merge ${SOURCE_REF} into ${TARGET_BRANCH}" \
+    "${SOURCE_REF}" \
     --strategy-option theirs
 
 # Replace @v4-beta -> @v4 in milaboratory/github-ci self-refs only.
