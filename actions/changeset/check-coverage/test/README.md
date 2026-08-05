@@ -39,7 +39,8 @@ and a couple of git ops.
   the tar copy), commits, and synthesizes an `origin/main` ref.
 - Each test (`setup`) tars the base into `$BATS_TEST_TMPDIR/ws`, switches
   to a `feature` branch, applies mutations via the helpers
-  (`touch_file`, `add_changeset`, `bump_catalog`), and runs the script
+  (`touch_file`, `add_changeset`, `add_empty_changeset`, `bump_catalog`),
+  and runs the script
   with `BASE_BRANCH=main`. The test asserts on the script's exit code and
   the captured `$output`.
 

@@ -140,6 +140,78 @@ setup() {
 }
 
 # ---------------------------------------------------------------------------
+# Empty-changeset opt-out.
+#
+# `pnpm changeset --empty` is the committed "no release needed" statement. It
+# waives coverage the same way it waives require-package-bump's half of the
+# gate — an author who declares "no release" must not be failed by one half and
+# passed by the other.
+# ---------------------------------------------------------------------------
+
+@test "an empty changeset added in this branch waives a coverage gap" {
+  touch_file 'packages/pkg-a/index.js'
+  add_empty_changeset
+  run_check
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'coverage requirement waived'* ]]
+}
+
+@test "an empty changeset waives every missing package at once" {
+  touch_file 'packages/pkg-a/index.js'
+  touch_file 'packages/pkg-b/index.js'
+  add_empty_changeset
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+@test "an empty changeset alongside a partial real changeset waives the rest" {
+  touch_file 'packages/pkg-a/index.js'
+  touch_file 'packages/pkg-b/index.js'
+  add_changeset '"@check-coverage-test/pkg-a": patch' 'edit pkg-a'
+  add_empty_changeset
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+# The opt-out is scoped to changesets ADDED in the branch. An empty changeset
+# inherited from the base branch is present in the tree but was not added here,
+# so it must not satisfy a new PR — otherwise one forgotten empty changeset on
+# main would disable the gate for every branch cut afterwards.
+@test "an empty changeset inherited from the base branch does not waive" {
+  git -C "${WORKSPACE}" checkout --quiet main
+  add_empty_changeset 'stale opt-out'
+  git -C "${WORKSPACE}" update-ref refs/remotes/origin/main main
+  git -C "${WORKSPACE}" checkout --quiet -B feature main
+  touch_file 'packages/pkg-a/index.js'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'@check-coverage-test/pkg-a'* ]]
+}
+
+# A real changeset added in the branch is not empty and must not be read as the
+# opt-out, or naming one package would waive the requirement for all the others.
+@test "a non-empty changeset is not treated as the opt-out" {
+  touch_file 'packages/pkg-a/index.js'
+  touch_file 'packages/pkg-b/index.js'
+  add_changeset '"@check-coverage-test/pkg-a": patch' 'edit pkg-a'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'@check-coverage-test/pkg-b'* ]]
+}
+
+# Exit 2 (tooling broken) must win over the waiver: with no changeset binary the
+# coverage question is unanswerable, and an empty changeset must not convert
+# that into a pass.
+@test "an empty changeset does not mask a tooling failure" {
+  rm -f "${WORKSPACE}/node_modules/.bin/changeset"
+  touch_file 'packages/pkg-a/index.js'
+  add_empty_changeset
+  run_check
+  [ "${status}" -eq 2 ]
+  [[ "${output}" == *'changeset binary not found'* ]]
+}
+
+# ---------------------------------------------------------------------------
 # Base-branch input.
 # ---------------------------------------------------------------------------
 
