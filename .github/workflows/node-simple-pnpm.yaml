@@ -358,14 +358,30 @@ on:
 
       require-package-path-bump:
         description: |
-          Opt-in gate (block repos): require the package at `package-path` to
-          be DIRECTLY bumped by a changeset on `pull_request` events. When true
-          and the package is not bumped — no empty changeset present and no
-          `skip-changelog` label on the PR — the `check for changesets` check
-          goes RED and blocks merge via branch protection. Sibling/devDependency
-          cascade bumps do NOT satisfy it. Not enforced in the merge queue; the
-          build/test jobs keep running regardless so CI stays usable while
-          iterating.
+          Opt-in gate (block repos): on `pull_request` events, require both
+          halves of the release contract to hold.
+
+            1. The package at `package-path` is DIRECTLY bumped by a changeset.
+               Required on every PR, whether or not that package's own files
+               changed. Sibling/devDependency cascade bumps do NOT satisfy it.
+            2. Every other workspace package whose own files the PR edits is
+               bumped too. Private packages are skipped — they are never
+               published — and a dependency or catalog version bump does not
+               count as editing a package.
+
+          Neither half implies the other: half 1 ignores the diff, half 2
+          ignores untouched packages. Half 2 only bites in a repo with more than
+          one publishable package — in a block repo the private
+          `model`/`ui`/`workflow`/`test` siblings are skipped and `block` is
+          already covered by half 1.
+
+          Either half failing turns the `check for changesets` check RED, which
+          blocks merge via branch protection. Two ways out, each waiving the gate
+          as a whole: an empty changeset added in the branch
+          (`pnpm changeset --empty`), which is the in-repo "no release needed"
+          statement, or the `skip-changelog` label on the PR. Not enforced in the
+          merge queue; the build/test jobs keep running regardless so CI stays
+          usable while iterating.
         type: boolean
         required: false
         default: false
@@ -613,8 +629,9 @@ jobs:
           run: |
             pnpm changeset status --since="origin/${BRANCH_NAME}"
 
-      # Block mode: the `package-path` package must be bumped DIRECTLY (empty
-      # changeset waives; the bypass label is handled by the job `if` above).
+      # Block mode, half 1: the `package-path` package must be bumped DIRECTLY,
+      # on every PR, whether or not its own files changed (empty changeset
+      # waives; the bypass label is handled by the job `if` above).
       # PR-only — merge_group / push need no enforcement here.
       - name: Require package bump by changeset
         if: ${{ inputs.require-package-path-bump && github.event_name == 'pull_request' }}
@@ -623,53 +640,11 @@ jobs:
           package-path: ${{ inputs.package-path }}
           base-branch: ${{ inputs.changeset-default-branch }}
 
-  changeset-coverage:
-    name: changeset coverage (diagnostic)
-    runs-on: ${{ inputs.gha-runner-label }}
-    # Diagnostic only: surface per-package changeset gaps as a red check, never block.
-    # The check-coverage step omits continue-on-error, so a gap (exit 1) fails this
-    # job and its check turns red. Job-level continue-on-error keeps the run green and
-    # the merge available. Separate from check-changesets so the native
-    # `changeset status` gate keeps blocking. Keep this job out of required checks.
-    continue-on-error: true
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    needs:
-      - metadata
-    steps:
-      - id: context
-        uses: milaboratory/github-ci/actions/context@v4
-
-      - uses: milaboratory/github-ci/actions/env@v4
-        with:
-          inputs: ${{ inputs.env }}
-          secrets: ${{ secrets.env }}
-
-      - uses: actions/checkout@v4
-        with:
-          lfs: ${{ inputs.checkout-git-lfs }}
-          submodules: ${{ inputs.checkout-submodules }}
-          fetch-depth: '0'
-
-      - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
-        env:
-          PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache-version: ${{ inputs.cache-version }}
-          pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
-          cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
-          npmrc-config: ${{ inputs.npmrc-config }}
-          cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
-          cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
-
-      - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4
-        with:
-          run: |
-            pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Check changeset coverage
+      # Block mode, half 2: every other workspace package the PR edits must be
+      # bumped as well. Runs even when half 1 already failed, so one red check
+      # reports the complete set of missing bumps instead of one at a time.
+      - name: Require changeset coverage for every edited package
+        if: ${{ !cancelled() && inputs.require-package-path-bump && github.event_name == 'pull_request' }}
         uses: milaboratory/github-ci/actions/changeset/check-coverage@v4
         with:
           base-branch: ${{ inputs.changeset-default-branch }}
