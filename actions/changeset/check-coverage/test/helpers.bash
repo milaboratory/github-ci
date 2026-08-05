@@ -76,6 +76,18 @@ EOF
   git -C "${WORKSPACE}" commit --quiet -m "add changeset: ${title}"
 }
 
+# Drop an empty changeset — the shape `pnpm changeset --empty` produces: front
+# matter naming no package. Args: title (optional, only used for the filename
+# and commit message).
+add_empty_changeset() {
+  local title="${1:-no release needed}"
+  local slug
+  slug="$(printf '%s' "${title}" | tr -cs 'a-z0-9' '-' | sed 's/^-\|-$//g')"
+  printf -- '---\n---\n' >"${WORKSPACE}/.changeset/${slug}.md"
+  git -C "${WORKSPACE}" add ".changeset/${slug}.md"
+  git -C "${WORKSPACE}" commit --quiet -m "add empty changeset: ${title}"
+}
+
 # Edit a file under $WORKSPACE, stage and commit. Args: relpath, content (or
 # defaults to appending a comment).
 touch_file() {

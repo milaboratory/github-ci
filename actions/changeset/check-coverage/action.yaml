@@ -12,8 +12,19 @@ description: |
   chain automatically at `changeset version` time. Flagging consumers of a
   bumped catalog dependency would over-report relative to `pnpm changeset`.
 
-  Runs after `pnpm install`. Requires the runner to have `pnpm` and `jq` on
-  PATH — both pre-installed on GitHub-hosted ubuntu-latest images.
+  An empty changeset (`pnpm changeset --empty`) added in the branch is a
+  deliberate, in-repo "no release needed" opt-out and waives the requirement for
+  every missing package at once — the same rule require-package-bump applies to
+  its own half of the gate. A stale empty changeset already on the base branch
+  does not count.
+
+  This action is label-agnostic; the `skip-changelog` bypass is handled by the
+  caller workflow's job-level `if` (PR labels are only available on
+  `pull_request` events).
+
+  Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq` and `git`
+  on PATH — all pre-installed on GitHub-hosted ubuntu-latest images. `git` needs
+  full history (`fetch-depth: 0`) to see which changesets the branch added.
 
 inputs:
   base-branch:
