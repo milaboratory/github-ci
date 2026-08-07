@@ -1,23 +1,43 @@
 #!/bin/bash
 #
-# fix-beta.sh — re-sync v4-beta with v4 after they diverge.
+# sync-branch.sh — bring $TARGET_BRANCH up to date with $SOURCE_BRANCH, then
+# point this repo's self-references at $TARGET_BRANCH.
 #
-# Use when:
-#   - Someone committed directly to v4 (bypassing the v4-beta → merge-beta.sh
-#     cycle) and you want v4-beta to incorporate those changes.
-#   - Post-promotion: v4 has the rename-sed commit from merge-beta.sh that
-#     v4-beta does not have; run this script to bring v4-beta back in sync.
+# The second half is the reason this is not just `git merge`. A consumer that
+# pins `@<branch>` gets whatever that branch's files say, so a branch whose
+# self-refs still name another branch runs the OTHER branch's actions — an
+# edit made here would appear to do nothing, and a canary would go green for
+# the wrong reason.
+#
+# The defaults sync v4-beta from v4, which is the routine recovery when the two
+# diverge:
+#   - Someone committed directly to v4, bypassing the v4-beta → promote.sh
+#     cycle, and you want v4-beta to incorporate those changes.
+#   - Post-promotion: v4 carries the rename-sed commit promote.sh made and
+#     v4-beta does not.
+#
+# Both branches are parameters, so the same script prepares any working branch
+# for a canary run:
+#
+#   TARGET_BRANCH=my-experiment SOURCE_BRANCH=v4 bash sync-branch.sh
+#
+# leaves my-experiment holding v4's content with every self-ref pointing at
+# my-experiment, so a consumer repo can pin @my-experiment and actually
+# exercise the change. $TARGET_BRANCH must already exist and track a remote
+# branch — step 3 pulls it.
 #
 # What it does:
 #   1. Refuses if the working tree is dirty.
 #   2. Re-execs itself from a tmp copy so the script survives the checkout.
-#   3. Switches to v4-beta, pulls latest.
-#   4. Merges v4 in with --strategy-option theirs (v4 content wins on conflict).
-#   5. Sed-flips @v4 -> @v4-beta across action.yaml + .github/workflows/*.yaml
-#      (mirrors merge-beta.sh's file scope, opposite direction).
+#   3. Switches to $TARGET_BRANCH, pulls latest.
+#   4. Merges $SOURCE_BRANCH in with --strategy-option theirs (source content
+#      wins on conflict).
+#   5. Sed-flips @$SOURCE_BRANCH -> @$TARGET_BRANCH across action.yaml +
+#      .github/workflows/*.yaml (mirrors promote.sh's file scope, opposite
+#      direction).
 #   6. Commits the flip on top of the merge commit and pushes.
 #
-# Inverse of merge-beta.sh.
+# Inverse of promote.sh.
 #
 # Sed safety, two concerns:
 #   1. Prefix collision. @v4 is a prefix of @v4-beta, so a naive
@@ -26,8 +46,8 @@
 #   2. Path scope. We must rewrite only milaboratory/github-ci self-refs.
 #      Third-party action pins (actions/checkout@v4, aws-actions/...@v4,
 #      pnpm/action-setup@v4, etc.) must stay at their upstream tags — those
-#      repos do not publish a v4-beta tag, and flipping them produced the
-#      "Unable to resolve action ...@v4-beta" failures fixed in this branch.
+#      repos do not publish a v4-beta tag, so flipping them produces
+#      "Unable to resolve action ...@v4-beta" failures.
 # Both patterns therefore anchor the substitution to a leading
 # `milaboratory/github-ci...` path.
 

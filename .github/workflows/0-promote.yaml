@@ -1,9 +1,9 @@
-name: "Create PR for beta branch (v4-beta -> v4)"
+name: "Promote beta branch (v4-beta -> v4)"
 
 on:
   push:
     paths:
-      - '.github/workflows/0-merge-beta.yaml'
+      - '.github/workflows/0-promote.yaml'
     branches:
       - 'v4-beta'
       - 'v4'
@@ -45,7 +45,7 @@ jobs:
             "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" \
             >> "$GITHUB_OUTPUT"
 
-      - name: Merge ${{ github.event.inputs.target_branch || 'v4' }}-beta
+      - name: Promote ${{ github.event.inputs.target_branch || 'v4' }}-beta
         shell: bash
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -57,4 +57,4 @@ jobs:
           git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>"
           #git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
-          ./merge-beta.sh # script in repository root
+          ./promote.sh # script in repository root

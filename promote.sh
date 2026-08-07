@@ -1,4 +1,26 @@
 #!/bin/bash
+#
+# promote.sh — open a PR moving $SOURCE_BRANCH's content into $TARGET_BRANCH,
+# with this repo's self-references flipped to name $TARGET_BRANCH.
+#
+# Defaults promote v4-beta into v4: staging becomes stable. Work lands on
+# v4-beta first, then this script publishes it.
+#
+# What it does:
+#   1. Refuses if the working tree is dirty.
+#   2. Re-execs itself from a tmp copy so the script survives the checkout.
+#   3. Creates (or resumes) $MERGE_BRANCH off $TARGET_BRANCH.
+#   4. Merges $SOURCE_BRANCH in with --strategy-option theirs.
+#   5. Sed-flips @$SOURCE_BRANCH -> @$TARGET_BRANCH across action.yaml +
+#      .github/workflows/*.yaml, amending the merge commit.
+#   6. Pushes $MERGE_BRANCH and opens a PR into $TARGET_BRANCH.
+#
+# The flip in step 5 is what makes the promoted content reference the branch it
+# now lives on; without it, $TARGET_BRANCH would keep sending consumers to
+# $SOURCE_BRANCH. A reviewer merges the PR — this script never writes to
+# $TARGET_BRANCH directly.
+#
+# Inverse of sync-branch.sh.
 
 set -o nounset
 set -o errexit
@@ -74,7 +96,7 @@ git merge \
 # action pins (actions/checkout@v4-beta, aws-actions/...@v4-beta, etc.) are
 # left alone. Without the anchor the sed would happily rewrite any token
 # ending in @v4-beta, which corrupts third-party refs on v4-beta when the
-# inverse sed (fix-beta.sh) flipped them from @v4 in the first place.
+# inverse sed (sync-branch.sh) flipped them from @v4 in the first place.
 {
     find . -type f -name "action.yaml"
     find .github/workflows -type f -name "*.yaml"
