@@ -52,9 +52,21 @@ runs:
           exit 0
         fi
 
+        # Resolve the inspect command once. Both talk to the registry directly and
+        # reuse the docker logins this workflow already performed; which one exists
+        # depends on the runner's docker CLI.
+        if docker manifest inspect --help >/dev/null 2>&1; then
+          image_exists() { docker manifest inspect "${1}" >/dev/null 2>&1; }
+        elif docker buildx imagetools inspect --help >/dev/null 2>&1; then
+          image_exists() { docker buildx imagetools inspect "${1}" >/dev/null 2>&1; }
+        else
+          echo "::error::no registry inspect command available (tried 'docker manifest inspect' and 'docker buildx imagetools inspect')"
+          exit 1
+        fi
+
         missing=()
         for tag in "${tags[@]}"; do
-          if docker manifest inspect "${tag}" >/dev/null 2>&1; then
+          if image_exists "${tag}"; then
             echo "  ok      ${tag}"
           else
             echo "  MISSING ${tag}"
