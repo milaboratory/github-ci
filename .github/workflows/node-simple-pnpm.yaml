@@ -394,6 +394,16 @@ on:
         required: false
         default: true
 
+      verify-docker-images:
+        description: |
+          Before publishing, check that every docker image referenced by the
+          block's entrypoint descriptors is present in the registry.
+          Guards against publishing a block whose images were built but never
+          pushed, which only surfaces as a runtime 404.
+        type: boolean
+        required: false
+        default: true
+
       notify-slack:
         description: |
           Enable Slack notifications
@@ -1073,6 +1083,15 @@ jobs:
           test-coverage: ${{ inputs.test-coverage }}
           test-coverage-reports: ${{ inputs.test-coverage-reports }}
           test-results-reports: ${{ inputs.test-results-reports }}
+
+      # Gate publication on the images actually being in the registry. Runs on the
+      # publish path only: on PRs the descriptors are not shipped anywhere, and a
+      # branch build may legitimately not push.
+      - name: Verify referenced docker images exist
+        if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
+          && inputs.verify-docker-images
+        uses: milaboratory/github-ci/blocks/monorepo/verify-docker-images@v4
 
       - name: Perform security scan checks before publication
         uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
