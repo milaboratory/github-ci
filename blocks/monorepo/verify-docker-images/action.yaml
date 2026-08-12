@@ -1,0 +1,101 @@
+name: Verify referenced docker images exist
+author: 'MiLaboratories'
+description: |
+  Check that every docker image referenced by a block's built entrypoint
+  descriptors is actually present in the registry.
+
+  A block's `.sw.json` descriptors carry the image tag the backend will pull at
+  runtime. The build writes those descriptors whether or not the push happened,
+  so a misconfigured package (historically a stray `"private": true`, which
+  gates pl-pkg auto-push) yields a green build and a block that 404s on first
+  run. This step closes that gap before publication.
+
+  The tag in the descriptor is the PULL address, which may differ from the push
+  alias (PL_DOCKER_REGISTRY_PUSH_TO). Verifying the pull address is deliberate:
+  it is what the backend resolves, so it covers the push and any CDN mapping in
+  front of the registry.
+
+inputs:
+  fail-on-missing:
+    description: |
+      Fail the step when a referenced image is missing.
+      Set to 'false' to report without blocking.
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Verify referenced docker images exist
+      env:
+        FAIL_ON_MISSING: ${{ inputs.fail-on-missing }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Repo-owned descriptors only. node_modules holds descriptors belonging to
+        # published dependencies (SDK runenvs); their images are not this block's
+        # to guarantee, and failing on them would block a release on upstream state.
+        mapfile -t descriptors < <(find . -name node_modules -prune -o -name '*.sw.json' -print | sort)
+
+        if [ ${#descriptors[@]} -eq 0 ]; then
+          echo "No .sw.json descriptors found. Nothing to verify."
+          exit 0
+        fi
+        echo "Scanning ${#descriptors[@]} entrypoint descriptor(s)."
+
+        mapfile -t tags < <(jq -r 'select(.docker != null and .docker.tag != null) | .docker.tag' "${descriptors[@]}" | sort -u)
+
+        if [ ${#tags[@]} -eq 0 ]; then
+          echo "No docker-backed entrypoints. Nothing to verify."
+          exit 0
+        fi
+
+        # Resolve the inspect command once. Both talk to the registry directly and
+        # reuse the docker logins this workflow already performed; which one exists
+        # depends on the runner's docker CLI.
+        if docker manifest inspect --help >/dev/null 2>&1; then
+          image_exists() { docker manifest inspect "${1}" >/dev/null 2>&1; }
+        elif docker buildx imagetools inspect --help >/dev/null 2>&1; then
+          image_exists() { docker buildx imagetools inspect "${1}" >/dev/null 2>&1; }
+        else
+          echo "::error::no registry inspect command available (tried 'docker manifest inspect' and 'docker buildx imagetools inspect')"
+          exit 1
+        fi
+
+        missing=()
+        for tag in "${tags[@]}"; do
+          if image_exists "${tag}"; then
+            echo "  ok      ${tag}"
+          else
+            echo "  MISSING ${tag}"
+            missing+=( "${tag}" )
+          fi
+        done
+
+        echo "Checked ${#tags[@]} image(s), ${#missing[@]} missing."
+        if [ ${#missing[@]} -eq 0 ]; then
+          exit 0
+        fi
+
+        {
+          echo "### Referenced docker images missing from the registry"
+          echo
+          echo "The build wrote entrypoint descriptors pointing at images that were never pushed."
+          echo "A block published in this state fails at runtime when the backend pulls them."
+          echo
+          for tag in "${missing[@]}"; do echo "- \`${tag}\`"; done
+          echo
+          echo "Most common cause: \`\"private\": true\` in the software package.json."
+          echo "pl-pkg gates docker auto-push on \`!isPrivate\`, so the image is built and"
+          echo "referenced but never uploaded. Software packages must not be private."
+        } >> "${GITHUB_STEP_SUMMARY}"
+
+        if [ "${FAIL_ON_MISSING}" != "true" ]; then
+          echo "::warning::${#missing[@]} referenced docker image(s) missing from the registry"
+          exit 0
+        fi
+
+        echo "::error::${#missing[@]} referenced docker image(s) missing from the registry"
+        exit 1
