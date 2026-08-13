@@ -778,6 +778,17 @@ jobs:
 
   build-publish:
     name: unified (build publish)
+    # Serialize the release job per ref so two runs never race `changeset version` and
+    # the push of "Auto-generated changes" to main.
+    # cancel-in-progress: false lets an in-flight release finish (publish + tag) instead of
+    # being cut mid-publish. GitHub keeps only one run pending per group (queue: single, the
+    # default), so a burst of merges can supersede a queued publish run. That is safe: the
+    # release is two-pass and self-heals — the final bump always triggers a publish run that
+    # ships the latest versions; only an intermediate version/tag can be skipped. Set
+    # queue: max to keep every bump's own version and tag.
+    concurrency:
+      group: release-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     needs:
       - check-changesets
@@ -945,7 +956,34 @@ jobs:
             git checkout main
             git add .
             git commit -m "Auto-generated changes"
-            git push
+
+            # Resilient, idempotent push. The concurrency block above stops a concurrent
+            # twin, but main can still advance between checkout and push — a human or another
+            # workflow pushes, or a retry re-enters. A bare `git push` then fails
+            # ("cannot lock ref ... is at X but expected Y") and exits 1, stranding the
+            # release half-done: main bumped, never published. Rebase, retry, and treat
+            # "already on main" as success.
+            pushed=false
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then
+                echo "Pushed auto-generated changes on attempt ${attempt}."
+                pushed=true
+                break
+              fi
+              echo "Push rejected on attempt ${attempt}; syncing with origin/main."
+              git fetch origin main
+              if git diff --quiet FETCH_HEAD -- .; then
+                echo "origin/main already contains these changes; nothing to push."
+                pushed=true
+                break
+              fi
+              git rebase FETCH_HEAD || { git rebase --abort || true; echo "Rebase onto origin/main failed."; exit 1; }
+            done
+
+            if [ "${pushed}" != "true" ]; then
+              echo "Failed to push auto-generated changes after retries." >&2
+              exit 1
+            fi
 
       - name: Publish npm package
         id: publish-to-private
