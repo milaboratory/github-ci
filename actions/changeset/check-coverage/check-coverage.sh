@@ -4,6 +4,9 @@
 # it edits. Exit 1 on a coverage gap; exit 2 on tooling failure; exit 0
 # otherwise.
 #
+# An empty changeset added in this branch (`pnpm changeset --empty`) waives the
+# requirement — see section 4.
+#
 # "Modified" means a direct edit to a workspace package's own files, detected
 # via `pnpm --filter '[<base>]' list` — pnpm runs the per-package git-diff
 # check itself. Root-level paths (`.github/`, `docs/`, `pnpm-workspace.yaml`,
@@ -149,11 +152,53 @@ if [ "${#missing[@]}" -eq 0 ]; then
   exit 0
 fi
 
+# ---------------------------------------------------------------------------
+# 4. Empty-changeset opt-out.
+# ---------------------------------------------------------------------------
+# A changeset ADDED in this branch whose front matter names no package
+# (`pnpm changeset --empty`) is a deliberate, committed "no release needed"
+# statement and waives the requirement for every missing package at once.
+#
+# Scoped to ADDED files, so a stale empty changeset sitting on the base branch
+# cannot silently satisfy a new PR.
+#
+# require-package-bump.sh applies the same rule to its own half of the gate.
+# Both halves must accept the same declaration — an author who states "no
+# release" should not be failed by one half and passed by the other. Change one
+# and change the other.
+is_empty_changeset() {
+  awk '
+    NR==1 && /^---[[:space:]]*$/ { infm=1; next }
+    infm && /^---[[:space:]]*$/  { exit (found ? 1 : 0) }
+    infm && /[^[:space:]]/       { found=1 }
+    END { if (!infm) exit 2; exit (found ? 1 : 0) }
+  ' "$1"
+}
+
+while IFS= read -r f; do
+  [ -z "${f}" ] && continue
+  case "${f}" in
+    .changeset/README.md) continue ;;
+    .changeset/*.md) ;;
+    *) continue ;;
+  esac
+  [ -f "${f}" ] || continue
+  if is_empty_changeset "${f}"; then
+    log "✓ Empty changeset added in this branch: ${f} — coverage requirement waived."
+    exit 0
+  fi
+done < <(
+  git diff --name-only --diff-filter=A "origin/${BASE_BRANCH}...HEAD" -- .changeset 2>/dev/null || true
+)
+
 err 'Changeset coverage gap. The following packages were modified but not bumped:'
 for pkg in "${missing[@]}"; do
   reason="${required_reason[${pkg}]%; }"
   err "  - ${pkg}  (${reason})"
 done
 err ''
-err "Add a changeset entry — run \`pnpm changeset\` and select the missing packages."
+err 'Do one of:'
+err "  - Bump them: run \`pnpm changeset\` and select the missing packages."
+err '  - Deliberately skip a release: `pnpm changeset --empty` (an empty changeset).'
+err '  - Bypass this check: add the `skip-changelog` label to the PR.'
 exit 1
