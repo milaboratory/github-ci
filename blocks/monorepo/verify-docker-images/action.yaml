@@ -1,8 +1,9 @@
 name: Verify referenced docker images exist
 author: 'MiLaboratories'
 description: |
-  Check that every docker image referenced by a block's built entrypoint
-  descriptors is actually present in the registry.
+  Check that every docker image a package's built entrypoint descriptors
+  reference is actually present in the registry, and that every runnable
+  software entrypoint offers a docker variant at all.
 
   A block's `.sw.json` descriptors carry the image tag the backend will pull at
   runtime. The build writes those descriptors whether or not the push happened,
@@ -15,11 +16,27 @@ description: |
   it is what the backend resolves, so it covers the push and any CDN mapping in
   front of the registry.
 
+  The second check covers the case one step earlier: a software entrypoint that
+  never declared a docker variant. Nothing in pl-pkg requires one — only
+  `python` and `conda` artifacts autogenerate an image, so a `java`, `R` or
+  plain `binary` entrypoint without an explicit `docker:` block releases with a
+  descriptor the k8s runner cannot use, and the command dies at runtime with a
+  bare "docker image is not specified". Every deployment we run is k8s-based,
+  so that is a release defect rather than a choice.
+
 inputs:
   fail-on-missing:
     description: |
       Fail the step when a referenced image is missing.
       Set to 'false' to report without blocking.
+    required: false
+    default: 'true'
+
+  require-docker-variant:
+    description: |
+      Also fail when a software entrypoint descriptor carries no docker variant
+      at all (binary-only), which cannot run on a kubernetes install.
+      Set to 'false' for a package that is deliberately binary-only.
     required: false
     default: 'true'
 
@@ -30,6 +47,7 @@ runs:
     - name: Verify referenced docker images exist
       env:
         FAIL_ON_MISSING: ${{ inputs.fail-on-missing }}
+        REQUIRE_DOCKER_VARIANT: ${{ inputs.require-docker-variant }}
       shell: bash
       run: |
         set -euo pipefail
@@ -45,57 +63,101 @@ runs:
         fi
         echo "Scanning ${#descriptors[@]} entrypoint descriptor(s)."
 
+        # A software entrypoint shipping only a `binary` variant cannot run on a k8s
+        # install at all. Descriptors for run environments (`runEnv`) and assets carry
+        # no `binary` and are exempt, as are dev-mode `local` descriptors and the
+        # placeholder ones against the sentinel registry.
+        no_docker=()
+        if [ "${REQUIRE_DOCKER_VARIANT}" == "true" ]; then
+          for descriptor in "${descriptors[@]}"; do
+            if jq -e '
+                 .binary != null
+                 and .docker == null
+                 and .local == null
+                 and (.binary.registry // "") != "no-software-placeholder"
+               ' "${descriptor}" >/dev/null; then
+              echo "  NO DOCKER ${descriptor}"
+              no_docker+=( "${descriptor}" )
+            fi
+          done
+        fi
+
         mapfile -t tags < <(jq -r 'select(.docker != null and .docker.tag != null) | .docker.tag' "${descriptors[@]}" | sort -u)
 
-        if [ ${#tags[@]} -eq 0 ]; then
+        if [ ${#tags[@]} -eq 0 ] && [ ${#no_docker[@]} -eq 0 ]; then
           echo "No docker-backed entrypoints. Nothing to verify."
           exit 0
         fi
 
-        # Resolve the inspect command once. Both talk to the registry directly and
-        # reuse the docker logins this workflow already performed; which one exists
-        # depends on the runner's docker CLI.
-        if docker manifest inspect --help >/dev/null 2>&1; then
-          image_exists() { docker manifest inspect "${1}" >/dev/null 2>&1; }
-        elif docker buildx imagetools inspect --help >/dev/null 2>&1; then
-          image_exists() { docker buildx imagetools inspect "${1}" >/dev/null 2>&1; }
-        else
-          echo "::error::no registry inspect command available (tried 'docker manifest inspect' and 'docker buildx imagetools inspect')"
-          exit 1
+        missing=()
+        if [ ${#tags[@]} -gt 0 ]; then
+          # Resolve the inspect command once. Both talk to the registry directly and
+          # reuse the docker logins this workflow already performed; which one exists
+          # depends on the runner's docker CLI.
+          if docker manifest inspect --help >/dev/null 2>&1; then
+            image_exists() { docker manifest inspect "${1}" >/dev/null 2>&1; }
+          elif docker buildx imagetools inspect --help >/dev/null 2>&1; then
+            image_exists() { docker buildx imagetools inspect "${1}" >/dev/null 2>&1; }
+          else
+            echo "::error::no registry inspect command available (tried 'docker manifest inspect' and 'docker buildx imagetools inspect')"
+            exit 1
+          fi
+
+          for tag in "${tags[@]}"; do
+            if image_exists "${tag}"; then
+              echo "  ok      ${tag}"
+            else
+              echo "  MISSING ${tag}"
+              missing+=( "${tag}" )
+            fi
+          done
         fi
 
-        missing=()
-        for tag in "${tags[@]}"; do
-          if image_exists "${tag}"; then
-            echo "  ok      ${tag}"
-          else
-            echo "  MISSING ${tag}"
-            missing+=( "${tag}" )
-          fi
-        done
-
-        echo "Checked ${#tags[@]} image(s), ${#missing[@]} missing."
-        if [ ${#missing[@]} -eq 0 ]; then
+        echo "Checked ${#tags[@]} image(s), ${#missing[@]} missing, ${#no_docker[@]} descriptor(s) with no docker variant."
+        if [ ${#missing[@]} -eq 0 ] && [ ${#no_docker[@]} -eq 0 ]; then
           exit 0
         fi
 
-        {
-          echo "### Referenced docker images missing from the registry"
-          echo
-          echo "The build wrote entrypoint descriptors pointing at images that were never pushed."
-          echo "A block published in this state fails at runtime when the backend pulls them."
-          echo
-          for tag in "${missing[@]}"; do echo "- \`${tag}\`"; done
-          echo
-          echo "Most common cause: \`\"private\": true\` in the software package.json."
-          echo "pl-pkg gates docker auto-push on \`!isPrivate\`, so the image is built and"
-          echo "referenced but never uploaded. Software packages must not be private."
-        } >> "${GITHUB_STEP_SUMMARY}"
+        if [ ${#missing[@]} -gt 0 ]; then
+          {
+            echo "### Referenced docker images missing from the registry"
+            echo
+            echo "The build wrote entrypoint descriptors pointing at images that were never pushed."
+            echo "A block published in this state fails at runtime when the backend pulls them."
+            echo
+            for tag in "${missing[@]}"; do echo "- \`${tag}\`"; done
+            echo
+            echo "Most common cause: \`\"private\": true\` in the software package.json."
+            echo "pl-pkg gates docker auto-push on \`!isPrivate\`, so the image is built and"
+            echo "referenced but never uploaded. Software packages must not be private."
+          } >> "${GITHUB_STEP_SUMMARY}"
+        fi
+
+        if [ ${#no_docker[@]} -gt 0 ]; then
+          {
+            echo "### Software entrypoints with no docker variant"
+            echo
+            echo "These descriptors carry only a \`binary\` variant. A kubernetes install has no"
+            echo "image to launch and fails the command at runtime with \"docker image is not"
+            echo "specified\"."
+            echo
+            for descriptor in "${no_docker[@]}"; do echo "- \`${descriptor}\`"; done
+            echo
+            echo "pl-pkg autogenerates an image for \`python\` and \`conda\` artifacts only. A"
+            echo "\`java\`, \`R\` or plain \`binary\` entrypoint needs an explicit \`docker:\` block in"
+            echo "its \`block-software.entrypoints\` definition."
+            echo
+            echo "For a package that really is meant to be binary-only, pass"
+            echo "\`require-docker-variant: false\`."
+          } >> "${GITHUB_STEP_SUMMARY}"
+        fi
+
+        verdict="${#missing[@]} referenced docker image(s) missing from the registry, ${#no_docker[@]} software entrypoint(s) with no docker variant"
 
         if [ "${FAIL_ON_MISSING}" != "true" ]; then
-          echo "::warning::${#missing[@]} referenced docker image(s) missing from the registry"
+          echo "::warning::${verdict}"
           exit 0
         fi
 
-        echo "::error::${#missing[@]} referenced docker image(s) missing from the registry"
+        echo "::error::${verdict}"
         exit 1
