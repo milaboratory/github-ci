@@ -35,7 +35,7 @@ runs:
   steps:
     - name: Convert paths
       id: converted
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         ABS_ROOT: ${{ inputs.abs-root }}
         REL_ROOT: ${{ inputs.rel-root }}

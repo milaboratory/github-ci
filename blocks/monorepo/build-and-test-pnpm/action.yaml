@@ -110,7 +110,7 @@ runs:
 
     - name: Upload coverage reports to Codecov
       if: inputs.test-coverage == 'true'
-      uses: milaboratory/github-ci/actions/node/upload-coverage@v4-beta
+      uses: milaboratory/github-ci/actions/node/upload-coverage@v4
       with:
         test-coverage-reports: ${{ inputs.test-coverage-reports }}
         test-results-reports: ${{ inputs.test-results-reports }}
