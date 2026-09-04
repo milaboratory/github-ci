@@ -848,6 +848,16 @@ on:
         required: false
         default: false
 
+      verify-pl-package-docker-images:
+        description: |
+          Before publishing the PL software package, check that every docker
+          image referenced by its entrypoint descriptors is present in the
+          registry. Guards against publishing a package whose images were built
+          but never pushed, which only surfaces as a runtime 404 in a block.
+        type: boolean
+        required: false
+        default: true
+
       pl-package-s3-region:
         description: |
           Region of PL packages registry in AWS.
@@ -2050,6 +2060,7 @@ jobs:
           always-auth: ${{ inputs.node-always-auth }}
           publish-script-name: ${{ inputs.publish-script-name }}
           publish-to-public: ${{ inputs.publish-to-public }}
+          verify-docker-images: ${{ inputs.verify-pl-package-docker-images }}
           pl-bin-registry-upload-url: ${{ secrets.BIN_REGISTRY_S3_BUCKET_URL }}
           s3-region: ${{ inputs.pl-package-s3-region }}
           s3-iam-role-to-assume: ${{ secrets.BIN_REGISTRY_S3_IAM_ROLE }}

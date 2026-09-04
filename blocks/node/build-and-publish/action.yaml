@@ -26,6 +26,15 @@ inputs:
       Indicates whether the current run is intended for a release.
     required: false
 
+  verify-docker-images:
+    description: |
+      Before publishing, check that every docker image referenced by the
+      package's built entrypoint descriptors is present in the registry.
+      Guards against publishing a software package whose images were built but
+      never pushed, which only surfaces as a runtime 404 in a block.
+    required: false
+    default: 'true'
+
   #
   # NodeJS Control
   #
@@ -199,6 +208,14 @@ runs:
       run: |
         cd "${WORKING_DIRECTORY}"
         npm run build
+
+    # Gate publication on the images actually being in the registry. pl-pkg writes
+    # entrypoint descriptors carrying the image tag whether or not the push happened,
+    # so a build that skipped the push still publishes a package whose consumers
+    # 404 pulling the image at runtime (MILAB-6714 for the block CI, MILAB-6872 here).
+    - name: Verify referenced docker images exist
+      if: inputs.verify-docker-images == 'true'
+      uses: milaboratory/github-ci/blocks/monorepo/verify-docker-images@v4
 
     - name: Perform security scan checks before publication
       uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
