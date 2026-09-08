@@ -8,9 +8,10 @@
 # for a block, the package has no `workspace:` *dependencies* (its private
 # siblings live in devDependencies, which `pnpm changeset` never cascades, and
 # its runtime deps are external `catalog:` pins), so a `changeset status`
-# release for the package is equivalent to a changeset that names it directly.
-# A sibling-only changeset therefore does NOT satisfy this check — matching the
-# "did you bump ./block?" intent.
+# release of a non-`none` type is equivalent to a changeset that names the
+# package directly. A sibling-only changeset still lists the block, at type
+# `none`; that does NOT satisfy this check — matching the "did you bump
+# ./block?" intent.
 #
 # The empty-changeset opt-out is scoped to changesets ADDED in this branch
 # (`git diff --diff-filter=A origin/$BASE_BRANCH...HEAD`), so a stale empty
@@ -88,7 +89,13 @@ if [ ! -s "${status_json}" ]; then
   fi
 fi
 
-if jq -e --arg n "${pkg_name}" '.releases[]? | select(.name == $n)' \
+# `.releases` also lists every dependent of a bumped package, with
+# `"type": "none"` when no version change is due. Only a non-`none` type is a
+# bump: the private siblings are versioned (block repos leave changesets'
+# `privatePackages` at its default), so a sibling-only changeset puts the block
+# in the plan as a `none` dependent.
+if jq -e --arg n "${pkg_name}" \
+     '.releases[]? | select(.name == $n and .type != "none")' \
      "${status_json}" >/dev/null; then
   log "✓ ${pkg_name} is bumped by a changeset."
   exit 0
