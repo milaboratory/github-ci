@@ -40,6 +40,9 @@ outputs:
   main-root:
     description: 'Path to platforma main root directory'
     value: ${{ steps.launch-pl.outputs.main-root }}
+  packages-root:
+    description: 'Path to platforma software packages directory'
+    value: ${{ steps.launch-pl.outputs.packages-root }}
   log-dir:
     description: 'Path to platforma log directory'
     value: ${{ steps.launch-pl.outputs.main-root }}/log
@@ -105,6 +108,11 @@ runs:
         # depending on moon phases and mood of the scheduler god. :(
         export PL_MAIN_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
 
+        # Software packages (python/java run environments and the like) take gigabytes
+        # and are the same on every run. Keep them out of the main root, so the
+        # platforma-dump artifact carries state and logs only.
+        export PL_PACKAGES_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
+
         # Run platforma as the runner user (not root) so OS file-mode permissions
         # are enforced inside the container (required by exec.writable tests).
         # PL_UID/PL_GID are consumed by docker-compose.yaml.
@@ -123,6 +131,7 @@ runs:
         export PL_GROUP_PATH="${PL_MAIN_ROOT}/.users/group"
 
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
+        echo "packages-root=${PL_PACKAGES_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
@@ -136,11 +145,12 @@ runs:
     - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+        PL_PACKAGES_ROOT: ${{ steps.launch-pl.outputs.packages-root }}
       with:
         run: |
           # Remove platforma state in the end
-          echo "Removing '${PL_MAIN_ROOT}'"
-          rm -rf "${PL_MAIN_ROOT}"
+          echo "Removing '${PL_MAIN_ROOT}' and '${PL_PACKAGES_ROOT}'"
+          rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}"
 
     - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       with:
@@ -157,6 +167,7 @@ runs:
         #
         # docker-compose.yaml parameters.
         #
+        PL_PACKAGES_ROOT: ${{ steps.launch-pl.outputs.packages-root }}
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_WORKSPACE: ${{ github.workspace }}
@@ -165,6 +176,13 @@ runs:
         HTPASSWD_PATH: ${{ github.action_path }}/htpasswd
       with:
         run: |
+          # Compose resolves the whole file even for `logs` and `down`, so it needs
+          # the same user/passwd variables the launch step exported.
+          export PL_UID="$(id -u)"
+          export PL_GID="$(id -g)"
+          export PL_PASSWD_PATH="${PL_MAIN_ROOT}/.users/passwd"
+          export PL_GROUP_PATH="${PL_MAIN_ROOT}/.users/group"
+
           # Collect logs
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" logs > "${PL_MAIN_ROOT}/compose-logs.txt"
           docker compose --file "${ACTION_PATH}/docker-compose.yaml" images > "${PL_MAIN_ROOT}/compose-images.txt"
