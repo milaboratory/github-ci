@@ -40,6 +40,9 @@ outputs:
   main-root:
     description: 'Path to platforma main root directory'
     value: ${{ steps.launch-pl.outputs.main-root }}
+  packages-root:
+    description: 'Path to platforma software packages directory'
+    value: ${{ steps.launch-pl.outputs.packages-root }}
   log-dir:
     description: 'Path to platforma log directory'
     value: ${{ steps.launch-pl.outputs.main-root }}/log
@@ -105,6 +108,11 @@ runs:
         # depending on moon phases and mood of the scheduler god. :(
         export PL_MAIN_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
 
+        # Software packages (python/java run environments and the like) take gigabytes
+        # and are the same on every run. Keep them out of the main root, so the
+        # platforma-dump artifact carries state and logs only.
+        export PL_PACKAGES_ROOT="$(TMPDIR=${RUNNER_WORKSPACE} mktemp --directory)"
+
         # Run platforma as the runner user (not root) so OS file-mode permissions
         # are enforced inside the container (required by exec.writable tests).
         # PL_UID/PL_GID are consumed by docker-compose.yaml.
@@ -123,6 +131,7 @@ runs:
         export PL_GROUP_PATH="${PL_MAIN_ROOT}/.users/group"
 
         echo "main-root=${PL_MAIN_ROOT}" >> "${GITHUB_OUTPUT}"
+        echo "packages-root=${PL_PACKAGES_ROOT}" >> "${GITHUB_OUTPUT}"
 
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" config | tee "${PL_MAIN_ROOT}/compose.yaml"
         docker compose --file "${ACTION_PATH}/docker-compose.yaml" up --quiet-pull --detach --force-recreate
@@ -136,11 +145,19 @@ runs:
     - uses: milaboratory/github-ci/actions/post/shell@v4
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
+        PL_PACKAGES_ROOT: ${{ steps.launch-pl.outputs.packages-root }}
       with:
         run: |
-          # Remove platforma state in the end
-          echo "Removing '${PL_MAIN_ROOT}'"
-          rm -rf "${PL_MAIN_ROOT}"
+          set -o nounset
+          set -o pipefail
+
+          # Best effort: the runner discards its workspace anyway, and a cleanup
+          # that cannot finish must never turn a job with passing tests red.
+          # It failed exactly that way while `down` was broken: the container kept
+          # writing into the bind-mounted root, so rm raced it and got ENOTEMPTY.
+          echo "Removing '${PL_MAIN_ROOT}' and '${PL_PACKAGES_ROOT}'"
+          rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
+            echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
 
     - uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
@@ -157,6 +174,7 @@ runs:
         #
         # docker-compose.yaml parameters.
         #
+        PL_PACKAGES_ROOT: ${{ steps.launch-pl.outputs.packages-root }}
         PL_DOCKER_REGISTRY: ${{ inputs.pl-docker-registry }}
         PL_DOCKER_TAG: ${{ inputs.pl-docker-tag }}
         PL_WORKSPACE: ${{ github.workspace }}
@@ -165,12 +183,37 @@ runs:
         HTPASSWD_PATH: ${{ github.action_path }}/htpasswd
       with:
         run: |
-          # Collect logs
-          docker compose --file "${ACTION_PATH}/docker-compose.yaml" logs > "${PL_MAIN_ROOT}/compose-logs.txt"
-          docker compose --file "${ACTION_PATH}/docker-compose.yaml" images > "${PL_MAIN_ROOT}/compose-images.txt"
+          # No errexit on purpose: every command here is teardown, and one that
+          # fails must not skip the ones after it. Each reports its own failure as
+          # a warning instead, so a broken teardown is visible in the job summary
+          # rather than silent. nounset guards the compose variables below, which
+          # is the class of bug that made `down` fail unnoticed before.
+          set -o nounset
+          set -o pipefail
 
-          # Stop the Platforma
-          docker compose --file "${ACTION_PATH}/docker-compose.yaml" down
+          compose() {
+            docker compose --file "${ACTION_PATH}/docker-compose.yaml" "${@}"
+          }
+
+          # Compose resolves the whole file even for `logs` and `down`, so it needs
+          # the same user/passwd variables the launch step exported.
+          export PL_UID="$(id -u)"
+          export PL_GID="$(id -g)"
+          export PL_PASSWD_PATH="${PL_MAIN_ROOT}/.users/passwd"
+          export PL_GROUP_PATH="${PL_MAIN_ROOT}/.users/group"
+
+          # Collect logs
+          compose logs > "${PL_MAIN_ROOT}/compose-logs.txt" ||
+            echo "::warning title=pl-compose teardown::failed to collect container logs"
+          compose images > "${PL_MAIN_ROOT}/compose-images.txt" ||
+            echo "::warning title=pl-compose teardown::failed to collect image list"
+
+          # Stop the Platforma. --volumes drops the bind-backed named volumes (the
+          # host directories stay), so a reused runner does not inherit a volume
+          # pointing at a root that the cleanup step has already removed.
+          compose down --volumes --remove-orphans ||
+            echo "::warning title=pl-compose teardown::docker compose down failed, containers may still be running"
 
           # Change ownership of Platforma state to the current user before uploading
-          sudo chown -R "$(id -u):$(id -g)" "${PL_MAIN_ROOT}"
+          sudo chown -R "$(id -u):$(id -g)" "${PL_MAIN_ROOT}" ||
+            echo "::warning title=pl-compose teardown::failed to chown platforma state"
