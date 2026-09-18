@@ -23,7 +23,8 @@ services:
     image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
     user: "${PL_UID}:${PL_GID}"
 
-    # Packages can be large. We don't want to save them after execution.
+    # Packages can be large. Keep them in a separate volume, outside the main
+    # root, so they are not dumped into the platforma-dump artifact.
     command: |
        --auth-htpasswd="/etc/htpasswd"
        --master-secret="cGxhdGZvcm1hLWNpLW1hc3Rlci1zZWNyZXQtc3RhdGljLWRvLW5vdC11c2UtaW4tcHJvZA"
@@ -32,7 +33,7 @@ services:
        --log-dst="file:///storage/log/platforma.log"
        --log-level="${PL_LOG_LEVEL:-info}"
        --main-root="/storage"
-       --packages-dir="/storage/packages"
+       --packages-dir="/packages"
        --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
        --primary-storage-s3-key="testuser"
        --primary-storage-s3-secret="testpassword"
@@ -58,6 +59,7 @@ services:
 
     volumes:
       - main-root:/storage
+      - packages-root:/packages
       - ${PL_TEST_ASSETS_DIR}:/library
       - ${PL_WORKSPACE}:${PL_WORKSPACE}
       - ${HTPASSWD_PATH}:/etc/htpasswd
@@ -79,3 +81,9 @@ volumes:
       type: none
       o: bind
       device: ${PL_MAIN_ROOT}
+  packages-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_PACKAGES_ROOT}
