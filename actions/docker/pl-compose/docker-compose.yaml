@@ -51,6 +51,11 @@ services:
       - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
       - "PL_LICENSE=${PL_LICENSE:-}"
       - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
+      # Whether this backend serves scratch (temporary) disk space requests, which pl made
+      # opt-in in milaboratory/pl#2192. Empty by default, so pl keeps its own default of off
+      # and no caller changes behaviour; a caller that wants it sets the variable on the step,
+      # the same way PL_LICENSE reaches here.
+      - "PL_HAS_SCRATCH_SPACE=${PL_HAS_SCRATCH_SPACE:-}"
 
     volumes:
       - main-root:/storage
