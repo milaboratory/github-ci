@@ -1,19 +1,26 @@
-name: 'Test: changeset/check-coverage'
+name: 'Test: changeset actions'
 
 on:
   workflow_call:
   workflow_dispatch:   # manual escape hatch — also lets us re-run after a workflow edit
   pull_request:
     paths:
-      - 'actions/changeset/check-coverage/**'
+      - 'actions/changeset/**'
   push:
     paths:
-      - 'actions/changeset/check-coverage/**'
+      - 'actions/changeset/**'
     branches: ['v4', 'v4-beta']
 
 jobs:
   bats:
+    name: bats (${{ matrix.action.dir }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        action:
+          - { dir: 'check-coverage', suite: 'test/coverage.bats' }
+          - { dir: 'require-package-bump', suite: 'test/require-package-bump.bats' }
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +43,6 @@ jobs:
           pnpm --version
           bats --version
 
-      - name: Run changeset/check-coverage bats suite
-        working-directory: actions/changeset/check-coverage
-        run: bats test/coverage.bats
+      - name: Run changeset/${{ matrix.action.dir }} bats suite
+        working-directory: actions/changeset/${{ matrix.action.dir }}
+        run: bats ${{ matrix.action.suite }}
