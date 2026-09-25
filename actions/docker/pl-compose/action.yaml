@@ -152,14 +152,6 @@ runs:
           rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
             echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
 
-          # Best effort: the runner discards its workspace anyway, and a cleanup
-          # that cannot finish must never turn a job with passing tests red.
-          # It failed exactly that way while `down` was broken: the container kept
-          # writing into the bind-mounted root, so rm raced it and got ENOTEMPTY.
-          echo "Removing '${PL_MAIN_ROOT}' and '${PL_PACKAGES_ROOT}'"
-          rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
-            echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
-
     - uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
         name: platforma-dump
