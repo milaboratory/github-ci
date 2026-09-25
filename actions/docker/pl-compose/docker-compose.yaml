@@ -1,0 +1,89 @@
+name: "platform"
+
+services:
+  minio:
+    image: quay.io/minio/minio
+    # Run as the runner UID/GID — keeps all files in PL_MAIN_ROOT owned by
+    # one user so cleanup (rm -rf) works without sudo.
+    user: "${PL_UID}:${PL_GID}"
+    command: server /data/minio --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+
+    environment:
+      MINIO_ROOT_USER: testuser
+      MINIO_ROOT_PASSWORD: testpassword
+
+    volumes:
+      - main-root:/data
+
+  platforma:
+    image: ${PL_DOCKER_REGISTRY}:${PL_DOCKER_TAG}
+    user: "${PL_UID}:${PL_GID}"
+
+    # Packages can be large. Keep them in a separate volume, outside the main
+    # root, so they are not dumped into the platforma-dump artifact.
+    command: |
+       --auth-htpasswd="/etc/htpasswd"
+       --master-secret="cGxhdGZvcm1hLWNpLW1hc3Rlci1zZWNyZXQtc3RhdGljLWRvLW5vdC11c2UtaW4tcHJvZA"
+       --listen-address="0.0.0.0"
+       --listen-port="6345"
+       --log-dst="file:///storage/log/platforma.log"
+       --log-level="${PL_LOG_LEVEL:-info}"
+       --main-root="/storage"
+       --packages-dir="/packages"
+       --primary-storage-s3="http://minio:9000/platforma-primary-bucket"
+       --primary-storage-s3-key="testuser"
+       --primary-storage-s3-secret="testpassword"
+       --primary-storage-s3-external-endpoint="http://localhost:9000/"
+       --data-library-fs="library=/library"
+
+    ports:
+      - "6345:6345"
+
+    # tmpfs HOME so pl/child processes have a writable home with no host pollution.
+    tmpfs: [ /tmp, /pl-home ]
+
+    environment:
+      - "HOME=/pl-home"
+      - "MI_LICENSE=${MI_LICENSE:-${PL_LICENSE:-}}"
+      - "PL_LICENSE=${PL_LICENSE:-}"
+      - "PL_DATA_CREATE_BUCKET=${PL_DATA_CREATE_BUCKET:-true}"
+      # Whether this backend serves scratch (temporary) disk space requests, which pl made
+      # opt-in in milaboratory/pl#2192. Empty by default, so pl keeps its own default of off
+      # and no caller changes behaviour; a caller that wants it sets the variable on the step,
+      # the same way PL_LICENSE reaches here.
+      - "PL_HAS_SCRATCH_SPACE=${PL_HAS_SCRATCH_SPACE:-}"
+
+    volumes:
+      - main-root:/storage
+      - packages-root:/packages
+      - ${PL_TEST_ASSETS_DIR}:/library
+      - ${PL_WORKSPACE}:${PL_WORKSPACE}
+      - ${HTPASSWD_PATH}:/etc/htpasswd
+      # Inject passwd/group so the runner UID resolves to a name —
+      # required by pl entrypoint's `id --user --name` check.
+      - ${PL_PASSWD_PATH}:/etc/passwd:ro
+      - ${PL_GROUP_PATH}:/etc/group:ro
+
+    restart: always
+
+# Never! NEVER! put volumes mounted into docker container outside runner workspace.
+# Runner workspace is the only directory that is guaranteed to be shared between runner FS and
+# docker host, wherever it is. Attempt to bind-mount directories outside WORKSPACE will randomly fail
+# depending on moon phases and mood of the scheduler god. :(
+volumes:
+  main-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_MAIN_ROOT}
+  packages-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PL_PACKAGES_ROOT}
