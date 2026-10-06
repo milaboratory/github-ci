@@ -98,6 +98,11 @@ runs:
           rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
             echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
 
+          # Best effort: a cleanup that cannot finish must never turn a passing job red.
+          echo "Removing '${PL_MAIN_ROOT}' and '${PL_PACKAGES_ROOT}'"
+          rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
+            echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
+
     - uses: milaboratory/github-ci/actions/post/artifact@v4
       with:
         name: platforma-dump

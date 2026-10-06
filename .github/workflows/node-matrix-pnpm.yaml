@@ -420,12 +420,13 @@ on:
 
       WIN_SIGN_CERT:
         description: |
-          base64-encoded p12 certificate file for the Windows
-          (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
+          Unused: Windows binaries are signed with Azure Trusted Signing.
+          Kept so existing callers that still pass it do not fail.
         required: false
       WIN_SIGN_CERT_PWD:
         description: |
-          password to decrypt the p12 signing certificate for the Windows
+          Unused: Windows binaries are signed with Azure Trusted Signing.
+          Kept so existing callers that still pass it do not fail.
         required: false
 
       GCP_TIMESTAMPING_URL:
@@ -722,33 +723,12 @@ jobs:
           mac-api-key-id: ${{ secrets.MAC_NOTR_API_KEY_ID }}
           mac-api-key-issuer-id: ${{ secrets.MAC_NOTR_API_KEY_ISSUER_ID }}
 
-      - name: Get GoogleCloud access token for CodeSign on Windows
-        uses: google-github-actions/auth@v2
-        id: gcp-auth
-        if: runner.os == 'Windows'
-          && inputs.sign-binaries != ''
-        with:
-          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
-          token_format: "access_token"
-
-      - name: Set up GCloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        if: runner.os == 'Windows'
-          && inputs.sign-binaries != ''
-        with:
-          version: ${{ inputs.gcp-sdk-version }}
-
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4
         with:
           binaries: ${{ inputs.sign-binaries }}
-          code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
-          kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
-          kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
-          access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
       - name: Run after-prebuild for - ${{ matrix.selector }}
         id: after-prebuild

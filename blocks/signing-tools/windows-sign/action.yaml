@@ -1,7 +1,12 @@
 name: Sign application on Windows
 author: 'MiLaboratories'
 description: |
-  Sign Windows executable
+  Sign Windows executables with Azure Trusted Signing.
+
+  Logs in to Azure through GitHub OIDC, so the calling job needs
+  'id-token: write' and the calling repository needs a federated credential
+  on the signing Entra app (milaboratory/infrastructure:
+  terraform/azure/trusted-signing/eastus.tfvars).
 
 inputs:
   #
@@ -24,27 +29,10 @@ inputs:
 
   jsign-version:
     description: |
-      Version of jsign
+      Version of jsign (chocolatey package version).
+      Azure Trusted Signing (TRUSTEDSIGNING storetype) requires jsign >= 7.0.
     required: false
-    default: '6.0'
-
-  store-type:
-    description: |
-      type of the store with certificate (the cloud service to use)
-    required: false
-    default: GOOGLECLOUD
-
-  timestamping-mode:
-    description: |
-      Timestamping mode
-    required: false
-    default: 'RFC3161'
-
-  timestamping-url:
-    description: |
-      Timestamping url, must be from the organization that issued code sign certificate
-    required: false
-    default: 'http://timestamp.globalsign.com/tsa/r6advanced1'
+    default: '7.4.0'
 
   binaries:
     description: |
@@ -54,25 +42,40 @@ inputs:
       (use /* or /** pattern ending to match all files inside directory)
     required: false
 
-  code-sign-chain:
-    description: |
-      base64-encoded code sign chain pem file for the Windows
+  #
+  # Azure Trusted Signing control
+  #
+  azure-client-id:
+    description: Microsoft Entra application (client) ID for Azure Trusted Signing OIDC login.
     required: false
+    default: '41a3655d-2ac4-4bd0-86e2-839a38b6cb58'
 
-  kms-keyring:
-    description: |
-       KMS keyring name in GCP
-    required: true
+  azure-tenant-id:
+    description: Microsoft Entra tenant ID for Azure Trusted Signing OIDC login.
+    required: false
+    default: '53dff85f-903c-48f0-908b-00aa35e40dad'
 
-  kms-keyname:
-    description: |
-      KMS key name in GCP
-    required: true
+  azure-codesign-endpoint:
+    description: Azure Trusted Signing regional endpoint (abbreviated region code, e.g. 'eus' for East US).
+    required: false
+    default: 'https://eus.codesigning.azure.net'
 
-  access-token:
+  azure-codesign-account:
+    description: Azure Trusted Signing account name.
+    required: false
+    default: 'platforma-app-signing'
+
+  azure-codesign-profile:
+    description: Azure Trusted Signing certificate profile name.
+    required: false
+    default: 'platforma-public-trust'
+
+  timestamping-url:
     description: |
-      Access token for certificate store
-    required: true
+      RFC3161 timestamping url. Azure Trusted Signing certificates live for days,
+      so signatures must be timestamped by the Microsoft TSA to stay valid.
+    required: false
+    default: 'http://timestamp.acs.microsoft.com'
 
   # interactive-debug:
   #   description: |
@@ -94,6 +97,24 @@ runs:
     # - uses: fawazahmed0/action-debug-vscode@main
     #   if: inputs.interactive-debug == 'true'
 
+    - name: Azure login (Trusted Signing)
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        allow-no-subscriptions: true
+
+    - name: Get Trusted Signing access token
+      id: azure-token
+      if: steps.binaries-list.outputs.has-matches == 'true'
+      shell: pwsh
+      run: |
+        $token = az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv
+        if ($LASTEXITCODE -ne 0 -or -not $token) { throw "Failed to get Azure Trusted Signing access token" }
+        echo "::add-mask::$token"
+        "token=$token" >> $env:GITHUB_OUTPUT
+
     - name: Install Java
       if: steps.binaries-list.outputs.has-matches == 'true'
       uses: actions/setup-java@v4
@@ -113,15 +134,10 @@ runs:
       id: pre-sign
       if: steps.binaries-list.outputs.has-matches == 'true'
       env:
-        CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.binaries-list.outputs.paths }}
         GH_WORKSPACE: ${{ github.workspace }}
       shell: pwsh
       run: |
-        $CODE_SIGN_CHAIN_PEM="codesign-chain.pem"
-        $DECODED_CODE_SIGN_CHAIN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ env.CODE_SIGN_CHAIN }}"))
-        $DECODED_CODE_SIGN_CHAIN | Out-File -FilePath "$CODE_SIGN_CHAIN_PEM"
-
         $SANITIZED_FILE_PATHS = @()
 
         foreach ($FILE_PATH in $env:BINARIES -split "`n") {
@@ -144,28 +160,26 @@ runs:
 
         $SANITIZED_FILE_PATHS_STRING = $SANITIZED_FILE_PATHS -join "%0A" # %0A is interpreted as '\n' by GITHUB_OUTPUT
 
-        echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
         echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
 
     - name: Sign app with jsign
       if: steps.binaries-list.outputs.has-matches == 'true'
       env:
-        CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.pre-sign.outputs.binaries }}
-        CERT_FILE: ${{ steps.pre-sign.outputs.code-sign-chain-pem }}
+        AZURE_CODESIGN_TOKEN: ${{ steps.azure-token.outputs.token }}
       shell: pwsh
       run: |
+        # The service holds the certificate, so there is no --certfile.
         foreach ($BIN_PATH in $env:BINARIES -split "`n") {
           echo "Signing $BIN_PATH..."
 
-          jsign --storetype "${{ inputs.store-type }}" `
-            --storepass "${{ inputs.access-token }}" `
-            --keystore "${{ inputs.kms-keyring }}" `
-            --alias "${{ inputs.kms-keyname }}" `
-            --certfile "$env:CERT_FILE" `
-            --tsmode "${{ inputs.timestamping-mode }}" `
+          jsign --storetype TRUSTEDSIGNING `
+            --storepass "$env:AZURE_CODESIGN_TOKEN" `
+            --keystore "${{ inputs.azure-codesign-endpoint }}" `
+            --alias "${{ inputs.azure-codesign-account }}/${{ inputs.azure-codesign-profile }}" `
+            --tsmode RFC3161 `
             --tsaurl "${{ inputs.timestamping-url }}" `
             "$BIN_PATH"
+
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
-
-
