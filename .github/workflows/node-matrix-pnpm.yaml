@@ -283,6 +283,15 @@ on:
         required: false
         default: ""
 
+      win-sign-backend:
+        description: |
+          Windows code signing backend: 'gcp' (Google Cloud HSM, needs the GCP_KMS_* /
+          WIN_SIGN_CERT secrets) or 'azure' (Azure Trusted Signing, needs a federated
+          credential for the calling repository on the signing Entra app).
+        type: string
+        required: false
+        default: "gcp"
+
       gcp-sdk-version:
         description: |
           Version or version constraint of the gcloud SDK to install. If
@@ -727,6 +736,7 @@ jobs:
         id: gcp-auth
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
+          && inputs.win-sign-backend != 'azure'
         with:
           workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
@@ -736,6 +746,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
+          && inputs.win-sign-backend != 'azure'
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
@@ -744,6 +755,7 @@ jobs:
           && inputs.sign-binaries != ''
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
+          backend: ${{ inputs.win-sign-backend }}
           binaries: ${{ inputs.sign-binaries }}
           code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
           kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}

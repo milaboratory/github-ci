@@ -61,18 +61,55 @@ inputs:
 
   kms-keyring:
     description: |
-       KMS keyring name in GCP
-    required: true
+       KMS keyring name in GCP. Used only with backend 'gcp'.
+    required: false
 
   kms-keyname:
     description: |
-      KMS key name in GCP
-    required: true
+      KMS key name in GCP. Used only with backend 'gcp'.
+    required: false
 
   access-token:
     description: |
-      Access token for certificate store
-    required: true
+      Access token for certificate store. Used only with backend 'gcp':
+      the 'azure' backend gets its own token through OIDC login.
+    required: false
+
+  #
+  # Azure Trusted Signing control
+  #
+  backend:
+    description: |
+      Windows signing backend: 'gcp' (Google Cloud HSM, default) or 'azure'
+      (Azure Trusted Signing). 'azure' needs 'id-token: write' on the calling job
+      and a federated credential for the calling repository on the Entra app.
+    required: false
+    default: 'gcp'
+
+  azure-client-id:
+    description: Microsoft Entra application (client) ID for Azure Trusted Signing OIDC login.
+    required: false
+    default: '41a3655d-2ac4-4bd0-86e2-839a38b6cb58'
+
+  azure-tenant-id:
+    description: Microsoft Entra tenant ID for Azure Trusted Signing OIDC login.
+    required: false
+    default: '53dff85f-903c-48f0-908b-00aa35e40dad'
+
+  azure-codesign-endpoint:
+    description: Azure Trusted Signing regional endpoint (abbreviated region code, e.g. 'eus' for East US).
+    required: false
+    default: 'https://eus.codesigning.azure.net'
+
+  azure-codesign-account:
+    description: Azure Trusted Signing account name.
+    required: false
+    default: 'platforma-app-signing'
+
+  azure-codesign-profile:
+    description: Azure Trusted Signing certificate profile name.
+    required: false
+    default: 'platforma-public-trust'
 
   # interactive-debug:
   #   description: |
@@ -101,10 +138,30 @@ runs:
         distribution: ${{ inputs.java-distribution }}
         java-version: ${{ inputs.java-version }}
 
+    - name: Azure login (Trusted Signing)
+      if: steps.binaries-list.outputs.has-matches == 'true'
+        && inputs.backend == 'azure'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        allow-no-subscriptions: true
+
+    - name: Get Trusted Signing access token
+      id: azure-token
+      if: steps.binaries-list.outputs.has-matches == 'true'
+        && inputs.backend == 'azure'
+      shell: pwsh
+      run: |
+        $token = az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv
+        echo "::add-mask::$token"
+        "token=$token" >> $env:GITHUB_OUTPUT
+
     - name: Install ebourg/jsign
       if: steps.binaries-list.outputs.has-matches == 'true'
       env:
-        JSIGN_VERSION: ${{ inputs.jsign-version }}
+        # Azure Trusted Signing (TRUSTEDSIGNING storetype) requires jsign >= 7.0.
+        JSIGN_VERSION: ${{ inputs.backend == 'azure' && '7.4.0' || inputs.jsign-version }}
       shell: pwsh
       run: |
         choco install jsign --version "${{ env.JSIGN_VERSION }}"
@@ -147,8 +204,9 @@ runs:
         echo "code-sign-chain-pem=$CODE_SIGN_CHAIN_PEM" >> $env:GITHUB_OUTPUT
         echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
 
-    - name: Sign app with jsign
+    - name: Sign app with jsign (GCP)
       if: steps.binaries-list.outputs.has-matches == 'true'
+        && inputs.backend != 'azure'
       env:
         CODE_SIGN_CHAIN: ${{ inputs.code-sign-chain }}
         BINARIES: ${{ steps.pre-sign.outputs.binaries }}
@@ -168,4 +226,26 @@ runs:
             "$BIN_PATH"
         }
 
+    - name: Sign app with jsign (Azure Trusted Signing)
+      if: steps.binaries-list.outputs.has-matches == 'true'
+        && inputs.backend == 'azure'
+      env:
+        BINARIES: ${{ steps.pre-sign.outputs.binaries }}
+        AZURE_CODESIGN_TOKEN: ${{ steps.azure-token.outputs.token }}
+      shell: pwsh
+      run: |
+        # The service holds the certificate (no --certfile) and requires the
+        # Microsoft RFC3161 timestamp authority.
+        foreach ($BIN_PATH in $env:BINARIES -split "`n") {
+          echo "Signing $BIN_PATH..."
 
+          jsign --storetype TRUSTEDSIGNING `
+            --storepass "$env:AZURE_CODESIGN_TOKEN" `
+            --keystore "${{ inputs.azure-codesign-endpoint }}" `
+            --alias "${{ inputs.azure-codesign-account }}/${{ inputs.azure-codesign-profile }}" `
+            --tsmode RFC3161 `
+            --tsaurl "http://timestamp.acs.microsoft.com" `
+            "$BIN_PATH"
+
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
