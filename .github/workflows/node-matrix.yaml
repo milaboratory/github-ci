@@ -270,18 +270,6 @@ on:
         default: false
 
       #
-      # Windows sign control
-      #
-      win-sign-backend:
-        description: |
-          Windows code signing backend: 'gcp' (Google Cloud HSM, needs gcp-login-enable
-          and the GCP_KMS_* / WIN_SIGN_CERT secrets) or 'azure' (Azure Trusted Signing,
-          needs a federated credential for the calling repository on the signing Entra app).
-        type: string
-        required: false
-        default: "gcp"
-
-      #
       # GCP sign control
       #
       gcp-login-enable:
@@ -411,12 +399,13 @@ on:
 
       WIN_SIGN_CERT:
         description: |
-          base64-encoded p12 certificate file for the Windows
-          (more info here https://docs.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage)
+          Unused: Windows binaries are signed with Azure Trusted Signing.
+          Kept so existing callers that still pass it do not fail.
         required: false
       WIN_SIGN_CERT_PWD:
         description: |
-          password to decrypt the p12 signing certificate for the Windows
+          Unused: Windows binaries are signed with Azure Trusted Signing.
+          Kept so existing callers that still pass it do not fail.
         required: false
 
       AWS_ASSUME_ROLE:
@@ -562,29 +551,12 @@ jobs:
           mac-cert-base64: ${{ secrets.MAC_SIGN_CERT }}
           mac-cert-passwd: ${{ secrets.MAC_SIGN_CERT_PWD }}
 
-      - name: Get GoogleCloud access token for CodeSign on Windows
-        uses: google-github-actions/auth@v2
-        id: gcp-auth
-        if: runner.os == 'Windows'
-          && inputs.sign-binaries != ''
-          && inputs.win-sign-backend != 'azure'
-          && inputs.gcp-login-enable
-        with:
-          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
-          token_format: "access_token"
-
       - name: CodeSign binary on Windows
         if: runner.os == 'Windows'
           && inputs.sign-binaries != ''
         uses: milaboratory/github-ci/blocks/signing-tools/windows-sign@v4-beta
         with:
-          backend: ${{ inputs.win-sign-backend }}
           binaries: ${{ inputs.sign-binaries }}
-          code-sign-chain: ${{ secrets.WIN_SIGN_CERT }}
-          kms-keyring: ${{ secrets.GCP_KMS_KEYRING }}
-          kms-keyname: ${{ secrets.GCP_KMS_KEY_NAME }}
-          access-token: ${{ steps.gcp-auth.outputs.access_token }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
