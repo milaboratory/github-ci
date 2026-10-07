@@ -158,9 +158,12 @@ runs:
             $SANITIZED_FILE_PATHS += "$FILE_PARENT_PATH/$FILE_RESOLVED_NAME_SANITIZED"
         }
 
-        $SANITIZED_FILE_PATHS_STRING = $SANITIZED_FILE_PATHS -join "%0A" # %0A is interpreted as '\n' by GITHUB_OUTPUT
-
-        echo "binaries=$SANITIZED_FILE_PATHS_STRING" >> $env:GITHUB_OUTPUT
+        # Multiline output: GITHUB_OUTPUT does not decode %0A, so a joined string reaches
+        # the sign step as a single (non-existent) file name.
+        $DELIMITER = "EOF_$([guid]::NewGuid().ToString('N'))"
+        "binaries<<$DELIMITER" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        $SANITIZED_FILE_PATHS | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "$DELIMITER" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
     - name: Sign app with jsign
       if: steps.binaries-list.outputs.has-matches == 'true'
@@ -171,6 +174,11 @@ runs:
       run: |
         # The service holds the certificate, so there is no --certfile.
         foreach ($BIN_PATH in $env:BINARIES -split "`n") {
+          $BIN_PATH = $BIN_PATH.Trim()
+          if (-not $BIN_PATH) {
+            continue
+          }
+
           echo "Signing $BIN_PATH..."
 
           jsign --storetype TRUSTEDSIGNING `
