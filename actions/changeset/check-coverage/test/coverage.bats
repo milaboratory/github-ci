@@ -46,6 +46,31 @@ setup() {
   [ "${status}" -eq 0 ]
 }
 
+# `changeset status` lists a dependent of a bumped package at `"type": "none"`
+# — in the plan, but not released. `pkg-app` devDepends on `pkg-lib` via
+# `workspace:*`, so bumping `pkg-lib` alone puts `pkg-app` in the plan at
+# `none` while leaving its own edit uncovered.
+@test "a type-none cascade entry does not cover an edited package" {
+  touch_file 'packages/pkg-app/index.js'
+  add_changeset '"@check-coverage-test/pkg-lib": patch' 'bump lib only'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'@check-coverage-test/pkg-app'* ]]
+}
+
+# Anti-drift guard for the fixture, not for the script: the case above is only
+# meaningful while the plan really carries `pkg-app` at type `none`.
+@test "fixture reproduces the cascade: pkg-lib bump leaves pkg-app at type none" {
+  add_changeset '"@check-coverage-test/pkg-lib": patch' 'bump lib only'
+  cd "${WORKSPACE}"
+  ./node_modules/.bin/changeset status \
+    --since=origin/main --output=cascade.json >/dev/null 2>&1 || true
+  run jq -r '.releases[] | select(.name == "@check-coverage-test/pkg-app") | .type' \
+    cascade.json
+  [ "${status}" -eq 0 ]
+  [ "${output}" = 'none' ]
+}
+
 @test "reports every missing package, not just the first" {
   touch_file 'packages/pkg-a/index.js'
   touch_file 'packages/pkg-b/index.js'
