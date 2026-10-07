@@ -272,6 +272,10 @@ on:
       #
       # GCP sign control
       #
+      # Unused: Windows binaries are signed with Azure Trusted Signing, and no
+      # node-matrix caller signs packages with gcloud-kms-sign. The gcp-* inputs and
+      # GCP_KMS_* secrets stay declared so callers that still pass them do not fail.
+      #
       gcp-login-enable:
         description: |
           Enables the creation of Google cloud credentials during the GitHub Action workflow.
@@ -797,24 +801,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE }}
           aws-region: ${{ secrets.AWS_ASSUME_REGION }}
 
-      - name: Configure GCP credentials
-        uses: google-github-actions/auth@v2
-        if: inputs.gcp-login-enable
-        with:
-          workload_identity_provider: ${{ secrets.GCP_KMS_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_KMS_SERVICE_ACCOUNT }}
-          token_format: "access_token"
-
-      - name: Set up GCloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        if: inputs.gcp-login-enable
-        with:
-          version: ${{ inputs.gcp-sdk-version }}
-
-      - name: Load MiLaboratories custom CLI tools
-        if: inputs.gcp-login-enable
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
-
       - name: Publish npm package
         uses: milaboratory/github-ci/actions/shell@v4-beta
         env:
@@ -822,11 +808,6 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PUBLISH_SCRIPT: ${{ inputs.publish-script-name }}
           PUBLISH_TO_PUBLIC: ${{ inputs.publish-to-public }}
-          GCP_KMS_KEY_VERSION: ${{ inputs.gcp-kms-key-version }}
-          GCP_KMS_KEY_NAME: ${{ secrets.GCP_KMS_KEY_NAME }}
-          GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
-          GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
-          GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
         with:
           run: |
             if [ -z "${PUBLISH_SCRIPT}" ]; then
