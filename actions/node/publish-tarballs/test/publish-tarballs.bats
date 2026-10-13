@@ -92,3 +92,12 @@ setup() {
     run "${SCRIPT_UNDER_TEST}"
     [ "${status}" -eq 2 ]
 }
+
+@test "refuses a plain-http registry before sending any token" {
+    export NPM_AUTH_TOKEN=github-token
+    run_publish http
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'http://npm.pkg.github.com/: only https registries are supported'* ]]
+    [ ! -s "${NPM_STUB_LOG}" ]
+    ! grep -q '_authToken' "${NPM_CONFIG_USERCONFIG}"
+}

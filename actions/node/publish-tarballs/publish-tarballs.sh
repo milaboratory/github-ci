@@ -15,8 +15,9 @@
 # Versions already in their registry are skipped, so a failed run can be
 # re-run.
 #
-# Auth, by registry host. Every host in the manifest is checked before the
-# first upload; a host without credentials fails the run.
+# Auth, by registry host. Every registry in the manifest is checked before the
+# first upload; a non-https registry or a host without credentials fails the
+# run.
 #   registry.npmjs.org   OIDC trusted publishing. NPMJS_FALLBACK_TOKEN, when
 #                        set, is configured too: npm tries OIDC first and uses
 #                        the token only if the exchange fails.
@@ -62,6 +63,12 @@ export NPM_CONFIG_USERCONFIG="${NPM_CONFIG_USERCONFIG:-$(mktemp)}"
 : > "${NPM_CONFIG_USERCONFIG}"
 
 while read -r registry; do
+    # npm attaches a token by host whatever the scheme, so plain http would
+    # send it in clear text.
+    if [[ "${registry}" != https://* ]]; then
+        echo "::error::${registry}: only https registries are supported" >&2
+        exit 1
+    fi
     host="$(registry_host "${registry}")"
     case "${host}" in
         registry.npmjs.org)
