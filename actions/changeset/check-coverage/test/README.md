@@ -50,13 +50,18 @@ and a couple of git ops.
 
 - `packages/pkg-a`, `packages/pkg-b` — both consume `is-number` via `catalog:`
 - `packages/pkg-c` — consumes `is-string` via `catalog:`
+- `packages/pkg-dev` — consumes `is-string` via a `catalog:` devDependency
 - `packages/pkg-private` — `"private": true`, never requires a bump
+- `packages/pkg-lib`, `packages/pkg-app` — both publishable; `pkg-app`
+  devDepends on `pkg-lib` via `workspace:*`. Bumping `pkg-lib` alone puts
+  `pkg-app` in the release plan at `"type": "none"`, the entry the script must
+  not read as a bump.
 
 ## CI
 
-`.github/workflows/0-test-changeset-coverage.yaml` runs the suite on
-`pull_request` and `push` (`v4`, `v4-beta`) whenever files under
-`actions/changeset/check-coverage/**` or the workflow itself change.
+`.github/workflows/0-test-changeset-actions.yaml` runs this suite and
+`require-package-bump`'s as a two-leg matrix, on `pull_request` and `push`
+(`v4`, `v4-beta`) whenever files under `actions/changeset/**` change.
 
 ## Adding a test
 
