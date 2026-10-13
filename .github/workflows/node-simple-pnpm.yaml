@@ -1157,6 +1157,7 @@ jobs:
           && inputs.npm-trusted-publishing
         uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
@@ -1165,7 +1166,8 @@ jobs:
         if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
         uses: actions/upload-artifact@v4
         with:
-          name: npm-tarballs
+          # Per call: a caller may run this workflow more than once per run.
+          name: npm-tarballs-${{ inputs.app-name-slug }}
           path: ${{ steps.npm-pack.outputs.dir }}
           retention-days: 7
           overwrite: true
@@ -1215,17 +1217,14 @@ jobs:
       # GitHub Packages uploads authenticate with GITHUB_TOKEN.
       packages: write
 
+    # No actions/env here: this runner holds an OIDC publish capability, so it
+    # gets only the npm token it may need, not the caller's other secrets.
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
-        with:
-          inputs: ${{ inputs.env }}
-          secrets: ${{ secrets.env }}
-
       - name: Download npm tarballs
         if: needs.build-test-publish.outputs.npm-pack-count != '0'
         uses: actions/download-artifact@v4
         with:
-          name: npm-tarballs
+          name: npm-tarballs-${{ inputs.app-name-slug }}
           path: ${{ runner.temp }}/npm-tarballs
 
       - name: Publish npm packages
@@ -1235,7 +1234,8 @@ jobs:
           dir: ${{ runner.temp }}/npm-tarballs
           access-public: ${{ inputs.publish-to-public }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
-          npmjs-fallback-token: ${{ inputs.npm-token-fallback && env.NPMJS_TOKEN || '' }}
+          # NPMJS_TOKEN from secrets.env, else inputs.env (actions/env's precedence).
+          npmjs-fallback-token: ${{ inputs.npm-token-fallback && (secrets.env && fromJSON(secrets.env).NPMJS_TOKEN || inputs.env && fromJSON(inputs.env).NPMJS_TOKEN) || '' }}
 
       - name: Create release with tag
         if: inputs.create-tag == 'true'

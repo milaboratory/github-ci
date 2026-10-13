@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -60,3 +61,12 @@ export const quiet = {
   warn: () => {},
   group: <T>(_title: string, fn: () => Promise<T>) => fn(),
 };
+
+/** Writes an npm-style tarball (package/package.json) to dir/file. */
+export function makeTarball(dir: string, file: string, manifest: object): void {
+  const staging = tempDir('tarball-');
+  fs.mkdirSync(path.join(staging, 'package'));
+  fs.writeFileSync(path.join(staging, 'package', 'package.json'), JSON.stringify(manifest));
+  fs.writeFileSync(path.join(staging, 'package', 'index.js'), 'module.exports = 1;\n');
+  execFileSync('tar', ['-czf', path.join(dir, file), '-C', staging, 'package']);
+}

@@ -27,10 +27,12 @@ function workspace(extra: string[] = []): { root: string; outDir: string } {
   return { root, outDir: path.join(base, 'out') };
 }
 
-async function pack(state: Parameters<typeof registryRunner>[0] = DEFAULT_STATE, extra: string[] = []) {
+const SOURCE = 'https://github.com/fixture-org/fixture-repo';
+
+async function pack(state: Parameters<typeof registryRunner>[0] = DEFAULT_STATE, extra: string[] = [], sourceRepository?: string) {
   const { root, outDir } = workspace(extra);
   const run = registryRunner(state);
-  const entries = await packWorkspace({ root, outDir, npmrcDir: root }, { ...quiet, run });
+  const entries = await packWorkspace({ root, outDir, npmrcDir: root, sourceRepository }, { ...quiet, run });
   return { root, outDir, entries, run };
 }
 
@@ -85,9 +87,10 @@ describe('packWorkspace', () => {
     expect(entries.map((e) => e.name)).toContain('@fixture/old');
   });
 
-  it('skips private packages and published versions', async () => {
+  it('skips private packages, with or without a version, and published versions', async () => {
     const { entries } = await pack();
     expect(entries.map((e) => e.name)).not.toContain('@fixture/internal');
+    expect(entries.map((e) => e.name)).not.toContain('@fixture/notes');
     expect(entries.map((e) => e.name)).not.toContain('@fixture/old');
   });
 
@@ -128,5 +131,26 @@ describe('packWorkspace', () => {
     await expect(pack({ ...DEFAULT_STATE, failing: ['@fixture/lib'] })).rejects.toThrow(
       'npm view @fixture/lib@1.0.0 version --registry=https://registry.fixture.test/',
     );
+  });
+
+  it('fills in the repository for provenance and leaves the checkout unchanged', async () => {
+    const { root, entries, outDir } = await pack(DEFAULT_STATE, [], SOURCE);
+    const app = entries.find((e) => e.name === '@fixture/app')!;
+    expect(JSON.parse(tarballFile(outDir, app.file, 'package.json')).repository).toEqual({
+      type: 'git',
+      url: 'git+https://github.com/fixture-org/fixture-repo.git',
+      directory: 'packages/app',
+    });
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'packages', 'app', 'package.json'), 'utf8')).repository).toBeUndefined();
+  });
+
+  it('fails on a repository that is not the one building, before any prepublishOnly', async () => {
+    const { root, outDir } = workspace();
+    const appJson = path.join(root, 'packages', 'app', 'package.json');
+    fs.writeFileSync(appJson, JSON.stringify({ ...JSON.parse(fs.readFileSync(appJson, 'utf8')), repository: 'fixture-org/old-name' }));
+    await expect(
+      packWorkspace({ root, outDir, npmrcDir: root, sourceRepository: SOURCE }, { ...quiet, run: registryRunner(DEFAULT_STATE) }),
+    ).rejects.toThrow('@fixture/app: package.json repository "fixture-org/old-name" is not https://github.com/fixture-org/fixture-repo');
+    expect(fs.existsSync(path.join(root, 'packages', 'lib', 'prepublished.txt'))).toBe(false);
   });
 });

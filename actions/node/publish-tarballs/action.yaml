@@ -30,9 +30,10 @@ inputs:
 
   npm-version:
     description: |
-      npm version to install. Trusted publishing needs 11.5.1 or later.
+      npm version to install, exact so a publish never runs an untested npm.
+      Trusted publishing needs 11.5.1 or later.
     required: false
-    default: '^11.5.1'
+    default: '11.21.0'
 
   npm-auth-token:
     description: Token for npm.pkg.github.com (GitHub Packages). Sent to no other registry.

@@ -25,13 +25,17 @@ export async function listPackages(root: string, run: Runner): Promise<Workspace
     .map((p) => fs.realpathSync(p.path))
     .filter((dir) => (isWorkspace ? dir !== rootDir : dir === rootDir));
 
-  return dirs.map((dir) => {
+  const packages: WorkspacePackage[] = [];
+  for (const dir of dirs) {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) as PackageJson;
     if (!manifest.name || !manifest.version) {
+      // pnpm -r publish ignores private packages, versioned or not.
+      if (manifest.private) continue;
       throw new Error(`${path.join(dir, 'package.json')}: name and version are required`);
     }
-    return { dir, manifest: manifest as WorkspacePackage['manifest'] };
-  });
+    packages.push({ dir, manifest: manifest as WorkspacePackage['manifest'] });
+  }
+  return packages;
 }
 
 /**

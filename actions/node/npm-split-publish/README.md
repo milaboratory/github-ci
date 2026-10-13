@@ -14,6 +14,31 @@ unpublished non-private package, in dependency order, it runs
 `npm publish <tarball> --ignore-scripts`. The two halves share
 `manifest.jsonl`, typed as `ManifestEntry` in `src/manifest.ts`.
 
+## Behaviour worth knowing
+
+- **`repository` for provenance.** Under trusted publishing npm turns
+  provenance on by itself for a public package from a public repository, and
+  the registry rejects the upload (E422) unless `package.json` `repository.url`
+  names the repository that built it. `pack` fills in a missing `repository`
+  (`git+https://github.com/<owner>/<repo>.git`, plus `directory`) in the packed
+  copy only, and fails before any `prepublishOnly` when a package declares a
+  different repository (for example after a rename).
+- **Dist-tag.** Every upload passes `--tag`: `publishConfig.tag`, else `latest`.
+  npm 11 refuses a prerelease or a version below the highest published one
+  without an explicit tag; the previous path (npm 10 under pnpm) tagged those
+  `latest`, so that stays the behaviour.
+- **The upload job does not trust the artifact.** Every manifest value is
+  validated, each tarball's `package/package.json` must match its entry, values
+  are passed as `--flag=value`, and npm runs from an empty directory so no
+  `.npmrc` from the artifact is read. `GITHUB_TOKEN` is sent only to
+  npm.pkg.github.com.
+- **Partial releases.** `prepublishOnly` (`block-tools publish` to the block
+  registry, `pl-pkg prepublish`) runs in the build job, before the upload job
+  starts. If the upload fails, those side effects have happened and npm lacks
+  the packages. Fix the cause and use "Re-run failed jobs" on the run: the
+  upload job reuses the artifact (kept 7 days) and skips versions already
+  published.
+
 ## Develop
 
 ```bash

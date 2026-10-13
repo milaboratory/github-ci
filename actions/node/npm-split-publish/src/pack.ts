@@ -7,6 +7,7 @@ import * as path from 'path';
 
 import { ManifestEntry, writeManifest } from './manifest';
 import { isPublished, resolveRegistry } from './registry';
+import { repositoryState, withRepository } from './repository';
 import { Runner, runChecked } from './run';
 import { WorkspacePackage, listPackages, sortTopologically } from './workspace';
 
@@ -17,6 +18,13 @@ export interface PackOptions {
   outDir: string;
   /** Directory of the .npmrc with scope mappings and auth; usually `root`. */
   npmrcDir: string;
+  /**
+   * https://github.com/<owner>/<repo> of the repository being built. npm
+   * provenance (on by default under trusted publishing) requires the
+   * package's repository.url to name it: a missing field is filled in for the
+   * pack, a different repository fails the run. Unset: no check.
+   */
+  sourceRepository?: string;
 }
 
 export interface PackDeps {
@@ -44,10 +52,11 @@ interface Planned {
  * for `block-tools publish` / `pl-pkg prepublish`), then `pnpm pack`, which
  * resolves `workspace:` and `catalog:`. Every package is checked before the
  * first prepublishOnly runs, so a bad package fails the run without side
- * effects.
+ * effects. With `sourceRepository`, a missing package.json `repository` is
+ * filled in for the pack (see repository.ts).
  */
 export async function packWorkspace(options: PackOptions, deps: PackDeps): Promise<ManifestEntry[]> {
-  const { root, outDir, npmrcDir } = options;
+  const { root, outDir, npmrcDir, sourceRepository } = options;
   const { run, log, warn, group } = deps;
 
   fs.rmSync(outDir, { recursive: true, force: true });
@@ -66,6 +75,10 @@ export async function packWorkspace(options: PackOptions, deps: PackDeps): Promi
         throw new Error(`${name}: '${script}' script is not supported by the split publish (it would run after the upload, on another runner)`);
       }
     }
+    if (sourceRepository && repositoryState(pkg.manifest, sourceRepository) === 'mismatch') {
+      const declared = JSON.stringify(pkg.manifest.repository);
+      throw new Error(`${name}: package.json repository ${declared} is not ${sourceRepository}; npm rejects provenance for a different repository`);
+    }
     const registry = await resolveRegistry(pkg.manifest, npmrcDir, run);
     if (await isPublished(name, version, registry, npmrcDir, run)) {
       log(`${name}@${version}: already in ${registry}, skipping`);
@@ -79,7 +92,8 @@ export async function packWorkspace(options: PackOptions, deps: PackDeps): Promi
     const { name, version } = pkg.manifest;
     const file = await group(`${name}@${version} -> ${registry}`, async () => {
       await runChecked(run, 'pnpm', ['run', '--if-present', 'prepublishOnly'], { cwd: pkg.dir, echo: true });
-      return packOne(pkg, outDir, run);
+      const pack = () => packOne(pkg, outDir, run);
+      return sourceRepository ? withRepository(pkg.dir, root, sourceRepository, pack) : pack();
     });
     entries.push({
       name,

@@ -1,10 +1,11 @@
+import { execFileSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { ManifestEntry, writeManifest } from '../src/manifest';
 import { npmrcFor, publishArgs, publishTarballs } from '../src/publish';
-import { Call, fakeRunner, notFound, ok, quiet, tempDir } from './helpers';
+import { Call, fakeRunner, makeTarball, notFound, ok, quiet, tempDir } from './helpers';
 
 const NPMJS = 'https://registry.npmjs.org/';
 const GITHUB = 'https://npm.pkg.github.com/';
@@ -18,10 +19,10 @@ function entry(name: string, overrides: Partial<ManifestEntry> = {}): ManifestEn
 const LIB = entry('@fixture/lib', { access: 'restricted' });
 const APP = entry('@fixture/app', { version: '2.0.0', tag: 'next' });
 
-/** A tarball dir with placeholder tarballs; the fake npm never reads them. */
+/** A tarball dir with real tarballs matching the entries. */
 function tarballDir(entries: ManifestEntry[]): string {
   const dir = tempDir('publish-test-');
-  for (const e of entries) fs.writeFileSync(path.join(dir, e.file), 'placeholder');
+  for (const e of entries) makeTarball(dir, e.file, { name: e.name, version: e.version });
   writeManifest(dir, entries);
   return dir;
 }
@@ -59,7 +60,7 @@ async function publish(entries: ManifestEntry[], npm = fakeNpm(), options: { acc
 describe('publishArgs', () => {
   it('skips lifecycle scripts and passes the registry, tag and access', () => {
     expect(publishArgs(APP, '/t', false)).toEqual(['publish', `/t/${APP.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--tag=next']);
-    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--access=restricted']);
+    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--tag=latest', '--access=restricted']);
   });
 
   it('accessPublic overrides the manifest access', () => {
@@ -131,6 +132,16 @@ describe('publishTarballs', () => {
     expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file]);
   });
 
+  it('fails before uploading when a tarball holds another package', async () => {
+    const dir = tarballDir([LIB, APP]);
+    makeTarball(dir, APP.file, { name: '@fixture/other', version: '2.0.0' });
+    const npm = fakeNpm();
+    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run })).rejects.toThrow(
+      `@fixture/app@2.0.0: ${APP.file} contains @fixture/other@2.0.0`,
+    );
+    expect(npm.run.calls).toEqual([]);
+  });
+
   it('fails when a tarball named in the manifest is missing', async () => {
     const dir = tarballDir([LIB]);
     fs.rmSync(path.join(dir, LIB.file));
@@ -155,5 +166,39 @@ describe('publishTarballs', () => {
     const npm = fakeNpm();
     expect(await publishTarballs({ dir: tempDir('empty-'), userconfig: '/dev/null', accessPublic: false }, { ...quiet, run: npm.run })).toEqual([]);
     expect(npm.run.calls).toEqual([]);
+  });
+});
+
+// Real npm, no upload (--dry-run): npm 11 refuses a prerelease without an
+// explicit tag. Our arguments must get past that, as npm 10 did on the old
+// path. Needs npm 11 on PATH (CI installs it) and registry access.
+const npmMajor = (() => {
+  try {
+    return Number(execFileSync('npm', ['--version'], { encoding: 'utf8' }).split('.')[0]);
+  } catch {
+    return 0;
+  }
+})();
+
+describe.skipIf(npmMajor < 11)('publishArgs with real npm 11', () => {
+  const prerelease = entry('@milaboratories/npm-split-publish-test-does-not-exist', { version: '1.0.0-next.0' });
+
+  function dryRun(args: string[]) {
+    const cwd = tempDir('npm-dry-run-');
+    return spawnSync('npm', [...args, '--dry-run'], { cwd, encoding: 'utf8' });
+  }
+
+  it('npm itself refuses a prerelease with the default tag', () => {
+    const dir = tarballDir([prerelease]);
+    const result = dryRun(['publish', path.join(dir, prerelease.file), '--ignore-scripts', `--registry=${NPMJS}`]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('You must specify a tag');
+  });
+
+  it('accepts a prerelease with our arguments', () => {
+    const dir = tarballDir([prerelease]);
+    const result = dryRun(publishArgs(prerelease, dir, true));
+    expect(result.stderr).not.toContain('You must specify a tag');
+    expect(result.status).toBe(0);
   });
 });

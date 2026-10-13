@@ -52,6 +52,13 @@ jobs:
             exit 1
           fi
 
+      # The real-npm tests in publish.test.ts skip below npm 11; pin the
+      # version the publish-tarballs action installs.
+      - name: npm 11
+        run: |
+          npm install --global "npm@$(yq '.inputs.npm-version.default' ../publish-tarballs/action.yaml)"
+          npm --version
+
       - name: Tests (pnpm from packageManager)
         run: pnpm exec vitest run
 

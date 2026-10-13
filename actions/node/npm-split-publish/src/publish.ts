@@ -9,6 +9,7 @@ import * as path from 'path';
 import { ManifestEntry, readManifest } from './manifest';
 import { isPublished } from './registry';
 import { Runner, runChecked } from './run';
+import { readPackedManifest } from './tarball';
 
 export const NPMJS_HOST = 'registry.npmjs.org';
 export const GITHUB_PACKAGES_HOST = 'npm.pkg.github.com';
@@ -88,9 +89,10 @@ export function publishArgs(entry: ManifestEntry, dir: string, accessPublic: boo
   // `--flag=value` keeps a value from being read as an option, on top of the
   // manifest validation.
   const args = ['publish', path.resolve(dir, entry.file), '--ignore-scripts', `--registry=${entry.registry}`];
-  if (entry.tag) {
-    args.push(`--tag=${entry.tag}`);
-  }
+  // Always explicit. With the default tag npm 11 refuses a prerelease or a
+  // version below the highest published one; the old path (npm 10 under
+  // pnpm) tagged those `latest`, so that stays the default.
+  args.push(`--tag=${entry.tag || 'latest'}`);
   if (accessPublic) {
     args.push('--access=public');
   } else if (entry.access) {
@@ -112,9 +114,17 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     log('Nothing to publish.');
     return [];
   }
+  // npm publishes whatever name/version the tarball holds, so the manifest
+  // alone is not enough: check every tarball before the first upload.
   for (const entry of entries) {
-    if (!fs.existsSync(path.join(dir, entry.file))) {
-      throw new Error(`${entry.name}@${entry.version}: ${entry.file} is missing from ${dir}`);
+    const label = `${entry.name}@${entry.version}`;
+    const tarball = path.join(dir, entry.file);
+    if (!fs.existsSync(tarball)) {
+      throw new Error(`${label}: ${entry.file} is missing from ${dir}`);
+    }
+    const packed = readPackedManifest(tarball);
+    if (packed.name !== entry.name || packed.version !== entry.version) {
+      throw new Error(`${label}: ${entry.file} contains ${String(packed.name)}@${String(packed.version)}`);
     }
   }
 

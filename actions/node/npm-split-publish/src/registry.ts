@@ -7,6 +7,7 @@ export interface PackageJson {
   private?: boolean;
   scripts?: Record<string, string>;
   publishConfig?: { registry?: string; tag?: string; access?: string };
+  repository?: string | { type?: string; url?: string; directory?: string };
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
