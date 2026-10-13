@@ -1155,7 +1155,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.npm-trusted-publishing
-        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@MILAB-7081_npm-trusted-publishing
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
@@ -1228,7 +1228,7 @@ jobs:
 
       - name: Publish npm packages
         if: needs.build-test-publish.outputs.npm-pack-count != '0'
-        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@MILAB-7081_npm-trusted-publishing
         with:
           dir: ${{ runner.temp }}/npm-tarballs
           access-public: ${{ inputs.publish-to-public }}
