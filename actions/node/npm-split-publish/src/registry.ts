@@ -47,7 +47,7 @@ export async function isPublished(
 ): Promise<boolean> {
   // npm view: exit 0 + the version when it exists; exit 0 + no output when the
   // package exists without that version; E404 when the package does not exist.
-  const args = ['view', `${name}@${version}`, 'version', '--registry', registry];
+  const args = ['view', `${name}@${version}`, 'version', `--registry=${registry}`];
   const result = await run('npm', args, { cwd });
   if (result.code === 0) {
     return result.stdout.trim() !== '';

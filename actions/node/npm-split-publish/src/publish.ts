@@ -3,6 +3,7 @@
 // npm trusted publishing (OIDC) does not accept self-hosted runners.
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 import { ManifestEntry, readManifest } from './manifest';
@@ -84,14 +85,16 @@ export function npmrcFor(entries: ManifestEntry[], credentials: Credentials): st
 
 /** `npm publish` arguments for one entry. Lifecycle scripts already ran during pack. */
 export function publishArgs(entry: ManifestEntry, dir: string, accessPublic: boolean): string[] {
-  const args = ['publish', path.join(dir, entry.file), '--ignore-scripts', '--registry', entry.registry];
+  // `--flag=value` keeps a value from being read as an option, on top of the
+  // manifest validation.
+  const args = ['publish', path.resolve(dir, entry.file), '--ignore-scripts', `--registry=${entry.registry}`];
   if (entry.tag) {
-    args.push('--tag', entry.tag);
+    args.push(`--tag=${entry.tag}`);
   }
   if (accessPublic) {
-    args.push('--access', 'public');
+    args.push('--access=public');
   } else if (entry.access) {
-    args.push('--access', entry.access);
+    args.push(`--access=${entry.access}`);
   }
   return args;
 }
@@ -116,6 +119,10 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
   }
 
   fs.writeFileSync(userconfig, npmrcFor(entries, options));
+  // npm reads a project .npmrc from its working directory. The tarball
+  // directory comes from another job's artifact, so npm runs from an empty
+  // directory instead and gets the tarballs by absolute path.
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'npm-publish-'));
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     NPM_CONFIG_USERCONFIG: userconfig,
@@ -127,12 +134,12 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
   const published: ManifestEntry[] = [];
   for (const entry of entries) {
     const label = `${entry.name}@${entry.version}`;
-    if (await isPublished(entry.name, entry.version, entry.registry, dir, envRun)) {
+    if (await isPublished(entry.name, entry.version, entry.registry, cwd, envRun)) {
       log(`${label}: already in ${entry.registry}, skipping`);
       continue;
     }
     await group(`${label} -> ${entry.registry}`, () =>
-      runChecked(envRun, 'npm', publishArgs(entry, dir, accessPublic), { cwd: dir, echo: true }),
+      runChecked(envRun, 'npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
     );
     published.push(entry);
   }

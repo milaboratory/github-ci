@@ -94,7 +94,7 @@ describe('packWorkspace', () => {
   it('asks each package registry, with the workspace .npmrc', async () => {
     const { run, root } = await pack();
     const view = run.calls.find((c) => c.command === 'npm' && c.args[1] === '@fixture/lib@1.0.0')!;
-    expect(view.args).toEqual(['view', '@fixture/lib@1.0.0', 'version', '--registry', 'https://registry.fixture.test/']);
+    expect(view.args).toEqual(['view', '@fixture/lib@1.0.0', 'version', '--registry=https://registry.fixture.test/']);
     expect(view.options.cwd).toBe(root);
   });
 
@@ -126,7 +126,7 @@ describe('packWorkspace', () => {
 
   it('fails when a registry lookup errors with anything but 404', async () => {
     await expect(pack({ ...DEFAULT_STATE, failing: ['@fixture/lib'] })).rejects.toThrow(
-      'npm view @fixture/lib@1.0.0 version --registry https://registry.fixture.test/',
+      'npm view @fixture/lib@1.0.0 version --registry=https://registry.fixture.test/',
     );
   });
 });

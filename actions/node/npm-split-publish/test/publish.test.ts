@@ -58,12 +58,12 @@ async function publish(entries: ManifestEntry[], npm = fakeNpm(), options: { acc
 
 describe('publishArgs', () => {
   it('skips lifecycle scripts and passes the registry, tag and access', () => {
-    expect(publishArgs(APP, '/t', false)).toEqual(['publish', `/t/${APP.file}`, '--ignore-scripts', '--registry', NPMJS, '--tag', 'next']);
-    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, '--ignore-scripts', '--registry', NPMJS, '--access', 'restricted']);
+    expect(publishArgs(APP, '/t', false)).toEqual(['publish', `/t/${APP.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--tag=next']);
+    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--access=restricted']);
   });
 
   it('accessPublic overrides the manifest access', () => {
-    expect(publishArgs(LIB, '/t', true).slice(-2)).toEqual(['--access', 'public']);
+    expect(publishArgs(LIB, '/t', true).slice(-1)).toEqual(['--access=public']);
   });
 });
 
@@ -137,6 +137,18 @@ describe('publishTarballs', () => {
     await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: fakeNpm().run })).rejects.toThrow(
       `${LIB.file} is missing`,
     );
+  });
+
+  it('runs npm outside the tarball directory, so a planted .npmrc is not read', async () => {
+    const dir = tarballDir([LIB]);
+    fs.writeFileSync(path.join(dir, '.npmrc'), 'registry=https://evil.test/\n');
+    const npm = fakeNpm();
+    await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run });
+    for (const call of npm.run.calls) {
+      expect(call.options.cwd).not.toBe(dir);
+      expect(fs.readdirSync(call.options.cwd)).toEqual([]);
+    }
+    expect(npm.publishes()[0].args[1]).toBe(path.join(dir, LIB.file));
   });
 
   it('does nothing on an empty or missing manifest', async () => {
