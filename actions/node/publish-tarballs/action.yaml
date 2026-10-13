@@ -1,0 +1,128 @@
+name: Publish packed npm tarballs
+author: 'MiLaboratories'
+description: |
+  Second half of a split npm publish: uploads the tarballs that
+  `pack-unpublished` produced, in manifest order. Must run on a GitHub-hosted
+  runner in a job with `id-token: write`: npm trusted publishing (OIDC) does
+  not accept self-hosted runners.
+
+  Auth per registry:
+    - registry.npmjs.org: OIDC trusted publishing. `npmjs-fallback-token`, when
+      set, is configured too; npm tries OIDC first and uses the token only if
+      the exchange fails (e.g. no trusted publisher configured yet).
+    - any other registry (GitHub Packages): `npm-auth-token`.
+
+  Lifecycle scripts are not run here (`--ignore-scripts`): they already ran in
+  `pack-unpublished`, next to the build.
+
+  Re-runnable: a version already in its registry is skipped.
+
+inputs:
+  dir:
+    description: Directory with the tarballs and manifest.jsonl.
+    required: true
+
+  access-public:
+    description: |
+      'true' publishes with `--access public`, as `pnpm -r publish --access public`
+      did. Otherwise the package's publishConfig.access, if any, is used.
+    required: false
+    default: 'false'
+
+  node-version:
+    description: Node.js version for the upload.
+    required: false
+    default: '24'
+
+  npm-version:
+    description: |
+      npm version to install. Trusted publishing needs 11.5.1 or later.
+    required: false
+    default: '^11.5.1'
+
+  npm-auth-token:
+    description: Token for registries other than registry.npmjs.org.
+    required: false
+    default: ''
+
+  npmjs-fallback-token:
+    description: |
+      Legacy registry.npmjs.org token, used only when the OIDC exchange fails.
+      Leave empty to require trusted publishing.
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install npm
+      shell: bash
+      env:
+        NPM_VERSION: ${{ inputs.npm-version }}
+      run: |
+        npm install --global "npm@${NPM_VERSION}"
+        npm --version
+
+    - name: Publish tarballs
+      shell: bash
+      env:
+        TARBALL_DIR: ${{ inputs.dir }}
+        ACCESS_PUBLIC: ${{ inputs.access-public }}
+        NPM_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
+        NPMJS_FALLBACK_TOKEN: ${{ inputs.npmjs-fallback-token }}
+      run: |
+        set -euo pipefail
+
+        manifest="${TARBALL_DIR}/manifest.jsonl"
+        if [ ! -s "${manifest}" ]; then
+          echo "Nothing to publish."
+          exit 0
+        fi
+
+        # Own userconfig: nothing inherited from the runner or the repo. Tokens
+        # stay env references, npm expands them when it reads the file.
+        export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/publish.npmrc"
+        : > "${NPM_CONFIG_USERCONFIG}"
+        while read -r registry; do
+          host="$(sed -E 's#^https?://##; s#/+$##' <<<"${registry}")"
+          if [ "${host}" = "registry.npmjs.org" ]; then
+            if [ -n "${NPMJS_FALLBACK_TOKEN}" ]; then
+              echo "//${host}/:_authToken=\${NPMJS_FALLBACK_TOKEN}" >> "${NPM_CONFIG_USERCONFIG}"
+            fi
+          else
+            echo "//${host}/:_authToken=\${NPM_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG}"
+          fi
+        done < <(jq -r '.registry' "${manifest}" | sort -u)
+
+        while read -r entry; do
+          name="$(jq -r '.name' <<<"${entry}")"
+          version="$(jq -r '.version' <<<"${entry}")"
+          file="$(jq -r '.file' <<<"${entry}")"
+          registry="$(jq -r '.registry' <<<"${entry}")"
+          tag="$(jq -r '.tag' <<<"${entry}")"
+          access="$(jq -r '.access' <<<"${entry}")"
+
+          if [ -n "$(npm view "${name}@${version}" version --registry "${registry}" 2>/dev/null || true)" ]; then
+            echo "${name}@${version}: already in ${registry}, skipping"
+            continue
+          fi
+
+          args=(publish "${TARBALL_DIR}/${file}" --ignore-scripts --registry "${registry}")
+          if [ -n "${tag}" ]; then
+            args+=(--tag "${tag}")
+          fi
+          if [ "${ACCESS_PUBLIC}" = "true" ]; then
+            args+=(--access public)
+          elif [ -n "${access}" ]; then
+            args+=(--access "${access}")
+          fi
+
+          echo "::group::${name}@${version} -> ${registry}"
+          npm "${args[@]}"
+          echo "::endgroup::"
+        done < "${manifest}"
