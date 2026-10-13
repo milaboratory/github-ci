@@ -1,0 +1,9 @@
+{
+  "id": "33333333-3333-3333-3333-333333333333",
+  "type": "github",
+  "file": "release.yaml",
+  "repository": "fixture-org/other",
+  "permissions": [
+    "createPackage"
+  ]
+}

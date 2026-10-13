@@ -6,16 +6,10 @@ description: |
   runner in a job with `id-token: write`: npm trusted publishing (OIDC) does
   not accept self-hosted runners.
 
-  Auth per registry:
-    - registry.npmjs.org: OIDC trusted publishing. `npmjs-fallback-token`, when
-      set, is configured too; npm tries OIDC first and uses the token only if
-      the exchange fails (e.g. no trusted publisher configured yet).
-    - any other registry (GitHub Packages): `npm-auth-token`.
-
-  Lifecycle scripts are not run here (`--ignore-scripts`): they already ran in
-  `pack-unpublished`, next to the build.
-
-  Re-runnable: a version already in its registry is skipped.
+  registry.npmjs.org authenticates through OIDC (`npmjs-fallback-token` as an
+  optional fallback); npm.pkg.github.com through `npm-auth-token`. Any other
+  registry fails the step before the first upload. Behaviour, auth rules and
+  exit codes are documented in publish-tarballs.sh; tests are in test/.
 
 inputs:
   dir:
@@ -41,7 +35,7 @@ inputs:
     default: '^11.5.1'
 
   npm-auth-token:
-    description: Token for registries other than registry.npmjs.org.
+    description: Token for npm.pkg.github.com (GitHub Packages). Sent to no other registry.
     required: false
     default: ''
 
@@ -71,58 +65,10 @@ runs:
     - name: Publish tarballs
       shell: bash
       env:
+        ACTION_PATH: ${{ github.action_path }}
         TARBALL_DIR: ${{ inputs.dir }}
         ACCESS_PUBLIC: ${{ inputs.access-public }}
         NPM_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         NPMJS_FALLBACK_TOKEN: ${{ inputs.npmjs-fallback-token }}
       run: |
-        set -euo pipefail
-
-        manifest="${TARBALL_DIR}/manifest.jsonl"
-        if [ ! -s "${manifest}" ]; then
-          echo "Nothing to publish."
-          exit 0
-        fi
-
-        # Own userconfig: nothing inherited from the runner or the repo. Tokens
-        # stay env references, npm expands them when it reads the file.
-        export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/publish.npmrc"
-        : > "${NPM_CONFIG_USERCONFIG}"
-        while read -r registry; do
-          host="$(sed -E 's#^https?://##; s#/+$##' <<<"${registry}")"
-          if [ "${host}" = "registry.npmjs.org" ]; then
-            if [ -n "${NPMJS_FALLBACK_TOKEN}" ]; then
-              echo "//${host}/:_authToken=\${NPMJS_FALLBACK_TOKEN}" >> "${NPM_CONFIG_USERCONFIG}"
-            fi
-          else
-            echo "//${host}/:_authToken=\${NPM_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG}"
-          fi
-        done < <(jq -r '.registry' "${manifest}" | sort -u)
-
-        while read -r entry; do
-          name="$(jq -r '.name' <<<"${entry}")"
-          version="$(jq -r '.version' <<<"${entry}")"
-          file="$(jq -r '.file' <<<"${entry}")"
-          registry="$(jq -r '.registry' <<<"${entry}")"
-          tag="$(jq -r '.tag' <<<"${entry}")"
-          access="$(jq -r '.access' <<<"${entry}")"
-
-          if [ -n "$(npm view "${name}@${version}" version --registry "${registry}" 2>/dev/null || true)" ]; then
-            echo "${name}@${version}: already in ${registry}, skipping"
-            continue
-          fi
-
-          args=(publish "${TARBALL_DIR}/${file}" --ignore-scripts --registry "${registry}")
-          if [ -n "${tag}" ]; then
-            args+=(--tag "${tag}")
-          fi
-          if [ "${ACCESS_PUBLIC}" = "true" ]; then
-            args+=(--access public)
-          elif [ -n "${access}" ]; then
-            args+=(--access "${access}")
-          fi
-
-          echo "::group::${name}@${version} -> ${registry}"
-          npm "${args[@]}"
-          echo "::endgroup::"
-        done < "${manifest}"
+        NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/publish.npmrc" "${ACTION_PATH}/publish-tarballs.sh" "${TARBALL_DIR}"

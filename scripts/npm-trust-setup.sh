@@ -62,6 +62,38 @@ discover() {
     done | awk '!seen[$0]++'
 }
 
+# Prints the package's trust configurations as a JSON array ([] when there
+# are none). Fails, after printing why, when they cannot be listed or the
+# output is not the JSON `npm trust list --json` documents: one object per
+# configuration with id, type, repository, file and permissions
+# ("createPackage" = npm publish, "createStagedPackage" = npm stage).
+list_trust() {
+    local pkg="$1" out err
+    err="$(mktemp)"
+    if ! out="$(npm trust list "${pkg}" --json 2>"${err}")"; then
+        cat "${err}" >&2
+        rm -f "${err}"
+        if [ "${DRY_RUN:-0}" = "1" ]; then
+            echo "WARN     ${pkg}: cannot list trust configurations (not logged in?), assuming none" >&2
+            echo '[]'
+            return 0
+        fi
+        echo "ERROR    ${pkg}: cannot list trust configurations; stopping" >&2
+        return 1
+    fi
+    rm -f "${err}"
+    if [ -z "${out//[[:space:]]/}" ]; then
+        echo '[]'
+        return 0
+    fi
+    if ! jq -s -c -e 'all(.[]; type == "object")' <<<"${out}" >/dev/null 2>&1; then
+        echo "${out}" >&2
+        echo "ERROR    ${pkg}: unexpected 'npm trust list --json' output; stopping" >&2
+        return 1
+    fi
+    jq -s -c '.' <<<"${out}"
+}
+
 apply() {
     local mapping="$1"
     local created=0 skipped=0 conflicts=0
@@ -73,7 +105,9 @@ apply() {
         exit 1
     fi
 
-    while IFS=$'\t' read -r pkg repo file; do
+    # The mapping comes in on fd 3 so stdin stays the terminal: npm reads 2FA
+    # codes from it.
+    while IFS=$'\t' read -r -u 3 pkg repo file; do
         [ -n "${pkg}" ] && [[ "${pkg}" != \#* ]] || continue
 
         if ! npm view "${pkg}" name >/dev/null 2>&1; then
@@ -82,27 +116,20 @@ apply() {
             continue
         fi
 
-        # --json prints one object per configuration, nothing when there is none.
-        local raw existing
-        if ! raw="$(npm trust list "${pkg}" --json 2>&1)"; then
-            if [ "${DRY_RUN:-0}" = "1" ]; then
-                echo "WARN     ${pkg}: cannot list trust configurations (not logged in?), assuming none"
-                raw=""
-            else
-                echo "${raw}" >&2
-                echo "ERROR    ${pkg}: cannot list trust configurations; stopping" >&2
-                exit 1
-            fi
-        fi
-        existing="$(jq -s -c '.' <<<"${raw}" 2>/dev/null)" || existing='[]'
+        local existing
+        existing="$(list_trust "${pkg}")" || exit 1
+
         if jq -e --arg r "${repo}" --arg f "${file}" \
-            'any(.[]; .type == "github" and .repository == $r and .file == $f)' <<<"${existing}" >/dev/null; then
-            echo "OK       ${pkg}: already trusts ${repo} ${file}"
+            'any(.[]; .type == "github" and .repository == $r and .file == $f
+                      and ((.permissions // []) | index("createPackage")))' <<<"${existing}" >/dev/null; then
+            echo "OK       ${pkg}: already trusts ${repo} ${file} with npm publish"
             skipped=$((skipped + 1))
             continue
         fi
         if [ "$(jq 'length' <<<"${existing}")" -gt 0 ]; then
-            echo "CONFLICT ${pkg}: configured for something else: ${existing}"
+            # Includes a matching repo/file without direct publish (staged
+            # only): CI's `npm publish` would be rejected. Fix by hand.
+            echo "CONFLICT ${pkg}: existing configuration does not allow npm publish from ${repo} ${file}: ${existing}"
             conflicts=$((conflicts + 1))
             continue
         fi
@@ -116,7 +143,7 @@ apply() {
             sleep "${SLEEP_SECONDS}"
         fi
         created=$((created + 1))
-    done < "${mapping}"
+    done 3< "${mapping}"
 
     echo "created=${created} skipped=${skipped} conflicts=${conflicts}"
 }

@@ -1,0 +1,64 @@
+name: 'Test: npm split publish (pack-unpublished, publish-tarballs, npm-trust-setup)'
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/0-test-npm-publish-split.yaml'
+      - 'actions/node/pack-unpublished/**'
+      - 'actions/node/publish-tarballs/**'
+      - 'scripts/npm-trust-setup.sh'
+      - 'scripts/test/**'
+  push:
+    paths:
+      - '.github/workflows/0-test-npm-publish-split.yaml'
+      - 'actions/node/pack-unpublished/**'
+      - 'actions/node/publish-tarballs/**'
+      - 'scripts/npm-trust-setup.sh'
+      - 'scripts/test/**'
+    branches: ['v4', 'v4-beta']
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 9.12: what block repos pin. The repo's own packageManager covers 10.x.
+        pnpm: ['9.12.0', '']
+    name: bats (pnpm ${{ matrix.pnpm || 'packageManager' }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # pnpm/action-setup errors when `version:` and the root packageManager
+      # are both set, so a pinned version is installed with npm instead. The
+      # suites run in temp workspaces without packageManager.
+      - if: matrix.pnpm == ''
+        uses: pnpm/action-setup@v4
+
+      - if: matrix.pnpm != ''
+        run: npm install --global "pnpm@${{ matrix.pnpm }}"
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Tool versions
+        run: |
+          jq --version
+          pnpm --version
+          npm --version
+          bats --version
+
+      - name: pack-unpublished
+        run: bats actions/node/pack-unpublished/test/pack-unpublished.bats
+
+      - name: publish-tarballs
+        run: bats actions/node/publish-tarballs/test/publish-tarballs.bats
+
+      - name: npm-trust-setup
+        run: bats scripts/test/npm-trust-setup.bats < /dev/null

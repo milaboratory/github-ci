@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# npm stub for the bats suites. `npm view <name>@<version> ...` answers from
+# env-configured fake registry state; every other command runs the real npm.
+#
+#   NPM_STUB_PUBLISHED  space-separated name@version that exist
+#   NPM_STUB_EXISTING   space-separated names that exist (without the asked version)
+#   NPM_STUB_FAILING    space-separated names whose lookup fails with E500
+#   NPM_STUB_LOG        file that receives every stubbed command line
+if [ "${1:-}" = "view" ]; then
+    spec="$2"
+    name="${spec%@*}"
+    echo "npm $*" >> "${NPM_STUB_LOG:-/dev/null}"
+    case " ${NPM_STUB_FAILING:-} " in *" ${name} "*) echo "npm error code E500" >&2; exit 1 ;; esac
+    case " ${NPM_STUB_PUBLISHED:-} " in *" ${spec} "*) echo "${spec##*@}"; exit 0 ;; esac
+    case " ${NPM_STUB_EXISTING:-} " in *" ${name} "*) exit 0 ;; esac
+    echo "npm error code E404" >&2
+    echo "npm error 404 Not Found - GET https://registry.test/${name}" >&2
+    exit 1
+fi
+exec "${REAL_NPM:?REAL_NPM must point to the real npm}" "$@"

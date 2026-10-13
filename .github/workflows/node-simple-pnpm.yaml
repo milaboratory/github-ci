@@ -1212,6 +1212,8 @@ jobs:
     permissions:
       id-token: write
       contents: write
+      # GitHub Packages uploads authenticate with GITHUB_TOKEN.
+      packages: write
 
     steps:
       - uses: milaboratory/github-ci/actions/env@v4-beta
