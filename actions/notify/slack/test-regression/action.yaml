@@ -42,9 +42,9 @@ runs:
 
   steps:
     - id: safe-ctx
-      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4
+      uses: milaboratory/github-ci/actions/helpers/safe-ctx@v4-beta
 
-    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4
+    - uses: milaboratory/github-ci/actions/templates/jinja-js@v4-beta
       id: payload
       with:
         githubContext: ${{ steps.safe-ctx.outputs.github }}
@@ -133,7 +133,7 @@ runs:
             "channel": "{{ slack_channel }}"
           }
 
-    - uses: milaboratory/github-ci/actions/notify/slack/send@v4
+    - uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
       with:
         token: ${{ inputs.slack-bot-token }}
         method: ${{ inputs.slack-bot-method }}
