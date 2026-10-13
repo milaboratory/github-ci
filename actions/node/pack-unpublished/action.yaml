@@ -7,9 +7,9 @@ description: |
   self-hosted runners.
 
   Runs prepublishOnly and `pnpm pack` for every unpublished non-private package
-  in topological order, and writes a manifest for the upload. The logic, the
-  manifest format and the failure cases are documented in pack-unpublished.sh;
-  tests are in test/.
+  in dependency order, and writes a manifest for the upload. Implemented in
+  ../npm-split-publish (TypeScript, src/pack.ts; the manifest type is in
+  src/manifest.ts).
 
   Expects the workspace `.npmrc` (create-npmrc) at GITHUB_WORKSPACE, with its
   token env vars set, so registry lookups resolve scopes and auth.
@@ -39,6 +39,5 @@ runs:
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-        OUTPUT_DIR: ${{ inputs.output-dir }}
-      run: |
-        OUT_DIR="${OUTPUT_DIR:-${RUNNER_TEMP}/npm-tarballs}" "${ACTION_PATH}/pack-unpublished.sh"
+        OUT_DIR: ${{ inputs.output-dir }}
+      run: node "${ACTION_PATH}/../npm-split-publish/lib/pack/index.js"

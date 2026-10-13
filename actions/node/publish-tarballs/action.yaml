@@ -8,8 +8,8 @@ description: |
 
   registry.npmjs.org authenticates through OIDC (`npmjs-fallback-token` as an
   optional fallback); npm.pkg.github.com through `npm-auth-token`. Any other
-  registry fails the step before the first upload. Behaviour, auth rules and
-  exit codes are documented in publish-tarballs.sh; tests are in test/.
+  registry fails the step before the first upload. Implemented in
+  ../npm-split-publish (TypeScript, src/publish.ts).
 
 inputs:
   dir:
@@ -70,5 +70,4 @@ runs:
         ACCESS_PUBLIC: ${{ inputs.access-public }}
         NPM_AUTH_TOKEN: ${{ inputs.npm-auth-token }}
         NPMJS_FALLBACK_TOKEN: ${{ inputs.npmjs-fallback-token }}
-      run: |
-        NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/publish.npmrc" "${ACTION_PATH}/publish-tarballs.sh" "${TARBALL_DIR}"
+      run: node "${ACTION_PATH}/../npm-split-publish/lib/publish/index.js"

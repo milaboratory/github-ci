@@ -127,6 +127,25 @@ importers:
         specifier: 'catalog:'
         version: 5.8.3
 
+  actions/node/npm-split-publish:
+    dependencies:
+      '@actions/core':
+        specifier: 'catalog:'
+        version: 1.11.1
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.5.2
+      '@vercel/ncc':
+        specifier: 'catalog:'
+        version: 0.38.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.3(@types/node@24.5.2)
+
   actions/post/artifact:
     dependencies:
       '@actions/artifact':
