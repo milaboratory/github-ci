@@ -14,6 +14,11 @@ import { FIXTURES, quiet, registryRunner, tempDir } from './helpers';
 /** `@fixture/old` is published at its current version; the rest are new. */
 const DEFAULT_STATE = { published: ['@fixture/old@3.0.0'] };
 
+/** fixtures/workspace maps @fixture to a fake registry; this maps it to npmjs. */
+function scopeOnNpmjs(root: string): void {
+  fs.writeFileSync(path.join(root, '.npmrc'), '@fixture:registry=https://registry.npmjs.org/\n');
+}
+
 function workspace(extra: string[] = []): { root: string; outDir: string } {
   const base = tempDir('pack-test-');
   const root = path.join(base, 'ws');
@@ -29,8 +34,14 @@ function workspace(extra: string[] = []): { root: string; outDir: string } {
 
 const SOURCE = 'https://github.com/fixture-org/fixture-repo';
 
-async function pack(state: Parameters<typeof registryRunner>[0] = DEFAULT_STATE, extra: string[] = [], sourceRepository?: string) {
+async function pack(
+  state: Parameters<typeof registryRunner>[0] = DEFAULT_STATE,
+  extra: string[] = [],
+  sourceRepository?: string,
+  npmjs = false,
+) {
   const { root, outDir } = workspace(extra);
+  if (npmjs) scopeOnNpmjs(root);
   const run = registryRunner(state);
   const entries = await packWorkspace({ root, outDir, npmrcDir: root, sourceRepository }, { ...quiet, run });
   return { root, outDir, entries, run };
@@ -134,7 +145,7 @@ describe('packWorkspace', () => {
   });
 
   it('fills in the repository for provenance and leaves the checkout unchanged', async () => {
-    const { root, entries, outDir } = await pack(DEFAULT_STATE, [], SOURCE);
+    const { root, entries, outDir } = await pack(DEFAULT_STATE, [], SOURCE, true);
     const app = entries.find((e) => e.name === '@fixture/app')!;
     expect(JSON.parse(tarballFile(outDir, app.file, 'package.json')).repository).toEqual({
       type: 'git',
@@ -146,11 +157,38 @@ describe('packWorkspace', () => {
 
   it('fails on a repository that is not the one building, before any prepublishOnly', async () => {
     const { root, outDir } = workspace();
+    scopeOnNpmjs(root);
     const appJson = path.join(root, 'packages', 'app', 'package.json');
     fs.writeFileSync(appJson, JSON.stringify({ ...JSON.parse(fs.readFileSync(appJson, 'utf8')), repository: 'fixture-org/old-name' }));
     await expect(
       packWorkspace({ root, outDir, npmrcDir: root, sourceRepository: SOURCE }, { ...quiet, run: registryRunner(DEFAULT_STATE) }),
     ).rejects.toThrow('@fixture/app: package.json repository "fixture-org/old-name" is not https://github.com/fixture-org/fixture-repo');
     expect(fs.existsSync(path.join(root, 'packages', 'lib', 'prepublished.txt'))).toBe(false);
+  });
+
+  it('adds no repository for registries other than npmjs', async () => {
+    const { entries, outDir } = await pack(DEFAULT_STATE, [], SOURCE);
+    const app = entries.find((e) => e.name === '@fixture/app')!;
+    expect(JSON.parse(tarballFile(outDir, app.file, 'package.json')).repository).toBeUndefined();
+  });
+
+  it('adds no repository without a source repository (private repository)', async () => {
+    const { entries, outDir } = await pack(DEFAULT_STATE, [], undefined, true);
+    const app = entries.find((e) => e.name === '@fixture/app')!;
+    expect(JSON.parse(tarballFile(outDir, app.file, 'package.json')).repository).toBeUndefined();
+  });
+
+  it('does not check packages that are already published', async () => {
+    // hooks has a postpublish script but is not part of this release.
+    const { entries } = await pack({ published: ['@fixture/old@3.0.0', '@fixture/hooks@1.0.0'] }, ['hooks']);
+    expect(entries.map((e) => e.name)).not.toContain('@fixture/hooks');
+  });
+
+  it('runs prepublishOnly, then prepublish, as pnpm publish does', async () => {
+    const { run } = await pack();
+    const scripts = run.calls
+      .filter((c) => c.command === 'pnpm' && c.args[0] === 'run' && c.options.cwd.endsWith(path.join('packages', 'lib')))
+      .map((c) => c.args[2]);
+    expect(scripts).toEqual(['prepublishOnly', 'prepublish']);
   });
 });

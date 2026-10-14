@@ -15,8 +15,9 @@ export interface ManifestEntry {
   /** Registry URL the package is published to, e.g. https://registry.npmjs.org/. */
   registry: string;
   /**
-   * publishConfig.tag / publishConfig.access, '' when unset. They travel here
-   * because `npm publish <tarball>` ignores publishConfig inside the tarball.
+   * publishConfig.tag / publishConfig.access, '' when unset. The upload passes
+   * them as flags: npm applies the tarball's publishConfig only for keys not
+   * given on the command line, so the flags are what decides.
    */
   tag: string;
   access: string;

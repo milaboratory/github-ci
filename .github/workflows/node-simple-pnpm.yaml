@@ -1227,6 +1227,31 @@ jobs:
           name: npm-tarballs-${{ inputs.app-name-slug }}
           path: ${{ runner.temp }}/npm-tarballs
 
+      # The token arrives inside the JSON `env` secret. GitHub masks the
+      # secret as a whole, not a value taken out of it, so it is masked here
+      # before any step receives it as an input (inputs are printed).
+      - name: npm fallback token
+        if: needs.build-test-publish.outputs.npm-pack-count != '0' && inputs.npm-token-fallback
+        shell: bash
+        env:
+          SECRETS_ENV: ${{ secrets.env }}
+          INPUTS_ENV: ${{ inputs.env }}
+        run: |
+          token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${SECRETS_ENV:-{\}}" 2>/dev/null || true)"
+          if [ -z "${token}" ]; then
+            token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${INPUTS_ENV:-{\}}" 2>/dev/null || true)"
+          fi
+          if [ -z "${token}" ]; then
+            echo "No NPMJS_TOKEN in env: publishing with trusted publishing only."
+            exit 0
+          fi
+          if [[ "${token}" == *$'\n'* ]]; then
+            echo "::error::NPMJS_TOKEN spans several lines"
+            exit 1
+          fi
+          echo "::add-mask::${token}"
+          echo "NPMJS_FALLBACK_TOKEN=${token}" >> "${GITHUB_ENV}"
+
       - name: Publish npm packages
         if: needs.build-test-publish.outputs.npm-pack-count != '0'
         uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
@@ -1234,8 +1259,8 @@ jobs:
           dir: ${{ runner.temp }}/npm-tarballs
           access-public: ${{ inputs.publish-to-public }}
           npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
-          # NPMJS_TOKEN from secrets.env, else inputs.env (actions/env's precedence).
-          npmjs-fallback-token: ${{ inputs.npm-token-fallback && (secrets.env && fromJSON(secrets.env).NPMJS_TOKEN || inputs.env && fromJSON(inputs.env).NPMJS_TOKEN) || '' }}
+          # Set (masked) by the previous step; empty without the fallback.
+          npmjs-fallback-token: ${{ env.NPMJS_FALLBACK_TOKEN }}
 
       - name: Create release with tag
         if: inputs.create-tag == 'true'

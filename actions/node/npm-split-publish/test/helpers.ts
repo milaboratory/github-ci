@@ -62,11 +62,14 @@ export const quiet = {
   group: <T>(_title: string, fn: () => Promise<T>) => fn(),
 };
 
+/** macOS tar adds ._* AppleDouble entries unless told not to; pnpm pack never does. */
+export const TAR_ENV = { ...process.env, COPYFILE_DISABLE: '1' };
+
 /** Writes an npm-style tarball (package/package.json) to dir/file. */
 export function makeTarball(dir: string, file: string, manifest: object): void {
   const staging = tempDir('tarball-');
   fs.mkdirSync(path.join(staging, 'package'));
   fs.writeFileSync(path.join(staging, 'package', 'package.json'), JSON.stringify(manifest));
   fs.writeFileSync(path.join(staging, 'package', 'index.js'), 'module.exports = 1;\n');
-  execFileSync('tar', ['-czf', path.join(dir, file), '-C', staging, 'package']);
+  execFileSync('tar', ['-czf', path.join(dir, file), '-C', staging, 'package'], { env: TAR_ENV });
 }

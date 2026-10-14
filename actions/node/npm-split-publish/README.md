@@ -10,28 +10,41 @@ Implementation of the split npm publish behind two composite actions:
 npm trusted publishing (OIDC) does not accept self-hosted runners, so
 `pack` does everything `pnpm -r publish` does except the upload: for every
 unpublished non-private package, in dependency order, it runs
-`prepublishOnly` and `pnpm pack`. `publish` uploads the tarballs with
+`prepublishOnly`, `prepublish` and `pnpm pack`. Packages with `publish` or
+`postpublish` scripts are refused: those would run after the upload. `publish` uploads the tarballs with
 `npm publish <tarball> --ignore-scripts`. The two halves share
 `manifest.jsonl`, typed as `ManifestEntry` in `src/manifest.ts`.
 
 ## Behaviour worth knowing
 
 - **`repository` for provenance.** Under trusted publishing npm turns
-  provenance on by itself for a public package from a public repository, and
-  the registry rejects the upload (E422) unless `package.json` `repository.url`
-  names the repository that built it. `pack` fills in a missing `repository`
+  provenance on by itself for a public npmjs package from a public repository,
+  and the registry rejects the upload (E422) unless `package.json`
+  `repository.url` names the repository that built it. For exactly those
+  uploads `pack` fills in a missing `repository`
   (`git+https://github.com/<owner>/<repo>.git`, plus `directory`) in the packed
-  copy only, and fails before any `prepublishOnly` when a package declares a
-  different repository (for example after a rename).
+  copy only, checks the field reached the tarball, and fails before any script
+  runs when a package declares a different repository (for example after a
+  rename). Private repositories and GitHub Packages targets are left alone, so
+  no private repository URL gets published.
 - **Dist-tag.** Every upload passes `--tag`: `publishConfig.tag`, else `latest`.
   npm 11 refuses a prerelease or a version below the highest published one
   without an explicit tag; the previous path (npm 10 under pnpm) tagged those
-  `latest`, so that stays the behaviour.
+  `latest`, so that stays the behaviour. Trade-off: if two releases of one
+  repository overlap and their uploads finish out of order, `latest` can move
+  back to the older version without an error (the old path could too, with a
+  shorter window).
 - **The upload job does not trust the artifact.** Every manifest value is
-  validated, each tarball's `package/package.json` must match its entry, values
-  are passed as `--flag=value`, and npm runs from an empty directory so no
-  `.npmrc` from the artifact is read. `GITHUB_TOKEN` is sent only to
+  validated; each tarball must hold exactly one `package/package.json`, nothing
+  outside `package/`, and the entry's name and version; a packed `publishConfig`
+  may not set auth, proxy or scope-registry keys, nor a different `registry`
+  (npm applies those packed keys that are not given on the command line).
+  Values are passed as `--flag=value`, and npm runs from an empty directory so
+  no `.npmrc` from the artifact is read. `GITHUB_TOKEN` is sent only to
   npm.pkg.github.com.
+- **Fallback token.** With `npm-token-fallback`, the upload job takes
+  `NPMJS_TOKEN` out of the caller's `env` secret and masks it before any step
+  receives it; no other caller secret reaches that runner.
 - **Partial releases.** `prepublishOnly` (`block-tools publish` to the block
   registry, `pl-pkg prepublish`) runs in the build job, before the upload job
   starts. If the upload fails, those side effects have happened and npm lacks

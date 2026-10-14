@@ -8,7 +8,7 @@ import * as path from 'path';
 
 import { ManifestEntry, readManifest } from './manifest';
 import { isPublished } from './registry';
-import { Runner, runChecked } from './run';
+import { CommandError, Runner } from './run';
 import { readPackedManifest } from './tarball';
 
 export const NPMJS_HOST = 'registry.npmjs.org';
@@ -84,6 +84,33 @@ export function npmrcFor(entries: ManifestEntry[], credentials: Credentials): st
   return [...lines].map((l) => l + '\n').join('');
 }
 
+/**
+ * npm applies a packed publishConfig for every key not given on the command
+ * line. Keys that could send the upload or its credentials elsewhere, or
+ * change how npm authenticates, are refused; `registry` must be the entry's.
+ */
+const FORBIDDEN_PUBLISH_CONFIG = new Set([
+  '_auth', '_authtoken', '_password', 'always-auth', 'auth-type', 'ca', 'cafile', 'cert', 'certfile',
+  'email', 'globalconfig', 'https-proxy', 'key', 'keyfile', 'noproxy', 'otp', 'password', 'proxy',
+  'strict-ssl', 'token', 'userconfig', 'username',
+]);
+
+export function checkPackedPublishConfig(label: string, publishConfig: unknown, registry: string): void {
+  if (publishConfig === undefined) return;
+  if (typeof publishConfig !== 'object' || publishConfig === null) {
+    throw new Error(`${label}: packed publishConfig is not an object`);
+  }
+  for (const [key, value] of Object.entries(publishConfig)) {
+    const lower = key.toLowerCase();
+    if (FORBIDDEN_PUBLISH_CONFIG.has(lower) || lower.startsWith('//') || /^@[^/]+:registry$/.test(lower)) {
+      throw new Error(`${label}: packed publishConfig sets '${key}', which the split publish does not allow`);
+    }
+    if (lower === 'registry' && String(value).replace(/\/+$/, '') !== registry.replace(/\/+$/, '')) {
+      throw new Error(`${label}: packed publishConfig.registry ${String(value)} is not ${registry}`);
+    }
+  }
+}
+
 /** `npm publish` arguments for one entry. Lifecycle scripts already ran during pack. */
 export function publishArgs(entry: ManifestEntry, dir: string, accessPublic: boolean): string[] {
   // `--flag=value` keeps a value from being read as an option, on top of the
@@ -122,10 +149,11 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     if (!fs.existsSync(tarball)) {
       throw new Error(`${label}: ${entry.file} is missing from ${dir}`);
     }
-    const packed = readPackedManifest(tarball);
+    const packed = readPackedManifest(tarball) as { name?: unknown; version?: unknown; publishConfig?: unknown };
     if (packed.name !== entry.name || packed.version !== entry.version) {
       throw new Error(`${label}: ${entry.file} contains ${String(packed.name)}@${String(packed.version)}`);
     }
+    checkPackedPublishConfig(label, packed.publishConfig, entry.registry);
   }
 
   fs.writeFileSync(userconfig, npmrcFor(entries, options));
@@ -148,9 +176,18 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
       log(`${label}: already in ${entry.registry}, skipping`);
       continue;
     }
-    await group(`${label} -> ${entry.registry}`, () =>
-      runChecked(envRun, 'npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
+    const result = await group(`${label} -> ${entry.registry}`, () =>
+      envRun('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
     );
+    if (result.code !== 0) {
+      // A version the lookup could not see, e.g. a restricted package queried
+      // without a token on a re-run: the registry refuses it as a duplicate.
+      if (/You cannot publish over the previously published versions/.test(result.stderr + result.stdout)) {
+        log(`${label}: already in ${entry.registry} (refused as a duplicate), skipping`);
+        continue;
+      }
+      throw new CommandError(['npm', ...publishArgs(entry, dir, accessPublic)].join(' '), result);
+    }
     published.push(entry);
   }
   return published;

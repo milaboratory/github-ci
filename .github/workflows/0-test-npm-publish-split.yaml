@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/0-test-npm-publish-split.yaml'
+      - '.github/workflows/node-simple-pnpm.yaml'
       - 'actions/node/npm-split-publish/**'
       - 'actions/node/pack-unpublished/**'
       - 'actions/node/publish-tarballs/**'
@@ -15,6 +16,7 @@ on:
   push:
     paths:
       - '.github/workflows/0-test-npm-publish-split.yaml'
+      - '.github/workflows/node-simple-pnpm.yaml'
       - 'actions/node/npm-split-publish/**'
       - 'actions/node/pack-unpublished/**'
       - 'actions/node/publish-tarballs/**'

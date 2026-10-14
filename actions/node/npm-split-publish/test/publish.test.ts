@@ -4,7 +4,7 @@ import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { ManifestEntry, writeManifest } from '../src/manifest';
-import { npmrcFor, publishArgs, publishTarballs } from '../src/publish';
+import { checkPackedPublishConfig, npmrcFor, publishArgs, publishTarballs } from '../src/publish';
 import { Call, fakeRunner, makeTarball, notFound, ok, quiet, tempDir } from './helpers';
 
 const NPMJS = 'https://registry.npmjs.org/';
@@ -30,6 +30,8 @@ function tarballDir(entries: ManifestEntry[]): string {
 interface NpmState {
   published?: string[];
   failingPublish?: string[];
+  /** Tarballs whose upload the registry refuses as already published. */
+  duplicate?: string[];
 }
 
 /** Fake npm; records the npm config in effect at each publish. */
@@ -43,6 +45,9 @@ function fakeNpm(state: NpmState = {}) {
     if (call.args[0] === 'publish') {
       configs.push(fs.readFileSync(call.options.env!.NPM_CONFIG_USERCONFIG!, 'utf8'));
       const file = path.basename(call.args[1]);
+      if (state.duplicate?.includes(file)) {
+        return { code: 1, stdout: '', stderr: 'npm error code E403\nnpm error 403 You cannot publish over the previously published versions: 1.0.0.' };
+      }
       return state.failingPublish?.includes(file) ? { code: 1, stdout: '', stderr: 'npm error code E403' } : ok(`+ ${file}`);
     }
     return undefined;
@@ -65,6 +70,26 @@ describe('publishArgs', () => {
 
   it('accessPublic overrides the manifest access', () => {
     expect(publishArgs(LIB, '/t', true).slice(-1)).toEqual(['--access=public']);
+  });
+});
+
+describe('checkPackedPublishConfig', () => {
+  it('allows ordinary publishConfig keys and the entry registry', () => {
+    expect(() =>
+      checkPackedPublishConfig('x', { access: 'public', tag: 'next', registry: 'https://registry.npmjs.org', main: 'dist/index.js', 'umd:main': 'x.js' }, NPMJS),
+    ).not.toThrow();
+    expect(() => checkPackedPublishConfig('x', undefined, NPMJS)).not.toThrow();
+  });
+
+  it.each([
+    [{ '@scope:registry': 'https://evil.test/' }, "sets '@scope:registry'"],
+    [{ '//evil.test/:_authToken': 'x' }, "sets '//evil.test/:_authToken'"],
+    [{ proxy: 'http://evil.test' }, "sets 'proxy'"],
+    [{ _authToken: 'x' }, "sets '_authToken'"],
+    [{ registry: 'https://evil.test/' }, 'publishConfig.registry https://evil.test/ is not'],
+    ['text', 'is not an object'],
+  ])('refuses %j', (config, message) => {
+    expect(() => checkPackedPublishConfig('x', config, NPMJS)).toThrow(message);
   });
 });
 
@@ -138,6 +163,23 @@ describe('publishTarballs', () => {
     const npm = fakeNpm();
     await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run })).rejects.toThrow(
       `@fixture/app@2.0.0: ${APP.file} contains @fixture/other@2.0.0`,
+    );
+    expect(npm.run.calls).toEqual([]);
+  });
+
+  it('treats a duplicate-version refusal as already published', async () => {
+    const npm = fakeNpm({ duplicate: [LIB.file] });
+    const { published } = await publish([LIB, APP], npm);
+    expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file, APP.file]);
+    expect(published).toEqual([APP]);
+  });
+
+  it('fails before uploading when a packed publishConfig could redirect the upload', async () => {
+    const dir = tarballDir([LIB, APP]);
+    makeTarball(dir, APP.file, { name: APP.name, version: APP.version, publishConfig: { '@fixture:registry': 'https://evil.test/' } });
+    const npm = fakeNpm();
+    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run })).rejects.toThrow(
+      "sets '@fixture:registry'",
     );
     expect(npm.run.calls).toEqual([]);
   });
