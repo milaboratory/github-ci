@@ -35,8 +35,9 @@ unpublished non-private package, in dependency order, it runs
   back to the older version without an error (the old path could too, with a
   shorter window).
 - **The upload job does not trust the artifact.** Every manifest value is
-  validated; each tarball must hold exactly one `package/package.json`, nothing
-  outside `package/`, and the entry's name and version; a packed `publishConfig`
+  validated; each tarball's manifest is read the way npm reads it (extracted
+  with node-tar and pacote's options, `src/tarball.ts`) and must have the
+  entry's name and version; a packed `publishConfig`
   may not set auth, proxy or scope-registry keys, nor a different `registry`
   (npm applies those packed keys that are not given on the command line).
   Values are passed as `--flag=value`, and npm runs from an empty directory so

@@ -7,7 +7,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@actions/core": "catalog:"
+    "@actions/core": "catalog:",
+    "tar": "7.5.22"
   },
   "devDependencies": {
     "@types/node": "catalog:",
