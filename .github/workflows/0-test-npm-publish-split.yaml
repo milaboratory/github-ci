@@ -1,0 +1,81 @@
+name: 'Test: npm split publish (npm-split-publish, npm-trust-setup)'
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/0-test-npm-publish-split.yaml'
+      - '.github/workflows/node-simple-pnpm.yaml'
+      - 'actions/node/npm-split-publish/**'
+      - 'actions/node/pack-unpublished/**'
+      - 'actions/node/publish-tarballs/**'
+      - 'scripts/npm-trust-setup.sh'
+      - 'scripts/test/**'
+      - 'pnpm-lock.yaml'
+  push:
+    paths:
+      - '.github/workflows/0-test-npm-publish-split.yaml'
+      - '.github/workflows/node-simple-pnpm.yaml'
+      - 'actions/node/npm-split-publish/**'
+      - 'actions/node/pack-unpublished/**'
+      - 'actions/node/publish-tarballs/**'
+      - 'scripts/npm-trust-setup.sh'
+      - 'scripts/test/**'
+      - 'pnpm-lock.yaml'
+    branches: ['v4', 'v4-beta']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actions/node/npm-split-publish
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:`: the root packageManager decides.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      # The actions run the committed lib/, so it must match the source.
+      - name: lib/ is built from the current source
+        run: |
+          pnpm run build
+          if ! git diff --exit-code --stat -- lib; then
+            echo "::error::lib/ is stale: run 'pnpm run build' in actions/node/npm-split-publish and commit lib/"
+            exit 1
+          fi
+
+      # The real-npm tests in publish.test.ts skip below npm 11; pin the
+      # version the publish-tarballs action installs.
+      - name: npm 11
+        run: |
+          npm install --global "npm@$(yq '.inputs.npm-version.default' ../publish-tarballs/action.yaml)"
+          npm --version
+
+      - name: Tests (pnpm from packageManager)
+        run: pnpm exec vitest run
+
+      # Block repos pin pnpm 9.12. The pack tests run pnpm in temp workspaces,
+      # so a pnpm 9.12 put first on PATH is the one they use.
+      - name: Pack integration tests (pnpm 9.12)
+        run: |
+          npm install --prefix "${RUNNER_TEMP}/pnpm9" pnpm@9.12.0
+          export PATH="${RUNNER_TEMP}/pnpm9/node_modules/.bin:${PATH}"
+          pnpm --version
+          ./node_modules/.bin/vitest run test/pack.test.ts
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: npm-trust-setup
+        working-directory: .
+        run: bats scripts/test/npm-trust-setup.bats < /dev/null

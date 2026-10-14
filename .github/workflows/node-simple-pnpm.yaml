@@ -280,6 +280,28 @@ on:
         required: false
         default: 'false'
 
+      npm-trusted-publishing:
+        description: |
+          Split the publish so npm trusted publishing (OIDC) can be used.
+          The build job, on `gha-runner-label`, runs prepublishOnly and packs
+          every unpublished package; a separate job on a GitHub-hosted runner
+          uploads the tarballs. npm does not accept OIDC from self-hosted runners.
+          Each published package needs a trusted publisher on npmjs.com that
+          names the caller's repository and workflow file.
+        type: boolean
+        required: false
+        default: false
+
+      npm-token-fallback:
+        description: |
+          With `npm-trusted-publishing`, also hand NPMJS_TOKEN to the upload.
+          npm tries OIDC first and falls back to the token, so packages without
+          a trusted publisher keep publishing during the migration.
+          Set to false to prove a package publishes through OIDC alone.
+        type: boolean
+        required: false
+        default: true
+
       package-path:
         description: |
           Relative path to the package.json with package version.
@@ -1098,6 +1120,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'false'
+          && !inputs.npm-trusted-publishing
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1113,6 +1136,7 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.publish-to-public == 'true'
+          && !inputs.npm-trusted-publishing
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1123,10 +1147,36 @@ jobs:
         with:
           publish: pnpm -r publish --no-git-checks --access public
 
+      # Trusted publishing: everything but the upload happens here, next to the
+      # build (prepublishOnly needs AWS/registry access). The `npm-publish` job
+      # uploads the tarballs from a GitHub-hosted runner.
+      - name: Pack unpublished npm packages
+        id: npm-pack
+        if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
+          && inputs.npm-trusted-publishing
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
+          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
+
+      - name: Upload npm tarballs
+        if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          # Per call: a caller may run this workflow more than once per run.
+          name: npm-tarballs-${{ inputs.app-name-slug }}
+          path: ${{ steps.npm-pack.outputs.dir }}
+          retention-days: 7
+          overwrite: true
+
       - name: Create release with tag
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.create-tag == 'true'
+          && !inputs.npm-trusted-publishing
         uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
@@ -1143,6 +1193,88 @@ jobs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
+      # Set only when the trusted-publishing pack step ran: '' means no release.
+      npm-pack-count: ${{ steps.npm-pack.outputs.count }}
+
+  # Trusted-publishing upload. Fixed GitHub-hosted runner, not gha-runner-label:
+  # npm rejects OIDC tokens from self-hosted runners. Runs whenever the pack
+  # step ran on main, so the release tag is created even when every package
+  # was already published (same as the non-split path).
+  npm-publish:
+    name: npm publish (trusted publishing)
+    runs-on: ubuntu-latest
+    needs:
+      - metadata
+      - build-test-publish
+    if: >
+      !cancelled() &&
+      inputs.npm-trusted-publishing &&
+      needs.build-test-publish.result == 'success' &&
+      needs.build-test-publish.outputs.npm-pack-count != ''
+    permissions:
+      id-token: write
+      contents: write
+      # GitHub Packages uploads authenticate with GITHUB_TOKEN.
+      packages: write
+
+    # No actions/env here: this runner holds an OIDC publish capability, so it
+    # gets only the npm token it may need, not the caller's other secrets.
+    steps:
+      - name: Download npm tarballs
+        if: needs.build-test-publish.outputs.npm-pack-count != '0'
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-tarballs-${{ inputs.app-name-slug }}
+          path: ${{ runner.temp }}/npm-tarballs
+
+      # The token arrives inside the JSON `env` secret. GitHub masks the
+      # secret as a whole, not a value taken out of it, so it is masked here
+      # before any step receives it as an input (inputs are printed).
+      - name: npm fallback token
+        if: needs.build-test-publish.outputs.npm-pack-count != '0' && inputs.npm-token-fallback
+        shell: bash
+        env:
+          SECRETS_ENV: ${{ secrets.env }}
+          INPUTS_ENV: ${{ inputs.env }}
+        run: |
+          token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${SECRETS_ENV:-{\}}" 2>/dev/null || true)"
+          if [ -z "${token}" ]; then
+            token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${INPUTS_ENV:-{\}}" 2>/dev/null || true)"
+          fi
+          if [ -z "${token}" ]; then
+            echo "No NPMJS_TOKEN in env: publishing with trusted publishing only."
+            exit 0
+          fi
+          if [[ "${token}" == *$'\n'* ]]; then
+            echo "::error::NPMJS_TOKEN spans several lines"
+            exit 1
+          fi
+          echo "::add-mask::${token}"
+          echo "NPMJS_FALLBACK_TOKEN=${token}" >> "${GITHUB_ENV}"
+
+      - name: Publish npm packages
+        if: needs.build-test-publish.outputs.npm-pack-count != '0'
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
+        with:
+          dir: ${{ runner.temp }}/npm-tarballs
+          access-public: ${{ inputs.publish-to-public }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          # Set (masked) by the previous step; empty without the fallback.
+          npmjs-fallback-token: ${{ env.NPMJS_FALLBACK_TOKEN }}
+
+      - name: Create release with tag
+        if: inputs.create-tag == 'true'
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        env:
+          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
+          commit: ${{ github.sha }}
+          skipIfReleaseExists: true
+          draft: false
+          prerelease: false
 
   notify-slack-release:
     name: notify slack release
@@ -1155,6 +1287,7 @@ jobs:
       - preflight-pnpm-lock-sync
       - check-changesets
       - build-test-publish
+      - npm-publish
       - pre-calculated-build
     steps:
       - id: search-tags
@@ -1173,6 +1306,7 @@ jobs:
           job-status: |
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
+            ${{ needs.npm-publish.result }}
             ${{ needs.check-changesets.result }}
             ${{ needs.preflight-require-latest.result }}
             ${{ needs.preflight-pnpm-lock-sync.result }}

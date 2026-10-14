@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# npm stub for the npm-trust-setup bats suite.
+#
+#   npm --version            prints NPM_STUB_VERSION (default 11.21.0)
+#   npm view <pkg> name      succeeds when <pkg> is in NPM_STUB_EXISTING
+#   npm trust list <pkg>     prints fixtures/trust/<pkg with / as __>.json when
+#                            present, nothing otherwise; fails with EOTP when
+#                            <pkg> is in NPM_STUB_LIST_FAILING
+#   npm trust github ...     appends the arguments to NPM_STUB_LOG and drains
+#                            stdin, as the interactive 2FA prompt would
+FIXTURES="$(cd "$(dirname "$0")/../fixtures" && pwd)"
+case "${1:-} ${2:-}" in
+    "--version "*) echo "${NPM_STUB_VERSION:-11.21.0}" ;;
+    "view "*)
+        case " ${NPM_STUB_EXISTING:-} " in *" $2 "*) echo "$2" ;; *) echo "npm error code E404" >&2; exit 1 ;; esac
+        ;;
+    "trust list")
+        echo "npm notice something on stderr" >&2
+        case " ${NPM_STUB_LIST_FAILING:-} " in *" $3 "*) echo "npm error code EOTP" >&2; exit 1 ;; esac
+        f="${FIXTURES}/trust/${3//\//__}.json"
+        [ -f "${f}" ] && cat "${f}"
+        exit 0
+        ;;
+    "trust github")
+        echo "$*" >> "${NPM_STUB_LOG:?}"
+        cat > /dev/null
+        ;;
+    *) echo "npm stub: unexpected command: $*" >&2; exit 99 ;;
+esac
