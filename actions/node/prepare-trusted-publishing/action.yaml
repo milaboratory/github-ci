@@ -4,12 +4,15 @@ description: |
   For jobs that run `npm publish` themselves on a GitHub-hosted runner with
   `id-token: write`: makes that publish work with npm trusted publishing (OIDC).
 
-  - Installs npm `npm-version` when the runner's npm is older than 11.5.1, the
-    first npm that publishes through OIDC.
-  - In a public repository npm adds provenance on its own, and the registry
-    rejects it (E422) unless package.json `repository.url` names this
-    repository. Adds a missing `repository` to the package's package.json and
-    fails on one that names another repository.
+  npm documents trusted publishing as requiring npm 11.5.1+ and Node 22.14+.
+  - Switches the job to Node `node-version` when its Node is older than
+    22.14, and installs npm `npm-version` when its npm is older than 11.5.1.
+    Later steps of the job run on that Node.
+  - For uploads to registry.npmjs.org from a public repository, where npm adds
+    provenance on its own and the registry rejects it (E422) unless
+    package.json `repository.url` names this repository: adds a missing
+    `repository` to the package's package.json and fails on one that names
+    another repository. Other registries are left alone.
 
   Implemented in ../npm-split-publish (src/bin/prepare.ts).
 
@@ -18,6 +21,16 @@ inputs:
     description: Directory of the package.json that `npm publish` runs in.
     required: false
     default: '.'
+  registry-url:
+    description: |
+      Registry the job publishes to (the package's publishConfig.registry
+      wins). Default: registry.npmjs.org.
+    required: false
+    default: ''
+  node-version:
+    description: Node version to switch to when the job's Node is older than 22.14.
+    required: false
+    default: '24'
   npm-version:
     description: npm version to install when the runner's npm is older than 11.5.1.
     required: false
@@ -27,6 +40,22 @@ runs:
   using: "composite"
 
   steps:
+    - name: Check Node version
+      id: node
+      shell: bash
+      run: |
+        current="$(node --version | sed 's/^v//')"
+        if [ "$(printf '%s\n22.14.0\n' "${current}" | sort -V | head -n 1)" != "22.14.0" ]; then
+          echo "Node ${current} is older than 22.14, which npm trusted publishing requires"
+          echo "too-old=true" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Node for trusted publishing
+      if: steps.node.outputs.too-old == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
     - name: npm with trusted publishing
       shell: bash
       env:
@@ -44,4 +73,5 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         PACKAGE_DIR: ${{ inputs.package-path }}
+        REGISTRY: ${{ inputs.registry-url }}
       run: node "${ACTION_PATH}/../npm-split-publish/lib/prepare/index.js"

@@ -16,6 +16,29 @@ unpublished non-private package, in dependency order, it runs
 `npm publish <tarball> --ignore-scripts`. The two halves share
 `manifest.jsonl`, typed as `ManifestEntry` in `src/manifest.ts`.
 
+## Manifest Format (Public)
+
+`publish-tarballs` reads `<dir>/manifest.jsonl` plus the tarballs next to it.
+`pack-unpublished` writes it, and repositories that pack themselves (e.g.
+milaboratory/pframes-rs) write it by hand, so this format is a contract:
+change it only compatibly. One JSON object per line, uploaded in file order:
+
+```json
+{"name": "@scope/pkg", "version": "1.2.3", "file": "scope-pkg-1.2.3.tgz",
+ "registry": "https://registry.npmjs.org/", "tag": "", "access": "public"}
+```
+
+| Field | Rule |
+|---|---|
+| `name` | npm package name, lowercase |
+| `version` | semver |
+| `file` | tarball basename in the same directory, `.tgz` |
+| `registry` | https URL; registry.npmjs.org (OIDC) or npm.pkg.github.com |
+| `tag` | dist-tag, or `""` for `latest` |
+| `access` | `""`, `public` or `restricted` |
+
+Validation: `src/manifest.ts` (`validateEntry`).
+
 ## Behaviour worth knowing
 
 - **`repository` for provenance.** Under trusted publishing npm turns
@@ -47,6 +70,10 @@ unpublished non-private package, in dependency order, it runs
 - **Fallback token.** With `npm-token-fallback`, the upload job takes
   `NPMJS_TOKEN` out of the caller's `env` secret and masks it before any step
   receives it; no other caller secret reaches that runner.
+- **New packages.** npm accepts a trusted publisher only for a package that
+  exists, and no token can publish any more, so `pack` refuses a package that
+  registry.npmjs.org does not have yet, before any script runs: publish its
+  first version by hand, add its trusted publisher, re-run the job.
 - **Partial releases.** `prepublishOnly` (`block-tools publish` to the block
   registry, `pl-pkg prepublish`) runs in the build job, before the upload job
   starts. If the upload fails, those side effects have happened and npm lacks

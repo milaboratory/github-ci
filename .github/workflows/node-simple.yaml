@@ -698,6 +698,7 @@ jobs:
         uses: milaboratory/github-ci/actions/node/prepare-trusted-publishing@v4-beta
         with:
           package-path: ${{ inputs.node-execution-path }}
+          registry-url: ${{ inputs.registry-url }}
 
       - name: Publish npm package
         if: steps.npm-pkg-status.outputs.exist == '0'

@@ -230,6 +230,7 @@ runs:
       uses: milaboratory/github-ci/actions/node/prepare-trusted-publishing@v4-beta
       with:
         package-path: ${{ inputs.execution-path }}
+        registry-url: ${{ inputs.registry-url }}
 
     - name: Publish npm package
       shell: bash

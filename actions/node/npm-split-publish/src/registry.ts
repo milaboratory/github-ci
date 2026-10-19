@@ -35,26 +35,34 @@ export async function resolveRegistry(pkg: PackageJson & { name: string }, npmrc
   return configGet('registry');
 }
 
+export type VersionState = 'published' | 'new-version' | 'new-package';
+
 /**
- * Whether name@version is in the registry. Throws on any lookup failure other
- * than "package not found".
+ * Where name@version stands in the registry: published, a new version of an
+ * existing package, or a package the registry does not have at all. Throws on
+ * any lookup failure other than "not found".
  */
-export async function isPublished(
+export async function versionState(
   name: string,
   version: string,
   registry: string,
   cwd: string,
   run: Runner,
-): Promise<boolean> {
+): Promise<VersionState> {
   // npm view: exit 0 + the version when it exists; exit 0 + no output when the
   // package exists without that version; E404 when the package does not exist.
   const args = ['view', `${name}@${version}`, 'version', `--registry=${registry}`];
   const result = await run('npm', args, { cwd });
   if (result.code === 0) {
-    return result.stdout.trim() !== '';
+    return result.stdout.trim() !== '' ? 'published' : 'new-version';
   }
   if (/\bE404\b/.test(result.stderr + result.stdout)) {
-    return false;
+    return 'new-package';
   }
   throw new CommandError(['npm', ...args].join(' '), result);
+}
+
+/** Whether name@version is in the registry (see versionState). */
+export async function isPublished(name: string, version: string, registry: string, cwd: string, run: Runner): Promise<boolean> {
+  return (await versionState(name, version, registry, cwd, run)) === 'published';
 }

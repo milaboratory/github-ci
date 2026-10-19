@@ -3,7 +3,7 @@ import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { publicSourceRepository } from '../src/github';
-import { ensureRepository } from '../src/repository';
+import { ensureRepository, prepareRepository } from '../src/repository';
 import { tempDir } from './helpers';
 
 const SOURCE = 'https://github.com/fixture-org/fixture-repo';
@@ -64,5 +64,29 @@ describe('publicSourceRepository', () => {
     ['GitHub Enterprise Server', () => env(event({ private: false }), 'https://ghes.example.test')],
   ])('returns nothing for %s', (_case, makeEnv) => {
     expect(publicSourceRepository(makeEnv())).toBeUndefined();
+  });
+});
+
+describe('prepareRepository', () => {
+  it('fills in the repository for an npmjs upload from a public repository', () => {
+    const { root, dir } = pkg({ name: '@x/a', version: '1.0.0' });
+    expect(prepareRepository({ pkgDir: dir, workspaceRoot: root, sourceRepository: SOURCE })).toBe('added');
+  });
+
+  it('leaves GitHub Packages uploads alone, even with another repository', () => {
+    const { root, dir, file } = pkg({ name: '@x/a', version: '1.0.0', repository: 'fixture-org/other' });
+    const before = fs.readFileSync(file, 'utf8');
+    expect(prepareRepository({ pkgDir: dir, workspaceRoot: root, registry: 'https://npm.pkg.github.com', sourceRepository: SOURCE })).toBe('other-registry');
+    expect(fs.readFileSync(file, 'utf8')).toBe(before);
+  });
+
+  it('lets publishConfig.registry win over the job registry', () => {
+    const { root, dir } = pkg({ name: '@x/a', version: '1.0.0', publishConfig: { registry: 'https://npm.pkg.github.com' } });
+    expect(prepareRepository({ pkgDir: dir, workspaceRoot: root, registry: 'https://registry.npmjs.org/', sourceRepository: SOURCE })).toBe('other-registry');
+  });
+
+  it('leaves private repositories alone', () => {
+    const { root, dir } = pkg({ name: '@x/a', version: '1.0.0' });
+    expect(prepareRepository({ pkgDir: dir, workspaceRoot: root })).toBe('private-repository');
   });
 });

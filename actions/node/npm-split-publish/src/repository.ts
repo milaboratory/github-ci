@@ -99,3 +99,29 @@ export function ensureRepository(pkgDir: string, workspaceRoot: string, sourceRe
     }
   }
 }
+
+export type PrepareResult = 'other-registry' | 'private-repository' | 'added' | 'present';
+
+/**
+ * What prepare-trusted-publishing does for one package: leaves it alone for
+ * a registry other than npmjs (publishConfig.registry wins over `registry`)
+ * or a private repository (no provenance), otherwise ensureRepository.
+ */
+export function prepareRepository(options: {
+  pkgDir: string;
+  workspaceRoot: string;
+  registry?: string;
+  sourceRepository?: string;
+}): PrepareResult {
+  const manifest = JSON.parse(fs.readFileSync(path.join(options.pkgDir, 'package.json'), 'utf8')) as PackageJson;
+  const registry = manifest.publishConfig?.registry || options.registry || 'https://registry.npmjs.org/';
+  let host = '';
+  try {
+    host = new URL(registry).hostname;
+  } catch {
+    /* not a URL: treated as another registry */
+  }
+  if (host !== 'registry.npmjs.org') return 'other-registry';
+  if (!options.sourceRepository) return 'private-repository';
+  return ensureRepository(options.pkgDir, options.workspaceRoot, options.sourceRepository);
+}
