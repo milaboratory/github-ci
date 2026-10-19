@@ -1,0 +1,47 @@
+name: Prepare npm trusted publishing
+author: 'MiLaboratories'
+description: |
+  For jobs that run `npm publish` themselves on a GitHub-hosted runner with
+  `id-token: write`: makes that publish work with npm trusted publishing (OIDC).
+
+  - Installs npm `npm-version` when the runner's npm is older than 11.5.1, the
+    first npm that publishes through OIDC.
+  - In a public repository npm adds provenance on its own, and the registry
+    rejects it (E422) unless package.json `repository.url` names this
+    repository. Adds a missing `repository` to the package's package.json and
+    fails on one that names another repository.
+
+  Implemented in ../npm-split-publish (src/bin/prepare.ts).
+
+inputs:
+  package-path:
+    description: Directory of the package.json that `npm publish` runs in.
+    required: false
+    default: '.'
+  npm-version:
+    description: npm version to install when the runner's npm is older than 11.5.1.
+    required: false
+    default: '11.21.0'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: npm with trusted publishing
+      shell: bash
+      env:
+        NPM_VERSION: ${{ inputs.npm-version }}
+      run: |
+        current="$(npm --version)"
+        if [ "$(printf '%s\n11.5.1\n' "${current}" | sort -V | head -n 1)" != "11.5.1" ]; then
+          echo "npm ${current} cannot publish through OIDC; installing npm ${NPM_VERSION}"
+          npm install --global "npm@${NPM_VERSION}"
+        fi
+        npm --version
+
+    - name: package.json repository for provenance
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        PACKAGE_DIR: ${{ inputs.package-path }}
+      run: node "${ACTION_PATH}/../npm-split-publish/lib/prepare/index.js"

@@ -506,20 +506,26 @@ jobs:
         with:
           version: ${{ inputs.gcp-sdk-version }}
 
-      - name: Create Release Pull Request and Publish npm package (Public)
-        if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'true'
+      # changesets/action opens the "chore: update versions" PR while
+      # changesets are pending; with none left, the packages are published
+      # with npm trusted publishing (OIDC): pack, then upload, in this
+      # GitHub-hosted job (id-token: write). Each package needs a trusted
+      # publisher naming the caller's repository and workflow file.
+      - name: Create Release Pull Request
+        id: changesets
+        if: steps.context.outputs.is-release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
         uses: changesets/action@v1
         with:
           commit: "chore: update versions"
           title: "chore: update versions"
-          publish: pnpm -r publish --no-git-checks --access public
 
-      - name: Create Release Pull Request and Publish npm package
-        if: steps.context.outputs.is-release == 'true' && inputs.publish-to-public == 'false'
+      - name: Pack unpublished npm packages
+        id: npm-pack
+        if: steps.context.outputs.is-release == 'true'
+          && steps.changesets.outputs.hasChangesets == 'false'
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -529,11 +535,14 @@ jobs:
           GCP_KMS_KEYRING: ${{ secrets.GCP_KMS_KEYRING }}
           GCP_KMS_LOCATION: ${{ secrets.GCP_KMS_LOCATION }}
           GCP_KMS_DIGEST_ALGORITHM: ${{ inputs.gcp-kms-digest-algorithm }}
-        uses: changesets/action@v1
+
+      - name: Publish npm packages
+        if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
         with:
-          commit: "chore: update versions"
-          title: "chore: update versions"
-          publish: pnpm -r publish --no-git-checks
+          dir: ${{ steps.npm-pack.outputs.dir }}
+          access-public: ${{ inputs.publish-to-public }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       # Even constant outputs become initialized only after job start.

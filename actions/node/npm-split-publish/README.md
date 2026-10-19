@@ -6,6 +6,7 @@ Implementation of the split npm publish behind two composite actions:
 |---|---|---|
 | `actions/node/pack-unpublished` | `lib/pack` (`src/bin/pack.ts` → `src/pack.ts`) | the build runner, often self-hosted |
 | `actions/node/publish-tarballs` | `lib/publish` (`src/bin/publish.ts` → `src/publish.ts`) | GitHub-hosted, `id-token: write` |
+| `actions/node/prepare-trusted-publishing` | `lib/prepare` (`src/bin/prepare.ts` → `src/repository.ts`) | GitHub-hosted jobs that run `npm publish` themselves |
 
 npm trusted publishing (OIDC) does not accept self-hosted runners, so
 `pack` does everything `pnpm -r publish` does except the upload: for every

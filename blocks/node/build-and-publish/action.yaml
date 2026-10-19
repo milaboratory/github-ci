@@ -223,6 +223,14 @@ runs:
         package-paths: |
           ${{ inputs.execution-path }}
 
+    # npm trusted publishing (OIDC): npm 11.5.1+ and, in public repositories,
+    # a package.json `repository` naming this repository. The caller's job
+    # needs `id-token: write`; npm-auth-token is used only if OIDC fails.
+    - name: Prepare npm trusted publishing
+      uses: milaboratory/github-ci/actions/node/prepare-trusted-publishing@v4-beta
+      with:
+        package-path: ${{ inputs.execution-path }}
+
     - name: Publish npm package
       shell: bash
       env:
