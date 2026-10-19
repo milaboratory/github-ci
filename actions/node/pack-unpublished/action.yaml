@@ -1,0 +1,43 @@
+name: Pack unpublished workspace packages
+author: 'MiLaboratories'
+description: |
+  First half of a split npm publish: everything `pnpm -r publish` does except
+  the registry upload. `publish-tarballs` uploads the result later, on a
+  GitHub-hosted runner, because npm trusted publishing (OIDC) does not accept
+  self-hosted runners.
+
+  Runs prepublishOnly and `pnpm pack` for every unpublished non-private package
+  in dependency order, and writes a manifest for the upload. Implemented in
+  ../npm-split-publish (TypeScript, src/pack.ts; the manifest type is in
+  src/manifest.ts).
+
+  Expects the workspace `.npmrc` (create-npmrc) at GITHUB_WORKSPACE, with its
+  token env vars set, so registry lookups resolve scopes and auth.
+
+inputs:
+  output-dir:
+    description: |
+      Directory for tarballs and manifest.jsonl. Defaults to
+      $RUNNER_TEMP/npm-tarballs. Emptied before packing.
+    required: false
+    default: ''
+
+outputs:
+  dir:
+    description: Directory holding the tarballs and manifest.jsonl.
+    value: ${{ steps.pack.outputs.dir }}
+  count:
+    description: Number of packed packages ('0' when everything is already published).
+    value: ${{ steps.pack.outputs.count }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Pack unpublished packages
+      id: pack
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        OUT_DIR: ${{ inputs.output-dir }}
+      run: node "${ACTION_PATH}/../npm-split-publish/lib/pack/index.js"
