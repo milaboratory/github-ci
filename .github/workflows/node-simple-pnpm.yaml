@@ -280,24 +280,13 @@ on:
         required: false
         default: 'false'
 
-      npm-trusted-publishing:
-        description: |
-          Split the publish so npm trusted publishing (OIDC) can be used.
-          The build job, on `gha-runner-label`, runs prepublishOnly and packs
-          every unpublished package; a separate job on a GitHub-hosted runner
-          uploads the tarballs. npm does not accept OIDC from self-hosted runners.
-          Each published package needs a trusted publisher on npmjs.com that
-          names the caller's repository and workflow file.
-        type: boolean
-        required: false
-        default: false
-
       npm-token-fallback:
         description: |
-          With `npm-trusted-publishing`, also hand NPMJS_TOKEN to the upload.
-          npm tries OIDC first and falls back to the token, so packages without
-          a trusted publisher keep publishing during the migration.
-          Set to false to prove a package publishes through OIDC alone.
+          Also hand NPMJS_TOKEN to the npm upload. npm publishes with trusted
+          publishing (OIDC) and uses the token only if the OIDC exchange fails,
+          e.g. for a package without a trusted publisher yet. npm no longer
+          accepts 2FA-bypass tokens for direct publish, so this only matters
+          while that is still possible; false requires trusted publishing.
         type: boolean
         required: false
         default: true
@@ -1115,46 +1104,14 @@ jobs:
             git commit -m "Auto-generated changes"
             git push
 
-      - name: Publish npm package
-        id: publish-to-private
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'false'
-          && !inputs.npm-trusted-publishing
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
-
-        uses: changesets/action@v1
-        with:
-          publish: pnpm -r publish --no-git-checks
-
-      - name: Publish npm package (public)
-        id: publish-to-public
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'true'
-          && !inputs.npm-trusted-publishing
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
-
-        uses: changesets/action@v1
-        with:
-          publish: pnpm -r publish --no-git-checks --access public
-
-      # Trusted publishing: everything but the upload happens here, next to the
-      # build (prepublishOnly needs AWS/registry access). The `npm-publish` job
-      # uploads the tarballs from a GitHub-hosted runner.
+      # npm publish is split for trusted publishing (OIDC), which npm accepts
+      # only from GitHub-hosted runners. Everything but the upload happens
+      # here, next to the build (prepublishOnly needs AWS/registry access);
+      # the `npm-publish` job uploads the tarballs and creates the tag.
       - name: Pack unpublished npm packages
         id: npm-pack
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
-          && inputs.npm-trusted-publishing
         uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1172,34 +1129,17 @@ jobs:
           retention-days: 7
           overwrite: true
 
-      - name: Create release with tag
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.create-tag == 'true'
-          && !inputs.npm-trusted-publishing
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
-        env:
-          NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
-          commit: ${{ github.sha }}
-          skipIfReleaseExists: true
-          draft: false
-          prerelease: false
-
     outputs:
       # Even constant outputs become initialized only after job start.
       # All outputs of skipped jobs are always empty.
       started: 'true'
-      # Set only when the trusted-publishing pack step ran: '' means no release.
+      # Set only when the pack step ran: '' means no release.
       npm-pack-count: ${{ steps.npm-pack.outputs.count }}
 
-  # Trusted-publishing upload. Fixed GitHub-hosted runner, not gha-runner-label:
-  # npm rejects OIDC tokens from self-hosted runners. Runs whenever the pack
-  # step ran on main, so the release tag is created even when every package
-  # was already published (same as the non-split path).
+  # npm upload with trusted publishing. Fixed GitHub-hosted runner, not
+  # gha-runner-label: npm rejects OIDC tokens from self-hosted runners. Runs
+  # whenever the pack step ran on main, so the release tag is created even
+  # when every package was already published.
   npm-publish:
     name: npm publish (trusted publishing)
     runs-on: ubuntu-latest
@@ -1208,7 +1148,6 @@ jobs:
       - build-test-publish
     if: >
       !cancelled() &&
-      inputs.npm-trusted-publishing &&
       needs.build-test-publish.result == 'success' &&
       needs.build-test-publish.outputs.npm-pack-count != ''
     permissions:
