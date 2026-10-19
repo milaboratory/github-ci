@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/lib",
+  "version": "1.0.0",
+  "files": ["index.js", "prepublished.txt"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "prepublishOnly": "node -e \"require('fs').writeFileSync('prepublished.txt', 'ran')\""
+  }
+}
