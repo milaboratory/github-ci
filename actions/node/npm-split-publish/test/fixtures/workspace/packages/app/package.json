@@ -1,0 +1,7 @@
+{
+  "name": "@fixture/app",
+  "version": "2.0.0",
+  "files": ["index.js"],
+  "dependencies": { "@fixture/lib": "workspace:*" },
+  "publishConfig": { "tag": "next" }
+}

@@ -280,6 +280,17 @@ on:
         required: false
         default: 'false'
 
+      npm-token-fallback:
+        description: |
+          Also hand NPMJS_TOKEN to the npm upload. npm publishes with trusted
+          publishing (OIDC) and uses the token only if the OIDC exchange fails,
+          e.g. for a package without a trusted publisher yet. npm no longer
+          accepts 2FA-bypass tokens for direct publish, so this only matters
+          while that is still possible; false requires trusted publishing.
+        type: boolean
+        required: false
+        default: true
+
       package-path:
         description: |
           Relative path to the package.json with package version.
@@ -480,7 +491,7 @@ jobs:
     runs-on: ${{ inputs.gha-runner-label }}
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
       current-version: ${{ steps.context.outputs.current-version }}
@@ -497,7 +508,7 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           PACKAGE_PATH: ${{ inputs.package-path }}
         with:
@@ -521,9 +532,9 @@ jobs:
     needs:
       - init
     steps:
-      - uses: milaboratory/github-ci/actions/context@v4-beta
+      - uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -535,7 +546,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Check infrastructure requirements for publication
-        uses: milaboratory/github-ci/actions/node/require-latest@v4-beta
+        uses: milaboratory/github-ci/actions/node/require-latest@v4
         with:
           packages: |
             @platforma-sdk/block-tools
@@ -551,9 +562,9 @@ jobs:
     needs:
       - init
     steps:
-      - uses: milaboratory/github-ci/actions/context@v4-beta
+      - uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -597,9 +608,9 @@ jobs:
       - metadata
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -611,7 +622,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -624,7 +635,7 @@ jobs:
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
       - name: Install NodeJS packages with pnpm
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             pnpm install --frozen-lockfile --prefer-offline
@@ -632,7 +643,7 @@ jobs:
       # Default gate: some changeset must exist (any package).
       - name: Check for Changesets
         if: ${{ !inputs.require-package-path-bump }}
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           BRANCH_NAME: ${{ inputs.changeset-default-branch }}
         with:
@@ -645,7 +656,7 @@ jobs:
       # PR-only — merge_group / push need no enforcement here.
       - name: Require package bump by changeset
         if: ${{ inputs.require-package-path-bump && github.event_name == 'pull_request' }}
-        uses: milaboratory/github-ci/actions/changeset/require-package-bump@v4-beta
+        uses: milaboratory/github-ci/actions/changeset/require-package-bump@v4
         with:
           package-path: ${{ inputs.package-path }}
           base-branch: ${{ inputs.changeset-default-branch }}
@@ -655,7 +666,7 @@ jobs:
       # reports the complete set of missing bumps instead of one at a time.
       - name: Require changeset coverage for every edited package
         if: ${{ !cancelled() && inputs.require-package-path-bump && github.event_name == 'pull_request' }}
-        uses: milaboratory/github-ci/actions/changeset/check-coverage@v4-beta
+        uses: milaboratory/github-ci/actions/changeset/check-coverage@v4
         with:
           base-branch: ${{ inputs.changeset-default-branch }}
 
@@ -698,7 +709,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -753,7 +764,7 @@ jobs:
       # breaks image pulls/pushes.
       - name: Turbo remote cache (RGW)
         if: env.HZ_CI_TURBO_S3_BUCKET != ''
-        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         env:
           S3_ACCESS_KEY: ${{ env.HZ_CI_TURBO_S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ env.HZ_CI_TURBO_S3_SECRET_KEY }}
@@ -767,14 +778,14 @@ jobs:
 
       - name: Turbo remote cache (AWS)
         if: env.HZ_CI_TURBO_S3_BUCKET == ''
-        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
           team-id: ${{ inputs.team-id }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -796,7 +807,7 @@ jobs:
 
       - name: Run changeset version
         if: ( github.event_name == 'push' && github.ref_name == 'main') || github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         with:
           run: |
             pnpm run version-packages
@@ -854,9 +865,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4-beta
+        uses: milaboratory/github-ci/actions/context@v4
 
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -907,14 +918,14 @@ jobs:
 
       - name: Prepare environment for Golang when requested
         if: inputs.golang-version != ''
-        uses: milaboratory/github-ci/actions/golang/prepare@v4-beta
+        uses: milaboratory/github-ci/actions/golang/prepare@v4
         with:
           golang-version: ${{ inputs.golang-version }}
           cache-version: ${{ inputs.cache-version }}
           cache-dependency-hashfiles-path: ${{ inputs.golang-cache-hashfiles-path }}
 
       - name: Prepare environment for building a NodeJS application
-        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4-beta
+        uses: milaboratory/github-ci/actions/node/prepare-pnpm@v4
         env:
           PNPM_VERSION: ${{ needs.metadata.outputs.pnpm-version }}
         with:
@@ -933,7 +944,7 @@ jobs:
       # breaks image pulls/pushes.
       - name: Turbo remote cache (RGW)
         if: env.HZ_CI_TURBO_S3_BUCKET != ''
-        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         env:
           S3_ACCESS_KEY: ${{ env.HZ_CI_TURBO_S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ env.HZ_CI_TURBO_S3_SECRET_KEY }}
@@ -947,7 +958,7 @@ jobs:
 
       - name: Turbo remote cache (AWS)
         if: env.HZ_CI_TURBO_S3_BUCKET == ''
-        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+        uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         with:
           storage-provider: 's3'
           storage-path: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET }}
@@ -995,7 +1006,7 @@ jobs:
           fi
 
       - name: Run build
-        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -1015,7 +1026,7 @@ jobs:
 
       - name: Run tests
         id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-docker-pnpm@v4
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
@@ -1041,7 +1052,7 @@ jobs:
           test-results-reports: ${{ inputs.test-results-reports }}
 
       - name: Run build (before publish)
-        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/build-and-test-pnpm@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -1066,10 +1077,10 @@ jobs:
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
           && inputs.verify-docker-images
-        uses: milaboratory/github-ci/blocks/monorepo/verify-docker-images@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/verify-docker-images@v4
 
       - name: Perform security scan checks before publication
-        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4-beta
+        uses: milaboratory/github-ci/actions/docker/scan-pnpm-repo@v4
 
       - name: Get GitHub App User ID
         if: steps.check-changes.outputs.has-changes == '1'
@@ -1079,7 +1090,7 @@ jobs:
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
       - name: Commit changed files to main
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         if: steps.check-changes.outputs.has-changes == '1'
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
@@ -1093,41 +1104,106 @@ jobs:
             git commit -m "Auto-generated changes"
             git push
 
-      - name: Publish npm package
-        id: publish-to-private
+      # npm publish is split for trusted publishing (OIDC), which npm accepts
+      # only from GitHub-hosted runners. Everything but the upload happens
+      # here, next to the build (prepublishOnly needs AWS/registry access);
+      # the `npm-publish` job uploads the tarballs and creates the tag.
+      - name: Pack unpublished npm packages
+        id: npm-pack
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'false'
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
 
-        uses: changesets/action@v1
+      - name: Upload npm tarballs
+        if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        uses: actions/upload-artifact@v4
         with:
-          publish: pnpm -r publish --no-git-checks
+          # Per call: a caller may run this workflow more than once per run.
+          name: npm-tarballs-${{ inputs.app-name-slug }}
+          path: ${{ steps.npm-pack.outputs.dir }}
+          retention-days: 7
+          overwrite: true
 
-      - name: Publish npm package (public)
-        id: publish-to-public
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'true'
+    outputs:
+      # Even constant outputs become initialized only after job start.
+      # All outputs of skipped jobs are always empty.
+      started: 'true'
+      # Set only when the pack step ran: '' means no release.
+      npm-pack-count: ${{ steps.npm-pack.outputs.count }}
+
+  # npm upload with trusted publishing. Fixed GitHub-hosted runner, not
+  # gha-runner-label: npm rejects OIDC tokens from self-hosted runners. Runs
+  # whenever the pack step ran on main, so the release tag is created even
+  # when every package was already published.
+  npm-publish:
+    name: npm publish (trusted publishing)
+    runs-on: ubuntu-latest
+    needs:
+      - metadata
+      - build-test-publish
+    if: >
+      !cancelled() &&
+      needs.build-test-publish.result == 'success' &&
+      needs.build-test-publish.outputs.npm-pack-count != ''
+    permissions:
+      id-token: write
+      contents: write
+      # GitHub Packages uploads authenticate with GITHUB_TOKEN.
+      packages: write
+
+    # No actions/env here: this runner holds an OIDC publish capability, so it
+    # gets only the npm token it may need, not the caller's other secrets.
+    steps:
+      - name: Download npm tarballs
+        if: needs.build-test-publish.outputs.npm-pack-count != '0'
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-tarballs-${{ inputs.app-name-slug }}
+          path: ${{ runner.temp }}/npm-tarballs
+
+      # The token arrives inside the JSON `env` secret. GitHub masks the
+      # secret as a whole, not a value taken out of it, so it is masked here
+      # before any step receives it as an input (inputs are printed).
+      - name: npm fallback token
+        if: needs.build-test-publish.outputs.npm-pack-count != '0' && inputs.npm-token-fallback
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-          PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
+          SECRETS_ENV: ${{ secrets.env }}
+          INPUTS_ENV: ${{ inputs.env }}
+        run: |
+          token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${SECRETS_ENV:-{\}}" 2>/dev/null || true)"
+          if [ -z "${token}" ]; then
+            token="$(jq -r '.NPMJS_TOKEN // empty' <<<"${INPUTS_ENV:-{\}}" 2>/dev/null || true)"
+          fi
+          if [ -z "${token}" ]; then
+            echo "No NPMJS_TOKEN in env: publishing with trusted publishing only."
+            exit 0
+          fi
+          if [[ "${token}" == *$'\n'* ]]; then
+            echo "::error::NPMJS_TOKEN spans several lines"
+            exit 1
+          fi
+          echo "::add-mask::${token}"
+          echo "NPMJS_FALLBACK_TOKEN=${token}" >> "${GITHUB_ENV}"
 
-        uses: changesets/action@v1
+      - name: Publish npm packages
+        if: needs.build-test-publish.outputs.npm-pack-count != '0'
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4
         with:
-          publish: pnpm -r publish --no-git-checks --access public
+          dir: ${{ runner.temp }}/npm-tarballs
+          access-public: ${{ inputs.publish-to-public }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
+          # Set (masked) by the previous step; empty without the fallback.
+          npmjs-fallback-token: ${{ env.NPMJS_FALLBACK_TOKEN }}
 
       - name: Create release with tag
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.create-tag == 'true'
-        uses: milaboratory/github-ci/actions/release/create-with-tag@v4-beta
+        if: inputs.create-tag == 'true'
+        uses: milaboratory/github-ci/actions/release/create-with-tag@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -1138,11 +1214,6 @@ jobs:
           skipIfReleaseExists: true
           draft: false
           prerelease: false
-
-    outputs:
-      # Even constant outputs become initialized only after job start.
-      # All outputs of skipped jobs are always empty.
-      started: 'true'
 
   notify-slack-release:
     name: notify slack release
@@ -1155,16 +1226,17 @@ jobs:
       - preflight-pnpm-lock-sync
       - check-changesets
       - build-test-publish
+      - npm-publish
       - pre-calculated-build
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/slack/release@v4
         env:
           NPM_PKG_VERSION: ${{ needs.metadata.outputs.npm-pkg-version }}
         with:
@@ -1173,6 +1245,7 @@ jobs:
           job-status: |
             ${{ needs.pre-calculated-build.result }}
             ${{ needs.build-test-publish.result }}
+            ${{ needs.npm-publish.result }}
             ${{ needs.check-changesets.result }}
             ${{ needs.preflight-require-latest.result }}
             ${{ needs.preflight-pnpm-lock-sync.result }}
@@ -1190,7 +1263,7 @@ jobs:
     steps:
       - name: Check workflow duration
         id: check-duration
-        uses: milaboratory/github-ci/actions/shell@v4-beta
+        uses: milaboratory/github-ci/actions/shell@v4
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -1234,7 +1307,7 @@ jobs:
 
       - name: Send Slack notification for slow merge queue
         if: fromJSON(steps.check-duration.outputs.data).alert == 'true' && inputs.notify-slack
-        uses: milaboratory/github-ci/actions/notify/slack/send@v4-beta
+        uses: milaboratory/github-ci/actions/notify/slack/send@v4
         with:
           token: ${{ secrets.SLACK_BOT_TOKEN }}
           method: chat.postMessage

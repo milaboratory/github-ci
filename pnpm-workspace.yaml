@@ -5,6 +5,7 @@ packages:
   - actions/detect-version
   - actions/post/shell
   - actions/post/artifact
+  - actions/node/npm-split-publish
 
 catalog:
   # Build

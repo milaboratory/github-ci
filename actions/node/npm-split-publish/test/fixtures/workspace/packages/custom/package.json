@@ -1,0 +1,6 @@
+{
+  "name": "unscoped-custom",
+  "version": "1.0.0",
+  "files": ["index.js"],
+  "publishConfig": { "registry": "https://custom.fixture.test/" }
+}
