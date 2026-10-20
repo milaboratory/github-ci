@@ -100,6 +100,18 @@ describe('packWorkspace', () => {
     expect(entries.map((e) => e.name)).toContain('@fixture/old');
   });
 
+  it('packs a new version with npm < 10, which prints nothing for a missing version', async () => {
+    const { entries } = await pack({ existing: ['@fixture/old'], legacyNpm: true });
+    expect(entries.map((e) => e.name)).toContain('@fixture/old');
+  });
+
+  it('tells a new version from a new package on npmjs (npm 10+ answers E404 for both)', async () => {
+    const { entries, run } = await pack(ON_NPMJS, [], undefined, true);
+    expect(entries.map((e) => e.name)).toEqual(expect.arrayContaining(['@fixture/lib', '@fixture/app']));
+    const lookup = run.calls.find((c) => c.command === 'npm' && c.args[1] === '@fixture/lib' && c.args[2] === 'name');
+    expect(lookup?.args).toEqual(['view', '@fixture/lib', 'name', '--registry=https://registry.npmjs.org/']);
+  });
+
   it('skips private packages, with or without a version, and published versions', async () => {
     const { entries } = await pack();
     expect(entries.map((e) => e.name)).not.toContain('@fixture/internal');

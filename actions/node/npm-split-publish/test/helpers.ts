@@ -37,20 +37,32 @@ export const ok = (stdout = ''): RunResult => ({ code: 0, stdout, stderr: '' });
 export const notFound = (): RunResult => ({ code: 1, stdout: '', stderr: 'npm error code E404\nnpm error 404 Not Found' });
 
 /**
- * Answers `npm view <name>@<version> version` from a fake registry state and
- * runs everything else for real (pnpm, npm config).
+ * Answers `npm view <name>@<version> version` and `npm view <name> name` from a
+ * fake registry state the way npm 10+ does (E404 for a missing version of an
+ * existing package), or like npm < 10 (exit 0, no output) with `legacyNpm`,
+ * and runs everything else for real (pnpm, npm config).
  */
-export function registryRunner(state: { published?: string[]; existing?: string[]; failing?: string[] }) {
+export function registryRunner(state: { published?: string[]; existing?: string[]; failing?: string[]; legacyNpm?: boolean }) {
   return fakeRunner((call) => {
     if (call.command !== 'npm' || call.args[0] !== 'view') return undefined;
     const spec = call.args[1];
-    const name = spec.slice(0, spec.lastIndexOf('@'));
+    const packageLookup = call.args[2] === 'name';
+    const name = packageLookup ? spec : spec.slice(0, spec.lastIndexOf('@'));
     if (state.failing?.includes(name)) return { code: 1, stdout: '', stderr: 'npm error code E500' };
+    const known = state.existing?.includes(name) || state.published?.some((p) => p.startsWith(`${name}@`));
+    if (packageLookup) return known ? ok(name + '\n') : notFound();
     if (state.published?.includes(spec)) return ok(spec.slice(spec.lastIndexOf('@') + 1) + '\n');
-    if (state.existing?.includes(name)) return ok('');
+    if (known) return state.legacyNpm ? ok('') : notFoundVersion(spec);
     return notFound();
   }, spawnRunner);
 }
+
+/** npm 10+ for a missing version of a package that exists. */
+export const notFoundVersion = (spec: string): RunResult => ({
+  code: 1,
+  stdout: '',
+  stderr: `npm error code E404\nnpm error 404 No match found for version ${spec.slice(spec.lastIndexOf('@') + 1)}`,
+});
 
 export function tempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
