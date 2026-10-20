@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { ManifestEntry, writeManifest } from './manifest';
-import { PackageJson, isPublished, resolveRegistry } from './registry';
+import { PackageJson, resolveRegistry, versionState } from './registry';
 import { repositoryState, withRepository } from './repository';
 import { Runner, runChecked } from './run';
 import { readPackedManifest } from './tarball';
@@ -79,15 +79,20 @@ export async function packWorkspace(options: PackOptions, deps: PackDeps): Promi
   // their registry yet. Only these are checked; already-published packages
   // keep releasing as before.
   const planned: Planned[] = [];
+  const newOnNpmjs: string[] = [];
   for (const pkg of packages) {
     const { name, version } = pkg.manifest;
     if (pkg.manifest.private) {
       continue;
     }
     const registry = await resolveRegistry(pkg.manifest, npmrcDir, run);
-    if (await isPublished(name, version, registry, npmrcDir, run)) {
+    const state = await versionState(name, version, registry, npmrcDir, run);
+    if (state === 'published') {
       log(`${name}@${version}: already in ${registry}, skipping`);
       continue;
+    }
+    if (state === 'new-package' && isNpmjs(registry)) {
+      newOnNpmjs.push(name);
     }
     // Provenance applies to npmjs uploads from a public repository only.
     const provenanceFrom = sourceRepository && isNpmjs(registry) ? sourceRepository : undefined;
@@ -96,6 +101,15 @@ export async function packWorkspace(options: PackOptions, deps: PackDeps): Promi
 
   // Every check before the first prepublishOnly, so a bad package fails the
   // run without side effects.
+  if (newOnNpmjs.length > 0) {
+    // npm accepts a trusted publisher only for a package that exists, and no
+    // token can publish any more, so the first version needs a person.
+    throw new Error(
+      `not on npmjs yet: ${newOnNpmjs.join(', ')}. Publish the first version of each by hand ` +
+        `(npm publish with 2FA), add its trusted publisher (repository + workflow file, "npm publish" allowed), ` +
+        `then re-run this job. Nothing was published or uploaded.`,
+    );
+  }
   for (const { pkg, provenanceFrom } of planned) {
     const { name } = pkg.manifest;
     for (const script of UNSUPPORTED_SCRIPTS) {
