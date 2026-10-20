@@ -7,9 +7,9 @@
 // root is the current directory. Outputs: dir, count.
 
 import * as core from '@actions/core';
-import * as fs from 'fs';
 import * as path from 'path';
 
+import { publicSourceRepository } from '../github';
 import { packWorkspace } from '../pack';
 import { spawnRunner } from '../run';
 
@@ -29,20 +29,6 @@ async function main(): Promise<void> {
   for (const e of entries) core.info(`  ${e.name}@${e.version} -> ${e.registry}`);
   core.setOutput('dir', outDir);
   core.setOutput('count', String(entries.length));
-}
-
-/**
- * https://github.com/<owner>/<repo> when the repository being built is public
- * on github.com, the only case where npm adds provenance on its own. The
- * event payload says whether the repository is private.
- */
-function publicSourceRepository(): string | undefined {
-  const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repository, GITHUB_EVENT_PATH: eventPath } = process.env;
-  if (server !== 'https://github.com' || !repository || !eventPath || !fs.existsSync(eventPath)) {
-    return undefined;
-  }
-  const event = JSON.parse(fs.readFileSync(eventPath, 'utf8')) as { repository?: { private?: boolean } };
-  return event.repository?.private === false ? `${server}/${repository}` : undefined;
 }
 
 function requireEnv(name: string): string {

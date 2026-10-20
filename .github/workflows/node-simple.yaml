@@ -688,6 +688,18 @@ jobs:
         if: inputs.gcp-login-enable
         uses: milaboratory/github-ci/actions/milab-shell-utils@v4
 
+      # npm trusted publishing (OIDC): npm 11.5.1+ and, in public repositories,
+      # a package.json `repository` naming this repository (npm adds
+      # provenance and the registry checks it). NPMJS_TOKEN is used only if
+      # the OIDC exchange fails.
+      - name: Prepare npm trusted publishing
+        if: steps.npm-pkg-status.outputs.exist == '0'
+          && steps.context.outputs.is-release == 'true'
+        uses: milaboratory/github-ci/actions/node/prepare-trusted-publishing@v4
+        with:
+          package-path: ${{ inputs.node-execution-path }}
+          registry-url: ${{ inputs.registry-url }}
+
       - name: Publish npm package
         if: steps.npm-pkg-status.outputs.exist == '0'
           && steps.context.outputs.is-release == 'true'
