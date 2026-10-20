@@ -62,15 +62,35 @@ discover() {
     done | awk '!seen[$0]++'
 }
 
+# npm asks for 2FA (the browser approval) only when stdin and stdout are both
+# a terminal (npm lib/utils/auth.js); a call whose output is captured fails
+# with EOTP instead. So on EOTP, run the same call on the terminal once: npm
+# prints the approval link, and ticking "skip 2FA for 5 minutes" there lets
+# the following captured calls through. Not in a dry run, and only when a
+# terminal is attached.
+authenticate() {
+    local pkg="$1"
+    [ "${DRY_RUN:-0}" = "1" ] && return 1
+    { : </dev/tty >/dev/tty; } 2>/dev/null || return 1
+    echo "npm needs 2FA: approve in the browser and tick \"skip 2FA for 5 minutes\"." >/dev/tty
+    npm trust list "${pkg}" </dev/tty >/dev/tty 2>&1
+}
+
 # Prints the package's trust configurations as a JSON array ([] when there
 # are none). Fails, after printing why, when they cannot be listed or the
 # output is not the JSON `npm trust list --json` documents: one object per
 # configuration with id, type, repository, file and permissions
 # ("createPackage" = npm publish, "createStagedPackage" = npm stage).
 list_trust() {
-    local pkg="$1" out err
+    local pkg="$1" out err rc=0
     err="$(mktemp)"
-    if ! out="$(npm trust list "${pkg}" --json 2>"${err}")"; then
+    out="$(npm trust list "${pkg}" --json 2>"${err}")" || rc=$?
+    if [ "${rc}" -ne 0 ] && grep -q 'EOTP' "${err}" && authenticate "${pkg}"; then
+        # Approved in the browser; the 2FA skip window covers the retry.
+        rc=0
+        out="$(npm trust list "${pkg}" --json 2>"${err}")" || rc=$?
+    fi
+    if [ "${rc}" -ne 0 ]; then
         cat "${err}" >&2
         rm -f "${err}"
         if [ "${DRY_RUN:-0}" = "1" ]; then

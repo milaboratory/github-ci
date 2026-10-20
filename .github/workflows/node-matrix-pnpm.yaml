@@ -927,31 +927,28 @@ jobs:
             git commit -m "Auto-generated changes"
             git push
 
-      - name: Publish npm package
-        id: publish-to-private
+      # npm trusted publishing (OIDC). This job runs on a GitHub-hosted runner
+      # with id-token: write, so pack and upload run back to back: pack runs
+      # prepublishOnly/prepublish and `pnpm pack` for each unpublished
+      # package, upload publishes the tarballs. Each package needs a trusted
+      # publisher naming the caller's repository and workflow file.
+      - name: Pack unpublished npm packages
+        id: npm-pack
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'false'
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-        uses: changesets/action@v1
-        with:
-          publish: pnpm -r publish --no-git-checks
 
-      - name: Publish npm package (public)
-        id: publish-to-public
-        if: github.ref_name == 'main'
-          && steps.check-changes.outputs.has-changes == '0'
-          && inputs.publish-to-public == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
-        uses: changesets/action@v1
+      - name: Publish npm packages
+        if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
         with:
-          publish: pnpm -r publish --no-git-checks --access public
+          dir: ${{ steps.npm-pack.outputs.dir }}
+          access-public: ${{ inputs.publish-to-public }}
+          npm-auth-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create release with tag
         if: github.ref_name == 'main'
