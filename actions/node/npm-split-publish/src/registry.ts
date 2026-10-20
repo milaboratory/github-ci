@@ -49,17 +49,31 @@ export async function versionState(
   cwd: string,
   run: Runner,
 ): Promise<VersionState> {
-  // npm view: exit 0 + the version when it exists; exit 0 + no output when the
-  // package exists without that version; E404 when the package does not exist.
+  // npm view name@version: exit 0 + the version when it exists. When it does
+  // not, npm < 10 exits 0 with no output, while npm 10+ fails with E404 ("No
+  // match found for version"), the same code as for a package that does not
+  // exist at all. So on E404, ask for the package itself.
   const args = ['view', `${name}@${version}`, 'version', `--registry=${registry}`];
   const result = await run('npm', args, { cwd });
   if (result.code === 0) {
     return result.stdout.trim() !== '' ? 'published' : 'new-version';
   }
-  if (/\bE404\b/.test(result.stderr + result.stdout)) {
+  if (!isNotFound(result)) {
+    throw new CommandError(['npm', ...args].join(' '), result);
+  }
+  const packageArgs = ['view', name, 'name', `--registry=${registry}`];
+  const pkg = await run('npm', packageArgs, { cwd });
+  if (pkg.code === 0 && pkg.stdout.trim() !== '') {
+    return 'new-version';
+  }
+  if (pkg.code === 0 || isNotFound(pkg)) {
     return 'new-package';
   }
-  throw new CommandError(['npm', ...args].join(' '), result);
+  throw new CommandError(['npm', ...packageArgs].join(' '), pkg);
+}
+
+function isNotFound(result: { stdout: string; stderr: string }): boolean {
+  return /\bE404\b/.test(result.stderr + result.stdout);
 }
 
 /** Whether name@version is in the registry (see versionState). */
