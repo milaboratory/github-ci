@@ -15,16 +15,22 @@ export interface PackageJson {
 }
 
 /**
- * The registry pnpm publishes the package to: publishConfig.registry, then the
+ * The registry the package is published to: publishConfig.registry, then the
  * scope mapping, then the default registry. `npmrcDir` is where the workspace
- * .npmrc lives; npm only reads the .npmrc of the project it runs in.
+ * .npmrc lives; pnpm reads the .npmrc of the project it runs in.
  */
 export async function resolveRegistry(pkg: PackageJson & { name: string }, npmrcDir: string, run: Runner): Promise<string> {
   if (pkg.publishConfig?.registry) {
     return pkg.publishConfig.registry;
   }
-  const configGet = async (key: string) =>
-    (await runChecked(run, 'npm', ['config', 'get', key], { cwd: npmrcDir })).stdout.trim();
+  const configGet = async (key: string) => {
+    const { stdout, stderr } = await runChecked(run, 'pnpm', ['config', 'get', key], { cwd: npmrcDir });
+    // pnpm 9 and 10 drop the whole .npmrc, scope mappings included, when a ${VAR} in it is unset.
+    if (stderr.includes('Failed to replace env in config')) {
+      throw new Error(`${npmrcDir}: pnpm could not read .npmrc, set its env vars:\n${stderr.trim()}`);
+    }
+    return stdout.trim();
+  };
 
   if (pkg.name.startsWith('@') && pkg.name.includes('/')) {
     const scoped = await configGet(`${pkg.name.split('/')[0]}:registry`);
@@ -49,31 +55,27 @@ export async function versionState(
   cwd: string,
   run: Runner,
 ): Promise<VersionState> {
-  // npm view name@version: exit 0 + the version when it exists. When it does
-  // not, npm < 10 exits 0 with no output, while npm 10+ fails with E404 ("No
-  // match found for version"), the same code as for a package that does not
-  // exist at all. So on E404, ask for the package itself.
-  const args = ['view', `${name}@${version}`, 'version', `--registry=${registry}`];
-  const result = await run('npm', args, { cwd });
-  if (result.code === 0) {
-    return result.stdout.trim() !== '' ? 'published' : 'new-version';
-  }
-  if (!isNotFound(result)) {
-    throw new CommandError(['npm', ...args].join(' '), result);
-  }
-  const packageArgs = ['view', name, 'name', `--registry=${registry}`];
-  const pkg = await run('npm', packageArgs, { cwd });
-  if (pkg.code === 0 && pkg.stdout.trim() !== '') {
-    return 'new-version';
-  }
-  if (pkg.code === 0 || isNotFound(pkg)) {
-    return 'new-package';
-  }
-  throw new CommandError(['npm', ...packageArgs].join(' '), pkg);
+  // npm (under pnpm 9 and 10) gives E404 for a missing version and a missing package alike.
+  const view = async (args: string[]) => {
+    const fullArgs = ['view', ...args, `--registry=${registry}`, '--json'];
+    const result = await run('pnpm', fullArgs, { cwd });
+    if (result.code === 0) return result.stdout.trim() !== '';
+    if (isNotFound(result.stdout)) return false;
+    throw new CommandError(['pnpm', ...fullArgs].join(' '), result);
+  };
+  if (await view([`${name}@${version}`, 'version'])) return 'published';
+  return (await view([name, 'name'])) ? 'new-version' : 'new-package';
 }
 
-function isNotFound(result: { stdout: string; stderr: string }): boolean {
-  return /\bE404\b/.test(result.stderr + result.stdout);
+const NOT_FOUND = ['ERR_PNPM_PACKAGE_NOT_FOUND', 'ERR_PNPM_FETCH_404', 'E404'];
+
+function isNotFound(stdout: string): boolean {
+  try {
+    const code = (JSON.parse(stdout) as { error?: { code?: string } }).error?.code;
+    return code !== undefined && NOT_FOUND.includes(code);
+  } catch {
+    return false;
+  }
 }
 
 /** Whether name@version is in the registry (see versionState). */

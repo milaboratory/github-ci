@@ -1,15 +1,13 @@
-// readPackedManifest must read what npm reads. Each case builds a tarball and
-// compares our result with npm's own (`npm pack <tarball> --dry-run --json`
-// reads the manifest through pacote, as `npm publish` does).
+// readPackedManifest must read what `pnpm publish --dry-run` reads, or refuse the tarball.
 
-import { spawnSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
 import { describe, expect, it } from 'vitest';
 
 import { readPackedManifest } from '../src/tarball';
-import { makeTarball, tempDir } from './helpers';
+import { hasRealPnpm, makeTarball, tempDir } from './helpers';
 
 const A = '{"name":"@x/a","version":"1.0.0"}';
 const B = '{"name":"@x/b","version":"2.0.0"}';
@@ -19,6 +17,10 @@ type Entry = [path: string, type: string, content: string];
 function handTar(entries: Entry[]): string {
   const blocks: Buffer[] = [];
   for (const [entryPath, type, content] of entries) {
+    if (type === 'zero') {
+      blocks.push(Buffer.alloc(512));
+      continue;
+    }
     const isLink = type === '1' || type === '2';
     const body = Buffer.from(isLink ? '' : content);
     const header = Buffer.alloc(512);
@@ -44,11 +46,20 @@ function handTar(entries: Entry[]): string {
   return file;
 }
 
-/** name@version as npm reads the tarball, or 'error'. */
-function npmSees(file: string): string {
-  const result = spawnSync('npm', ['pack', file, '--dry-run', '--json'], { cwd: tempDir('npm-pack-'), encoding: 'utf8' });
+/** One pax record: "<length> <key>=<value>\n", the length counting itself. */
+function pax(key: string, value: string): string {
+  const body = ` ${key}=${value}\n`;
+  let length = body.length + 1;
+  while (String(length).length + body.length > length) length++;
+  return `${length}${body}`;
+}
+
+/** name@version as pnpm reads the tarball, or 'error'. */
+function pnpmSees(file: string): string {
+  const args = ['publish', file, '--dry-run', '--json', '--registry=https://registry.npmjs.org/'];
+  const result = spawnSync('pnpm', args, { cwd: tempDir('pnpm-dry-run-'), encoding: 'utf8' });
   if (result.status !== 0) return 'error';
-  const [info] = JSON.parse(result.stdout) as { name: string; version: string }[];
+  const info = JSON.parse(result.stdout) as { name: string; version: string };
   return `${info.name}@${info.version}`;
 }
 
@@ -61,25 +72,64 @@ function weSee(file: string): string {
   }
 }
 
-describe('readPackedManifest reads what npm reads', () => {
+describe.skipIf(!hasRealPnpm())('readPackedManifest reads what pnpm reads', () => {
   it('a tarball made by tar', () => {
     const dir = tempDir('tar-');
     makeTarball(dir, 'a.tgz', { name: '@x/a', version: '1.0.0' });
     expect(weSee(path.join(dir, 'a.tgz'))).toBe('@x/a@1.0.0');
-    expect(npmSees(path.join(dir, 'a.tgz'))).toBe('@x/a@1.0.0');
+    expect(pnpmSees(path.join(dir, 'a.tgz'))).toBe('@x/a@1.0.0');
+  });
+
+  it('a tarball made by pnpm pack', () => {
+    const pkg = tempDir('pnpm-pack-');
+    const out = tempDir('pnpm-pack-out-');
+    fs.writeFileSync(path.join(pkg, 'package.json'), A);
+    execFileSync('pnpm', ['pack', '--pack-destination', out], { cwd: pkg, stdio: 'ignore' });
+    const file = path.join(out, fs.readdirSync(out)[0]);
+    expect(weSee(file)).toBe('@x/a@1.0.0');
+    expect(pnpmSees(file)).toBe('@x/a@1.0.0');
   });
 
   it.each<[string, Entry[]]>([
-    ['a second manifest under another top directory', [['package/package.json', '0', A], ['x/package.json', '0', B]]],
-    ['a second manifest spelled package/./package.json', [['package/package.json', '0', A], ['package/./package.json', '0', B]]],
-    ['a second manifest spelled package//package.json', [['package/package.json', '0', A], ['package//package.json', '0', B]]],
-    ['a ./ prefix and a directory entry', [['./package/', '5', ''], ['./package/package.json', '0', A]]],
-    ['a .. entry after the manifest', [['package/package.json', '0', A], ['package/../package.json', '0', B]]],
-    ['a symlink named package.json', [['package/package.json', '0', A], ['package/package.json', '2', '/etc/hostname']]],
-    ['a hard link after the manifest', [['package/package.json', '0', A], ['package/other.json', '1', 'package/package.json']]],
-    ['no manifest at all', [['package/index.js', '0', '1']]],
-  ])('%s', (_case, entries) => {
+    ['a long path in a pax header', [['package/package.json', 'x', pax('path', 'package/package.json')], ['ignored', '0', A]]],
+    ['a long path in a GNU header', [['././@LongLink', 'L', 'package/package.json\0'], ['ignored', '0', A]]],
+  ])('accepts %s', (_case, entries) => {
     const file = handTar(entries);
-    expect(weSee(file)).toBe(npmSees(file));
+    expect(weSee(file)).toBe('@x/a@1.0.0');
+    expect(pnpmSees(file)).toBe('@x/a@1.0.0');
+  });
+
+  it.each<[string, string, Entry[]]>([
+    ['a second manifest under another top directory', '@x/a@1.0.0', [['package/package.json', '0', A], ['x/package.json', '0', B]]],
+    ['a second manifest spelled package/./package.json', 'error', [['package/package.json', '0', A], ['package/./package.json', '0', B]]],
+    ['a second manifest spelled package//package.json', 'error', [['package/package.json', '0', A], ['package//package.json', '0', B]]],
+    ['a second manifest spelled package\\package.json', 'error', [['package/package.json', '0', A], ['package\\package.json', '0', B]]],
+    ['a ./ prefix and a directory entry', '@x/a@1.0.0', [['./package/', '5', ''], ['./package/package.json', '0', A]]],
+    ['a .. entry after the manifest', '@x/a@1.0.0', [['package/package.json', '0', A], ['package/../package.json', '0', B]]],
+    ['an absolute path', 'error', [['/package/package.json', '0', A]]],
+    ['a symlink named package.json', 'error', [['package/package.json', '0', A], ['package/package.json', '2', '/etc/hostname']]],
+    ['a hard link after the manifest', '@x/a@1.0.0', [['package/package.json', '0', A], ['package/other.json', '1', 'package/package.json']]],
+    ['a second manifest after an end-of-archive block', 'error', [['package/package.json', '0', A], ['', 'zero', ''], ['package/package.json', '0', B]]],
+    ['a second manifest through a pax path', 'error', [['package/package.json', '0', A], ['x', 'x', pax('path', 'package/package.json')], ['other', '0', B]]],
+    ['a pax size', 'error', [['x', 'x', pax('size', '0')], ['package/package.json', '0', A]]],
+    ['a global pax header', 'error', [['package/package.json', 'g', pax('path', 'x')], ['package/package.json', '0', A]]],
+    ['no manifest at all', 'error', [['package/index.js', '0', '1']]],
+  ])('%s: %s', (_case, expected, entries) => {
+    const file = handTar(entries);
+    expect(weSee(file)).toBe(expected);
+    if (expected !== 'error') expect(pnpmSees(file)).toBe(expected);
+  });
+});
+
+describe('readPackedManifest refuses', () => {
+  it('a second gzip member, which pnpm does not read', () => {
+    const file = handTar([['package/package.json', '0', A]]);
+    fs.appendFileSync(file, zlib.gzipSync(Buffer.alloc(1024)));
+    expect(weSee(file)).toBe('error');
+  });
+
+  it('a pax record length that Number() reads but the tar crate does not', () => {
+    const file = handTar([['x', 'x', '0x1f path=package/package.json\n'], ['other', '0', A]]);
+    expect(weSee(file)).toBe('error');
   });
 });

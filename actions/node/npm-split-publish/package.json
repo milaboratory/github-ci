@@ -1,14 +1,13 @@
 {
   "name": "@milaboratories/github-ci-npm-split-publish",
   "private": true,
-  "description": "Split npm publish: pack on the build runner, upload from a GitHub-hosted runner with npm trusted publishing.",
+  "description": "Split npm publish: pack on the build runner, upload with pnpm from a GitHub-hosted runner with npm trusted publishing.",
   "scripts": {
     "build": "rm -rf lib dist && tsc && ncc build dist/bin/pack.js --minify --out lib/pack --source-map && ncc build dist/bin/publish.js --minify --out lib/publish --source-map && ncc build dist/bin/prepare.js --minify --out lib/prepare --source-map",
     "test": "vitest run"
   },
   "dependencies": {
-    "@actions/core": "catalog:",
-    "tar": "7.5.22"
+    "@actions/core": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -1,11 +1,11 @@
-import { execFileSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { ManifestEntry, writeManifest } from '../src/manifest';
-import { checkPackedPublishConfig, npmrcFor, publishArgs, publishTarballs } from '../src/publish';
-import { Call, fakeRunner, makeTarball, notFound, ok, quiet, tempDir } from './helpers';
+import { checkPackedManifest, npmrcFor, publishArgs, publishTarballs } from '../src/publish';
+import { Call, fakeRunner, hasRealPnpm, makeTarball, ok, quiet, tempDir, viewError } from './helpers';
 
 const NPMJS = 'https://registry.npmjs.org/';
 const GITHUB = 'https://npm.pkg.github.com/';
@@ -27,45 +27,48 @@ function tarballDir(entries: ManifestEntry[]): string {
   return dir;
 }
 
-interface NpmState {
+interface PnpmState {
   published?: string[];
   failingPublish?: string[];
   /** Tarballs whose upload the registry refuses as already published. */
   duplicate?: string[];
+  version?: string;
 }
 
-/** Fake npm; records the npm config in effect at each publish. */
-function fakeNpm(state: NpmState = {}) {
+/** Fake pnpm; records the auth file in effect at each publish. */
+function fakePnpm(state: PnpmState = {}) {
   const configs: string[] = [];
   const run = fakeRunner((call: Call) => {
-    if (call.command !== 'npm') return undefined;
+    if (call.command !== 'pnpm') return undefined;
+    if (call.args[0] === '--version') return ok(`${state.version ?? '12.14.0'}\n`);
     if (call.args[0] === 'view') {
-      return state.published?.includes(call.args[1]) ? ok(call.args[1].split('@').pop() + '\n') : notFound();
+      return state.published?.includes(call.args[1]) ? ok(JSON.stringify(call.args[1].split('@').pop())) : viewError('ERR_PNPM_FETCH_404');
     }
     if (call.args[0] === 'publish') {
-      configs.push(fs.readFileSync(call.options.env!.NPM_CONFIG_USERCONFIG!, 'utf8'));
+      configs.push(fs.readFileSync(call.options.env!.PNPM_CONFIG_NPMRC_AUTH_FILE!, 'utf8'));
       const file = path.basename(call.args[1]);
       if (state.duplicate?.includes(file)) {
-        return { code: 1, stdout: '', stderr: 'npm error code E403\nnpm error 403 You cannot publish over the previously published versions: 1.0.0.' };
+        const message = 'Failed to publish package x@1.0.0 (status 403 Forbidden): {"error":"You cannot publish over the previously published versions: 1.0.0."}';
+        return { code: 1, stdout: JSON.stringify({ error: { code: 'ERR_PNPM_FAILED_TO_PUBLISH', message } }), stderr: 'Error: ERR_PNPM_FAILED_TO_PUBLISH\n  │ You cannot publish over the previously published\n  │ versions: 1.0.0.' };
       }
-      return state.failingPublish?.includes(file) ? { code: 1, stdout: '', stderr: 'npm error code E403' } : ok(`+ ${file}`);
+      return state.failingPublish?.includes(file) ? viewError('ERR_PNPM_FAILED_TO_PUBLISH') : ok(JSON.stringify({ name: file }));
     }
     return undefined;
   });
   return { run, configs, publishes: () => run.calls.filter((c) => c.args[0] === 'publish') };
 }
 
-async function publish(entries: ManifestEntry[], npm = fakeNpm(), options: { accessPublic?: boolean; npmAuthToken?: string; npmjsFallbackToken?: string } = {}) {
+async function publish(entries: ManifestEntry[], pnpm = fakePnpm(), options: { accessPublic?: boolean; npmAuthToken?: string; npmjsFallbackToken?: string } = {}) {
   const dir = tarballDir(entries);
   const userconfig = path.join(dir, '..', `${path.basename(dir)}.npmrc`);
-  const published = await publishTarballs({ dir, userconfig, accessPublic: false, ...options }, { ...quiet, run: npm.run });
-  return { dir, published, npm };
+  const published = await publishTarballs({ dir, userconfig, accessPublic: false, ...options }, { ...quiet, run: pnpm.run });
+  return { dir, published, pnpm };
 }
 
 describe('publishArgs', () => {
-  it('skips lifecycle scripts and passes the registry, tag and access', () => {
-    expect(publishArgs(APP, '/t', false)).toEqual(['publish', `/t/${APP.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--tag=next']);
-    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, '--ignore-scripts', `--registry=${NPMJS}`, '--tag=latest', '--access=restricted']);
+  it('passes the registry, tag and access', () => {
+    expect(publishArgs(APP, '/t', false)).toEqual(['publish', `/t/${APP.file}`, `--registry=${NPMJS}`, '--json', '--tag=next']);
+    expect(publishArgs(LIB, '/t', false)).toEqual(['publish', `/t/${LIB.file}`, `--registry=${NPMJS}`, '--json', '--access=restricted']);
   });
 
   it('accessPublic overrides the manifest access', () => {
@@ -73,23 +76,28 @@ describe('publishArgs', () => {
   });
 });
 
-describe('checkPackedPublishConfig', () => {
+describe('checkPackedManifest', () => {
+  const check = (publishConfig: unknown) => () => checkPackedManifest('x', { publishConfig }, LIB);
+
   it('allows ordinary publishConfig keys and the entry registry', () => {
-    expect(() =>
-      checkPackedPublishConfig('x', { access: 'public', tag: 'next', registry: 'https://registry.npmjs.org', main: 'dist/index.js', 'umd:main': 'x.js' }, NPMJS),
-    ).not.toThrow();
-    expect(() => checkPackedPublishConfig('x', undefined, NPMJS)).not.toThrow();
+    expect(check({ access: 'public', tag: 'next', registry: 'https://registry.npmjs.org', main: 'dist/index.js', 'umd:main': 'x.js' })).not.toThrow();
+    expect(check(undefined)).not.toThrow();
+  });
+
+  it('allows a top-level tag only when it is the one the upload uses', () => {
+    expect(() => checkPackedManifest('x', { tag: 'latest' }, LIB)).not.toThrow();
+    expect(() => checkPackedManifest('x', { tag: 'next' }, APP)).not.toThrow();
+    expect(() => checkPackedManifest('x', { tag: 'evil' }, LIB)).toThrow(`sets tag "evil", not 'latest'`);
+    expect(() => checkPackedManifest('x', { tag: 'latest' }, APP)).toThrow(`sets tag "latest", not 'next'`);
   });
 
   it.each([
     [{ '@scope:registry': 'https://evil.test/' }, "sets '@scope:registry'"],
-    [{ '//evil.test/:_authToken': 'x' }, "sets '//evil.test/:_authToken'"],
-    [{ proxy: 'http://evil.test' }, "sets 'proxy'"],
-    [{ _authToken: 'x' }, "sets '_authToken'"],
+    [{ '@Scope:Registry': 'https://evil.test/' }, "sets '@Scope:Registry'"],
     [{ registry: 'https://evil.test/' }, 'publishConfig.registry https://evil.test/ is not'],
     ['text', 'is not an object'],
   ])('refuses %j', (config, message) => {
-    expect(() => checkPackedPublishConfig('x', config, NPMJS)).toThrow(message);
+    expect(check(config)).toThrow(message);
   });
 });
 
@@ -126,121 +134,104 @@ describe('npmrcFor', () => {
 
 describe('publishTarballs', () => {
   it('publishes in manifest order', async () => {
-    const { npm, published } = await publish([LIB, APP]);
-    expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file, APP.file]);
+    const { pnpm, published } = await publish([LIB, APP]);
+    expect(pnpm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file, APP.file]);
     expect(published).toEqual([LIB, APP]);
   });
 
   it('skips versions that are already published', async () => {
-    const { npm } = await publish([LIB, APP], fakeNpm({ published: ['@fixture/lib@1.0.0'] }));
-    expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([APP.file]);
+    const { pnpm } = await publish([LIB, APP], fakePnpm({ published: ['@fixture/lib@1.0.0'] }));
+    expect(pnpm.publishes().map((c) => path.basename(c.args[1]))).toEqual([APP.file]);
   });
 
-  it('hands npm the generated config and the tokens only through env', async () => {
-    const npm = fakeNpm();
-    await publish([LIB], npm, { npmjsFallbackToken: 'np-secret' });
-    expect(npm.configs).toEqual(['//registry.npmjs.org/:_authToken=${NPMJS_FALLBACK_TOKEN}\n']);
-    expect(npm.publishes()[0].options.env!.NPMJS_FALLBACK_TOKEN).toBe('np-secret');
+  it('hands pnpm the generated auth file and the tokens only through env', async () => {
+    const pnpm = fakePnpm();
+    await publish([LIB], pnpm, { npmjsFallbackToken: 'np-secret' });
+    expect(pnpm.configs).toEqual(['//registry.npmjs.org/:_authToken=${NPMJS_FALLBACK_TOKEN}\n']);
+    expect(pnpm.publishes()[0].options.env!.NPMJS_FALLBACK_TOKEN).toBe('np-secret');
   });
 
   it('fails before uploading on a registry without credentials', async () => {
-    const npm = fakeNpm();
-    await expect(publish([LIB, entry('@x/private', { registry: 'https://npm.example.test/' })], npm)).rejects.toThrow(
+    const pnpm = fakePnpm();
+    await expect(publish([LIB, entry('@x/private', { registry: 'https://npm.example.test/' })], pnpm)).rejects.toThrow(
       'no credentials for this registry',
     );
-    expect(npm.run.calls).toEqual([]);
+    expect(pnpm.run.calls).toEqual([]);
   });
 
   it('stops at the first failed upload', async () => {
-    const npm = fakeNpm({ failingPublish: [LIB.file] });
-    await expect(publish([LIB, APP], npm)).rejects.toThrow('E403');
-    expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file]);
+    const pnpm = fakePnpm({ failingPublish: [LIB.file] });
+    await expect(publish([LIB, APP], pnpm)).rejects.toThrow('ERR_PNPM_FAILED_TO_PUBLISH');
+    expect(pnpm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file]);
   });
 
   it('fails before uploading when a tarball holds another package', async () => {
     const dir = tarballDir([LIB, APP]);
     makeTarball(dir, APP.file, { name: '@fixture/other', version: '2.0.0' });
-    const npm = fakeNpm();
-    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run })).rejects.toThrow(
+    const pnpm = fakePnpm();
+    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: pnpm.run })).rejects.toThrow(
       `@fixture/app@2.0.0: ${APP.file} contains @fixture/other@2.0.0`,
     );
-    expect(npm.run.calls).toEqual([]);
+    expect(pnpm.run.calls).toEqual([]);
   });
 
   it('treats a duplicate-version refusal as already published', async () => {
-    const npm = fakeNpm({ duplicate: [LIB.file] });
-    const { published } = await publish([LIB, APP], npm);
-    expect(npm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file, APP.file]);
+    const pnpm = fakePnpm({ duplicate: [LIB.file] });
+    const { published } = await publish([LIB, APP], pnpm);
+    expect(pnpm.publishes().map((c) => path.basename(c.args[1]))).toEqual([LIB.file, APP.file]);
     expect(published).toEqual([APP]);
   });
 
   it('fails before uploading when a packed publishConfig could redirect the upload', async () => {
     const dir = tarballDir([LIB, APP]);
     makeTarball(dir, APP.file, { name: APP.name, version: APP.version, publishConfig: { '@fixture:registry': 'https://evil.test/' } });
-    const npm = fakeNpm();
-    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run })).rejects.toThrow(
+    const pnpm = fakePnpm();
+    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: pnpm.run })).rejects.toThrow(
       "sets '@fixture:registry'",
     );
-    expect(npm.run.calls).toEqual([]);
+    expect(pnpm.run.calls).toEqual([]);
   });
 
   it('fails when a tarball named in the manifest is missing', async () => {
     const dir = tarballDir([LIB]);
     fs.rmSync(path.join(dir, LIB.file));
-    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: fakeNpm().run })).rejects.toThrow(
+    await expect(publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: fakePnpm().run })).rejects.toThrow(
       `${LIB.file} is missing`,
     );
   });
 
-  it('runs npm outside the tarball directory, so a planted .npmrc is not read', async () => {
+  it('runs pnpm outside the tarball directory, so a planted .npmrc is not read', async () => {
     const dir = tarballDir([LIB]);
     fs.writeFileSync(path.join(dir, '.npmrc'), 'registry=https://evil.test/\n');
-    const npm = fakeNpm();
-    await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run });
-    for (const call of npm.run.calls) {
+    const pnpm = fakePnpm();
+    await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: pnpm.run });
+    for (const call of pnpm.run.calls) {
       expect(call.options.cwd).not.toBe(dir);
       expect(fs.readdirSync(call.options.cwd)).toEqual([]);
     }
-    expect(npm.publishes()[0].args[1]).toBe(path.join(dir, LIB.file));
+    expect(pnpm.publishes()[0].args[1]).toBe(path.join(dir, LIB.file));
+  });
+
+  it('fails before uploading with pnpm older than 12', async () => {
+    const pnpm = fakePnpm({ version: '11.9.0' });
+    await expect(publish([LIB], pnpm)).rejects.toThrow('pnpm 11.9.0 is on PATH; the split publish needs pnpm 12 or later');
+    expect(pnpm.publishes()).toEqual([]);
   });
 
   it('does nothing on an empty or missing manifest', async () => {
-    const npm = fakeNpm();
-    expect(await publishTarballs({ dir: tempDir('empty-'), userconfig: '/dev/null', accessPublic: false }, { ...quiet, run: npm.run })).toEqual([]);
-    expect(npm.run.calls).toEqual([]);
+    const pnpm = fakePnpm();
+    expect(await publishTarballs({ dir: tempDir('empty-'), userconfig: '/dev/null', accessPublic: false }, { ...quiet, run: pnpm.run })).toEqual([]);
+    expect(pnpm.run.calls).toEqual([]);
   });
 });
 
-// Real npm, no upload (--dry-run): npm 11 refuses a prerelease without an
-// explicit tag. Our arguments must get past that, as npm 10 did on the old
-// path. Needs npm 11 on PATH (CI installs it) and registry access.
-const npmMajor = (() => {
-  try {
-    return Number(execFileSync('npm', ['--version'], { encoding: 'utf8' }).split('.')[0]);
-  } catch {
-    return 0;
-  }
-})();
-
-describe.skipIf(npmMajor < 11)('publishArgs with real npm 11', () => {
-  const prerelease = entry('@milaboratories/npm-split-publish-test-does-not-exist', { version: '1.0.0-next.0' });
-
-  function dryRun(args: string[]) {
-    const cwd = tempDir('npm-dry-run-');
-    return spawnSync('npm', [...args, '--dry-run'], { cwd, encoding: 'utf8' });
-  }
-
-  it('npm itself refuses a prerelease with the default tag', () => {
+// Real pnpm, dry run; needs pnpm 12+ on PATH (see hasRealPnpm).
+describe.skipIf(!hasRealPnpm())('publishArgs with real pnpm', () => {
+  it.each(['next', ''])('pnpm accepts our arguments for a prerelease with tag %j', (tag) => {
+    const prerelease = entry('@milaboratories/npm-split-publish-test-does-not-exist', { version: '1.0.0-next.0', tag });
     const dir = tarballDir([prerelease]);
-    const result = dryRun(['publish', path.join(dir, prerelease.file), '--ignore-scripts', `--registry=${NPMJS}`]);
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain('You must specify a tag');
-  });
-
-  it('accepts a prerelease with our arguments', () => {
-    const dir = tarballDir([prerelease]);
-    const result = dryRun(publishArgs(prerelease, dir, true));
-    expect(result.stderr).not.toContain('You must specify a tag');
-    expect(result.status).toBe(0);
+    const result = spawnSync('pnpm', [...publishArgs(prerelease, dir, true), '--dry-run'], { cwd: tempDir('pnpm-dry-run-'), encoding: 'utf8' });
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ name: prerelease.name, version: prerelease.version });
   });
 });
