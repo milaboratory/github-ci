@@ -40,6 +40,32 @@ setup() {
   [[ "${output}" == *'@block-bump-test/block'* ]]
 }
 
+@test "fails when every sibling is bumped but the block is not" {
+  add_changeset '"@block-bump-test/model": patch' 'bump model'
+  add_changeset '"@block-bump-test/ui": patch' 'bump ui'
+  add_changeset '"@block-bump-test/workflow": patch' 'bump workflow'
+  run_require
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'@block-bump-test/block'* ]]
+}
+
+# Anti-drift guard for the fixture, not for the script. A sibling-only
+# changeset must leave the block in the release plan at type `none` — the
+# shape the gate has to reject. `.changeset/config.json` must keep changesets'
+# `privatePackages` default (versioning the private siblings), as every block
+# repo does; setting it to `false` drops the siblings from the plan, removes
+# this entry, and makes the sibling-only cases above pass for the wrong reason.
+@test "fixture reproduces the cascade: sibling-only leaves block at type none" {
+  add_changeset '"@block-bump-test/model": patch' 'bump model only'
+  cd "${WORKSPACE}"
+  ./node_modules/.bin/changeset status \
+    --since=origin/main --output=cascade.json >/dev/null 2>&1 || true
+  run jq -r '.releases[] | select(.name == "@block-bump-test/block") | .type' \
+    cascade.json
+  [ "${status}" -eq 0 ]
+  [ "${output}" = 'none' ]
+}
+
 @test "fails when the block is edited without any changeset" {
   touch_file 'block/src/index.js'
   run_require

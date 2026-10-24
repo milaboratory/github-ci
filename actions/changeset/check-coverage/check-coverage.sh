@@ -27,6 +27,9 @@
 # Skips private (unpublished) workspace packages — they never appear in
 # the changeset's release set.
 #
+# A package listed in the release plan at `"type": "none"` is a dependent of a
+# bumped package, not a release. It does not count as covered.
+#
 # Runs from the repo root after `pnpm install`.
 
 set -o nounset
@@ -96,10 +99,15 @@ if [ ! -s "${status_json}" ]; then
   fi
 fi
 
+# `.releases` also lists every dependent of a bumped package, at
+# `"type": "none"` when no version change is due. A `none` entry is not a bump
+# and must not cover its package's own edit.
 declare -A bumped_set=()
 while IFS= read -r pkg; do
   [ -n "${pkg}" ] && bumped_set["${pkg}"]=1
-done < <(jq -r '.releases[]?.name // empty' "${status_json}")
+done < <(
+  jq -r '.releases[]? | select(.type != "none") | .name // empty' "${status_json}"
+)
 
 if [ "${#bumped_set[@]}" -eq 0 ]; then
   log 'Changeset bumps: <none>'
