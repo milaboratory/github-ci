@@ -6,6 +6,7 @@ description: |
   runner in a job with `id-token: write`: npm trusted publishing (OIDC) does
   not accept self-hosted runners.
 
+  Uploads with `pnpm publish <tarball>` (pnpm 11+ publishes without npm).
   registry.npmjs.org authenticates through OIDC (`npmjs-fallback-token` as an
   optional fallback); npm.pkg.github.com through `npm-auth-token`. Any other
   registry fails the step before the first upload. Implemented in
@@ -23,17 +24,13 @@ inputs:
     required: false
     default: 'false'
 
-  node-version:
-    description: Node.js version for the upload.
-    required: false
-    default: '24'
-
-  npm-version:
+  pnpm-version:
     description: |
-      npm version to install, exact so a publish never runs an untested npm.
-      Trusted publishing needs 11.5.1 or later.
+      pnpm version to install for the upload, exact so a publish never runs
+      an untested pnpm. Must be 12 or later: the tarball check reads the
+      manifest the way pnpm 12 does.
     required: false
-    default: '11.21.0'
+    default: '12.14.0'
 
   npm-auth-token:
     description: Token for npm.pkg.github.com (GitHub Packages). Sent to no other registry.
@@ -51,17 +48,11 @@ runs:
   using: "composite"
 
   steps:
-    - uses: actions/setup-node@v4
+    # No package.json or version file, so the caller's pins do not apply.
+    - uses: milaboratory/github-ci/actions/node/setup-pnpm@v4-beta
       with:
-        node-version: ${{ inputs.node-version }}
-
-    - name: Install npm
-      shell: bash
-      env:
-        NPM_VERSION: ${{ inputs.npm-version }}
-      run: |
-        npm install --global "npm@${NPM_VERSION}"
-        npm --version
+        version: ${{ inputs.pnpm-version }}
+        working-directory: ${{ runner.temp }}
 
     - name: Publish tarballs
       shell: bash

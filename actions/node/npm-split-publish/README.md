@@ -13,8 +13,10 @@ npm trusted publishing (OIDC) does not accept self-hosted runners, so
 unpublished non-private package, in dependency order, it runs
 `prepublishOnly`, `prepublish` and `pnpm pack`. Packages with `publish` or
 `postpublish` scripts are refused: those would run after the upload. `publish` uploads the tarballs with
-`npm publish <tarball> --ignore-scripts`. The two halves share
-`manifest.jsonl`, typed as `ManifestEntry` in `src/manifest.ts`.
+`pnpm publish <tarball>` (pnpm 11+ publishes natively, with OIDC and
+provenance). Registry lookups use `pnpm config get` and `pnpm view`; only
+pnpm 9 and 10 run npm for `pnpm view`, so the upload never needs npm. The two halves share `manifest.jsonl`, typed as `ManifestEntry`
+in `src/manifest.ts`.
 
 ## Manifest Format (Public)
 
@@ -51,22 +53,37 @@ Validation: `src/manifest.ts` (`validateEntry`).
   runs when a package declares a different repository (for example after a
   rename). Private repositories and GitHub Packages targets are left alone, so
   no private repository URL gets published.
-- **Dist-tag.** Every upload passes `--tag`: `publishConfig.tag`, else `latest`.
-  npm 11 refuses a prerelease or a version below the highest published one
-  without an explicit tag; the previous path (npm 10 under pnpm) tagged those
-  `latest`, so that stays the behaviour. Trade-off: if two releases of one
+- **Dist-tag.** An upload passes `--tag` only for `publishConfig.tag`; pnpm
+  ignores a packed `publishConfig.tag` and defaults to `latest`, also for a
+  prerelease or a version below the highest published one, as before. A
+  packed top-level `tag` wins over `--tag` in pnpm 12, so it must equal the
+  tag the upload uses. Trade-off: if two releases of one
   repository overlap and their uploads finish out of order, `latest` can move
   back to the older version without an error (the old path could too, with a
   shorter window).
 - **The upload job does not trust the artifact.** Every manifest value is
-  validated; each tarball's manifest is read the way npm reads it (extracted
-  with node-tar and pacote's options, `src/tarball.ts`) and must have the
-  entry's name and version; a packed `publishConfig`
-  may not set auth, proxy or scope-registry keys, nor a different `registry`
-  (npm applies those packed keys that are not given on the command line).
-  Values are passed as `--flag=value`, and npm runs from an empty directory so
-  no `.npmrc` from the artifact is read. `GITHUB_TOKEN` is sent only to
-  npm.pkg.github.com.
+  validated; each tarball's manifest is read the way pnpm reads it (the last
+  entry named `package/package.json`, `src/tarball.ts`), and archives where tar
+  readers can disagree (duplicate manifests, data after the end marker, a
+  second gzip member, pax `size`, global pax headers, more than 2 GiB
+  unpacked) are refused. This mirrors pnpm 12, so the upload fails before the
+  first package with an older pnpm. The manifest must have the entry's name
+  and version; a packed `publishConfig` may not set `@<scope>:registry` nor a
+  different `registry` (pnpm 12 prefers both to `--registry`; of the packed
+  `publishConfig` it also reads `access`, which a flag overrides). Values are
+  passed as `--flag=value`, and pnpm runs from an empty temporary directory,
+  so it reads no `.npmrc` from the artifact and skips its git checks.
+  `GITHUB_TOKEN` is sent only to npm.pkg.github.com.
+- **pnpm on the upload runner.** `publish-tarballs` installs pnpm
+  `pnpm-version` with `setup-pnpm` (`pnpm/setup`) in `$RUNNER_TEMP`, without the caller's
+  `packageManager` or `devEngines`, and puts it first on `PATH` for the rest
+  of the job (`PATH`, `PNPM_HOME`). Its own script runs on the runner's
+  Node. `pnpm/setup` is a node24 action: a self-hosted runner needs a runner
+  version with node24.
+- **Registry auth while packing.** The lookups use pnpm's config at
+  GITHUB_WORKSPACE, as `pnpm install` does. pnpm 11.5.3+ ignores `${VAR}`
+  tokens in a project `.npmrc`; such repositories keep registry auth in a
+  user-level `.npmrc`.
 - **Fallback token.** With `npm-token-fallback`, the upload job takes
   `NPMJS_TOKEN` out of the caller's `env` secret and masks it before any step
   receives it; no other caller secret reaches that runner.
@@ -94,5 +111,9 @@ The actions run the committed `lib/`; CI (`0-test-npm-publish-split.yaml`)
 fails when it does not match a fresh build.
 
 `test/pack.test.ts` runs the real `pnpm` from PATH on `test/fixtures/workspace`
-and fakes only `npm view`. CI runs it with pnpm 9.12 (what block repos pin) and
-with the repo's pnpm. Other tests replace pnpm/npm with a fake `Runner`.
+and fakes only `pnpm view`. CI runs it with pnpm 9.12 (what block repos pin),
+the repo's pnpm, and the pnpm of `publish-tarballs`. `test/tarball.test.ts`
+and the real-pnpm case in `test/publish.test.ts` compare with
+`pnpm publish --dry-run` and skip below pnpm 12 (CI sets
+`REQUIRE_REAL_PNPM=1`, which turns the skip into a failure). Other tests replace pnpm with
+a fake `Runner`.

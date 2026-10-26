@@ -8,7 +8,7 @@ import * as path from 'path';
 
 import { ManifestEntry, readManifest } from './manifest';
 import { isPublished } from './registry';
-import { CommandError, Runner } from './run';
+import { CommandError, Runner, runChecked } from './run';
 import { readPackedManifest } from './tarball';
 
 export const NPMJS_HOST = 'registry.npmjs.org';
@@ -18,8 +18,8 @@ export interface Credentials {
   /** Token for npm.pkg.github.com (the job's GITHUB_TOKEN). Sent nowhere else. */
   npmAuthToken?: string;
   /**
-   * Legacy registry.npmjs.org token. npm tries OIDC first and uses it only if
-   * the exchange fails. Leave empty to require trusted publishing.
+   * Legacy registry.npmjs.org token. pnpm tries OIDC first and uses it only
+   * if the exchange fails. Leave empty to require trusted publishing.
    */
   npmjsFallbackToken?: string;
 }
@@ -29,7 +29,7 @@ export interface PublishOptions extends Credentials {
   dir: string;
   /** Adds `--access public` to every upload, as `pnpm -r publish --access public` did. */
   accessPublic: boolean;
-  /** npm config file written for the uploads; nothing else is read. */
+  /** Auth file (.npmrc format) written for the uploads; nothing else is read. */
   userconfig: string;
 }
 
@@ -39,16 +39,19 @@ export interface PublishDeps {
   group: <T>(title: string, fn: () => Promise<T>) => Promise<T>;
 }
 
-// Env var names the generated npm config refers to; npm expands them when it
+// The tarball check reads the manifest the way pnpm 12 does.
+const MIN_PNPM_MAJOR = 12;
+
+// Env var names the generated auth file refers to; pnpm expands them when it
 // reads the file, so the file itself holds no secret.
 const NPM_AUTH_TOKEN_VAR = 'NPM_AUTH_TOKEN';
 const NPMJS_FALLBACK_TOKEN_VAR = 'NPMJS_FALLBACK_TOKEN';
 
 /**
- * npm config (userconfig) for uploading `entries`. Every registry must be
- * https on a supported host: npm attaches a token by host whatever the
- * scheme, and the GitHub token must reach GitHub Packages only. Throws before
- * anything is uploaded otherwise.
+ * Auth file for uploading `entries`. Every registry must be https on a
+ * supported host: pnpm attaches a token by host whatever the scheme, and the
+ * GitHub token must reach GitHub Packages only. Throws before anything is
+ * uploaded otherwise.
  */
 export function npmrcFor(entries: ManifestEntry[], credentials: Credentials): string {
   const lines = new Set<string>();
@@ -84,42 +87,37 @@ export function npmrcFor(entries: ManifestEntry[], credentials: Credentials): st
   return [...lines].map((l) => l + '\n').join('');
 }
 
-/**
- * npm applies a packed publishConfig for every key not given on the command
- * line. Keys that could send the upload or its credentials elsewhere, or
- * change how npm authenticates, are refused; `registry` must be the entry's.
- */
-const FORBIDDEN_PUBLISH_CONFIG = new Set([
-  '_auth', '_authtoken', '_password', 'always-auth', 'auth-type', 'ca', 'cafile', 'cert', 'certfile',
-  'email', 'globalconfig', 'https-proxy', 'key', 'keyfile', 'noproxy', 'otp', 'password', 'proxy',
-  'strict-ssl', 'token', 'userconfig', 'username',
-]);
+/** Refuses packed manifest keys that pnpm 12 prefers to our flags: `tag`, `publishConfig` registries. */
+export function checkPackedManifest(label: string, packed: { tag?: unknown; publishConfig?: unknown }, entry: ManifestEntry): void {
+  if (packed.tag !== undefined && packed.tag !== (entry.tag || 'latest')) {
+    throw new Error(`${label}: packed package.json sets tag ${JSON.stringify(packed.tag)}, not '${entry.tag || 'latest'}'`);
+  }
+  checkPackedPublishConfig(label, packed.publishConfig, entry.registry);
+}
 
-export function checkPackedPublishConfig(label: string, publishConfig: unknown, registry: string): void {
+function checkPackedPublishConfig(label: string, publishConfig: unknown, registry: string): void {
   if (publishConfig === undefined) return;
   if (typeof publishConfig !== 'object' || publishConfig === null) {
     throw new Error(`${label}: packed publishConfig is not an object`);
   }
   for (const [key, value] of Object.entries(publishConfig)) {
-    const lower = key.toLowerCase();
-    if (FORBIDDEN_PUBLISH_CONFIG.has(lower) || lower.startsWith('//') || /^@[^/]+:registry$/.test(lower)) {
+    if (/^@[^/]+:registry$/i.test(key)) {
       throw new Error(`${label}: packed publishConfig sets '${key}', which the split publish does not allow`);
     }
-    if (lower === 'registry' && String(value).replace(/\/+$/, '') !== registry.replace(/\/+$/, '')) {
+    if (key.toLowerCase() === 'registry' && String(value).replace(/\/+$/, '') !== registry.replace(/\/+$/, '')) {
       throw new Error(`${label}: packed publishConfig.registry ${String(value)} is not ${registry}`);
     }
   }
 }
 
-/** `npm publish` arguments for one entry. Lifecycle scripts already ran during pack. */
+/** `pnpm publish` arguments for one entry. */
 export function publishArgs(entry: ManifestEntry, dir: string, accessPublic: boolean): string[] {
   // `--flag=value` keeps a value from being read as an option, on top of the
   // manifest validation.
-  const args = ['publish', path.resolve(dir, entry.file), '--ignore-scripts', `--registry=${entry.registry}`];
-  // Always explicit. With the default tag npm 11 refuses a prerelease or a
-  // version below the highest published one; the old path (npm 10 under
-  // pnpm) tagged those `latest`, so that stays the default.
-  args.push(`--tag=${entry.tag || 'latest'}`);
+  const args = ['publish', path.resolve(dir, entry.file), `--registry=${entry.registry}`, '--json'];
+  if (entry.tag) {
+    args.push(`--tag=${entry.tag}`);
+  }
   if (accessPublic) {
     args.push('--access=public');
   } else if (entry.access) {
@@ -141,7 +139,7 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     log('Nothing to publish.');
     return [];
   }
-  // npm publishes whatever name/version the tarball holds, so the manifest
+  // pnpm publishes whatever name/version the tarball holds, so the manifest
   // alone is not enough: check every tarball before the first upload.
   for (const entry of entries) {
     const label = `${entry.name}@${entry.version}`;
@@ -149,25 +147,28 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     if (!fs.existsSync(tarball)) {
       throw new Error(`${label}: ${entry.file} is missing from ${dir}`);
     }
-    const packed = readPackedManifest(tarball) as { name?: unknown; version?: unknown; publishConfig?: unknown };
+    const packed = readPackedManifest(tarball) as { name?: unknown; version?: unknown; tag?: unknown; publishConfig?: unknown };
     if (packed.name !== entry.name || packed.version !== entry.version) {
       throw new Error(`${label}: ${entry.file} contains ${String(packed.name)}@${String(packed.version)}`);
     }
-    checkPackedPublishConfig(label, packed.publishConfig, entry.registry);
+    checkPackedManifest(label, packed, entry);
   }
 
   fs.writeFileSync(userconfig, npmrcFor(entries, options));
-  // npm reads a project .npmrc from its working directory. The tarball
-  // directory comes from another job's artifact, so npm runs from an empty
-  // directory instead and gets the tarballs by absolute path.
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'npm-publish-'));
+  // An empty directory, so pnpm reads no .npmrc or pnpm-workspace.yaml from the artifact.
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pnpm-publish-'));
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    NPM_CONFIG_USERCONFIG: userconfig,
+    PNPM_CONFIG_NPMRC_AUTH_FILE: userconfig,
     [NPM_AUTH_TOKEN_VAR]: options.npmAuthToken ?? '',
     [NPMJS_FALLBACK_TOKEN_VAR]: options.npmjsFallbackToken ?? '',
   };
   const envRun: Runner = (command, args, runOptions) => run(command, args, { ...runOptions, env });
+
+  const pnpmVersion = (await runChecked(envRun, 'pnpm', ['--version'], { cwd })).stdout.trim();
+  if (Number(pnpmVersion.split('.')[0]) < MIN_PNPM_MAJOR) {
+    throw new Error(`pnpm ${pnpmVersion} is on PATH; the split publish needs pnpm ${MIN_PNPM_MAJOR} or later`);
+  }
 
   const published: ManifestEntry[] = [];
   for (const entry of entries) {
@@ -177,7 +178,7 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
       continue;
     }
     const result = await group(`${label} -> ${entry.registry}`, () =>
-      envRun('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
+      envRun('pnpm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
     );
     if (result.code !== 0) {
       // A version the lookup could not see, e.g. a restricted package queried
@@ -186,7 +187,7 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
         log(`${label}: already in ${entry.registry} (refused as a duplicate), skipping`);
         continue;
       }
-      throw new CommandError(['npm', ...publishArgs(entry, dir, accessPublic)].join(' '), result);
+      throw new CommandError(['pnpm', ...publishArgs(entry, dir, accessPublic)].join(' '), result);
     }
     published.push(entry);
   }

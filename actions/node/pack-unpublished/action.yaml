@@ -11,8 +11,11 @@ description: |
   ../npm-split-publish (TypeScript, src/pack.ts; the manifest type is in
   src/manifest.ts).
 
-  Expects the workspace `.npmrc` (create-npmrc) at GITHUB_WORKSPACE, with its
-  token env vars set, so registry lookups resolve scopes and auth.
+  Needs pnpm and Node; npm only with pnpm 9 or 10, whose `pnpm view` runs
+  npm. Registry lookups run `pnpm config get` and `pnpm view` at
+  GITHUB_WORKSPACE, so they use the same scopes and auth as
+  `pnpm install`. pnpm 11.5.3+ ignores `${VAR}` tokens in a project `.npmrc`:
+  put registry auth in a user-level `.npmrc` there.
 
 inputs:
   output-dir:

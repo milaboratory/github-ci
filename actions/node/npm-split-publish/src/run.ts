@@ -1,4 +1,4 @@
-// External commands (pnpm, npm) go through a Runner so tests can replace them.
+// External commands (pnpm) go through a Runner so tests can replace them.
 
 import { spawn } from 'child_process';
 

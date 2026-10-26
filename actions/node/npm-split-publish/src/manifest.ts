@@ -16,8 +16,8 @@ export interface ManifestEntry {
   registry: string;
   /**
    * publishConfig.tag / publishConfig.access, '' when unset. The upload passes
-   * them as flags: npm applies the tarball's publishConfig only for keys not
-   * given on the command line, so the flags are what decides.
+   * them as flags: pnpm ignores a packed publishConfig.tag, and a flag wins
+   * over a packed publishConfig.access.
    */
   tag: string;
   access: string;
@@ -26,7 +26,7 @@ export interface ManifestEntry {
 const FIELDS: (keyof ManifestEntry)[] = ['name', 'version', 'file', 'registry', 'tag', 'access'];
 
 // The manifest crosses from the build job to the upload job as an artifact,
-// so the upload job does not trust it: every value ends up in npm's argv and
+// so the upload job does not trust it: every value ends up in pnpm's argv and
 // must not be readable as an option.
 const NAME = /^(@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
 const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;

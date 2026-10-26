@@ -1,6 +1,6 @@
-// Integration tests: real pnpm and `npm config` on a copy of
-// fixtures/workspace; only `npm view` (the registry) is faked.
-// CI runs this file with pnpm 9.12 (what block repos pin) and pnpm 10.
+// Integration tests: real pnpm (pack, config get) on a copy of
+// fixtures/workspace; only `pnpm view` (the registry) is faked.
+// CI runs this file with pnpm 9.12 (what block repos pin), pnpm 10 and pnpm 12.
 
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -9,7 +9,8 @@ import { describe, expect, it } from 'vitest';
 
 import { readManifest } from '../src/manifest';
 import { packWorkspace } from '../src/pack';
-import { FIXTURES, quiet, registryRunner, tempDir } from './helpers';
+import { resolveRegistry } from '../src/registry';
+import { FIXTURES, fakeRunner, ok, quiet, registryRunner, tempDir } from './helpers';
 
 /** `@fixture/old` is published at its current version; the rest are new. */
 const DEFAULT_STATE = { published: ['@fixture/old@3.0.0'] };
@@ -105,11 +106,14 @@ describe('packWorkspace', () => {
     expect(entries.map((e) => e.name)).toContain('@fixture/old');
   });
 
-  it('tells a new version from a new package on npmjs (npm 10+ answers E404 for both)', async () => {
-    const { entries, run } = await pack(ON_NPMJS, [], undefined, true);
+  it.each([
+    ['pnpm 11+', false],
+    ['npm 10+ under pnpm 9 and 10, which answers E404 for both', true],
+  ])('tells a new version from a new package on npmjs (%s)', async (_case, npm10) => {
+    const { entries, run } = await pack({ ...ON_NPMJS, npm10 }, [], undefined, true);
     expect(entries.map((e) => e.name)).toEqual(expect.arrayContaining(['@fixture/lib', '@fixture/app']));
-    const lookup = run.calls.find((c) => c.command === 'npm' && c.args[1] === '@fixture/lib' && c.args[2] === 'name');
-    expect(lookup?.args).toEqual(['view', '@fixture/lib', 'name', '--registry=https://registry.npmjs.org/']);
+    const lookup = run.calls.find((c) => c.command === 'pnpm' && c.args[1] === '@fixture/lib' && c.args[2] === 'name');
+    expect(lookup?.args).toEqual(['view', '@fixture/lib', 'name', '--registry=https://registry.npmjs.org/', '--json']);
   });
 
   it('skips private packages, with or without a version, and published versions', async () => {
@@ -121,8 +125,8 @@ describe('packWorkspace', () => {
 
   it('asks each package registry, with the workspace .npmrc', async () => {
     const { run, root } = await pack();
-    const view = run.calls.find((c) => c.command === 'npm' && c.args[1] === '@fixture/lib@1.0.0')!;
-    expect(view.args).toEqual(['view', '@fixture/lib@1.0.0', 'version', '--registry=https://registry.fixture.test/']);
+    const view = run.calls.find((c) => c.command === 'pnpm' && c.args[0] === 'view' && c.args[1] === '@fixture/lib@1.0.0')!;
+    expect(view.args).toEqual(['view', '@fixture/lib@1.0.0', 'version', '--registry=https://registry.fixture.test/', '--json']);
     expect(view.options.cwd).toBe(root);
   });
 
@@ -154,7 +158,7 @@ describe('packWorkspace', () => {
 
   it('fails when a registry lookup errors with anything but 404', async () => {
     await expect(pack({ ...DEFAULT_STATE, failing: ['@fixture/lib'] })).rejects.toThrow(
-      'npm view @fixture/lib@1.0.0 version --registry=https://registry.fixture.test/',
+      'pnpm view @fixture/lib@1.0.0 version --registry=https://registry.fixture.test/ --json',
     );
   });
 
@@ -222,5 +226,13 @@ describe('packWorkspace', () => {
     // lib and app missing entirely there.
     const { entries } = await pack();
     expect(entries.map((e) => e.name)).toContain('@fixture/app');
+  });
+});
+
+describe('resolveRegistry', () => {
+  it('fails when pnpm 9 drops the .npmrc for an unset env var', async () => {
+    const warning = 'WARN  Issue while reading ".npmrc". Failed to replace env in config: ${NODE_AUTH_TOKEN}';
+    const run = fakeRunner(() => ({ ...ok('undefined\n'), stderr: warning }));
+    await expect(resolveRegistry({ name: '@fixture/lib' }, '/ws', run)).rejects.toThrow('pnpm could not read .npmrc');
   });
 });

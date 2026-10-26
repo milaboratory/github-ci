@@ -54,13 +54,6 @@ jobs:
             exit 1
           fi
 
-      # The real-npm tests in publish.test.ts skip below npm 11; pin the
-      # version the publish-tarballs action installs.
-      - name: npm 11
-        run: |
-          npm install --global "npm@$(yq '.inputs.npm-version.default' ../publish-tarballs/action.yaml)"
-          npm --version
-
       - name: Tests (pnpm from packageManager)
         run: pnpm exec vitest run
 
@@ -72,6 +65,23 @@ jobs:
           export PATH="${RUNNER_TEMP}/pnpm9/node_modules/.bin:${PATH}"
           pnpm --version
           ./node_modules/.bin/vitest run test/pack.test.ts
+
+      - name: pnpm version of publish-tarballs
+        id: pnpm-upload
+        run: echo "version=$(yq '.inputs.pnpm-version.default' ../publish-tarballs/action.yaml)" >> "${GITHUB_OUTPUT}"
+
+      # Same setup as publish-tarballs; the real-pnpm tests need pnpm 12+.
+      - uses: ./actions/node/setup-pnpm
+        with:
+          version: ${{ steps.pnpm-upload.outputs.version }}
+          working-directory: ${{ runner.temp }}
+
+      - name: Tests (pnpm of publish-tarballs)
+        env:
+          REQUIRE_REAL_PNPM: '1'
+        run: |
+          (cd "${RUNNER_TEMP}" && pnpm --version)
+          ./node_modules/.bin/vitest run
 
       - name: Install bats
         run: sudo apt-get update && sudo apt-get install -y bats

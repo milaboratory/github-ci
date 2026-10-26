@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -34,35 +34,37 @@ export function fakeRunner(handler: Handler, fallback?: Runner): Runner & { call
 }
 
 export const ok = (stdout = ''): RunResult => ({ code: 0, stdout, stderr: '' });
-export const notFound = (): RunResult => ({ code: 1, stdout: '', stderr: 'npm error code E404\nnpm error 404 Not Found' });
 
-/**
- * Answers `npm view <name>@<version> version` and `npm view <name> name` from a
- * fake registry state the way npm 10+ does (E404 for a missing version of an
- * existing package), or like npm < 10 (exit 0, no output) with `legacyNpm`,
- * and runs everything else for real (pnpm, npm config).
- */
-export function registryRunner(state: { published?: string[]; existing?: string[]; failing?: string[]; legacyNpm?: boolean }) {
+/** A failed `pnpm view --json` or `npm view --json`. */
+export const viewError = (code: string): RunResult => ({ code: 1, stdout: JSON.stringify({ error: { code } }), stderr: `Error: ${code}` });
+
+/** Fakes `pnpm view` as pnpm 11+, or as npm 10+ / npm < 10 under pnpm 9 and 10; runs other commands for real. */
+export function registryRunner(state: { published?: string[]; existing?: string[]; failing?: string[]; npm10?: boolean; legacyNpm?: boolean }) {
   return fakeRunner((call) => {
-    if (call.command !== 'npm' || call.args[0] !== 'view') return undefined;
+    if (call.command !== 'pnpm' || call.args[0] !== 'view') return undefined;
     const spec = call.args[1];
     const packageLookup = call.args[2] === 'name';
     const name = packageLookup ? spec : spec.slice(0, spec.lastIndexOf('@'));
-    if (state.failing?.includes(name)) return { code: 1, stdout: '', stderr: 'npm error code E500' };
+    const missingPackage = viewError(state.npm10 || state.legacyNpm ? 'E404' : 'ERR_PNPM_FETCH_404');
+    if (state.failing?.includes(name)) return viewError('ERR_PNPM_FETCH_500');
     const known = state.existing?.includes(name) || state.published?.some((p) => p.startsWith(`${name}@`));
-    if (packageLookup) return known ? ok(name + '\n') : notFound();
-    if (state.published?.includes(spec)) return ok(spec.slice(spec.lastIndexOf('@') + 1) + '\n');
-    if (known) return state.legacyNpm ? ok('') : notFoundVersion(spec);
-    return notFound();
+    if (packageLookup) return known ? ok(JSON.stringify(name)) : missingPackage;
+    if (state.published?.includes(spec)) return ok(JSON.stringify(spec.slice(spec.lastIndexOf('@') + 1)));
+    if (!known) return missingPackage;
+    if (state.legacyNpm) return ok('');
+    return viewError(state.npm10 ? 'E404' : 'ERR_PNPM_PACKAGE_NOT_FOUND');
   }, spawnRunner);
 }
 
-/** npm 10+ for a missing version of a package that exists. */
-export const notFoundVersion = (spec: string): RunResult => ({
-  code: 1,
-  stdout: '',
-  stderr: `npm error code E404\nnpm error 404 No match found for version ${spec.slice(spec.lastIndexOf('@') + 1)}`,
-});
+/** Whether pnpm 12+ runs from a temp directory; with REQUIRE_REAL_PNPM=1 its absence is an error. */
+export function hasRealPnpm(): boolean {
+  const { stdout } = spawnSync('pnpm', ['--version'], { cwd: tempDir('pnpm-version-'), encoding: 'utf8' });
+  const major = Number((stdout ?? '').split('.')[0]) || 0;
+  if (major < 12 && process.env.REQUIRE_REAL_PNPM === '1') {
+    throw new Error(`REQUIRE_REAL_PNPM=1, but pnpm ${major || 'is missing'} is not 12+`);
+  }
+  return major >= 12;
+}
 
 export function tempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
