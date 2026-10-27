@@ -1095,14 +1095,34 @@ jobs:
         env:
           USER_ID: ${{ steps.get-user-id.outputs.user-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           run: |
             git config --global user.name "${APP_SLUG}[bot]"
             git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com>"
             git checkout main
             git add .
-            git commit -m "Auto-generated changes"
+            # A merged PR labelled `mark-unstable` adds a trailer that the
+            # publish run on this commit reads.
+            labels=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[].labels[].name')
+            msg="Auto-generated changes"
+            if grep -qx 'mark-unstable' <<< "${labels}"; then
+              msg+=$'\n\nPublish-Unstable: true'
+            fi
+            git commit -m "${msg}"
             git push
+
+      # `block-tools publish` reads PL_PUBLISH_UNSTABLE as `--unstable`. Any
+      # value turns it on, `false` included, so set it only for the trailer.
+      - name: Publish without the stable channel if the commit says so
+        if: github.ref_name == 'main'
+          && steps.check-changes.outputs.has-changes == '0'
+        shell: bash
+        run: |
+          if [ "$(git log -1 --format='%(trailers:key=Publish-Unstable,valueonly)' "${GITHUB_SHA}")" = true ]; then
+            echo "PL_PUBLISH_UNSTABLE=true" >> "${GITHUB_ENV}"
+            echo "::notice title=Unstable release::Publishing without the stable channel: commit ${GITHUB_SHA::7} carries Publish-Unstable: true"
+          fi
 
       # npm publish is split for trusted publishing (OIDC), which npm accepts
       # only from GitHub-hosted runners. Everything but the upload happens
