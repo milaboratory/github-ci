@@ -86,7 +86,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Commit message:*\n{{ head_commit_message }}"
+                  "text": {{ ("*Commit message:*\n" ~ (head_commit_message | truncate(2900, true))) | dump }}
                 }
               },
               {% if additional_info | length > 0 %}
