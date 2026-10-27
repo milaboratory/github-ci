@@ -166,7 +166,7 @@ runs:
         echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
     - name: Post save plan
-      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      uses: milaboratory/github-ci/actions/post/artifact@v4
       if: inputs.mode == 'plan'
       with:
         name: ${{ inputs.report-name }}
@@ -174,7 +174,7 @@ runs:
         path: ${{ steps.init.outputs.skipped-file }}
 
     - name: Post save report
-      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      uses: milaboratory/github-ci/actions/post/artifact@v4
       if: inputs.mode == 'scan'
       with:
         name: ${{ inputs.report-name }}
