@@ -71,7 +71,7 @@ runs:
   steps:
     - name: Helm repo add platforma
       if: inputs.helm-chart-name == 'platforma'
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         dump-stdout: false
         run: |
