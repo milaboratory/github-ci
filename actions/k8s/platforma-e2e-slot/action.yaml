@@ -11,7 +11,7 @@ description: |
   spec.nodeName). When NODE_NAME is empty or is not listed in `slots`, the output
   values file is empty and the run keeps the placement of the base values file.
 
-  Usage: pass `--values <base>` first, then `--values ${{ steps.<id>.outputs.values-file }}`.
+  Usage: pass `--values <base>` first, then `--values` with this action's `values-file` output.
 
 inputs:
   slots:
