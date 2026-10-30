@@ -1,0 +1,92 @@
+name: Pick the Platforma e2e slot for this runner's node
+author: "MiLaboratories"
+description: |
+  Places a Platforma k8s e2e run on the node its runner pod landed on, when that
+  node is an e2e slot: a node that exports the run's RWX workspace over local NFS
+  and has its own Kueue flavor. The run's backend, its Kueue jobs and its
+  workspace then share one host, and the test client (this runner) sits next to
+  them.
+
+  The runner pod must expose its node as the NODE_NAME env var (downward API
+  spec.nodeName). When NODE_NAME is empty or is not listed in `slots`, the output
+  values file is empty and the run keeps the placement of the base values file.
+
+  Usage: pass `--values <base>` first, then `--values ${{ steps.<id>.outputs.values-file }}`.
+
+inputs:
+  slots:
+    description: |
+      One slot per line: "<node name> <workspace StorageClass> <node pool>".
+      The pool follows the hz node convention: the node carries the label
+      node.kubernetes.io/role=<pool> and the taint dedicated=<pool>:NoSchedule.
+    required: false
+    default: |
+      cluster-ci-1 nfs-ci-1 ci
+      cluster-ci-2 nfs-ci-2 ci
+      cluster-ci-3 nfs-ci-3 ci
+  node-name:
+    description: |
+      Node to place the run on. Empty = the NODE_NAME env var of the runner.
+    required: false
+    default: ""
+
+outputs:
+  values-file:
+    description: Helm values overlay for the Platforma chart (empty mapping when no slot matched)
+    value: ${{ steps.slot.outputs.values-file }}
+  node:
+    description: The slot node, or empty when no slot matched
+    value: ${{ steps.slot.outputs.node }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - id: slot
+      shell: bash
+      env:
+        SLOTS: ${{ inputs.slots }}
+        NODE_INPUT: ${{ inputs.node-name }}
+      run: |
+        set -euo pipefail
+        node="${NODE_INPUT:-${NODE_NAME:-}}"
+        file="${RUNNER_TEMP}/platforma-e2e-slot-values.yaml"
+        echo '{}' > "${file}"
+        match=""
+
+        while read -r slot_node storage_class pool; do
+          [ -z "${slot_node}" ] && continue
+          if [ "${slot_node}" = "${node}" ]; then
+            match="${slot_node}"
+            # role is set, not just hostname: a base values file may pin the role
+            # of its own pool, and Helm merges nodeSelector maps key by key.
+            selector="{ kubernetes.io/hostname: ${slot_node}, node.kubernetes.io/role: ${pool} }"
+            toleration="[{ key: dedicated, operator: Equal, value: ${pool}, effect: NoSchedule }]"
+            {
+              echo "app:"
+              echo "  nodeSelector: ${selector}"
+              echo "  tolerations: ${toleration}"
+              echo "kueue:"
+              echo "  pools:"
+              for kueue_pool in ui batch; do
+                echo "    ${kueue_pool}:"
+                echo "      nodeSelector: ${selector}"
+                echo "      tolerations: ${toleration}"
+              done
+              echo "storage:"
+              echo "  workspace:"
+              echo "    pvc:"
+              echo "      storageClass: ${storage_class}"
+            } > "${file}"
+            break
+          fi
+        done <<< "${SLOTS}"
+
+        if [ -n "${match}" ]; then
+          echo "Runner node '${node}' is an e2e slot: backend, jobs and workspace go there."
+        else
+          echo "Runner node '${node:-<unset>}' is not an e2e slot: keeping the base values placement."
+        fi
+        cat "${file}"
+        echo "values-file=${file}" >> "${GITHUB_OUTPUT}"
+        echo "node=${match}" >> "${GITHUB_OUTPUT}"
