@@ -296,7 +296,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: milaboratory/github-ci/actions/env@v4-beta
+      - uses: milaboratory/github-ci/actions/env@v4
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -352,7 +352,7 @@ jobs:
           role-duration-seconds: ${{ inputs.aws-login-duration }}
           aws-region: ${{ inputs.aws-region }}
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4-beta
+      - uses: milaboratory/github-ci/actions/turborepo/cache-s3@v4
         if: ${{ env.AWS_CI_TURBOREPO_S3_BUCKET != '' }}
         with:
           storage-provider: "s3"
@@ -377,7 +377,7 @@ jobs:
           echo "PL_TEST_USER=${PL_CI_TEST_USER:-testuser1}" >> "${GITHUB_ENV}"
           echo "PL_TEST_PASSWORD=${PL_CI_TEST_PASSWORD:-testpassword1}" >> "${GITHUB_ENV}"
 
-      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4-beta
+      - uses: milaboratory/github-ci/actions/k8s/helm-deployment@v4
         with:
           helm-release-name: ${{ env.HELM_RELEASE_NAME }}
           helm-chart-name: ${{ inputs.helm-chart-name }}
@@ -417,7 +417,7 @@ jobs:
           done
 
       - id: test
-        uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4-beta
+        uses: milaboratory/github-ci/blocks/monorepo/test-pl-k8s-pnpm@v4
         env:
           PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
         with:
@@ -461,14 +461,14 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+        uses: milaboratory/github-ci/actions/strings/json-list@v4
         with:
           input: |
             test
             integration
             google-batch
 
-      - uses: milaboratory/github-ci/blocks/notify/slack/tests@v4-beta
+      - uses: milaboratory/github-ci/blocks/notify/slack/tests@v4
         env:
           NPM_PKG_VERSION: ${{ needs.run-tests.outputs.npm-pkg-version }}
         with:
