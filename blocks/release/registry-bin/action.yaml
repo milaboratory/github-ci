@@ -112,7 +112,7 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -121,7 +121,7 @@ runs:
         aws-region: ${{ inputs.s3-region }}
 
     - id: artifact-path
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: echo './release-artifact'
 
@@ -132,14 +132,14 @@ runs:
         path: ${{ steps.artifact-path.outputs.stdout }}
 
     - name: Add version
-      uses: milaboratory/github-ci/actions/files/add-suffix@v4-beta
+      uses: milaboratory/github-ci/actions/files/add-suffix@v4
       with:
         paths: ${{ steps.artifact-path.outputs.stdout }}
         suffix: '-${{ steps.context.outputs.current-version }}'
 
     - name: Search for the package.yaml inside github workspace
       id: pkg-yaml-status
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         PKG_YAML_SEARCH_PATH: ${{ format('{0}/{1}', github.workspace, 'package.yaml') }}
       with:
@@ -154,13 +154,13 @@ runs:
 
     - name: Patch package version
       if: fromJSON(steps.pkg-yaml-status.outputs.data).exist != '0'
-      uses: milaboratory/github-ci/actions/yaml/patch-version@v4-beta
+      uses: milaboratory/github-ci/actions/yaml/patch-version@v4
       with:
         version: ${{ steps.context.outputs.current-version }}
 
     - name: Re-pack artifact as tgz archive
       id: repack
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         ARTIFACT_PATH: ${{ steps.artifact-path.outputs.stdout }}
         ARCHIVE_PATH: ${{ format('{0}/result-archive', github.workspace) }}
@@ -194,7 +194,7 @@ runs:
           ghwa_set_output archive-path "${ARCHIVE_PATH}"
 
     - name: Create sig file for re-packed archive
-      uses: milaboratory/github-ci/actions/gcloud-kms-sign@v4-beta
+      uses: milaboratory/github-ci/actions/gcloud-kms-sign@v4
       with:
         file-path: ${{ fromJSON(steps.repack.outputs.data).archive-full-path }}
         gcloud-kms-workload-identity-provider: ${{ inputs.gcloud-kms-workload-identity-provider }}
@@ -207,7 +207,7 @@ runs:
         gcloud-kms-key-name: ${{ inputs.gcloud-kms-key-name }}
 
     - name: Upload files
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       with:
         run: |
           aws s3 cp --recursive \
@@ -215,7 +215,7 @@ runs:
           s3://${{ inputs.s3-bucket }}/${{ inputs.s3-path }}
 
     - id: uploaded-list
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         ARTIFACT_PATH: ${{ fromJSON(steps.repack.outputs.data).archive-path }}
         S3_PATH: ${{ inputs.s3-path }}
@@ -231,6 +231,6 @@ runs:
             done
 
     - id: uploaded-json
-      uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
+      uses: milaboratory/github-ci/actions/strings/json-list@v4
       with:
         input: ${{ steps.uploaded-list.outputs.stdout }}

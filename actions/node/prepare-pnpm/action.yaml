@@ -64,7 +64,7 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Re-Write .npmrc config
-      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
@@ -82,14 +82,14 @@ runs:
 
     - name: Set up pnpm store cache (GitHub)
       if: inputs.cache-s3-access-key == ''
-      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4
       with:
         cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
         cache-version: ${{ inputs.cache-version }}
 
     - name: Set up pnpm store cache (RGW / S3)
       if: inputs.cache-s3-access-key != ''
-      uses: milaboratory/github-ci/actions/node/cache-pnpm-s3@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache-pnpm-s3@v4
       with:
         access-key: ${{ inputs.cache-s3-access-key }}
         secret-key: ${{ inputs.cache-s3-secret-key }}

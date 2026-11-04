@@ -151,8 +151,22 @@ runs:
       run: |
         trivy_dir="${WORKSPACE_PATH}/trivy"
         mkdir -p "${trivy_dir}"
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh |
-          sh -s -- -b "${trivy_dir}" v0.69.3
+        # Download the pinned release straight from GitHub Releases and verify its
+        # sha256. Do not use contrib/install.sh: it fetches tarballs via
+        # get.trivy.dev, an extra domain outside our control that has already
+        # gone unresolvable and broke every scan.
+        trivy_version="0.69.3"
+        case "$(uname -m)" in
+          x86_64)  trivy_arch="64bit"; trivy_sha256="1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75" ;;
+          aarch64) trivy_arch="ARM64"; trivy_sha256="7e3924a974e912e57b4a99f65ece7931f8079584dae12eb7845024f97087bdfd" ;;
+          *) echo "::error::Unsupported runner architecture for Trivy: $(uname -m)"; exit 1 ;;
+        esac
+        trivy_tarball="trivy_${trivy_version}_Linux-${trivy_arch}.tar.gz"
+        curl -fsSL --retry 3 -o "${trivy_dir}/${trivy_tarball}" \
+          "https://github.com/aquasecurity/trivy/releases/download/v${trivy_version}/${trivy_tarball}"
+        echo "${trivy_sha256}  ${trivy_dir}/${trivy_tarball}" | sha256sum -c -
+        tar -xzf "${trivy_dir}/${trivy_tarball}" -C "${trivy_dir}" trivy
+        rm -f "${trivy_dir}/${trivy_tarball}"
 
         trivy_bin="${trivy_dir}/trivy"
         report_file="./${REPORT_NAME}"
@@ -166,7 +180,7 @@ runs:
         echo "skipped-file=${skipped_file}" >> "${GITHUB_OUTPUT}"
 
     - name: Post save plan
-      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      uses: milaboratory/github-ci/actions/post/artifact@v4
       if: inputs.mode == 'plan'
       with:
         name: ${{ inputs.report-name }}
@@ -174,7 +188,7 @@ runs:
         path: ${{ steps.init.outputs.skipped-file }}
 
     - name: Post save report
-      uses: milaboratory/github-ci/actions/post/artifact@v4-beta
+      uses: milaboratory/github-ci/actions/post/artifact@v4
       if: inputs.mode == 'scan'
       with:
         name: ${{ inputs.report-name }}
