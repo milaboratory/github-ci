@@ -377,7 +377,7 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
     outputs:
       is-release: ${{ steps.context.outputs.is-release }}
@@ -399,9 +399,9 @@ jobs:
 
     steps:
       - id: context
-        uses: milaboratory/github-ci/actions/context@v4
+        uses: milaboratory/github-ci/actions/context@v4-beta
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -410,7 +410,7 @@ jobs:
         with:
           submodules: ${{ inputs.checkout-submodules }}
 
-      - uses: milaboratory/github-ci/actions/env@v4
+      - uses: milaboratory/github-ci/actions/env@v4-beta
         with:
           inputs: ${{ inputs.env }}
           secrets: ${{ secrets.env }}
@@ -420,10 +420,10 @@ jobs:
           submodules: ${{ inputs.checkout-submodules }}
 
       - name: Add MiLab shell utils to PATH
-        uses: milaboratory/github-ci/actions/milab-shell-utils@v4
+        uses: milaboratory/github-ci/actions/milab-shell-utils@v4-beta
 
       - id: npm-pkg-metadata
-        uses: milaboratory/github-ci/actions/shell@v4
+        uses: milaboratory/github-ci/actions/shell@v4-beta
         with:
           run: |
             NPM_PKG_VERSION="$(cat "${GITHUB_WORKSPACE}/package.json" | jq --raw-output '.version')"
@@ -443,9 +443,9 @@ jobs:
         with:
           mask-password: "true"
 
-      - uses: milaboratory/github-ci/actions/turborepo/cache@v4
+      - uses: milaboratory/github-ci/actions/turborepo/cache@v4-beta
 
-      - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4
+      - uses: milaboratory/github-ci/blocks/node/build-and-test-pnpm@v4-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN  }}
@@ -465,7 +465,7 @@ jobs:
           npmrc-config: ${{ inputs.npmrc-config }}
 
       - id: test
-        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4
+        uses: milaboratory/github-ci/blocks/pl/linux/test-pl-docker-pnpm@v4-beta
         if: inputs.test
         env:
           PL_ADDRESS: "http://127.0.0.1:6345"
@@ -525,7 +525,7 @@ jobs:
         id: npm-pack
         if: steps.context.outputs.is-release == 'true'
           && steps.changesets.outputs.hasChangesets == 'false'
-        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4
+        uses: milaboratory/github-ci/actions/node/pack-unpublished@v4-beta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -538,7 +538,7 @@ jobs:
 
       - name: Publish npm packages
         if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
-        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4
+        uses: milaboratory/github-ci/actions/node/publish-tarballs@v4-beta
         with:
           dir: ${{ steps.npm-pack.outputs.dir }}
           access-public: ${{ inputs.publish-to-public }}
@@ -562,12 +562,12 @@ jobs:
     steps:
       - id: search-tags
         if: always()
-        uses: milaboratory/github-ci/actions/strings/json-list@v4
+        uses: milaboratory/github-ci/actions/strings/json-list@v4-beta
         with:
           input: |
             release
 
-      - uses: milaboratory/github-ci/blocks/notify/release@v4
+      - uses: milaboratory/github-ci/blocks/notify/release@v4-beta
         env:
           NPM_PKG_VERSION: ${{ needs.build-test-publish.outputs.npm-pkg-version }}
         with:

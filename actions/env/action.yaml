@@ -39,12 +39,12 @@ runs:
   using: "composite"
 
   steps:
-    - uses: milaboratory/github-ci/actions/env/set@v4
+    - uses: milaboratory/github-ci/actions/env/set@v4-beta
       with:
         json: ${{ inputs.inputs }}
         mask-values: false
 
-    - uses: milaboratory/github-ci/actions/env/set@v4
+    - uses: milaboratory/github-ci/actions/env/set@v4-beta
       with:
         json: ${{ inputs.secrets }}
         mask-values: true
