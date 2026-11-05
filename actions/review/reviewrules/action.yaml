@@ -26,10 +26,15 @@ inputs:
     required: false
     default: ${{ github.token }}
 
+  settings:
+    description: Global reviewrules settings, TOML. A key in the repo .reviewrules/settings.toml replaces the same key here.
+    required: false
+    default: ''
+
   version:
     description: Commit SHA of reviewrules to install.
     required: false
-    default: '81894bcb3f637a72bab789fb19dae9882ce3fa27'
+    default: 'f5d723d9563aae80ce104d912a8d5cf06058bca0'
 
 outputs:
   report:
@@ -58,6 +63,7 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         RULE_SETS_TOKEN: ${{ inputs.rule-sets-token }}
         BASE_REF: ${{ github.event.pull_request.base.ref }}
+        SETTINGS: ${{ inputs.settings }}
       run: |
         git config --global url."https://x-access-token:${RULE_SETS_TOKEN}@github.com/".insteadOf "https://github.com/"
 
@@ -66,6 +72,7 @@ runs:
         report="${output}/report.json"
         mkdir -p "${output}"
         echo "output=${output}" >> "${GITHUB_OUTPUT}"
+        printf '%s\n' "${SETTINGS}" > "${RUNNER_TEMP}/settings.toml"
         cat > "${config}" <<'TOML'
         [ci]
         agent = "anthropic"

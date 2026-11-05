@@ -62,17 +62,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Add the block rule set when the repo has no rule folder
+      - name: Add a rule folder when the repo has none
         if: steps.label.outputs.requested == 'true' && hashFiles('.reviewrules/config.json') == ''
         shell: bash
         run: |
           mkdir -p .reviewrules
-          cat > .reviewrules/settings.toml <<'TOML'
-          [[rule_sets]]
-          name = "block"
-          url = "https://github.com/milaboratory/block-review-rules.git"
-          ref = "v0.1.0"
-          TOML
           cat > .reviewrules/config.json <<'JSON'
           {
             "ignorePatterns": "**/node_modules/**\n**/dist/**\n**/block-pack/**\n**/.turbo/**\n**/*.tgz\n**/CHANGELOG.md\nsoftware/**/uv.lock\nsoftware/**/src/requirements.txt\nsoftware/**/tests/data/corpus/**\ntest/fixtures/data/**\n**/__pycache__/**",
@@ -85,3 +79,8 @@ jobs:
         with:
           anthropic-api-key: ${{ env.ANTHROPIC_API_KEY }}
           rule-sets-token: ${{ env.REVIEWRULES_RULE_SETS_TOKEN || github.token }}
+          settings: |
+            [[rule_sets]]
+            name = "block"
+            url = "https://github.com/milaboratory/block-review-rules.git"
+            ref = "v0.1.0"
