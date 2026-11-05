@@ -6,6 +6,8 @@ description: |
   Post each finding as a review comment on its line. A finding on a line outside
   the diff goes to the review body. A finding that is already posted is not posted again.
   The step fails only when reviewrules cannot run (exit code 2), not on findings.
+  The artifact reviewrules-attempt-<n> holds report.json and sessions/: parent.json and
+  one fork-<id>.json per rule or hypothesis fork, with every message of the model calls.
 
   The repo must be checked out at the PR head commit with full history.
 
@@ -27,7 +29,7 @@ inputs:
   version:
     description: Commit SHA of reviewrules to install.
     required: false
-    default: '80ff69ce9d16fdd4df659d65add28fe80f437683'
+    default: '81894bcb3f637a72bab789fb19dae9882ce3fa27'
 
 outputs:
   report:
@@ -59,8 +61,11 @@ runs:
       run: |
         git config --global url."https://x-access-token:${RULE_SETS_TOKEN}@github.com/".insteadOf "https://github.com/"
 
+        output="${RUNNER_TEMP}/reviewrules"
         config="${RUNNER_TEMP}/reviewrules.toml"
-        report="${RUNNER_TEMP}/reviewrules-report.json"
+        report="${output}/report.json"
+        mkdir -p "${output}"
+        echo "output=${output}" >> "${GITHUB_OUTPUT}"
         cat > "${config}" <<'TOML'
         [ci]
         agent = "anthropic"
@@ -74,7 +79,7 @@ runs:
         TOML
 
         code=0
-        reviewrules --config "${config}" --base "origin/${BASE_REF}" --json-out "${report}" || code=$?
+        reviewrules --config "${config}" --base "origin/${BASE_REF}" --json-out "${report}" --session-dir "${output}/sessions" || code=$?
         echo "report=${report}" >> "${GITHUB_OUTPUT}"
         if [ "${code}" -ge 2 ]; then
           echo "::error::reviewrules could not run (exit code ${code})"
@@ -90,3 +95,11 @@ runs:
         script: |
           const postReview = require(`${process.env.GITHUB_ACTION_PATH}/post-review.js`);
           await postReview({ github, context, core, reportPath: process.env.REPORT });
+
+    - name: Save the report and the model sessions
+      if: always() && steps.review.outputs.output != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: reviewrules-attempt-${{ github.run_attempt }}
+        path: ${{ steps.review.outputs.output }}
+        if-no-files-found: ignore
