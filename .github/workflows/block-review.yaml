@@ -1,24 +1,28 @@
 name: Block review
-# Runs as a required workflow of an organization ruleset, so block repos need no change.
-# A ruleset workflow starts only on PR opened, synchronize, and reopened. After you add
-# the label, re-run this workflow, or push a new commit.
+# node-simple-pnpm.yaml calls it on every PR. It reviews only when the PR has the ai-review label.
 on:
-  pull_request:
-
-permissions:
-  contents: read
-  pull-requests: write
-
-concurrency:
-  group: block-review-${{ github.repository }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  workflow_call:
+    secrets:
+      env:
+        description: |
+          The same JSON-encoded map of secret env variables as node-simple-pnpm.yaml gets.
+          It must hold ANTHROPIC_API_KEY. REVIEWRULES_RULE_SETS_TOKEN is optional: a token
+          that can read private rule set repos.
+        required: false
 
 env:
   REVIEW_LABEL: ai-review
 
 jobs:
   review:
+    name: AI review
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: block-review-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     steps:
       # A re-run gets the labels of the first run, so read the labels the PR has now.
       - name: Check the review label
@@ -34,7 +38,22 @@ jobs:
             });
             const requested = labels.some((label) => label.name === process.env.REVIEW_LABEL);
             core.setOutput('requested', String(requested));
-            if (!requested) core.notice(`Add the label ${process.env.REVIEW_LABEL} and re-run this workflow to get a review.`);
+            if (!requested) core.notice(`Add the label ${process.env.REVIEW_LABEL} and push or re-run this job to get a review.`);
+
+      - uses: milaboratory/github-ci/actions/env@v4-beta
+        if: steps.label.outputs.requested == 'true'
+        with:
+          inputs: '{}'
+          secrets: ${{ secrets.env || '{}' }}
+
+      - name: Check the Anthropic API key
+        if: steps.label.outputs.requested == 'true'
+        shell: bash
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY is missing. Add it to secrets.env in .github/workflows/build.yaml, the same way as NPMJS_TOKEN."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
         if: steps.label.outputs.requested == 'true'
@@ -64,5 +83,5 @@ jobs:
       - uses: milaboratory/github-ci/actions/review/reviewrules@v4-beta
         if: steps.label.outputs.requested == 'true'
         with:
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          rule-sets-token: ${{ secrets.REVIEWRULES_RULE_SETS_TOKEN || github.token }}
+          anthropic-api-key: ${{ env.ANTHROPIC_API_KEY }}
+          rule-sets-token: ${{ env.REVIEWRULES_RULE_SETS_TOKEN || github.token }}
