@@ -41,7 +41,8 @@ const hypothesisFindings = (report) =>
       return {
         path: at[1],
         line: Number(at[2]),
-        key: `hypothesis:${check.at}:${check.question}`,
+        // The model words a question differently on each run, so the key is the hunt and the place.
+        key: `hypothesis:${check.hunt}:${at[1]}:${at[2]}`,
         text: hypothesisText(check),
       };
     });
