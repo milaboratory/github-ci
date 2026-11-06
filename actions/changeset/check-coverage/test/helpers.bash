@@ -98,11 +98,17 @@ touch_file() {
   git -C "${WORKSPACE}" commit --quiet -m "edit ${rel}"
 }
 
+# Apply a yq expression to pnpm-workspace.yaml and commit. Args: expression,
+# commit message.
+edit_workspace_yaml() {
+  local expression="$1" message="$2"
+  yq -i "${expression}" "${WORKSPACE}/pnpm-workspace.yaml"
+  git -C "${WORKSPACE}" add pnpm-workspace.yaml
+  git -C "${WORKSPACE}" commit --quiet -m "${message}"
+}
+
 # Bump a default-catalog entry in pnpm-workspace.yaml. Args: key, new-version.
 bump_catalog() {
   local key="$1" version="$2"
-  # yq edits in place.
-  yq -i ".catalog.\"${key}\" = \"${version}\"" "${WORKSPACE}/pnpm-workspace.yaml"
-  git -C "${WORKSPACE}" add pnpm-workspace.yaml
-  git -C "${WORKSPACE}" commit --quiet -m "bump catalog ${key} to ${version}"
+  edit_workspace_yaml ".catalog.\"${key}\" = \"${version}\"" "bump catalog ${key} to ${version}"
 }
