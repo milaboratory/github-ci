@@ -8,9 +8,10 @@
 # requirement — see section 4.
 #
 # "Modified" means a direct edit to a workspace package's own files, detected
-# via `pnpm --filter '[<base>]' list` — pnpm runs the per-package git-diff
-# check itself. Root-level paths (`.github/`, `docs/`, `pnpm-workspace.yaml`,
-# `README.md`) live in no package directory, so they never trigger inclusion.
+# from `git diff` against the base: a changed file belongs to the deepest
+# package directory that contains it. Root-level paths (`.github/`, `docs/`,
+# `pnpm-workspace.yaml`, `README.md`) belong to the unnamed or private
+# workspace root, so they never trigger inclusion.
 #
 # Dependency-version bumps never require a changeset — including catalog
 # bumps in pnpm-workspace.yaml. A catalog entry always pins an *external*
@@ -122,20 +123,82 @@ require_pkg() {
 
 # Direct workspace-package edits.
 #
-# `pnpm --filter '[<since>]' list` selects packages whose own files changed
-# (pnpm runs the per-package `git diff` itself). Root-level paths like
-# `.github/`, `docs/`, `pnpm-workspace.yaml`, or `README.md` are not in any
-# package directory and so don't trigger inclusion — no manual ignore list
-# needed, and a catalog bump in pnpm-workspace.yaml never reaches this filter.
+# Each file the branch changed belongs to the deepest workspace package whose
+# directory contains it. The changed files come from `git diff`, not from
+# `pnpm --filter '[<since>]'`: pnpm 12 also selects every package whose
+# catalog entries changed, which flags the consumers of a dependency bump.
 #
-# The jq filter drops private packages here (they never appear in a
+# Root-level paths like `.github/`, `docs/`, `pnpm-workspace.yaml`, or
+# `README.md` belong to the workspace root, which is unnamed or private in a
+# monorepo, so they never trigger inclusion — no manual ignore list needed.
+#
+# The jq filter blanks the names of private packages (they never appear in a
 # changeset's release set), so `require_pkg` doesn't need to re-check.
-while IFS= read -r pkg; do
-  [ -n "${pkg}" ] && require_pkg "${pkg}" 'direct edit'
+if ! packages_json="$(pnpm -r list --depth -1 --json 2>/dev/null)"; then
+  err 'pnpm list failed.'
+  exit 2
+fi
+
+# Package directories relative to the workspace root ('' for the root itself),
+# and the matching names, '' too for an unnamed or private package.
+pkg_dirs=()
+pkg_names=()
+while IFS=$'\t' read -r path name; do
+  path="${path%/}"
+  rel=''
+  # pnpm prints absolute paths, possibly with symlinks resolved (macOS /tmp →
+  # /private/tmp), so strip whichever form of the cwd matches.
+  for root in "$(pwd -P)" "$(pwd -L)"; do
+    case "${path}" in
+      "${root}") rel='.' ;;
+      "${root}"/*) rel="${path#"${root}"/}" ;;
+    esac
+    [ -n "${rel}" ] && break
+  done
+  # Outside the repo root: not ours to check.
+  [ -z "${rel}" ] && continue
+  [ "${rel}" = '.' ] && rel=''
+  pkg_dirs+=("${rel}")
+  pkg_names+=("${name}")
 done < <(
-  pnpm -r --filter "[origin/${BASE_BRANCH}]" list --depth -1 --json 2>/dev/null \
-    | jq -r '.[] | select(.name != null and .name != "" and .private != true) | .name'
+  printf '%s' "${packages_json}" \
+    | jq -r '.[] | [.path, (if (.name // "") == "" or .private == true then "" else .name end)] | @tsv'
 )
+
+# pnpm always lists the workspace root, so an empty list means its output was
+# not the expected JSON.
+if [ "${#pkg_dirs[@]}" -eq 0 ]; then
+  err 'pnpm list returned no workspace packages.'
+  exit 2
+fi
+
+# Files the branch changed since it left the base. `--no-renames` lists both
+# sides of a move, so moving a file out of a package still counts as editing it.
+if ! changed_files="$(git diff --name-only --relative --no-renames "origin/${BASE_BRANCH}...HEAD")"; then
+  err "git diff against origin/${BASE_BRANCH} failed."
+  exit 2
+fi
+
+while IFS= read -r file; do
+  [ -z "${file}" ] && continue
+  # Find the deepest package directory containing the file. The root ('')
+  # contains every file, so it wins only when no package directory does.
+  best=-1
+  best_len=-1
+  for i in "${!pkg_dirs[@]}"; do
+    dir="${pkg_dirs[${i}]}"
+    if [ -z "${dir}" ] || [[ "${file}" == "${dir}/"* ]]; then
+      if [ "${#dir}" -gt "${best_len}" ]; then
+        best="${i}"
+        best_len="${#dir}"
+      fi
+    fi
+  done
+  [ "${best}" -lt 0 ] && continue
+  # An empty name (root or private package) requires nothing.
+  pkg="${pkg_names[${best}]}"
+  [ -n "${pkg}" ] && [ -z "${required_set[${pkg}]:-}" ] && require_pkg "${pkg}" 'direct edit'
+done <<<"${changed_files}"
 
 log "Direct-edit packages: ${#required_set[@]}"
 
