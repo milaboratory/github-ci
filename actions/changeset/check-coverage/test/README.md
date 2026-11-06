@@ -39,18 +39,17 @@ and a couple of git ops.
   the tar copy), commits, and synthesizes an `origin/main` ref.
 - Each test (`setup`) tars the base into `$BATS_TEST_TMPDIR/ws`, switches
   to a `feature` branch, applies mutations via the helpers
-  (`touch_file`, `add_changeset`, `add_empty_changeset`, `bump_catalog`),
+  (`touch_file`, `add_changeset`, `add_empty_changeset`, `bump_catalog`,
+  `edit_workspace_yaml`),
   and runs the script
   with `BASE_BRANCH=main`. The test asserts on the script's exit code and
   the captured `$output`.
 
 ## Fixture
 
-`fixtures/minimal-workspace/` — small pnpm workspace:
-
-- `packages/pkg-a`, `packages/pkg-b` — both consume `is-number` via `catalog:`
-- `packages/pkg-c` — consumes `is-string` via `catalog:`
-- `packages/pkg-private` — `"private": true`, never requires a bump
+`fixtures/minimal-workspace/` — small pnpm workspace; its `README.md` lists
+which package takes which dependency from which catalog, and in which
+dependency field.
 
 ## CI
 

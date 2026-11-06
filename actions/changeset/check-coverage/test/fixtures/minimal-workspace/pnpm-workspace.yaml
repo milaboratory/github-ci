@@ -4,3 +4,7 @@ packages:
 catalog:
   is-number: ^7.0.0
   is-string: ^1.0.7
+
+catalogs:
+  legacy:
+    is-number: ^6.0.0
