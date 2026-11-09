@@ -1,0 +1,72 @@
+name: Greptile auto-approve
+author: 'MiLaboratories'
+description: |
+  Approve a pull request on behalf of github-actions[bot] when the latest Greptile
+  confidence score in the PR description is at least `min-score` and the PR touches
+  no protected path. Otherwise dismiss the approvals the bot gave earlier, so a push
+  that touches a protected path or a lower score takes the approval back.
+
+  The score is trusted only when Greptile made the last edit of the PR description,
+  and it is trusted even when Greptile reviewed an older commit. The changed files
+  are always checked at the PR head.
+
+  The protected list is read from the base branch through the API, so a PR cannot
+  change the list it is checked against, and the caller needs no checkout. Format:
+  one path or bash glob per line, relative to the repo root; '*' also matches '/';
+  '#' starts a comment; a '!' line excludes paths: a path is protected when it
+  matches a pattern and no '!' pattern. Matching is case-sensitive.
+
+  Call it from a `pull_request_target` workflow with `pull-requests: write`, on
+  `opened, edited, synchronize, reopened, ready_for_review, converted_to_draft`:
+  Greptile writes its score into the PR description, which fires `edited`.
+  The repository must allow GitHub Actions to approve pull requests.
+
+inputs:
+  protected-paths:
+    description: |
+      Path of the protected list in the repository, read from the PR base branch.
+    required: false
+    default: '.github/greptile-auto-approve-protected.txt'
+  min-score:
+    description: Lowest Greptile confidence score (1-5) that approves.
+    required: false
+    default: '4'
+  dry-run:
+    description: "'true' prints the decision and changes nothing."
+    required: false
+    default: 'false'
+  github-token:
+    description: GitHub token with pull-requests:write permission.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Fetch protected list from the base branch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PROTECTED_PATHS_SOURCE: ${{ inputs.protected-paths }}
+      run: |
+        gh api \
+          -H 'Accept: application/vnd.github.raw' \
+          "repos/${REPO}/contents/${PROTECTED_PATHS_SOURCE}?ref=${BASE_SHA}" \
+          >"${RUNNER_TEMP}/greptile-auto-approve-protected.txt"
+
+    - name: Approve or withdraw approval
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PROTECTED_PATHS_LABEL: ${{ inputs.protected-paths }}
+        MIN_SCORE: ${{ inputs.min-score }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        PROTECTED_PATHS="${RUNNER_TEMP}/greptile-auto-approve-protected.txt" \
+          "${ACTION_PATH}/greptile-auto-approve.sh"
