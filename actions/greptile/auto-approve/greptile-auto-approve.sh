@@ -17,8 +17,7 @@
 #   MIN_SCORE        lowest Greptile confidence score that approves (default 4)
 #   DRY_RUN          'true' prints the decision and changes nothing
 #
-# The decision is also posted as a PR comment. The bot keeps one such comment per PR and
-# edits it on every run, so pushes do not pile up comments.
+# Every run also posts its decision as a new PR comment.
 set -euo pipefail
 
 : "${REPO:?}" "${PR_NUMBER:?}" "${PROTECTED_PATHS:?}"
@@ -27,8 +26,6 @@ DRY_RUN="${DRY_RUN:-false}"
 PROTECTED_PATHS_LABEL="${PROTECTED_PATHS_LABEL:-$PROTECTED_PATHS}"
 
 BOT_LOGIN='github-actions[bot]'
-# Marks the bot's decision comment, so a later run finds and edits it.
-COMMENT_MARKER='<!-- greptile-auto-approve -->'
 # Only the Greptile app may have written the score: anyone else can edit a PR body.
 GREPTILE_LOGINS='greptile-apps greptile-apps[bot]'
 # The files API lists at most 3000 files of a PR.
@@ -149,20 +146,10 @@ run() {
   fi
 }
 
-# post_conclusion writes the decision into the bot's decision comment, creating it on the
-# first run.
+# post_conclusion posts the decision as a PR comment.
 post_conclusion() {
-  local comment_body comment_id
-  comment_body="$COMMENT_MARKER
-**Greptile auto-approve** at $head_sha: $1"
-  comment_id=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
-    --jq ".[] | select(.user.login == \"$BOT_LOGIN\" and (.body | startswith(\"$COMMENT_MARKER\"))) | .id")
-  comment_id="${comment_id%%$'\n'*}"
-  if [[ -n "$comment_id" ]]; then
-    run gh api -X PATCH "repos/$REPO/issues/comments/$comment_id" -f body="$comment_body"
-  else
-    run gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -f body="$comment_body"
-  fi
+  run gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" \
+    -f body="**Greptile auto-approve** at $head_sha: $1"
 }
 
 if [[ -z "$reason" ]]; then
