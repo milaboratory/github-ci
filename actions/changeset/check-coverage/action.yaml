@@ -1,16 +1,15 @@
 name: Check changeset coverage
 author: 'MiLaboratories'
 description: |
-  Fail if a PR's changesets don't cover every workspace package whose own
-  files it edits — e.g. editing block code under packages/<pkg>/ without
-  adding that package to the changeset.
+  Fail if a PR's changesets don't cover every published workspace package it
+  changes. A package is changed when the PR edits a file inside its directory,
+  or when the PR changes a catalog entry in pnpm-workspace.yaml that the
+  package references via `catalog:` from `dependencies` or `peerDependencies`.
+  A catalog entry referenced only from `devDependencies` or
+  `optionalDependencies` requires nothing.
 
-  Dependency-version bumps are intentionally NOT flagged, including catalog
-  bumps in pnpm-workspace.yaml. A catalog entry always pins an external
-  package, and `pnpm changeset` never requires a release for an external
-  dependency bump — it propagates versions through the internal dependency
-  chain automatically at `changeset version` time. Flagging consumers of a
-  bumped catalog dependency would over-report relative to `pnpm changeset`.
+  Changes are counted from the merge base with the base branch, so commits that
+  landed on the base branch after the PR branched off are not the PR's.
 
   An empty changeset (`pnpm changeset --empty`) added in the branch is a
   deliberate, in-repo "no release needed" opt-out and waives the requirement for
@@ -22,9 +21,9 @@ description: |
   caller workflow's job-level `if` (PR labels are only available on
   `pull_request` events).
 
-  Runs after `pnpm install`. Requires the runner to have `pnpm`, `jq` and `git`
-  on PATH — all pre-installed on GitHub-hosted ubuntu-latest images. `git` needs
-  full history (`fetch-depth: 0`) to see which changesets the branch added.
+  Runs after `pnpm install`. Requires `git`, `pnpm`, `jq` and `yq` (mikefarah,
+  v4+) on PATH. `git` needs full history (`fetch-depth: 0`) to find the merge
+  base with the base branch.
 
 inputs:
   base-branch:

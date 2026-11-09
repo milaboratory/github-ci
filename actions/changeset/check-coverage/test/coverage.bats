@@ -67,59 +67,93 @@ setup() {
 }
 
 # ---------------------------------------------------------------------------
-# Catalog / dependency bumps — intentionally NOT a coverage requirement.
-#
-# A catalog entry always pins an *external* package: workspace packages are
-# referenced via `workspace:*`, never `catalog:`. `pnpm changeset` never adds
-# a package to its release plan because an external dependency's version
-# changed, and it propagates version bumps through the internal dependency
-# chain automatically at `changeset version` time. So a catalog bump on its
-# own requires no hand-written changeset — requiring one over-reports relative
-# to `pnpm changeset`.
-#
-# Regression: platforma-open/clonotype-space#95. The `.workflow` package listed
-# `@platforma-sdk/workflow-tengo` under `dependencies` as `catalog:`; the
-# catalog bumped it (5.25.0 → 6.3.2) while the package's own files were
-# untouched. The PR's changeset (model/ui/block) was complete per
-# `pnpm changeset`, yet the old check failed the PR on `.workflow`.
+# Branch scope: only what the branch changed since it left the base.
 # ---------------------------------------------------------------------------
 
-@test "catalog bump alone requires no changeset (consumer files untouched)" {
-  # pkg-a and pkg-b both consume is-number via `dependencies: { is-number: catalog: }`
-  # — exactly the clonotype-space `.workflow` → workflow-tengo shape. Bumping
-  # the catalog without touching either package must pass.
+@test "an edit that landed on the base after the branch left it is not the branch's" {
+  git -C "${WORKSPACE}" checkout --quiet main
+  touch_file 'packages/pkg-a/index.js'
   bump_catalog 'is-number' '^7.0.1'
+  git -C "${WORKSPACE}" update-ref refs/remotes/origin/main main
+  git -C "${WORKSPACE}" checkout --quiet feature
+  touch_file 'README.md' 'feature-branch readme edit'
   run_check
   [ "${status}" -eq 0 ]
 }
 
-@test "runtime vs dev catalog dep is irrelevant — neither is flagged" {
-  # is-string is a runtime dep of pkg-c and a devDependency of pkg-dev. Bumping
-  # it flags neither: a dependency-version bump never requires a changeset.
-  bump_catalog 'is-string' '^1.0.8'
+@test "moving a file out of a package is an edit of that package" {
+  git -C "${WORKSPACE}" mv packages/pkg-a/index.js lib-index.js
+  git -C "${WORKSPACE}" commit --quiet -m 'move pkg-a index out'
   run_check
-  [ "${status}" -eq 0 ]
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'- @check-coverage-test/pkg-a  (direct edit)'* ]]
 }
 
-@test "catalog bump alongside a direct edit only requires the edited package" {
-  # The simultaneous is-number catalog bump adds no requirements: only pkg-c,
-  # whose own files changed, must be covered. pkg-a/pkg-b consume is-number but
-  # were not edited.
-  touch_file 'packages/pkg-c/index.js'
+# ---------------------------------------------------------------------------
+# Catalog bumps.
+#
+# A package that takes a dependency from the catalog in `dependencies` or
+# `peerDependencies` ships that dependency, so a changed catalog entry is a
+# change of the package even when its own files are untouched.
+# `devDependencies` and `optionalDependencies` do not count.
+# ---------------------------------------------------------------------------
+
+@test "catalog bump requires every runtime consumer" {
   bump_catalog 'is-number' '^7.0.1'
   run_check
   [ "${status}" -eq 1 ]
-  [[ "${output}" == *'@check-coverage-test/pkg-c'* ]]
-  [[ "${output}" != *'@check-coverage-test/pkg-a'* ]]
-  [[ "${output}" != *'@check-coverage-test/pkg-b'* ]]
+  [[ "${output}" == *'- @check-coverage-test/pkg-a  (catalog bump: is-number)'* ]]
+  [[ "${output}" == *'- @check-coverage-test/pkg-b  (catalog bump: is-number)'* ]]
+  [[ "${output}" == *'- @check-coverage-test/pkg-peer  (catalog bump: is-number)'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-private'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-legacy'* ]]
 }
 
-@test "direct edit covered by a changeset passes even with a concurrent catalog bump" {
+@test "catalog bump does not require a devDependency consumer" {
+  # is-string is a runtime dependency of pkg-c and a devDependency of pkg-dev.
+  bump_catalog 'is-string' '^1.0.8'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'- @check-coverage-test/pkg-c  (catalog bump: is-string)'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-dev'* ]]
+}
+
+@test "catalog bump covered by a changeset passes" {
+  bump_catalog 'is-string' '^1.0.8'
+  add_changeset '"@check-coverage-test/pkg-c": patch' 'bump is-string'
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+@test "named catalog bump requires only that catalog's consumers" {
+  edit_workspace_yaml '.catalogs.legacy."is-number" = "^6.0.1"' 'bump legacy is-number'
+  run_check
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'- @check-coverage-test/pkg-legacy  (catalog bump: is-number)'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-a'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-peer'* ]]
+}
+
+@test "a new catalog entry nobody consumes requires nothing" {
+  edit_workspace_yaml '.catalog."is-odd" = "^3.0.1"' 'add is-odd to the catalog'
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+@test "a pnpm-workspace.yaml change outside the catalogs requires nothing" {
+  edit_workspace_yaml '.minimumReleaseAgeExclude = ["@check-coverage-test/*"]' 'add a workspace setting'
+  run_check
+  [ "${status}" -eq 0 ]
+}
+
+@test "catalog bump and direct edit are both reported" {
   touch_file 'packages/pkg-c/index.js'
   bump_catalog 'is-number' '^7.0.1'
   add_changeset '"@check-coverage-test/pkg-c": patch' 'edit pkg-c'
   run_check
-  [ "${status}" -eq 0 ]
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'- @check-coverage-test/pkg-a  (catalog bump: is-number)'* ]]
+  [[ "${output}" != *'- @check-coverage-test/pkg-c'* ]]
 }
 
 # ---------------------------------------------------------------------------
