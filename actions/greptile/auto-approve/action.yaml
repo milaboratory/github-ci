@@ -5,6 +5,7 @@ description: |
   confidence score in the PR description is at least `min-score` and the PR touches
   no protected path. Otherwise dismiss the approvals the bot gave earlier, so a push
   that touches a protected path or a lower score takes the approval back.
+  The decision is posted as one PR comment that every run edits in place.
 
   The score is trusted only when Greptile made the last edit of the PR description,
   and it is trusted even when Greptile reviewed an older commit. The changed files

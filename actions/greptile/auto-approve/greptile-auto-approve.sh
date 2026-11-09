@@ -16,6 +16,9 @@
 #   PROTECTED_PATHS_LABEL  how the approval message names the list (default PROTECTED_PATHS)
 #   MIN_SCORE        lowest Greptile confidence score that approves (default 4)
 #   DRY_RUN          'true' prints the decision and changes nothing
+#
+# The decision is also posted as a PR comment. The bot keeps one such comment per PR and
+# edits it on every run, so pushes do not pile up comments.
 set -euo pipefail
 
 : "${REPO:?}" "${PR_NUMBER:?}" "${PROTECTED_PATHS:?}"
@@ -24,6 +27,8 @@ DRY_RUN="${DRY_RUN:-false}"
 PROTECTED_PATHS_LABEL="${PROTECTED_PATHS_LABEL:-$PROTECTED_PATHS}"
 
 BOT_LOGIN='github-actions[bot]'
+# Marks the bot's decision comment, so a later run finds and edits it.
+COMMENT_MARKER='<!-- greptile-auto-approve -->'
 # Only the Greptile app may have written the score: anyone else can edit a PR body.
 GREPTILE_LOGINS='greptile-apps greptile-apps[bot]'
 # The files API lists at most 3000 files of a PR.
@@ -144,25 +149,50 @@ run() {
   fi
 }
 
+# post_conclusion writes the decision into the bot's decision comment, creating it on the
+# first run.
+post_conclusion() {
+  local comment_body comment_id
+  comment_body="$COMMENT_MARKER
+**Greptile auto-approve** at $head_sha: $1"
+  comment_id=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
+    --jq ".[] | select(.user.login == \"$BOT_LOGIN\" and (.body | startswith(\"$COMMENT_MARKER\"))) | .id")
+  comment_id="${comment_id%%$'\n'*}"
+  if [[ -n "$comment_id" ]]; then
+    run gh api -X PATCH "repos/$REPO/issues/comments/$comment_id" -f body="$comment_body"
+  else
+    run gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -f body="$comment_body"
+  fi
+}
+
 if [[ -z "$reason" ]]; then
   echo "approve: Greptile confidence $score/5, no protected path touched at $head_sha"
+  conclusion="approved. Latest Greptile confidence score is $score/5, and no protected path (\`$PROTECTED_PATHS_LABEL\`) is touched."
   # An approval stays valid across pushes: the repos do not dismiss stale reviews.
   if [[ -n "$bot_approvals" ]]; then
     echo "already approved"
-    exit 0
+  else
+    run gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+      -f commit_id="$head_sha" \
+      -f event=APPROVE \
+      -f body="Auto-approved: latest Greptile confidence score is $score/5, and $head_sha touches no protected path (\`$PROTECTED_PATHS_LABEL\`)."
   fi
-  run gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/reviews" \
-    -f commit_id="$head_sha" \
-    -f event=APPROVE \
-    -f body="Auto-approved: latest Greptile confidence score is $score/5, and $head_sha touches no protected path (\`$PROTECTED_PATHS_LABEL\`)."
+  post_conclusion "$conclusion"
   exit 0
 fi
 
 echo "no approval: $reason"
+conclusion="not approved: $reason."
+dismissed=0
 while read -r review_id _; do
   [[ -z "$review_id" ]] && continue
   echo "dismiss review $review_id"
   run gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/reviews/$review_id/dismissals" \
     -f message="Auto-approval withdrawn: $reason." \
     -f event=DISMISS
+  dismissed=$((dismissed + 1))
 done <<<"$bot_approvals"
+if (( dismissed > 0 )); then
+  conclusion+=" Withdrew $dismissed earlier approval(s)."
+fi
+post_conclusion "$conclusion"
