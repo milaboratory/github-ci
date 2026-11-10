@@ -16,6 +16,8 @@
 #   PROTECTED_PATHS_LABEL  how the approval message names the list (default PROTECTED_PATHS)
 #   MIN_SCORE        lowest Greptile confidence score that approves (default 4)
 #   DRY_RUN          'true' prints the decision and changes nothing
+#
+# Every run also posts its decision as a new PR comment.
 set -euo pipefail
 
 : "${REPO:?}" "${PR_NUMBER:?}" "${PROTECTED_PATHS:?}"
@@ -144,25 +146,40 @@ run() {
   fi
 }
 
+# post_conclusion posts the decision as a PR comment.
+post_conclusion() {
+  run gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" \
+    -f body="**Greptile auto-approve** at $head_sha: $1"
+}
+
 if [[ -z "$reason" ]]; then
   echo "approve: Greptile confidence $score/5, no protected path touched at $head_sha"
+  conclusion="approved. Latest Greptile confidence score is $score/5, and no protected path (\`$PROTECTED_PATHS_LABEL\`) is touched."
   # An approval stays valid across pushes: the repos do not dismiss stale reviews.
   if [[ -n "$bot_approvals" ]]; then
     echo "already approved"
-    exit 0
+  else
+    run gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+      -f commit_id="$head_sha" \
+      -f event=APPROVE \
+      -f body="Auto-approved: latest Greptile confidence score is $score/5, and $head_sha touches no protected path (\`$PROTECTED_PATHS_LABEL\`)."
   fi
-  run gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/reviews" \
-    -f commit_id="$head_sha" \
-    -f event=APPROVE \
-    -f body="Auto-approved: latest Greptile confidence score is $score/5, and $head_sha touches no protected path (\`$PROTECTED_PATHS_LABEL\`)."
+  post_conclusion "$conclusion"
   exit 0
 fi
 
 echo "no approval: $reason"
+conclusion="not approved: $reason."
+dismissed=0
 while read -r review_id _; do
   [[ -z "$review_id" ]] && continue
   echo "dismiss review $review_id"
   run gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/reviews/$review_id/dismissals" \
     -f message="Auto-approval withdrawn: $reason." \
     -f event=DISMISS
+  dismissed=$((dismissed + 1))
 done <<<"$bot_approvals"
+if (( dismissed > 0 )); then
+  conclusion+=" Withdrew $dismissed earlier approval(s)."
+fi
+post_conclusion "$conclusion"
