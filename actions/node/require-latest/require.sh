@@ -5,6 +5,7 @@ set -o errexit
 
 : "${PACKAGES_TO_CHECK:=}" # require these packages to be latest
 : "${RECURSIVE:=false}" # make sure none of dependencies also use an old version
+: "${MAX_AGE_DAYS:=2}" # a newer minor fails the check once it is this many days old
 
 logf() {
   printf "$@" >&2
@@ -14,7 +15,7 @@ log() {
   logf "%s\n" "$*"
 }
 
-latest_version() {
+registry_metadata() {
   local _package="${1}"
   # Query the npm registry HTTP API directly with curl + jq, bypassing npm/pnpm. Both
   # `npm view` and `pnpm view` honour the runner's global/user .npmrc, which maps the
@@ -28,8 +29,26 @@ latest_version() {
   if [ -n "${NPMJS_TOKEN:-}" ]; then
     _auth=(-H "Authorization: Bearer ${NPMJS_TOKEN}")
   fi
-  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null |
-    jq -r '."dist-tags".latest // empty' 2>/dev/null
+  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null
+}
+
+# Print "<version> <publish time>" of the oldest release in a newer minor line than
+# <current>, when it was published before <cutoff> (epoch seconds). Print nothing otherwise.
+# Only stable releases up to the 'latest' dist-tag count.
+overdue_minor() {
+  local _metadata="${1}"
+  local _current="${2}"
+  local _cutoff="${3}"
+
+  jq -r --arg current "${_current}" --argjson cutoff "${_cutoff}" '
+    def minor: split(".")[0:2] | map(tonumber);
+    (."dist-tags".latest | minor) as $latest
+    | [ .time | to_entries[]
+        | select(.key | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
+        | select((.key | minor) > ($current | minor) and (.key | minor) <= $latest) ]
+    | min_by(.value) // empty
+    | select((.value | sub("\\.[0-9]+Z$"; "Z") | fromdate) < $cutoff)
+    | "\(.key) \(.value)"' <<< "${_metadata}"
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
@@ -53,15 +72,17 @@ check_package() {
   local _package="${2}"
   local _recursive="${3:-false}"
 
-  local _latest_version
-  _latest_version=$(latest_version "${_package}")
+  local _metadata
+  _metadata=$(registry_metadata "${_package}")
 
-  # Don't fail closed on a fetch error: an empty latest means the registry lookup
+  # Don't fail closed on a fetch error: empty metadata means the registry lookup
   # failed (network/auth), not that the used version is outdated. Warn and skip.
-  if [ -z "${_latest_version}" ]; then
-    log "  WARNING: could not determine latest version of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
+  if [ -z "${_metadata}" ]; then
+    log "  WARNING: could not read registry metadata of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
     return 0
   fi
+
+  local _cutoff=$(( $(date +%s) - MAX_AGE_DAYS * 86400 ))
 
   local _versions
   if [ "${_recursive}" == "true" ]; then
@@ -79,15 +100,15 @@ check_package() {
       continue
     fi
 
-    # Compare only major.minor, ignoring patch version differences
-    local _latest_major_minor="${_latest_version%.*}"
-    local _current_major_minor="${_current_version%.*}"
+    # Patch differences never fail. A newer minor fails once it is MAX_AGE_DAYS old.
+    local _overdue
+    _overdue=$(overdue_minor "${_metadata}" "${_current_version}" "${_cutoff}")
 
-    if [ "${_latest_major_minor}" != "${_current_major_minor}" ]; then
+    if [ -n "${_overdue}" ]; then
       logf "%s\n%s\n%s\n" \
         "Old package '${_package}' detected:" \
-        "  latest version: ${_latest_version}" \
-        "  version used: ${_current_version}"
+        "  version used: ${_current_version}" \
+        "  newer minor released more than ${MAX_AGE_DAYS} days ago: ${_overdue}"
 
       return 1
     fi
