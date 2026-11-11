@@ -17,7 +17,9 @@
 #   MIN_SCORE        lowest Greptile confidence score that approves (default 4)
 #   DRY_RUN          'true' prints the decision and changes nothing
 #
-# Every run also posts its decision as a new PR comment.
+# Every run also posts its decision as a new PR comment. While an open PR touches a protected
+# path, the PR body starts with an "AUTOREVIEW: RESTRICTED" banner; the run removes the banner
+# when the PR touches no protected path again.
 set -euo pipefail
 
 : "${REPO:?}" "${PR_NUMBER:?}" "${PROTECTED_PATHS:?}"
@@ -26,6 +28,15 @@ DRY_RUN="${DRY_RUN:-false}"
 PROTECTED_PATHS_LABEL="${PROTECTED_PATHS_LABEL:-$PROTECTED_PATHS}"
 
 BOT_LOGIN='github-actions[bot]'
+# The edit history names the bot without the [bot] suffix. The score editor is the last editor
+# of the PR body other than the bot: a banner edit keeps an untrusted earlier editor visible.
+BOT_EDITOR_LOGINS='github-actions github-actions[bot]'
+# Edits of the PR body that the run reads to find the last editor other than the bot.
+BODY_EDITS_READ=100
+# The banner lists at most this many protected paths, so the PR body stays short.
+BANNER_PATH_LIMIT=20
+BANNER_START='<!-- greptile-auto-approve:restricted -->'
+BANNER_END='<!-- /greptile-auto-approve:restricted -->'
 # Only the Greptile app may have written the score: anyone else can edit a PR body.
 GREPTILE_LOGINS='greptile-apps greptile-apps[bot]'
 # The files API lists at most 3000 files of a PR.
@@ -39,8 +50,9 @@ pr_json=$(gh api graphql \
   -F owner="$owner" \
   -F name="$name" \
   -F number="$PR_NUMBER" \
+  -F edits="$BODY_EDITS_READ" \
   -f query='
-query($owner: String!, $name: String!, $number: Int!) {
+query($owner: String!, $name: String!, $number: Int!, $edits: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       state
@@ -48,7 +60,7 @@ query($owner: String!, $name: String!, $number: Int!) {
       headRefOid
       changedFiles
       body
-      editor { login }
+      userContentEdits(last: $edits) { nodes { editedAt editor { login } } }
     }
   }
 }' --jq '.data.repository.pullRequest')
@@ -58,7 +70,12 @@ is_draft=$(jq -r '.isDraft' <<<"$pr_json")
 head_sha=$(jq -r '.headRefOid' <<<"$pr_json")
 changed_files=$(jq -r '.changedFiles' <<<"$pr_json")
 body=$(jq -r '.body // ""' <<<"$pr_json")
-editor=$(jq -r '.editor.login // ""' <<<"$pr_json")
+editor=$(jq -r \
+  --arg bots "$BOT_EDITOR_LOGINS" \
+  '[.userContentEdits.nodes[]
+    | select((.editor.login // "") as $login | ($bots | split(" ") | index($login)) | not)]
+   | sort_by(.editedAt) | last | .editor.login // ""' \
+  <<<"$pr_json")
 
 # is_protected_path succeeds when the path matches a pattern of PROTECTED_PATHS
 # and no '!' pattern.
@@ -116,27 +133,57 @@ check_pr() {
     return
   fi
 
+  reason="$restricted_reason"
+}
+
+# find_restricted sets restricted_reason and protected_touched when the PR touches a protected
+# path or lists too many files to check.
+find_restricted() {
   if (( changed_files >= FILES_API_LIMIT )); then
-    reason="PR changes $changed_files files, more than the files API lists"
+    restricted_reason="PR changes $changed_files files, more than the files API lists"
     return
   fi
 
   local path
   while IFS= read -r path; do
-    if is_protected_path "$path"; then
-      reason="PR touches protected path $path"
-      return
-    fi
+    is_protected_path "$path" && protected_touched+=("$path")
   done < <(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
     --jq '.[] | .filename, (.previous_filename // empty)')
+  if (( ${#protected_touched[@]} > 0 )); then
+    restricted_reason="PR touches protected path ${protected_touched[0]}"
+  fi
 }
 
-score=""
-reason=""
-check_pr
+# restricted_banner prints the banner that starts the body of a restricted PR.
+restricted_banner() {
+  echo "$BANNER_START"
+  echo "# AUTOREVIEW: RESTRICTED"
+  echo
+  echo "This PR needs a human review. Greptile auto-approve does not approve it: $restricted_reason (\`$PROTECTED_PATHS_LABEL\`)."
+  if (( ${#protected_touched[@]} > 0 )); then
+    echo
+    printf -- "- \`%s\`\n" "${protected_touched[@]:0:BANNER_PATH_LIMIT}"
+    if (( ${#protected_touched[@]} > BANNER_PATH_LIMIT )); then
+      echo "- and $(( ${#protected_touched[@]} - BANNER_PATH_LIMIT )) more"
+    fi
+  fi
+  echo "$BANNER_END"
+}
 
-bot_approvals=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
-  --jq ".[] | select(.user.login == \"$BOT_LOGIN\" and .state == \"APPROVED\") | \"\(.id) \(.commit_id)\"")
+# sync_restricted_banner puts the banner at the start of the PR body while the PR is restricted,
+# and removes it when the PR is not.
+sync_restricted_banner() {
+  local unbannered new_body
+  unbannered=$(BANNER_START="$BANNER_START" BANNER_END="$BANNER_END" \
+    perl -0777 -pe 's/\Q$ENV{BANNER_START}\E.*?\Q$ENV{BANNER_END}\E\s*//s' <<<"$body")
+  new_body="$unbannered"
+  if [[ -n "$restricted_reason" ]]; then
+    new_body="$(restricted_banner)${unbannered:+$'\n\n'$unbannered}"
+  fi
+  [[ "$new_body" == "$body" ]] && return
+  echo "update the restricted banner in the PR body"
+  run gh api -X PATCH "repos/$REPO/pulls/$PR_NUMBER" -f body="$new_body"
+}
 
 run() {
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -145,6 +192,19 @@ run() {
     "$@" >/dev/null
   fi
 }
+
+score=""
+reason=""
+restricted_reason=""
+protected_touched=()
+if [[ "$state" == "OPEN" ]]; then
+  find_restricted
+  sync_restricted_banner
+fi
+check_pr
+
+bot_approvals=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+  --jq ".[] | select(.user.login == \"$BOT_LOGIN\" and .state == \"APPROVED\") | \"\(.id) \(.commit_id)\"")
 
 # post_conclusion posts the decision as a PR comment.
 post_conclusion() {
