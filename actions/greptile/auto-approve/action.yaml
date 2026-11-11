@@ -5,11 +5,13 @@ description: |
   confidence score in the PR description is at least `min-score` and the PR touches
   no protected path. Otherwise dismiss the approvals the bot gave earlier, so a push
   that touches a protected path or a lower score takes the approval back.
-  Every run posts its decision as a PR comment.
+  Every run posts its decision as a PR comment. While an open PR touches a protected
+  path, the PR description starts with a large "AUTOREVIEW: RESTRICTED" banner that
+  lists the protected paths; the banner goes away when the PR touches none again.
 
-  The score is trusted only when Greptile made the last edit of the PR description,
-  and it is trusted even when Greptile reviewed an older commit. The changed files
-  are always checked at the PR head.
+  The score is trusted only when Greptile made the last edit of the PR description
+  that the bot did not make, and it is trusted even when Greptile reviewed an older
+  commit. The changed files are always checked at the PR head.
 
   The protected list is read from the base branch through the API, so a PR cannot
   change the list it is checked against, and the caller needs no checkout. Format:
