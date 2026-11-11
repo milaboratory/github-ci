@@ -34,6 +34,7 @@ registry_metadata() {
 
 # Print "<version> <publish time>" of the oldest release in a newer minor line than
 # <current> that is more than <days> old. Print nothing when there is none.
+# A prerelease <current> is compared by its major.minor.
 # Only stable releases up to the 'latest' dist-tag count.
 # Returns non-zero when <current> or the 'latest' dist-tag is not a version.
 overdue_minor() {
@@ -43,15 +44,15 @@ overdue_minor() {
 
   # Publish times are UTC ISO 8601 strings, which sort in time order as text.
   jq -r --arg current "${_current}" --argjson days "${_days}" '
-    def minor:
-      (capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.") // error("not a version: \(.)"))
-      | [.major, .minor | tonumber];
+    def version:
+      (capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)") // error("not a version: \(.)"))
+      | [.major, .minor, .patch | tonumber];
     (now - $days * 86400 | todate) as $cutoff
-    | ($current | minor) as $used
-    | (."dist-tags".latest | minor) as $latest
+    | ($current | version | .[0:2]) as $used
+    | (."dist-tags".latest | version) as $latest
     | [ .time | to_entries[]
         | select(.key | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
-        | select((.key | minor) > $used and (.key | minor) <= $latest)
+        | select((.key | version) as $v | $v[0:2] > $used and $v <= $latest)
         | select(.value < $cutoff) ]
     | min_by(.value) // empty
     | "\(.key) \(.value)"' <<< "${_metadata}"
@@ -132,6 +133,12 @@ log ""
 log "  Checking infrastructure pnpm package requirements"
 log "----------------------------------------------------------------------------"
 log ""
+
+if ! [[ "${MAX_AGE_DAYS}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  log "max-age-days must be a non-negative number, got '${MAX_AGE_DAYS}'"
+  log ""
+  exit 1
+fi
 
 lockfile="./pnpm-lock.yaml"
 
