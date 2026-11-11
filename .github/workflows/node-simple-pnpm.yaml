@@ -1051,6 +1051,8 @@ jobs:
           test-coverage-reports: ${{ inputs.test-coverage-reports }}
           test-results-reports: ${{ inputs.test-results-reports }}
 
+      # The build script can upload binaries under the release version. Run it only in
+      # the publish run: an earlier upload takes the version, and the release skips it.
       - name: Run build (before publish)
         if: github.ref_name == 'main'
           && steps.check-changes.outputs.has-changes == '0'
