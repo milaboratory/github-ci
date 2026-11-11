@@ -33,21 +33,27 @@ registry_metadata() {
 }
 
 # Print "<version> <publish time>" of the oldest release in a newer minor line than
-# <current>, when it was published before <cutoff> (epoch seconds). Print nothing otherwise.
+# <current> that is more than <days> old. Print nothing when there is none.
 # Only stable releases up to the 'latest' dist-tag count.
+# Fails when <current> or the 'latest' dist-tag is not a version.
 overdue_minor() {
   local _metadata="${1}"
   local _current="${2}"
-  local _cutoff="${3}"
+  local _days="${3}"
 
-  jq -r --arg current "${_current}" --argjson cutoff "${_cutoff}" '
-    def minor: split(".")[0:2] | map(tonumber);
-    (."dist-tags".latest | minor) as $latest
+  # Publish times are UTC ISO 8601 strings, which sort in time order as text.
+  jq -r --arg current "${_current}" --argjson days "${_days}" '
+    def minor:
+      (capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.") // error("not a version: \(.)"))
+      | [.major, .minor | tonumber];
+    (now - $days * 86400 | todate) as $cutoff
+    | ($current | minor) as $used
+    | (."dist-tags".latest | minor) as $latest
     | [ .time | to_entries[]
         | select(.key | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
-        | select((.key | minor) > ($current | minor) and (.key | minor) <= $latest) ]
+        | select((.key | minor) > $used and (.key | minor) <= $latest)
+        | select(.value < $cutoff) ]
     | min_by(.value) // empty
-    | select((.value | sub("\\.[0-9]+Z$"; "Z") | fromdate) < $cutoff)
     | "\(.key) \(.value)"' <<< "${_metadata}"
 }
 
@@ -82,8 +88,6 @@ check_package() {
     return 0
   fi
 
-  local _cutoff=$(( $(date +%s) - MAX_AGE_DAYS * 86400 ))
-
   local _versions
   if [ "${_recursive}" == "true" ]; then
     _versions=(
@@ -102,7 +106,10 @@ check_package() {
 
     # Patch differences never fail. A newer minor fails once it is MAX_AGE_DAYS old.
     local _overdue
-    _overdue=$(overdue_minor "${_metadata}" "${_current_version}" "${_cutoff}")
+    if ! _overdue=$(overdue_minor "${_metadata}" "${_current_version}" "${MAX_AGE_DAYS}"); then
+      log "  ERROR: could not compare '${_package}' version '${_current_version}' with the registry metadata"
+      return 1
+    fi
 
     if [ -n "${_overdue}" ]; then
       logf "%s\n%s\n%s\n" \
