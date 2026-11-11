@@ -35,7 +35,7 @@ registry_metadata() {
 # Print "<version> <publish time>" of the oldest release in a newer minor line than
 # <current> that is more than <days> old. Print nothing when there is none.
 # Only stable releases up to the 'latest' dist-tag count.
-# Fails when <current> or the 'latest' dist-tag is not a version.
+# Returns non-zero when <current> or the 'latest' dist-tag is not a version.
 overdue_minor() {
   local _metadata="${1}"
   local _current="${2}"
@@ -107,8 +107,8 @@ check_package() {
     # Patch differences never fail. A newer minor fails once it is MAX_AGE_DAYS old.
     local _overdue
     if ! _overdue=$(overdue_minor "${_metadata}" "${_current_version}" "${MAX_AGE_DAYS}"); then
-      log "  ERROR: could not compare '${_package}' version '${_current_version}' with the registry metadata"
-      return 1
+      log "  WARNING: could not compare '${_package}' version '${_current_version}' with the registry metadata — skipping, not treating as outdated"
+      continue
     fi
 
     if [ -n "${_overdue}" ]; then
