@@ -32,11 +32,6 @@ latest_version() {
     jq -r '."dist-tags".latest // empty' 2>/dev/null
 }
 
-# Print the major number of a version. Print nothing when it does not start with "<number>.".
-major_of() {
-  [[ "${1}" =~ ^([0-9]+)\. ]] && printf '%s' "${BASH_REMATCH[1]}" || true
-}
-
 # Get all versions of a package used directly or by transitive dependencies.
 versions_recursive() {
   local _lockfile="${1}"
@@ -58,13 +53,12 @@ check_package() {
   local _package="${2}"
   local _recursive="${3:-false}"
 
-  local _latest _latest_major
-  _latest=$(latest_version "${_package}")
-  _latest_major=$(major_of "${_latest}")
+  local _latest_version
+  _latest_version=$(latest_version "${_package}")
 
-  # Don't fail closed on a fetch error: no latest major means the registry lookup
+  # Don't fail closed on a fetch error: an empty latest means the registry lookup
   # failed (network/auth), not that the used version is outdated. Warn and skip.
-  if [ -z "${_latest_major}" ]; then
+  if [ -z "${_latest_version}" ]; then
     log "  WARNING: could not determine latest version of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
     return 0
   fi
@@ -85,19 +79,20 @@ check_package() {
       continue
     fi
 
-    # Only an older major version fails. Minor and patch differences never do.
-    local _major
-    _major=$(major_of "${_current_version}")
-    if [ -z "${_major}" ]; then
-      log "  WARNING: could not read the major version of '${_package}' version '${_current_version}' — skipping, not treating as outdated"
+    # Compare only the major version, ignoring minor and patch differences
+    local _latest_major="${_latest_version%%.*}"
+    local _current_major="${_current_version%%.*}"
+
+    if ! [[ "${_latest_major}" =~ ^[0-9]+$ && "${_current_major}" =~ ^[0-9]+$ ]]; then
+      log "  WARNING: could not compare '${_package}' version '${_current_version}' with latest '${_latest_version}' — skipping, not treating as outdated"
       continue
     fi
 
-    if [ "${_major}" -lt "${_latest_major}" ]; then
+    if [ "${_current_major}" -lt "${_latest_major}" ]; then
       logf "%s\n%s\n%s\n" \
         "Old package '${_package}' detected:" \
-        "  version used: ${_current_version}" \
-        "  latest version: ${_latest}"
+        "  latest version: ${_latest_version}" \
+        "  version used: ${_current_version}"
 
       return 1
     fi
