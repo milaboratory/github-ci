@@ -3,7 +3,7 @@
 set -o nounset
 set -o errexit
 
-: "${PACKAGES_TO_CHECK:=}" # require these packages to be latest
+: "${PACKAGES_TO_CHECK:=}" # require these packages to be on the latest major version
 : "${RECURSIVE:=false}" # make sure none of dependencies also use an old version
 
 logf() {
@@ -79,11 +79,16 @@ check_package() {
       continue
     fi
 
-    # Compare only major.minor, ignoring patch version differences
-    local _latest_major_minor="${_latest_version%.*}"
-    local _current_major_minor="${_current_version%.*}"
+    # Compare only the major version, ignoring minor and patch differences
+    local _latest_major="${_latest_version%%.*}"
+    local _current_major="${_current_version%%.*}"
 
-    if [ "${_latest_major_minor}" != "${_current_major_minor}" ]; then
+    if ! [[ "${_latest_major}" =~ ^[0-9]+$ && "${_current_major}" =~ ^[0-9]+$ ]]; then
+      log "  WARNING: could not compare '${_package}' version '${_current_version}' with latest '${_latest_version}' — skipping, not treating as outdated"
+      continue
+    fi
+
+    if [ "${_current_major}" -lt "${_latest_major}" ]; then
       logf "%s\n%s\n%s\n" \
         "Old package '${_package}' detected:" \
         "  latest version: ${_latest_version}" \

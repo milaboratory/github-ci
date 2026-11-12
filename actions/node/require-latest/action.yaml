@@ -6,7 +6,8 @@ description: |
 inputs:
   packages:
     description: |
-      List of NPM packages to require latest versions in lock file.
+      List of NPM packages to require the latest major version in lock file.
+      Minor and patch differences never fail the check.
     required: true
 
   recursive:
