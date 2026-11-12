@@ -1278,6 +1278,15 @@ jobs:
           override-tag: ${{ format('v{0}', env.NPM_PKG_VERSION) }}
           search-tags: ${{ steps.search-tags.outputs.result }}
 
+  ai-review:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: milaboratory/github-ci/.github/workflows/block-review.yaml@v4-beta
+    secrets:
+      env: ${{ secrets.env }}
+
   monitor-merge-queue-duration:
     name: monitor merge queue duration
     runs-on: ${{ inputs.gha-runner-label }}
