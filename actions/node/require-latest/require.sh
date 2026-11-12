@@ -3,9 +3,8 @@
 set -o nounset
 set -o errexit
 
-: "${PACKAGES_TO_CHECK:=}" # require these packages to be latest
+: "${PACKAGES_TO_CHECK:=}" # require these packages to be on the latest major version
 : "${RECURSIVE:=false}" # make sure none of dependencies also use an old version
-: "${MAX_AGE_DAYS:=2}" # a newer minor fails the check once it is this many days old
 
 logf() {
   printf "$@" >&2
@@ -15,7 +14,7 @@ log() {
   logf "%s\n" "$*"
 }
 
-registry_metadata() {
+latest_version() {
   local _package="${1}"
   # Query the npm registry HTTP API directly with curl + jq, bypassing npm/pnpm. Both
   # `npm view` and `pnpm view` honour the runner's global/user .npmrc, which maps the
@@ -29,33 +28,13 @@ registry_metadata() {
   if [ -n "${NPMJS_TOKEN:-}" ]; then
     _auth=(-H "Authorization: Bearer ${NPMJS_TOKEN}")
   fi
-  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null
+  curl -fsSL "${_auth[@]}" "https://registry.npmjs.org/${_enc}" 2>/dev/null |
+    jq -r '."dist-tags".latest // empty' 2>/dev/null
 }
 
-# Print "<version> <publish time>" of the oldest release in a newer minor line than
-# <current> that is more than <days> old. Print nothing when there is none.
-# A prerelease <current> is compared by its major.minor.
-# Only stable releases up to the 'latest' dist-tag count.
-# Returns non-zero when <current> or the 'latest' dist-tag is not a version.
-overdue_minor() {
-  local _metadata="${1}"
-  local _current="${2}"
-  local _days="${3}"
-
-  # Publish times are UTC ISO 8601 strings, which sort in time order as text.
-  jq -r --arg current "${_current}" --argjson days "${_days}" '
-    def version:
-      (capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)") // error("not a version: \(.)"))
-      | [.major, .minor, .patch | tonumber];
-    (now - $days * 86400 | todate) as $cutoff
-    | ($current | version | .[0:2]) as $used
-    | (."dist-tags".latest | version) as $latest
-    | [ .time | to_entries[]
-        | select(.key | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
-        | select((.key | version) as $v | $v[0:2] > $used and $v <= $latest)
-        | select(.value < $cutoff) ]
-    | min_by(.value) // empty
-    | "\(.key) \(.value)"' <<< "${_metadata}"
+# Print the major number of a version. Print nothing when it does not start with "<number>.".
+major_of() {
+  [[ "${1}" =~ ^([0-9]+)\. ]] && printf '%s' "${BASH_REMATCH[1]}" || true
 }
 
 # Get all versions of a package used directly or by transitive dependencies.
@@ -79,13 +58,14 @@ check_package() {
   local _package="${2}"
   local _recursive="${3:-false}"
 
-  local _metadata
-  _metadata=$(registry_metadata "${_package}")
+  local _latest _latest_major
+  _latest=$(latest_version "${_package}")
+  _latest_major=$(major_of "${_latest}")
 
-  # Don't fail closed on a fetch error: empty metadata means the registry lookup
+  # Don't fail closed on a fetch error: no latest major means the registry lookup
   # failed (network/auth), not that the used version is outdated. Warn and skip.
-  if [ -z "${_metadata}" ]; then
-    log "  WARNING: could not read registry metadata of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
+  if [ -z "${_latest_major}" ]; then
+    log "  WARNING: could not determine latest version of '${_package}' (registry fetch failed) — skipping, not treating as outdated"
     return 0
   fi
 
@@ -105,18 +85,19 @@ check_package() {
       continue
     fi
 
-    # Patch differences never fail. A newer minor fails once it is MAX_AGE_DAYS old.
-    local _overdue
-    if ! _overdue=$(overdue_minor "${_metadata}" "${_current_version}" "${MAX_AGE_DAYS}"); then
-      log "  WARNING: could not compare '${_package}' version '${_current_version}' with the registry metadata — skipping, not treating as outdated"
+    # Only an older major version fails. Minor and patch differences never do.
+    local _major
+    _major=$(major_of "${_current_version}")
+    if [ -z "${_major}" ]; then
+      log "  WARNING: could not read the major version of '${_package}' version '${_current_version}' — skipping, not treating as outdated"
       continue
     fi
 
-    if [ -n "${_overdue}" ]; then
+    if [ "${_major}" -lt "${_latest_major}" ]; then
       logf "%s\n%s\n%s\n" \
         "Old package '${_package}' detected:" \
         "  version used: ${_current_version}" \
-        "  newer minor released more than ${MAX_AGE_DAYS} days ago: ${_overdue}"
+        "  latest version: ${_latest}"
 
       return 1
     fi
@@ -133,12 +114,6 @@ log ""
 log "  Checking infrastructure pnpm package requirements"
 log "----------------------------------------------------------------------------"
 log ""
-
-if ! [[ "${MAX_AGE_DAYS}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-  log "max-age-days must be a non-negative number, got '${MAX_AGE_DAYS}'"
-  log ""
-  exit 1
-fi
 
 lockfile="./pnpm-lock.yaml"
 
