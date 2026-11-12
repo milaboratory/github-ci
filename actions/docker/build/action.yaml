@@ -71,7 +71,7 @@ runs:
   using: 'composite'
   steps:
     - name: Build Docker Image
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       id: build-image
       env:
         DOCKERFILE: ${{ inputs.dockerfile }}
