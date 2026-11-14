@@ -92,16 +92,23 @@ export function splitIntoBatches(paths: string[]): string[][] {
   return batches.map((b) => b.paths);
 }
 
+// createPlaceholders creates an empty file under root for each path. The paths must be repository
+// paths (see isRepoPath), and no path can be a parent directory of another path (see
+// splitIntoBatches).
+export async function createPlaceholders(root: string, paths: string[]): Promise<void> {
+  for (const p of paths) {
+    const file = path.join(root, p);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, "");
+  }
+}
+
 // matchBatch returns the paths of the batch that the patterns match.
 async function matchBatch(patterns: string, paths: string[]): Promise<Set<string>> {
   const tempBase = process.env.RUNNER_TEMP || os.tmpdir();
   const root = await fs.realpath(await fs.mkdtemp(path.join(tempBase, "greptile-auto-approve-")));
   try {
-    for (const p of paths) {
-      const file = path.join(root, p);
-      await fs.mkdir(path.dirname(file), { recursive: true });
-      await fs.writeFile(file, "");
-    }
+    await createPlaceholders(root, paths);
 
     // glob.create resolves relative patterns from the current directory.
     const cwd = process.cwd();
