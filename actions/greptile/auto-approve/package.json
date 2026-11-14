@@ -1,0 +1,27 @@
+{
+  "name": "@milaboratories/actions.greptile.auto-approve",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Approve a PR after a Greptile review when the PR touches no protected path",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "rm -rf lib dist && tsc && ncc build dist/main.js --minify --out lib --source-map",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest run",
+    "release": "npm run build && npm run format && npm run lint",
+    "all": "npm run release && npm test"
+  },
+  "dependencies": {
+    "@actions/core": "catalog:",
+    "@actions/github": "catalog:",
+    "@actions/glob": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "@vercel/ncc": "catalog:",
+    "vitest": "catalog:"
+  }
+}

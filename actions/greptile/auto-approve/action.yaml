@@ -6,18 +6,30 @@ description: |
   no protected path. Otherwise dismiss the approvals the bot gave earlier, so a push
   that touches a protected path or a lower score takes the approval back.
   Every run posts its decision as a PR comment. While an open PR touches a protected
-  path, the PR description starts with a large "AUTOREVIEW: RESTRICTED" banner that
-  lists the protected paths; the banner goes away when the PR touches none again.
+  path, it has the "AUTOREVIEW: RESTRICTED" label; the label goes away when the PR
+  touches none again. The action never edits the PR description.
 
-  The score is trusted only when Greptile made the last edit of the PR description
-  that the bot did not make, and it is trusted even when Greptile reviewed an older
-  commit. The changed files are always checked at the PR head.
+  The score is trusted only when Greptile made the last edit of the PR description,
+  and it is trusted even when Greptile reviewed an older commit. The changed files
+  are always checked at the PR head.
 
   The protected list is read from the base branch through the API, so a PR cannot
-  change the list it is checked against, and the caller needs no checkout. Format:
-  one path or bash glob per line, relative to the repo root; '*' also matches '/';
-  '#' starts a comment; a '!' line excludes paths: a path is protected when it
-  matches a pattern and no '!' pattern. Matching is case-sensitive.
+  change the list it is checked against, and the caller needs no checkout. The
+  action checks each changed path, and the old path of a renamed file, with the
+  @actions/glob globber (followSymbolicLinks: false, implicitDescendants: true,
+  matchDirectories: false). Rules of the list:
+  - One pattern on each line, relative to the repository root. A line that starts
+    with '#' is a comment. A '#' after a pattern is part of the pattern.
+  - A pattern that starts with '/' or '~', or that has a '..' segment, is an error:
+    the action then protects all paths and the job fails.
+  - '*' and '?' do not match '/'. '**' matches any number of directories.
+    '[abc]' matches one of the characters. Braces and extglob are not supported.
+  - A pattern that matches a directory also matches all files in it:
+    'dir', 'dir/', 'dir/*' and 'dir/**' all protect the full directory.
+    '*.sh' matches only the .sh files in the root; use '**/*.sh' for all of them.
+  - A '!' line excludes paths. The last line that matches a path wins, so put a
+    '!' line after the lines it limits.
+  - Matching is case-insensitive.
 
   Call it from a `pull_request_target` workflow with `pull-requests: write`, on
   `opened, edited, synchronize, reopened, ready_for_review, converted_to_draft`:
@@ -44,32 +56,5 @@ inputs:
     default: ${{ github.token }}
 
 runs:
-  using: 'composite'
-
-  steps:
-    - name: Fetch protected list from the base branch
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github-token }}
-        REPO: ${{ github.repository }}
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        PROTECTED_PATHS_SOURCE: ${{ inputs.protected-paths }}
-      run: |
-        gh api \
-          -H 'Accept: application/vnd.github.raw' \
-          "repos/${REPO}/contents/${PROTECTED_PATHS_SOURCE}?ref=${BASE_SHA}" \
-          >"${RUNNER_TEMP}/greptile-auto-approve-protected.txt"
-
-    - name: Approve or withdraw approval
-      shell: bash
-      env:
-        ACTION_PATH: ${{ github.action_path }}
-        GH_TOKEN: ${{ inputs.github-token }}
-        REPO: ${{ github.repository }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
-        PROTECTED_PATHS_LABEL: ${{ inputs.protected-paths }}
-        MIN_SCORE: ${{ inputs.min-score }}
-        DRY_RUN: ${{ inputs.dry-run }}
-      run: |
-        PROTECTED_PATHS="${RUNNER_TEMP}/greptile-auto-approve-protected.txt" \
-          "${ACTION_PATH}/greptile-auto-approve.sh"
+  using: 'node24'
+  main: 'lib/index.js'

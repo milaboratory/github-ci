@@ -3,6 +3,7 @@ packages:
   - lib/milib
 
   - actions/detect-version
+  - actions/greptile/auto-approve
   - actions/post/shell
   - actions/post/artifact
   - actions/node/npm-split-publish
