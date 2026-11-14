@@ -12,6 +12,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
+import { changedPaths } from "./changes";
 import { decide, PullRequestState, restrictedReason } from "./decision";
 import { findProtectedPaths, InvalidPatternError } from "./protected";
 
@@ -211,9 +212,7 @@ async function findRestricted(
     pull_number: prNumber,
     per_page: 100,
   });
-  const paths = files.flatMap((f) => (f.previous_filename ? [f.filename, f.previous_filename] : [f.filename]));
-
-  const protectedPaths = await findProtectedPaths(patterns, paths);
+  const protectedPaths = await findProtectedPaths(patterns, changedPaths(files));
   if (protectedPaths.length > 0) {
     core.info(`protected paths:\n  ${protectedPaths.join("\n  ")}`);
   }
