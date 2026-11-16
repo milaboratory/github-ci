@@ -8,6 +8,11 @@ export const FILES_API_LIMIT = 3000;
 
 const SCORE_MARKER = /<!-- greptile_confidence_score:([0-9]+) -->/g;
 
+// hasScoreMarker tells whether the PR body has a Greptile confidence score, from any editor.
+export function hasScoreMarker(body: string): boolean {
+  return body.match(SCORE_MARKER) !== null;
+}
+
 export interface PullRequestState {
   state: string;
   isDraft: boolean;
