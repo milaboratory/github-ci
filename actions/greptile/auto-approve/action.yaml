@@ -7,9 +7,7 @@ description: |
   that touches a protected path or a lower score takes the approval back.
   Run it on every PR event, also before Greptile writes a score. An open PR has the
   "AUTOAPPROVE: ALLOW" label when the run approves it, and "AUTOAPPROVE: DECLINED" in
-  all other cases. While an open PR touches a protected path, it also has the
-  "AUTOREVIEW: RESTRICTED" label; the label goes away when the PR touches none again.
-  A run posts its decision as a PR comment only when the PR description has a
+  all other cases. A run posts its decision as a PR comment only when the PR description has a
   Greptile score. The action never edits the PR description.
 
   The score is trusted only when Greptile made the last edit of the PR description,
