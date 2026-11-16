@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decide, PullRequestState, restrictedReason } from "./decision";
+import { decide, hasScoreMarker, PullRequestState, restrictedReason } from "./decision";
 
 const scored = (score: number): PullRequestState => ({
   state: "OPEN",
@@ -45,6 +45,15 @@ describe("decide", () => {
       reason: "PR touches protected path x",
       score: 5,
     });
+  });
+});
+
+describe("hasScoreMarker", () => {
+  it("finds the score on every call, and not in a body without it", () => {
+    expect(hasScoreMarker(scored(4).body)).toBe(true);
+    expect(hasScoreMarker(scored(4).body)).toBe(true);
+    expect(hasScoreMarker("Summary\n<!-- greptile_confidence_score: -->\n")).toBe(false);
+    expect(hasScoreMarker("")).toBe(false);
   });
 });
 

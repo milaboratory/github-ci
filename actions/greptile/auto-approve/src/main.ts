@@ -4,21 +4,25 @@
 // push. In all other cases the action dismisses the approvals that the bot gave before, so a lower
 // score or a push that touches a protected path takes the approval back.
 //
-// Each run posts its decision as a new PR comment. While an open PR touches a protected path, it
-// has the RESTRICTED_LABEL label. The run removes the label when the PR touches no protected path
-// again. The run never edits the PR body, so the last editor of the body stays the author of the
-// score.
+// The workflow runs the action on every PR event, also before Greptile writes a score. An open PR
+// has ALLOW_LABEL when the run approves it, and DECLINED_LABEL in all other cases. While an open PR
+// touches a protected path, it also has RESTRICTED_LABEL. A run posts its decision as a new PR
+// comment only when the PR body has a Greptile score, so a PR with no Greptile review gets no
+// comment on each push. The run never edits the PR body, so the last editor of the body stays the
+// author of the score.
 
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
 import { changedPaths } from "./changes";
-import { decide, PullRequestState, restrictedReason } from "./decision";
+import { decide, hasScoreMarker, PullRequestState, restrictedReason } from "./decision";
 import { findProtectedPaths, InvalidPatternError } from "./protected";
 
 const BOT_LOGIN = "github-actions[bot]";
 // GitHub creates the label on first use.
 const RESTRICTED_LABEL = "AUTOREVIEW: RESTRICTED";
+const ALLOW_LABEL = "AUTOAPPROVE: ALLOW";
+const DECLINED_LABEL = "AUTOAPPROVE: DECLINED";
 
 type Octokit = ReturnType<typeof github.getOctokit>;
 
@@ -63,6 +67,20 @@ async function run(): Promise<void> {
     await change();
   };
 
+  // setLabel adds or removes one label of the PR, and does nothing when the PR already matches.
+  const setLabel = async (labels: string[], name: string, wanted: boolean): Promise<void> => {
+    const labeled = labels.includes(name);
+    if (wanted && !labeled) {
+      await act(`add label ${name}`, () =>
+        octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [name] }),
+      );
+    } else if (!wanted && labeled) {
+      await act(`remove label ${name}`, () =>
+        octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name }),
+      );
+    }
+  };
+
   const query = await octokit.graphql<PullRequestQuery>(
     `query($owner: String!, $name: String!, $number: Int!) {
       repository(owner: $owner, name: $name) {
@@ -87,6 +105,7 @@ async function run(): Promise<void> {
     body: data.body ?? "",
   };
   const headSha = data.headRefOid;
+  const labels = data.labels.nodes.map((label) => label.name);
 
   let restricted = "";
   let listError = "";
@@ -102,19 +121,14 @@ async function run(): Promise<void> {
       restricted = listError;
     }
 
-    const labeled = data.labels.nodes.some((label) => label.name === RESTRICTED_LABEL);
-    if (restricted !== "" && !labeled) {
-      await act(`add label ${RESTRICTED_LABEL}`, () =>
-        octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [RESTRICTED_LABEL] }),
-      );
-    } else if (restricted === "" && labeled) {
-      await act(`remove label ${RESTRICTED_LABEL}`, () =>
-        octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: RESTRICTED_LABEL }),
-      );
-    }
+    await setLabel(labels, RESTRICTED_LABEL, restricted !== "");
   }
 
   const { reason, score } = decide(pr, minScore, restricted);
+  if (pr.state === "OPEN") {
+    await setLabel(labels, ALLOW_LABEL, reason === "");
+    await setLabel(labels, DECLINED_LABEL, reason !== "");
+  }
 
   const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
     owner,
@@ -124,8 +138,12 @@ async function run(): Promise<void> {
   });
   const botApprovals = reviews.filter((r) => r.user?.login === BOT_LOGIN && r.state === "APPROVED");
 
-  const postConclusion = (conclusion: string): Promise<void> =>
-    act("post the decision as a PR comment", () =>
+  const postConclusion = async (conclusion: string): Promise<void> => {
+    if (!hasScoreMarker(pr.body)) {
+      core.info("no Greptile score in PR body: post no PR comment");
+      return;
+    }
+    await act("post the decision as a PR comment", () =>
       octokit.rest.issues.createComment({
         owner,
         repo,
@@ -133,6 +151,7 @@ async function run(): Promise<void> {
         body: `**Greptile auto-approve** at ${headSha}: ${conclusion}`,
       }),
     );
+  };
 
   if (reason === "") {
     core.info(`approve: Greptile confidence ${score}/5, no protected path touched at ${headSha}`);
