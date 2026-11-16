@@ -5,9 +5,9 @@
 // score or a push that touches a protected path takes the approval back.
 //
 // The workflow runs the action on every PR event, also before Greptile writes a score. An open PR
-// has ALLOW_LABEL when the run approves it, and DECLINED_LABEL in all other cases. A run posts its
-// decision as a new PR comment only when the PR body has a Greptile score, so a PR with no Greptile review gets no
-// comment on each push. The run never edits the PR body, so the last editor of the body stays the
+// has ALLOW_LABEL when no protected path blocks approval, and DECLINED_LABEL otherwise. A run posts its
+// decision as a new PR comment when the PR body has a Greptile score or a protected path blocks approval.
+// The run never edits the PR body, so the last editor of the body stays the
 // author of the score.
 
 import * as core from "@actions/core";
@@ -39,7 +39,9 @@ interface PullRequestQuery {
 }
 
 async function run(): Promise<void> {
-  const protectedPathsSource = core.getInput("protected-paths", { required: true });
+  const protectedPathsSource = core.getInput("protected-paths", {
+    required: true,
+  });
   const minScore = Number(core.getInput("min-score") || "4");
   const dryRun = core.getInput("dry-run") === "true";
   const octokit = github.getOctokit(core.getInput("github-token", { required: true }));
@@ -70,11 +72,21 @@ async function run(): Promise<void> {
     const labeled = labels.includes(name);
     if (wanted && !labeled) {
       await act(`add label ${name}`, () =>
-        octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [name] }),
+        octokit.rest.issues.addLabels({
+          owner,
+          repo,
+          issue_number: prNumber,
+          labels: [name],
+        }),
       );
     } else if (!wanted && labeled) {
       await act(`remove label ${name}`, () =>
-        octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name }),
+        octokit.rest.issues.removeLabel({
+          owner,
+          repo,
+          issue_number: prNumber,
+          name,
+        }),
       );
     }
   };
@@ -109,7 +121,15 @@ async function run(): Promise<void> {
   let listError = "";
   if (pr.state === "OPEN") {
     try {
-      restricted = await findRestricted(octokit, owner, repo, prNumber, baseSha, protectedPathsSource, data.changedFiles);
+      restricted = await findRestricted(
+        octokit,
+        owner,
+        repo,
+        prNumber,
+        baseSha,
+        protectedPathsSource,
+        data.changedFiles,
+      );
     } catch (error) {
       if (!(error instanceof InvalidPatternError)) {
         throw error;
@@ -122,8 +142,8 @@ async function run(): Promise<void> {
 
   const { reason, score } = decide(pr, minScore, restricted);
   if (pr.state === "OPEN") {
-    await setLabel(labels, ALLOW_LABEL, reason === "");
-    await setLabel(labels, DECLINED_LABEL, reason !== "");
+    await setLabel(labels, ALLOW_LABEL, restricted === "");
+    await setLabel(labels, DECLINED_LABEL, restricted !== "");
   }
 
   const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
@@ -135,8 +155,8 @@ async function run(): Promise<void> {
   const botApprovals = reviews.filter((r) => r.user?.login === BOT_LOGIN && r.state === "APPROVED");
 
   const postConclusion = async (conclusion: string): Promise<void> => {
-    if (!hasScoreMarker(pr.body)) {
-      core.info("no Greptile score in PR body: post no PR comment");
+    if (!hasScoreMarker(pr.body) && restricted === "") {
+      core.info("no Greptile score or protected path restriction: post no PR comment");
       return;
     }
     await act("post the decision as a PR comment", () =>
@@ -173,7 +193,14 @@ async function run(): Promise<void> {
   }
 
   core.info(`no approval: ${reason}`);
-  let conclusion = `not approved: ${reason}.`;
+  let conclusion = `not approved: ${reason}`;
+  if (restricted !== "") {
+    conclusion = `**${DECLINED_LABEL}**: ${reason}`;
+    if (reason !== restricted) {
+      conclusion += `\n\n${restricted}`;
+    }
+    conclusion += `\n\nProtected list: \`${protectedPathsSource}\`.`;
+  }
   for (const review of botApprovals) {
     await act(`dismiss review ${review.id}`, () =>
       octokit.rest.pulls.dismissReview({

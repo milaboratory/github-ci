@@ -37,7 +37,10 @@ describe("decide", () => {
   });
 
   it("does not approve a score below min-score", () => {
-    expect(decide(scored(3), 4, "")).toEqual({ reason: "Greptile confidence score 3/5 is below 4", score: 3 });
+    expect(decide(scored(3), 4, "")).toEqual({
+      reason: "Greptile confidence score 3/5 is below 4",
+      score: 3,
+    });
   });
 
   it("does not approve a restricted PR", () => {
@@ -58,10 +61,11 @@ describe("hasScoreMarker", () => {
 });
 
 describe("restrictedReason", () => {
-  it("names the first protected path and the count of the others", () => {
+  it("names every protected path", () => {
     expect(restrictedReason(3, [])).toBe("");
-    expect(restrictedReason(3, ["a"])).toBe("PR touches protected path a");
-    expect(restrictedReason(3, ["a", "b", "c"])).toBe("PR touches protected path a and 2 more");
+    expect(restrictedReason(3, ["a"])).toBe('PR touches protected paths:\n- "a"');
+    expect(restrictedReason(3, ["a", "b", "c"])).toBe('PR touches protected paths:\n- "a"\n- "b"\n- "c"');
+    expect(restrictedReason(1, ["a\nb"])).toBe('PR touches protected paths:\n- "a\\nb"');
   });
 
   it("restricts a PR that is too large for the files API", () => {
