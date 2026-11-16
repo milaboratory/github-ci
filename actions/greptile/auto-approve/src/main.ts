@@ -5,9 +5,8 @@
 // score or a push that touches a protected path takes the approval back.
 //
 // The workflow runs the action on every PR event, also before Greptile writes a score. An open PR
-// has ALLOW_LABEL when the run approves it, and DECLINED_LABEL in all other cases. While an open PR
-// touches a protected path, it also has RESTRICTED_LABEL. A run posts its decision as a new PR
-// comment only when the PR body has a Greptile score, so a PR with no Greptile review gets no
+// has ALLOW_LABEL when the run approves it, and DECLINED_LABEL in all other cases. A run posts its
+// decision as a new PR comment only when the PR body has a Greptile score, so a PR with no Greptile review gets no
 // comment on each push. The run never edits the PR body, so the last editor of the body stays the
 // author of the score.
 
@@ -20,7 +19,6 @@ import { findProtectedPaths, InvalidPatternError } from "./protected";
 
 const BOT_LOGIN = "github-actions[bot]";
 // GitHub creates the label on first use.
-const RESTRICTED_LABEL = "AUTOREVIEW: RESTRICTED";
 const ALLOW_LABEL = "AUTOAPPROVE: ALLOW";
 const DECLINED_LABEL = "AUTOAPPROVE: DECLINED";
 
@@ -120,8 +118,6 @@ async function run(): Promise<void> {
       listError = `${protectedPathsSource} has an incorrect pattern: ${error.message}`;
       restricted = listError;
     }
-
-    await setLabel(labels, RESTRICTED_LABEL, restricted !== "");
   }
 
   const { reason, score } = decide(pr, minScore, restricted);
