@@ -35,8 +35,7 @@ export function restrictedReason(changedFiles: number, protectedPaths: string[])
   if (protectedPaths.length === 0) {
     return "";
   }
-  const more = protectedPaths.length > 1 ? ` and ${protectedPaths.length - 1} more` : "";
-  return `PR touches protected path ${protectedPaths[0]}${more}`;
+  return `PR touches protected paths:\n${protectedPaths.map((path) => `- ${JSON.stringify(path)}`).join("\n")}`;
 }
 
 // decide applies the rules in their order: PR state, score author, score, protected paths.
@@ -48,7 +47,9 @@ export function decide(pr: PullRequestState, minScore: number, restricted: strin
     return { reason: "PR is a draft" };
   }
   if (!GREPTILE_LOGINS.includes(pr.editor)) {
-    return { reason: `PR body was last edited by '${pr.editor || "<nobody>"}', not by Greptile` };
+    return {
+      reason: `PR body was last edited by '${pr.editor || "<nobody>"}', not by Greptile`,
+    };
   }
 
   const markers = [...pr.body.matchAll(SCORE_MARKER)];
@@ -61,7 +62,10 @@ export function decide(pr: PullRequestState, minScore: number, restricted: strin
   const score = Number(markers[0][1]);
 
   if (score < minScore) {
-    return { reason: `Greptile confidence score ${score}/5 is below ${minScore}`, score };
+    return {
+      reason: `Greptile confidence score ${score}/5 is below ${minScore}`,
+      score,
+    };
   }
   return { reason: restricted, score };
 }

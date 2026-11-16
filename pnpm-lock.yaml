@@ -142,9 +142,18 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.5.2
+      '@typescript-eslint/eslint-plugin':
+        specifier: 'catalog:'
+        version: 8.33.1(@typescript-eslint/parser@8.33.1(eslint@9.28.0)(typescript@5.8.3))(eslint@9.28.0)(typescript@5.8.3)
+      '@typescript-eslint/parser':
+        specifier: 'catalog:'
+        version: 8.33.1(eslint@9.28.0)(typescript@5.8.3)
       '@vercel/ncc':
         specifier: 'catalog:'
         version: 0.38.4
+      eslint:
+        specifier: 'catalog:'
+        version: 9.28.0
       typescript:
         specifier: 'catalog:'
         version: 5.8.3
@@ -1873,6 +1882,7 @@ packages:
   eslint@9.28.0:
     resolution: {integrity: sha512-ocgh41VhRlf9+fVpe7QKzwLj9c92fDiqOj8Y3Sd4/ZmVA4Btx4PlUYPq4pp9JDyupkf1upbEXecxL2mwNV7jPQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'

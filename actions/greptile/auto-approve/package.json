@@ -19,7 +19,10 @@
     "@actions/glob": "catalog:"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
     "@types/node": "catalog:",
+    "eslint": "catalog:",
     "typescript": "catalog:",
     "@vercel/ncc": "catalog:",
     "vitest": "catalog:"
