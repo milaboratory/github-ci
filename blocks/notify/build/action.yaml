@@ -89,10 +89,10 @@ runs:
 
   steps:
     - id: context
-      uses: milaboratory/github-ci/actions/context@v4-beta
+      uses: milaboratory/github-ci/actions/context@v4
 
     - id: category
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         IS_RELEASE: ${{ steps.context.outputs.is-release }}
       with:
@@ -104,7 +104,7 @@ runs:
           fi
 
     - id: define-version
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         OVERRIDE_VERSION: ${{ inputs.override-version }}
         CURRENT_VERSION: ${{ steps.context.outputs.current-version }}
@@ -118,12 +118,12 @@ runs:
 
     - id: build-status
       name: Merge build statuses
-      uses: milaboratory/github-ci/actions/helpers/merge-status@v4-beta
+      uses: milaboratory/github-ci/actions/helpers/merge-status@v4
       with:
         statuses: ${{ inputs.build-status }}
 
     - id: json
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         MAVEN_PACKAGES: ${{ inputs.maven-packages }}
         DOCKER_IMAGES: ${{ inputs.docker-images }}
@@ -141,7 +141,7 @@ runs:
       if:  steps.build-status.outputs.status != 'success'
         && inputs.notification-mode != 'success-only'
 
-      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v4-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/build-failed@v4
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
@@ -156,7 +156,7 @@ runs:
       if:  steps.build-status.outputs.status == 'success'
         && inputs.notification-mode != 'failure-only'
 
-      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v4-beta
+      uses: milaboratory/github-ci/actions/notify/telegram/build-ready@v4
       with:
         telegram-target: ${{ inputs.telegram-target }}
         telegram-token: ${{ inputs.telegram-token }}
