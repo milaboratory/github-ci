@@ -13,6 +13,14 @@ import { readPackedManifest } from './tarball';
 
 export const NPMJS_HOST = 'registry.npmjs.org';
 export const GITHUB_PACKAGES_HOST = 'npm.pkg.github.com';
+/**
+ * Our registry (Verdaccio + OIDC). It accepts a GitHub Actions OIDC token with
+ * this audience as the npm token: no stored secret. The publishing job must
+ * run in the protected `npm-publish` environment, which the registry's allow
+ * entry requires.
+ */
+export const OWN_REGISTRY_HOST = 'npm.platforma.bio';
+export const OWN_REGISTRY_AUDIENCE = 'https://npm.platforma.bio';
 
 export interface Credentials {
   /** Token for npm.pkg.github.com (the job's GITHUB_TOKEN). Sent nowhere else. */
@@ -37,12 +45,18 @@ export interface PublishDeps {
   run: Runner;
   log: (message: string) => void;
   group: <T>(title: string, fn: () => Promise<T>) => Promise<T>;
+  /**
+   * A GitHub Actions OIDC token for `audience`. Called before every upload to
+   * the own registry: the tokens live minutes, a publish run can take longer.
+   */
+  oidcToken?: (audience: string) => Promise<string>;
 }
 
 // Env var names the generated npm config refers to; npm expands them when it
 // reads the file, so the file itself holds no secret.
 const NPM_AUTH_TOKEN_VAR = 'NPM_AUTH_TOKEN';
 const NPMJS_FALLBACK_TOKEN_VAR = 'NPMJS_FALLBACK_TOKEN';
+const OWN_REGISTRY_TOKEN_VAR = 'NPM_PLATFORMA_OIDC_TOKEN';
 
 /**
  * npm config (userconfig) for uploading `entries`. Every registry must be
@@ -77,8 +91,14 @@ export function npmrcFor(entries: ManifestEntry[], credentials: Credentials): st
         }
         lines.add(`//${GITHUB_PACKAGES_HOST}/:_authToken=\${${NPM_AUTH_TOKEN_VAR}}`);
         break;
+      case OWN_REGISTRY_HOST:
+        // Filled per upload with a fresh OIDC token (publishTarballs).
+        lines.add(`//${OWN_REGISTRY_HOST}/:_authToken=\${${OWN_REGISTRY_TOKEN_VAR}}`);
+        break;
       default:
-        throw new Error(`${registry}: no credentials for this registry (supported: ${NPMJS_HOST}, ${GITHUB_PACKAGES_HOST})`);
+        throw new Error(
+          `${registry}: no credentials for this registry (supported: ${NPMJS_HOST}, ${GITHUB_PACKAGES_HOST}, ${OWN_REGISTRY_HOST})`,
+        );
     }
   }
   return [...lines].map((l) => l + '\n').join('');
@@ -166,6 +186,7 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     NPM_CONFIG_USERCONFIG: userconfig,
     [NPM_AUTH_TOKEN_VAR]: options.npmAuthToken ?? '',
     [NPMJS_FALLBACK_TOKEN_VAR]: options.npmjsFallbackToken ?? '',
+    [OWN_REGISTRY_TOKEN_VAR]: '',
   };
   const envRun: Runner = (command, args, runOptions) => run(command, args, { ...runOptions, env });
 
@@ -176,13 +197,21 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
       log(`${label}: already in ${entry.registry}, skipping`);
       continue;
     }
+    // Each upload gets its own env: a fresh OIDC token for the own registry
+    // (tokens live minutes), nothing extra for the others.
+    let uploadEnv = env;
+    if (new URL(entry.registry).hostname === OWN_REGISTRY_HOST) {
+      if (!deps.oidcToken) throw new Error(`${label}: no OIDC token source for ${OWN_REGISTRY_HOST}`);
+      uploadEnv = { ...env, [OWN_REGISTRY_TOKEN_VAR]: await deps.oidcToken(OWN_REGISTRY_AUDIENCE) };
+    }
     const result = await group(`${label} -> ${entry.registry}`, () =>
-      envRun('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true }),
+      run('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true, env: uploadEnv }),
     );
     if (result.code !== 0) {
       // A version the lookup could not see, e.g. a restricted package queried
       // without a token on a re-run: the registry refuses it as a duplicate.
-      if (/You cannot publish over the previously published versions/.test(result.stderr + result.stdout)) {
+      // npmjs: "You cannot publish over ..."; Verdaccio: E409 "this package is already present".
+      if (/You cannot publish over the previously published versions|E409|this package is already present/.test(result.stderr + result.stdout)) {
         log(`${label}: already in ${entry.registry} (refused as a duplicate), skipping`);
         continue;
       }

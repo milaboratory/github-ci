@@ -244,3 +244,45 @@ describe.skipIf(npmMajor < 11)('publishArgs with real npm 11', () => {
     expect(result.status).toBe(0);
   });
 });
+
+describe('own registry (npm.platforma.bio)', () => {
+  const OWN = 'https://npm.platforma.bio/';
+  const BLOCK = entry('@scope-tbd/milaboratories.some-block', { registry: OWN });
+  const BLOCK2 = entry('@scope-tbd/milaboratories.some-block.model', { registry: OWN });
+
+  it('npmrcFor refers to the OIDC token only through an env var', () => {
+    expect(npmrcFor([BLOCK], {})).toBe('//npm.platforma.bio/:_authToken=${NPM_PLATFORMA_OIDC_TOKEN}\n');
+  });
+
+  it('mints a fresh token with the registry audience before every upload there, and none for npmjs', async () => {
+    const audiences: string[] = [];
+    let n = 0;
+    const oidcToken = async (audience: string) => { audiences.push(audience); return `jwt-${++n}`; };
+    const npm = fakeNpm();
+    const dir = tarballDir([LIB, BLOCK, BLOCK2]);
+    await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run, oidcToken });
+    expect(audiences).toEqual(['https://npm.platforma.bio', 'https://npm.platforma.bio']);
+    const tokens = npm.publishes().map((c) => c.options.env!.NPM_PLATFORMA_OIDC_TOKEN);
+    expect(tokens).toEqual(['', 'jwt-1', 'jwt-2']);
+    expect(npm.configs.every((c) => !c.includes('jwt-'))).toBe(true);
+  });
+
+  it('fails without an OIDC token source', async () => {
+    const npm = fakeNpm();
+    await expect(publish([BLOCK], npm)).rejects.toThrow('no OIDC token source for npm.platforma.bio');
+    expect(npm.publishes()).toEqual([]);
+  });
+
+  it("treats Verdaccio's E409 duplicate as already published", async () => {
+    const npm = fakeNpm();
+    const run = fakeRunner((call: Call) =>
+      call.args[0] === 'publish'
+        ? { code: 1, stdout: '', stderr: 'npm error code E409\nnpm error 409 Conflict - PUT https://npm.platforma.bio/x - this package is already present' }
+        : undefined,
+      npm.run,
+    );
+    const dir = tarballDir([BLOCK]);
+    const published = await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' });
+    expect(published).toEqual([]);
+  });
+});

@@ -33,6 +33,14 @@ inputs:
     required: false
     default: ''
 
+  own-registry-scopes:
+    description: |
+      Space-separated npm scopes (without @) to install from and publish to
+      npm.platforma.bio, e.g. 'platforma-open'. Empty (default): unchanged.
+      Opt-in while repositories move; see actions/node/own-registry-scopes.
+    required: false
+    default: ''
+
   npmrc-config:
     description: |
       Generates a .npmrc file based on provided configuration.
@@ -80,6 +88,12 @@ runs:
           [ -s "$npmrc" ] && [ -n "$(tail -c1 "$npmrc")" ] && echo >> "$npmrc"
           echo "$line" >> "$npmrc"
         fi
+
+    - name: Map own-registry scopes to npm.platforma.bio
+      if: inputs.own-registry-scopes != ''
+      uses: milaboratory/github-ci/actions/node/own-registry-scopes@v4-beta
+      with:
+        scopes: ${{ inputs.own-registry-scopes }}
 
     - name: Install pnpm - ${{ inputs.pnpm-version }}
       if: inputs.pnpm-version != ''
