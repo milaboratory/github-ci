@@ -265,11 +265,12 @@ on:
 
       npm-own-registry-scopes:
         description: |
-          Space-separated npm scopes (without @) this repository installs from
-          and publishes to npm.platforma.bio instead of npmjs, e.g.
-          'platforma-open'. Empty (default): unchanged. Publishing there needs
-          the repository's `npm-publish` environment (main only) and the
-          package in the registry's owner map (automatic, from package.json).
+          Space-separated npm scopes this repository installs from and
+          publishes to npm.platforma.bio instead of npmjs, e.g.
+          '@platforma-open'. Empty (default): unchanged. Publishing there needs
+          the repository's `npm-publish` environment (main only); which
+          repository may publish which package is decided by the registry
+          (first publish, npm provenance, admin pins).
         type: string
         required: false
         default: ''

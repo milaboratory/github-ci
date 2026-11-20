@@ -8,12 +8,13 @@ description: |
   through publish-tarballs, which authenticates with GitHub OIDC.
 
   Opt-in per repository while repositories move to npm.platforma.bio:
-  `npm-own-registry-scopes: platforma-open` in the caller's node-simple-pnpm
-  inputs. Idempotent: an existing line for the same scope is replaced.
+  `npm-own-registry-scopes: '@platforma-open'` in the caller's
+  node-simple-pnpm inputs. Idempotent: an existing line for the same scope is
+  replaced.
 
 inputs:
   scopes:
-    description: Space-separated scope names without `@`, e.g. 'platforma-open'.
+    description: Space-separated scope names, with or without `@`, e.g. '@platforma-open'.
     required: true
   registry:
     description: Registry URL for those scopes.
@@ -32,6 +33,7 @@ runs:
         npmrc="${GITHUB_WORKSPACE}/.npmrc"
         touch "${npmrc}"
         for scope in ${SCOPES}; do
+          scope="${scope#@}"
           case "${scope}" in *[!a-z0-9._-]*|'') echo "::error::bad scope name '${scope}'"; exit 1;; esac
           grep -v -F "@${scope}:registry=" "${npmrc}" > "${npmrc}.tmp" || true
           mv "${npmrc}.tmp" "${npmrc}"

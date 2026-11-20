@@ -74,8 +74,8 @@ inputs:
 
   own-registry-scopes:
     description: |
-      Space-separated npm scopes (without @) to install from and publish to
-      npm.platforma.bio, e.g. 'platforma-open'. Empty (default): unchanged.
+      Space-separated npm scopes to install from and publish to
+      npm.platforma.bio, e.g. '@platforma-open'. Empty (default): unchanged.
       Opt-in while repositories move; see actions/node/own-registry-scopes.
     required: false
     default: ''
