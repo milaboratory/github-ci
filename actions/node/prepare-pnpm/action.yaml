@@ -77,18 +77,6 @@ runs:
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
 
-    # The SDK depends on packages served only by npm.platforma.bio (the quickjs-emscripten fork).
-    # A dependency cannot name its registry, so every consumer's .npmrc must map the scope.
-    - name: Map @milaboratories-poc to npm.platforma.bio
-      shell: bash
-      run: |
-        line='@milaboratories-poc:registry=https://npm.platforma.bio/'
-        npmrc="${GITHUB_WORKSPACE}/.npmrc"
-        if ! grep -qxF "$line" "$npmrc" 2>/dev/null; then
-          [ -s "$npmrc" ] && [ -n "$(tail -c1 "$npmrc")" ] && echo >> "$npmrc"
-          echo "$line" >> "$npmrc"
-        fi
-
     - name: Map own-registry scopes to npm.platforma.bio
       if: inputs.own-registry-scopes != ''
       uses: milaboratory/github-ci/actions/node/own-registry-scopes@v4
