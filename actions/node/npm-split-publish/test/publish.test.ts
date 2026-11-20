@@ -306,4 +306,18 @@ describe('own registry (npm.platforma.bio)', () => {
     const published = await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' });
     expect(published).toEqual([]);
   });
+
+  it('does NOT treat a 409 from npmjs as already published (fails the release instead)', async () => {
+    const npm = fakeNpm();
+    const run = fakeRunner((call: Call) =>
+      call.args[0] === 'publish'
+        ? { code: 1, stdout: '', stderr: 'npm error code E409\nnpm error 409 Conflict - PUT https://registry.npmjs.org/x - Conflict' }
+        : undefined,
+      npm.run,
+    );
+    const dir = tarballDir([LIB]);
+    await expect(
+      publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' }),
+    ).rejects.toThrow();
+  });
 });

@@ -216,8 +216,12 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     if (result.code !== 0) {
       // A version the lookup could not see, e.g. a restricted package queried
       // without a token on a re-run: the registry refuses it as a duplicate.
-      // npmjs: "You cannot publish over ..."; Verdaccio: E409 "this package is already present".
-      if (/You cannot publish over the previously published versions|E409|this package is already present/.test(result.stderr + result.stdout)) {
+      // npmjs: "You cannot publish over ..."; our registry (Verdaccio): E409
+      // "this package is already present". E409 counts only for our registry:
+      // on npmjs a 409 can be a transient conflict, not a duplicate.
+      const output = result.stderr + result.stdout;
+      const own = new URL(entry.registry).hostname === OWN_REGISTRY_HOST;
+      if (/You cannot publish over the previously published versions/.test(output) || (own && /E409|this package is already present/.test(output))) {
         log(`${label}: already in ${entry.registry} (refused as a duplicate), skipping`);
         continue;
       }

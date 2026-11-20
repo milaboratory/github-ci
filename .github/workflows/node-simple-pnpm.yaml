@@ -1161,9 +1161,13 @@ jobs:
       # Does anything packed go to our own registry? Then the upload job runs
       # in the protected `npm-publish` environment, which that registry's OIDC
       # allow entry requires. Repos that publish only to npmjs are unaffected.
+      # Gated on the opt-in input: a repository that does not set
+      # npm-own-registry-scopes never gets the environment, whatever its
+      # .npmrc maps.
       - name: Any package for npm.platforma.bio?
         id: npm-own-registry
-        if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        if: inputs.npm-own-registry-scopes != ''
+          && steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
         shell: bash
         env:
           MANIFEST: ${{ steps.npm-pack.outputs.dir }}/manifest.jsonl
