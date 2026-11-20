@@ -2,7 +2,8 @@
 //
 // Env: TARBALL_DIR (required), ACCESS_PUBLIC ('true'), NPM_AUTH_TOKEN,
 // NPMJS_FALLBACK_TOKEN, NPM_PUBLISH_USERCONFIG (default
-// $RUNNER_TEMP/publish.npmrc).
+// $RUNNER_TEMP/publish.npmrc). Uploads to npm.platforma.bio use a GitHub OIDC
+// token (core.getIDToken; the job needs `id-token: write`).
 
 import * as core from '@actions/core';
 import * as path from 'path';
@@ -22,7 +23,7 @@ async function main(): Promise<void> {
       npmjsFallbackToken: process.env.NPMJS_FALLBACK_TOKEN,
       userconfig,
     },
-    { run: spawnRunner, log: core.info, group: core.group },
+    { run: spawnRunner, log: core.info, group: core.group, oidcToken: (audience) => core.getIDToken(audience) },
   );
   core.info(`Published ${published.length} package(s).`);
 }

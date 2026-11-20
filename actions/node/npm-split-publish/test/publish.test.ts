@@ -244,3 +244,80 @@ describe.skipIf(npmMajor < 11)('publishArgs with real npm 11', () => {
     expect(result.status).toBe(0);
   });
 });
+
+describe('own registry (npm.platforma.bio)', () => {
+  const OWN = 'https://npm.platforma.bio/';
+  const BLOCK = entry('@platforma-open/milaboratories.some-block', { registry: OWN });
+  const BLOCK2 = entry('@platforma-open/milaboratories.some-block.model', { registry: OWN });
+
+  it('npmrcFor refers to the OIDC token only through an env var', () => {
+    expect(npmrcFor([BLOCK], {})).toBe('//npm.platforma.bio/:_authToken=${NPM_PLATFORMA_OIDC_TOKEN}\n');
+  });
+
+  it('mints a fresh token with the registry audience before every upload there, and none for npmjs', async () => {
+    const audiences: string[] = [];
+    let n = 0;
+    const oidcToken = async (audience: string) => { audiences.push(audience); return `jwt-${++n}`; };
+    const npm = fakeNpm();
+    const dir = tarballDir([LIB, BLOCK, BLOCK2]);
+    await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run: npm.run, oidcToken });
+    expect(audiences).toEqual(['https://npm.platforma.bio', 'https://npm.platforma.bio']);
+    const tokens = npm.publishes().map((c) => c.options.env!.NPM_PLATFORMA_OIDC_TOKEN);
+    expect(tokens).toEqual(['', 'jwt-1', 'jwt-2']);
+    expect(npm.configs.every((c) => !c.includes('jwt-'))).toBe(true);
+  });
+
+  it("hides GitHub's OIDC variables from npm on uploads to the own registry only", async () => {
+    const saved = { url: process.env.ACTIONS_ID_TOKEN_REQUEST_URL, token: process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN };
+    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = 'https://oidc.example';
+    process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'req-token';
+    try {
+      const npm = fakeNpm();
+      const dir = tarballDir([LIB, BLOCK]);
+      await publishTarballs(
+        { dir, userconfig: `${dir}.npmrc`, accessPublic: false },
+        { ...quiet, run: npm.run, oidcToken: async () => 'jwt' },
+      );
+      const [toNpmjs, toOwn] = npm.publishes().map((c) => c.options.env!);
+      expect(toNpmjs.ACTIONS_ID_TOKEN_REQUEST_URL).toBe('https://oidc.example');
+      expect(toOwn.ACTIONS_ID_TOKEN_REQUEST_URL).toBeUndefined();
+      expect(toOwn.ACTIONS_ID_TOKEN_REQUEST_TOKEN).toBeUndefined();
+    } finally {
+      if (saved.url === undefined) delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL; else process.env.ACTIONS_ID_TOKEN_REQUEST_URL = saved.url;
+      if (saved.token === undefined) delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN; else process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = saved.token;
+    }
+  });
+
+  it('fails without an OIDC token source', async () => {
+    const npm = fakeNpm();
+    await expect(publish([BLOCK], npm)).rejects.toThrow('no OIDC token source for npm.platforma.bio');
+    expect(npm.publishes()).toEqual([]);
+  });
+
+  it("treats Verdaccio's E409 duplicate as already published", async () => {
+    const npm = fakeNpm();
+    const run = fakeRunner((call: Call) =>
+      call.args[0] === 'publish'
+        ? { code: 1, stdout: '', stderr: 'npm error code E409\nnpm error 409 Conflict - PUT https://npm.platforma.bio/x - this package is already present' }
+        : undefined,
+      npm.run,
+    );
+    const dir = tarballDir([BLOCK]);
+    const published = await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' });
+    expect(published).toEqual([]);
+  });
+
+  it('does NOT treat a 409 from npmjs as already published (fails the release instead)', async () => {
+    const npm = fakeNpm();
+    const run = fakeRunner((call: Call) =>
+      call.args[0] === 'publish'
+        ? { code: 1, stdout: '', stderr: 'npm error code E409\nnpm error 409 Conflict - PUT https://registry.npmjs.org/x - Conflict' }
+        : undefined,
+      npm.run,
+    );
+    const dir = tarballDir([LIB]);
+    await expect(
+      publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' }),
+    ).rejects.toThrow();
+  });
+});
