@@ -102,7 +102,7 @@ runs:
         evict-old-files: ${{ inputs.evict-old-files }}
 
     - name: Configure ccache
-      uses: milaboratory/github-ci/actions/shell@v4-beta
+      uses: milaboratory/github-ci/actions/shell@v4
       env:
         OPTS: ${{ inputs.options }}
       with:
