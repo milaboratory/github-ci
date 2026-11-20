@@ -203,6 +203,12 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
     if (new URL(entry.registry).hostname === OWN_REGISTRY_HOST) {
       if (!deps.oidcToken) throw new Error(`${label}: no OIDC token source for ${OWN_REGISTRY_HOST}`);
       uploadEnv = { ...env, [OWN_REGISTRY_TOKEN_VAR]: await deps.oidcToken(OWN_REGISTRY_AUDIENCE) };
+      // npm 11 sees GitHub's OIDC variables and first tries its own
+      // trusted-publishing exchange against this registry (a token with an
+      // audience the registry refuses: a 401 in its log on every upload).
+      // The token above is all it needs.
+      delete uploadEnv.ACTIONS_ID_TOKEN_REQUEST_URL;
+      delete uploadEnv.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
     }
     const result = await group(`${label} -> ${entry.registry}`, () =>
       run('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true, env: uploadEnv }),

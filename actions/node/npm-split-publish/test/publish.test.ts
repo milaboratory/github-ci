@@ -267,6 +267,27 @@ describe('own registry (npm.platforma.bio)', () => {
     expect(npm.configs.every((c) => !c.includes('jwt-'))).toBe(true);
   });
 
+  it("hides GitHub's OIDC variables from npm on uploads to the own registry only", async () => {
+    const saved = { url: process.env.ACTIONS_ID_TOKEN_REQUEST_URL, token: process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN };
+    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = 'https://oidc.example';
+    process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'req-token';
+    try {
+      const npm = fakeNpm();
+      const dir = tarballDir([LIB, BLOCK]);
+      await publishTarballs(
+        { dir, userconfig: `${dir}.npmrc`, accessPublic: false },
+        { ...quiet, run: npm.run, oidcToken: async () => 'jwt' },
+      );
+      const [toNpmjs, toOwn] = npm.publishes().map((c) => c.options.env!);
+      expect(toNpmjs.ACTIONS_ID_TOKEN_REQUEST_URL).toBe('https://oidc.example');
+      expect(toOwn.ACTIONS_ID_TOKEN_REQUEST_URL).toBeUndefined();
+      expect(toOwn.ACTIONS_ID_TOKEN_REQUEST_TOKEN).toBeUndefined();
+    } finally {
+      if (saved.url === undefined) delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL; else process.env.ACTIONS_ID_TOKEN_REQUEST_URL = saved.url;
+      if (saved.token === undefined) delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN; else process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = saved.token;
+    }
+  });
+
   it('fails without an OIDC token source', async () => {
     const npm = fakeNpm();
     await expect(publish([BLOCK], npm)).rejects.toThrow('no OIDC token source for npm.platforma.bio');
