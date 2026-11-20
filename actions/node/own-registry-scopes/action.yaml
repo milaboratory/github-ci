@@ -1,0 +1,42 @@
+name: Map our scopes to npm.platforma.bio
+author: 'MiLaboratories'
+description: |
+  Adds `@<scope>:registry=https://npm.platforma.bio/` to the workspace .npmrc
+  for every scope served by our own registry, after create-npmrc wrote it.
+  One central place, so no repository has to list the registry in its own
+  npmrc-config. Reads need no token (our scopes are public); uploads go
+  through publish-tarballs, which authenticates with GitHub OIDC.
+
+  Opt-in per repository while repositories move to npm.platforma.bio:
+  `npm-own-registry-scopes: '@platforma-open'` in the caller's
+  node-simple-pnpm inputs. Idempotent: an existing line for the same scope is
+  replaced.
+
+inputs:
+  scopes:
+    description: Space-separated scope names, with or without `@`, e.g. '@platforma-open'.
+    required: true
+  registry:
+    description: Registry URL for those scopes.
+    required: false
+    default: 'https://npm.platforma.bio/'
+
+runs:
+  using: composite
+  steps:
+    - name: Map scopes to our registry
+      shell: bash
+      env:
+        SCOPES: ${{ inputs.scopes }}
+        REGISTRY: ${{ inputs.registry }}
+      run: |
+        npmrc="${GITHUB_WORKSPACE}/.npmrc"
+        touch "${npmrc}"
+        for scope in ${SCOPES}; do
+          scope="${scope#@}"
+          case "${scope}" in *[!a-z0-9._-]*|'') echo "::error::bad scope name '${scope}'"; exit 1;; esac
+          grep -v -F "@${scope}:registry=" "${npmrc}" > "${npmrc}.tmp" || true
+          mv "${npmrc}.tmp" "${npmrc}"
+          echo "@${scope}:registry=${REGISTRY}" >> "${npmrc}"
+          echo "@${scope} -> ${REGISTRY}"
+        done

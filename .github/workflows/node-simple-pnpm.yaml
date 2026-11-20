@@ -263,6 +263,18 @@ on:
         type: string
         required: true
 
+      npm-own-registry-scopes:
+        description: |
+          Space-separated npm scopes this repository installs from and
+          publishes to npm.platforma.bio instead of npmjs, e.g.
+          '@platforma-open'. Empty (default): unchanged. Publishing there needs
+          the repository's `npm-publish` environment (main only); which
+          repository may publish which package is decided by the registry
+          (first publish, npm provenance, admin pins).
+        type: string
+        required: false
+        default: ''
+
       #
       # Distribution control
       #
@@ -631,6 +643,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
@@ -794,6 +807,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
@@ -934,6 +948,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
@@ -1143,6 +1158,24 @@ jobs:
           NPMJS_TOKEN: ${{ env.NPMJS_TOKEN }}
           PL_DOCKER_REGISTRY_PUSH_TO: ${{ inputs.pl-docker-registry-push-to }}
 
+      # Does anything packed go to our own registry? Then the upload job runs
+      # in the protected `npm-publish` environment, which that registry's OIDC
+      # allow entry requires. Repos that publish only to npmjs are unaffected.
+      # Gated on the opt-in input: a repository that does not set
+      # npm-own-registry-scopes never gets the environment, whatever its
+      # .npmrc maps.
+      - name: Any package for npm.platforma.bio?
+        id: npm-own-registry
+        if: inputs.npm-own-registry-scopes != ''
+          && steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
+        shell: bash
+        env:
+          MANIFEST: ${{ steps.npm-pack.outputs.dir }}/manifest.jsonl
+        run: |
+          if grep -q '"registry":"https://npm.platforma.bio/' "${MANIFEST}"; then
+            echo "own=true" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Upload npm tarballs
         if: steps.npm-pack.outputs.count != '' && steps.npm-pack.outputs.count != '0'
         uses: actions/upload-artifact@v4
@@ -1159,6 +1192,8 @@ jobs:
       started: 'true'
       # Set only when the pack step ran: '' means no release.
       npm-pack-count: ${{ steps.npm-pack.outputs.count }}
+      # 'true' when at least one package goes to npm.platforma.bio.
+      npm-own-registry: ${{ steps.npm-own-registry.outputs.own }}
 
   # npm upload with trusted publishing. Fixed GitHub-hosted runner, not
   # gha-runner-label: npm rejects OIDC tokens from self-hosted runners. Runs
@@ -1174,6 +1209,10 @@ jobs:
       !cancelled() &&
       needs.build-test-publish.result == 'success' &&
       needs.build-test-publish.outputs.npm-pack-count != ''
+    # npm.platforma.bio accepts the OIDC token only from this environment
+    # (main-only branch rule, no reviewer: docs/npm-registry.md in
+    # milaboratory/infrastructure). Empty = no environment, as before.
+    environment: ${{ needs.build-test-publish.outputs.npm-own-registry == 'true' && 'npm-publish' || '' }}
     permissions:
       id-token: write
       contents: write
