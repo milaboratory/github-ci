@@ -7,14 +7,14 @@ description: |
   npmrc-config. Reads need no token (our scopes are public); uploads go
   through publish-tarballs, which authenticates with GitHub OIDC.
 
-  DRAFT: `scope-tbd` is a placeholder for the new scope name (to be decided).
-  Idempotent: an existing line for the same scope is replaced.
+  Opt-in per repository while repositories move to npm.platforma.bio:
+  `npm-own-registry-scopes: platforma-open` in the caller's node-simple-pnpm
+  inputs. Idempotent: an existing line for the same scope is replaced.
 
 inputs:
   scopes:
-    description: Space-separated scope names without `@`.
-    required: false
-    default: 'scope-tbd'
+    description: Space-separated scope names without `@`, e.g. 'platforma-open'.
+    required: true
   registry:
     description: Registry URL for those scopes.
     required: false

@@ -4,7 +4,7 @@ import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { ManifestEntry, writeManifest } from '../src/manifest';
-import { checkPackedPublishConfig, npmrcFor, publishArgs, publishTarballs } from '../src/publish';
+import { checkPackedPublishConfig, npmrcFor, NOT_REGISTERED_RETRIES, publishArgs, publishTarballs } from '../src/publish';
 import { Call, fakeRunner, makeTarball, notFound, ok, quiet, tempDir } from './helpers';
 
 const NPMJS = 'https://registry.npmjs.org/';
@@ -247,8 +247,8 @@ describe.skipIf(npmMajor < 11)('publishArgs with real npm 11', () => {
 
 describe('own registry (npm.platforma.bio)', () => {
   const OWN = 'https://npm.platforma.bio/';
-  const BLOCK = entry('@scope-tbd/milaboratories.some-block', { registry: OWN });
-  const BLOCK2 = entry('@scope-tbd/milaboratories.some-block.model', { registry: OWN });
+  const BLOCK = entry('@platforma-open/milaboratories.some-block', { registry: OWN });
+  const BLOCK2 = entry('@platforma-open/milaboratories.some-block.model', { registry: OWN });
 
   it('npmrcFor refers to the OIDC token only through an env var', () => {
     expect(npmrcFor([BLOCK], {})).toBe('//npm.platforma.bio/:_authToken=${NPM_PLATFORMA_OIDC_TOKEN}\n');
@@ -284,5 +284,44 @@ describe('own registry (npm.platforma.bio)', () => {
     const dir = tarballDir([BLOCK]);
     const published = await publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt' });
     expect(published).toEqual([]);
+  });
+
+  const notYet = { code: 1, stdout: '', stderr: 'npm error code E403\nnpm error 403 Forbidden - package @platforma-open/x is not registered to any repository yet (the owner map ...; retry in a few minutes)' };
+
+  it('waits and retries a package the owner map does not list yet, with a fresh token each time', async () => {
+    let calls = 0;
+    const npm = fakeNpm();
+    const run = fakeRunner((call: Call) => (call.args[0] === 'publish' && ++calls <= 2 ? notYet : undefined), npm.run);
+    const waits: number[] = [];
+    let n = 0;
+    const dir = tarballDir([BLOCK]);
+    const published = await publishTarballs(
+      { dir, userconfig: `${dir}.npmrc`, accessPublic: false },
+      { ...quiet, run, oidcToken: async () => `jwt-${++n}`, sleep: async (ms) => { waits.push(ms); } },
+    );
+    expect(published).toEqual([BLOCK]);
+    expect(waits).toEqual([45000, 45000]);
+    const tokens = run.calls.filter((c) => c.args[0] === 'publish').map((c) => c.options.env!.NPM_PLATFORMA_OIDC_TOKEN);
+    expect(tokens).toEqual(['jwt-1', 'jwt-2', 'jwt-3']);
+  });
+
+  it('gives up after the retries and fails the release', async () => {
+    const run = fakeRunner((call: Call) => (call.args[0] === 'publish' ? notYet : undefined), fakeNpm().run);
+    const dir = tarballDir([BLOCK]);
+    let waits = 0;
+    await expect(
+      publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt', sleep: async () => { waits++; } }),
+    ).rejects.toThrow('not registered to any repository yet');
+    expect(waits).toBe(NOT_REGISTERED_RETRIES);
+  });
+
+  it('does not retry other refusals (e.g. another repository owns the package)', async () => {
+    const run = fakeRunner((call: Call) => (call.args[0] === 'publish' ? { code: 1, stdout: '', stderr: 'npm error 403 Forbidden - package belongs to another repository' } : undefined), fakeNpm().run);
+    const dir = tarballDir([BLOCK]);
+    let waits = 0;
+    await expect(
+      publishTarballs({ dir, userconfig: `${dir}.npmrc`, accessPublic: false }, { ...quiet, run, oidcToken: async () => 'jwt', sleep: async () => { waits++; } }),
+    ).rejects.toThrow('belongs to another repository');
+    expect(waits).toBe(0);
   });
 });

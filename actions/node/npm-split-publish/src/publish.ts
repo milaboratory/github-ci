@@ -50,7 +50,19 @@ export interface PublishDeps {
    * the own registry: the tokens live minutes, a publish run can take longer.
    */
   oidcToken?: (audience: string) => Promise<string>;
+  /** Waits between retries of a not-yet-registered package (injectable for tests). */
+  sleep?: (ms: number) => Promise<void>;
 }
+
+/**
+ * npm.platforma.bio refuses a package its owner map does not list yet. The map
+ * is regenerated every 5 minutes from the repositories' package.json, so a
+ * brand-new package is accepted within minutes: wait and retry instead of
+ * failing the release.
+ */
+const NOT_REGISTERED_YET = /not registered to any repository yet/;
+export const NOT_REGISTERED_RETRIES = 8;
+export const NOT_REGISTERED_WAIT_MS = 45_000;
 
 // Env var names the generated npm config refers to; npm expands them when it
 // reads the file, so the file itself holds no secret.
@@ -197,16 +209,22 @@ export async function publishTarballs(options: PublishOptions, deps: PublishDeps
       log(`${label}: already in ${entry.registry}, skipping`);
       continue;
     }
-    // Each upload gets its own env: a fresh OIDC token for the own registry
-    // (tokens live minutes), nothing extra for the others.
-    let uploadEnv = env;
-    if (new URL(entry.registry).hostname === OWN_REGISTRY_HOST) {
-      if (!deps.oidcToken) throw new Error(`${label}: no OIDC token source for ${OWN_REGISTRY_HOST}`);
-      uploadEnv = { ...env, [OWN_REGISTRY_TOKEN_VAR]: await deps.oidcToken(OWN_REGISTRY_AUDIENCE) };
+    const own = new URL(entry.registry).hostname === OWN_REGISTRY_HOST;
+    if (own && !deps.oidcToken) throw new Error(`${label}: no OIDC token source for ${OWN_REGISTRY_HOST}`);
+    const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    let result;
+    for (let attempt = 0; ; attempt++) {
+      // Each upload gets its own env: a fresh OIDC token for the own registry
+      // (tokens live minutes), nothing extra for the others.
+      const uploadEnv = own ? { ...env, [OWN_REGISTRY_TOKEN_VAR]: await deps.oidcToken!(OWN_REGISTRY_AUDIENCE) } : env;
+      result = await group(`${label} -> ${entry.registry}`, () =>
+        run('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true, env: uploadEnv }),
+      );
+      const output = result.stderr + result.stdout;
+      if (result.code === 0 || !own || !NOT_REGISTERED_YET.test(output) || attempt >= NOT_REGISTERED_RETRIES) break;
+      log(`${label}: not in the registry's owner map yet (new package?), retry ${attempt + 1}/${NOT_REGISTERED_RETRIES} in ${NOT_REGISTERED_WAIT_MS / 1000}s`);
+      await sleep(NOT_REGISTERED_WAIT_MS);
     }
-    const result = await group(`${label} -> ${entry.registry}`, () =>
-      run('npm', publishArgs(entry, dir, accessPublic), { cwd, echo: true, env: uploadEnv }),
-    );
     if (result.code !== 0) {
       // A version the lookup could not see, e.g. a restricted package queried
       // without a token on a re-run: the registry refuses it as a duplicate.

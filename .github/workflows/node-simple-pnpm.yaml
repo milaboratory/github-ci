@@ -263,6 +263,17 @@ on:
         type: string
         required: true
 
+      npm-own-registry-scopes:
+        description: |
+          Space-separated npm scopes (without @) this repository installs from
+          and publishes to npm.platforma.bio instead of npmjs, e.g.
+          'platforma-open'. Empty (default): unchanged. Publishing there needs
+          the repository's `npm-publish` environment (main only) and the
+          package in the registry's owner map (automatic, from package.json).
+        type: string
+        required: false
+        default: ''
+
       #
       # Distribution control
       #
@@ -631,6 +642,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
@@ -794,6 +806,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
@@ -934,6 +947,7 @@ jobs:
           pnpm-version: ${{ env.PNPM_VERSION || inputs.pnpm-version }}
           cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
           npmrc-config: ${{ inputs.npmrc-config }}
+          own-registry-scopes: ${{ inputs.npm-own-registry-scopes }}
           cache-s3-access-key: ${{ env.HZ_CI_CACHE_S3_ACCESS_KEY }}
           cache-s3-secret-key: ${{ env.HZ_CI_CACHE_S3_SECRET_KEY }}
 
