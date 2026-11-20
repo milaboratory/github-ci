@@ -72,6 +72,14 @@ inputs:
     required: false
     default: 'false'
 
+  own-registry-scopes:
+    description: |
+      Space-separated npm scopes to install from and publish to
+      npm.platforma.bio, e.g. '@platforma-open'. Empty (default): unchanged.
+      Opt-in while repositories move; see actions/node/own-registry-scopes.
+    required: false
+    default: ''
+
   npmrc-config:
     description: |
       Generates a .npmrc file based on provided configuration.
@@ -94,6 +102,12 @@ runs:
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
+
+    - name: Map own-registry scopes to npm.platforma.bio
+      if: inputs.own-registry-scopes != ''
+      uses: milaboratory/github-ci/actions/node/own-registry-scopes@v4
+      with:
+        scopes: ${{ inputs.own-registry-scopes }}
 
     - name: Set up cache for a NodeJS/Electron application
       uses: milaboratory/github-ci/actions/node/cache@v4
