@@ -98,19 +98,19 @@ runs:
         always-auth: ${{ inputs.always-auth }}
 
     - name: Re-Write .npmrc config
-      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4-beta
+      uses: milaboratory/github-ci/actions/utils/create-npmrc@v4
       if: inputs.npmrc-config != ''
       with:
         npmrcConfig: ${{ inputs.npmrc-config }}
 
     - name: Map own-registry scopes to npm.platforma.bio
       if: inputs.own-registry-scopes != ''
-      uses: milaboratory/github-ci/actions/node/own-registry-scopes@v4-beta
+      uses: milaboratory/github-ci/actions/node/own-registry-scopes@v4
       with:
         scopes: ${{ inputs.own-registry-scopes }}
 
     - name: Set up cache for a NodeJS/Electron application
-      uses: milaboratory/github-ci/actions/node/cache@v4-beta
+      uses: milaboratory/github-ci/actions/node/cache@v4
       with:
         is-electron-application: ${{ inputs.is-electron-application }}
         hashfiles-search-path: ${{ inputs.hashfiles-search-path }}
