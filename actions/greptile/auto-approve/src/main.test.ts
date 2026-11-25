@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   addLabels: vi.fn(),
   removeLabel: vi.fn(),
   createComment: vi.fn(),
+  listComments: vi.fn(),
+  updateComment: vi.fn(),
+  comments: [] as { id: number; user: { login: string }; body: string }[],
   createReview: vi.fn(),
   dismissReview: vi.fn(),
 }));
@@ -37,6 +40,8 @@ vi.mock("@actions/github", () => ({
         addLabels: mocks.addLabels,
         removeLabel: mocks.removeLabel,
         createComment: mocks.createComment,
+        listComments: mocks.listComments,
+        updateComment: mocks.updateComment,
       },
     },
   }),
@@ -53,9 +58,91 @@ beforeEach(() => {
       })[name] ?? "",
   );
   mocks.getContent.mockResolvedValue({ data: "src/**" });
-  mocks.paginate.mockImplementation(async (method: unknown) =>
-    method === mocks.listFiles ? [{ filename: "src/first.ts" }, { filename: "src/second.ts" }] : [],
-  );
+  mocks.comments = [];
+  mocks.paginate.mockImplementation(async (method: unknown) => {
+    if (method === mocks.listComments) {
+      return mocks.comments;
+    }
+    return method === mocks.listFiles ? [{ filename: "src/first.ts" }, { filename: "src/second.ts" }] : [];
+  });
+});
+
+it.each([
+  {
+    slug: "rewrites-earlier-decision",
+    comments: [
+      {
+        id: 7,
+        user: { login: "author" },
+        body: "**Greptile auto-approve** at old: quoted by a person",
+      },
+      {
+        id: 8,
+        user: { login: "github-actions[bot]" },
+        body: "<!-- sticky-comment: deploy-instructions -->",
+      },
+      {
+        id: 9,
+        user: { login: "github-actions[bot]" },
+        body: "**Greptile auto-approve** at old: approved.",
+      },
+      {
+        id: 10,
+        user: { login: "github-actions[bot]" },
+        body: "**Greptile auto-approve** at older: approved.",
+      },
+    ],
+    rewrittenId: 9,
+  },
+  {
+    slug: "posts-without-earlier-decision",
+    comments: [
+      {
+        id: 7,
+        user: { login: "author" },
+        body: "**Greptile auto-approve** at old: quoted by a person",
+      },
+      {
+        id: 8,
+        user: { login: "github-actions[bot]" },
+        body: "<!-- sticky-comment: deploy-instructions -->",
+      },
+    ],
+    rewrittenId: undefined,
+  },
+])("$slug", async ({ comments, rewrittenId }) => {
+  mocks.getContent.mockResolvedValue({ data: "other/**" });
+  mocks.graphql.mockResolvedValue({
+    repository: {
+      pullRequest: {
+        state: "OPEN",
+        isDraft: false,
+        headRefOid: "head",
+        changedFiles: 2,
+        body: "<!-- greptile_confidence_score:3 -->",
+        editor: { login: "greptile-apps" },
+        labels: { nodes: [] },
+      },
+    },
+  });
+  mocks.comments = comments;
+
+  await import("./main");
+
+  if (rewrittenId === undefined) {
+    await vi.waitFor(() => expect(mocks.createComment).toHaveBeenCalledOnce());
+    expect(mocks.updateComment).not.toHaveBeenCalled();
+  } else {
+    await vi.waitFor(() => expect(mocks.updateComment).toHaveBeenCalledOnce());
+    expect(mocks.updateComment).toHaveBeenCalledWith({
+      owner: "owner",
+      repo: "repo",
+      comment_id: rewrittenId,
+      body: expect.stringMatching(/^\*\*Greptile auto-approve\*\* at head: not approved:/),
+    });
+    expect(mocks.createComment).not.toHaveBeenCalled();
+  }
+  expect(mocks.setFailed).not.toHaveBeenCalled();
 });
 
 it.each([
