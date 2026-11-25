@@ -27,7 +27,7 @@ runs:
 
   steps:
     - id: value
-      uses: milaboratory/github-ci/actions/shell@v4
+      uses: milaboratory/github-ci/actions/shell@v4-beta
       env:
         VALUE: ${{ inputs.value }}
         DEFAULT: ${{ inputs.default }}

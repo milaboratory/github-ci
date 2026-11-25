@@ -84,7 +84,7 @@ runs:
         printf 'root:x:0:\npl:x:%s:\n' "$(id -g)" > "${PL_MAIN_ROOT}/.users/group"
 
     # Post steps run in reverse order: the last one declared runs first.
-    - uses: milaboratory/github-ci/actions/post/shell@v4
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
         PL_PACKAGES_ROOT: ${{ steps.launch-pl.outputs.packages-root }}
@@ -98,14 +98,14 @@ runs:
           rm -rf "${PL_MAIN_ROOT}" "${PL_PACKAGES_ROOT}" ||
             echo "::warning title=pl-compose cleanup::failed to remove platforma state roots"
 
-    - uses: milaboratory/github-ci/actions/post/artifact@v4
+    - uses: milaboratory/github-ci/actions/post/artifact@v4-beta
       with:
         name: platforma-dump
         archive: true
         path: |
           ${{ steps.launch-pl.outputs.main-root }}
 
-    - uses: milaboratory/github-ci/actions/post/shell@v4
+    - uses: milaboratory/github-ci/actions/post/shell@v4-beta
       env:
         PL_MAIN_ROOT: ${{ steps.launch-pl.outputs.main-root }}
       with:
