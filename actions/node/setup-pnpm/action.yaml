@@ -1,0 +1,107 @@
+name: Set up pnpm and Node from devEngines
+author: 'MiLaboratories'
+description: |
+  Install the pnpm and Node versions that `devEngines` in the root package.json pins,
+  write registry credentials to a user-level .npmrc, and restore the pnpm store cache.
+
+  For repos that pin pnpm 11+ in `devEngines.packageManager`. Use `prepare-pnpm` for repos
+  that pin pnpm in `packageManager`.
+
+  The store cache uses `cache-pnpm` / `cache-pnpm-s3`, not the pnpm/setup `cache` input,
+  which saves a new cache entry in every job.
+
+inputs:
+  version:
+    description: |
+      pnpm version to install. Empty = the version from `devEngines.packageManager`.
+      When set, pnpm goes to its own folder, so an earlier setup-pnpm install in the job
+      is not deleted, but later steps run this pnpm. The cache steps are skipped.
+    required: false
+    default: ''
+
+  working-directory:
+    description: |
+      Directory whose package.json pnpm/setup reads, relative to the repository root
+      or absolute. The cache steps always run in the repository root.
+    required: false
+    default: '.'
+
+  npmrc:
+    description: |
+      Lines for a user-level .npmrc (NPM_CONFIG_USERCONFIG). pnpm 11.5.3+ does not expand
+      `${VAR}` in credentials from the project .npmrc, so tokens go here. Example:
+        //registry.npmjs.org/:_authToken=${NPMJS_TOKEN}
+      Empty = no user-level .npmrc.
+    required: false
+    default: ''
+
+  cache:
+    description: |
+      'false' = do not restore or save the pnpm store cache.
+    required: false
+    default: 'true'
+
+  cache-version:
+    description: |
+      Change the value to start from an empty pnpm store cache.
+    required: false
+    default: 'v1'
+
+  cache-hashfiles-search-path:
+    description: |
+      Hashfiles search path for pnpm-lock.yaml
+    required: false
+    default: '**/pnpm-lock.yaml'
+
+  cache-s3-access-key:
+    description: |
+      S3/RGW access key for the pnpm store cache (e.g. org secret HZ_CI_CACHE_S3_ACCESS_KEY).
+      Empty = use the GitHub-hosted cache.
+    required: false
+    default: ''
+  cache-s3-secret-key:
+    description: |
+      S3/RGW secret key for the pnpm store cache (e.g. org secret HZ_CI_CACHE_S3_SECRET_KEY).
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Write user-level .npmrc
+      if: inputs.npmrc != ''
+      shell: bash
+      env:
+        NPMRC: ${{ inputs.npmrc }}
+      # github-env: NPM_CONFIG_USERCONFIG is a fixed path under RUNNER_TEMP — no attacker input.
+      run: | # zizmor: ignore[github-env]
+        npmrc="${RUNNER_TEMP}/.npmrc"
+        printf '%s\n' "${NPMRC}" > "${npmrc}"
+        echo "NPM_CONFIG_USERCONFIG=${npmrc}" >> "${GITHUB_ENV}"
+
+    - name: Install pnpm and Node from devEngines
+      uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+      with:
+        version: ${{ inputs.version }}
+        working-directory: ${{ inputs.working-directory }}
+        # pnpm/setup hashes the lockfile even without its cache; a path outside the workspace hashes to nothing.
+        cache-dependency-path: ${{ inputs.version != '' && format('{0}/pnpm-lock.yaml', runner.temp) || '' }}
+        dest: ${{ runner.temp }}/setup-pnpm${{ inputs.version != '' && format('-{0}', inputs.version) || '' }}
+        install: false
+
+    - name: Set up pnpm store cache (GitHub)
+      if: inputs.cache == 'true' && inputs.version == '' && inputs.cache-s3-access-key == ''
+      uses: milaboratory/github-ci/actions/node/cache-pnpm@v4-beta
+      with:
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        cache-version: ${{ inputs.cache-version }}
+
+    - name: Set up pnpm store cache (RGW / S3)
+      if: inputs.cache == 'true' && inputs.version == '' && inputs.cache-s3-access-key != ''
+      uses: milaboratory/github-ci/actions/node/cache-pnpm-s3@v4-beta
+      with:
+        access-key: ${{ inputs.cache-s3-access-key }}
+        secret-key: ${{ inputs.cache-s3-secret-key }}
+        cache-hashfiles-search-path: ${{ inputs.cache-hashfiles-search-path }}
+        cache-version: ${{ inputs.cache-version }}
