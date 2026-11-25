@@ -6,7 +6,8 @@
 //
 // The workflow runs the action on every PR event, also before Greptile writes a score. An open PR
 // has ALLOW_LABEL when no protected path blocks approval, and DECLINED_LABEL otherwise. A run posts its
-// decision as a new PR comment when the PR body has a Greptile score or a protected path blocks approval.
+// decision as a PR comment when the PR body has a Greptile score or a protected path blocks approval.
+// A later run rewrites the earliest decision comment of the bot, so the PR keeps one.
 // The run never edits the PR body, so the last editor of the body stays the
 // author of the score.
 
@@ -21,6 +22,8 @@ const BOT_LOGIN = "github-actions[bot]";
 // GitHub creates the label on first use.
 const ALLOW_LABEL = "AUTOAPPROVE: ALLOW";
 const DECLINED_LABEL = "AUTOAPPROVE: DECLINED";
+// Every decision comment starts with this text; a later run finds its comment by it.
+const DECISION_COMMENT_PREFIX = "**Greptile auto-approve**";
 
 type Octokit = ReturnType<typeof github.getOctokit>;
 
@@ -159,12 +162,33 @@ async function run(): Promise<void> {
       core.info("no Greptile score or protected path restriction: post no PR comment");
       return;
     }
-    await act("post the decision as a PR comment", () =>
-      octokit.rest.issues.createComment({
+    const body = `${DECISION_COMMENT_PREFIX} at ${headSha}: ${conclusion}`;
+    const comments = await octokit.paginate(octokit.rest.issues.listComments, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100,
+    });
+    const earlier = comments.find(
+      (comment) => comment.user?.login === BOT_LOGIN && comment.body?.startsWith(DECISION_COMMENT_PREFIX),
+    );
+    if (earlier === undefined) {
+      await act("post the decision as a PR comment", () =>
+        octokit.rest.issues.createComment({
+          owner,
+          repo,
+          issue_number: prNumber,
+          body,
+        }),
+      );
+      return;
+    }
+    await act(`rewrite the decision PR comment ${earlier.id}`, () =>
+      octokit.rest.issues.updateComment({
         owner,
         repo,
-        issue_number: prNumber,
-        body: `**Greptile auto-approve** at ${headSha}: ${conclusion}`,
+        comment_id: earlier.id,
+        body,
       }),
     );
   };
