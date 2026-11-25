@@ -10,7 +10,8 @@ description: |
   of the Greptile score. Otherwise it has "AUTOAPPROVE: DECLINED".
   The approval review still requires a sufficient Greptile score.
   A run posts its decision when the PR description has a Greptile
-  score or a protected path blocks approval. The decline comment lists every
+  score or a protected path blocks approval. A later run rewrites the earliest
+  decision comment of the bot, so the PR keeps one. The decline comment lists every
   protected file and names the protected list. The action never edits the PR description.
 
   The score is trusted only when Greptile made the last edit of the PR description,
