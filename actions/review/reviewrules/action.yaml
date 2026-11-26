@@ -1,0 +1,112 @@
+name: Review a pull request with reviewrules
+author: 'MiLaboratories'
+description: |
+  Review the pull request diff with reviewrules (https://github.com/popoffvg/reviewrules)
+  against the rules in the repo's .reviewrules/ folder and its rule sets.
+  Post each finding as a review comment on its line. A finding on a line outside
+  the diff goes to the review body. A finding that is already posted is not posted again.
+  The step fails only when reviewrules cannot run (exit code 2), not on findings.
+  The artifact reviewrules-attempt-<n> holds report.json and sessions/: parent.json and
+  one fork-<id>.json per rule or hypothesis fork, with every message of the model calls.
+
+  The repo must be checked out at the PR head commit with full history.
+
+inputs:
+  anthropic-api-key:
+    description: Anthropic API key for the review models.
+    required: true
+
+  github-token:
+    description: GitHub token with pull-requests:write. The review comments come from its owner.
+    required: false
+    default: ${{ github.token }}
+
+  rule-sets-token:
+    description: GitHub token that can read the rule set repos, for example a private one.
+    required: false
+    default: ${{ github.token }}
+
+  settings:
+    description: Global reviewrules settings, TOML. A key in the repo .reviewrules/settings.toml replaces the same key here.
+    required: false
+    default: ''
+
+  version:
+    description: Commit SHA of reviewrules to install.
+    required: false
+    default: 'f5d723d9563aae80ce104d912a8d5cf06058bca0'
+
+outputs:
+  report:
+    description: Path of the reviewrules JSON report.
+    value: ${{ steps.review.outputs.report }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: false
+
+    - name: Install reviewrules
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: go install "github.com/popoffvg/reviewrules@${VERSION}"
+
+    - name: Review
+      id: review
+      shell: bash
+      env:
+        CI: 'true'
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        RULE_SETS_TOKEN: ${{ inputs.rule-sets-token }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+        SETTINGS: ${{ inputs.settings }}
+      run: |
+        git config --global url."https://x-access-token:${RULE_SETS_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+        output="${RUNNER_TEMP}/reviewrules"
+        config="${RUNNER_TEMP}/reviewrules.toml"
+        report="${output}/report.json"
+        mkdir -p "${output}"
+        echo "output=${output}" >> "${GITHUB_OUTPUT}"
+        printf '%s\n' "${SETTINGS}" > "${RUNNER_TEMP}/settings.toml"
+        cat > "${config}" <<'TOML'
+        [ci]
+        agent = "anthropic"
+        model = "claude-haiku-5-5"
+        reasoning_effort = "medium"
+
+        [[ci.profiles]]
+        action = "hypothesis"
+        model = "claude-opus-5-5"
+        reasoning_effort = "medium"
+        TOML
+
+        code=0
+        reviewrules --config "${config}" --base "origin/${BASE_REF}" --json-out "${report}" --session-dir "${output}/sessions" || code=$?
+        echo "report=${report}" >> "${GITHUB_OUTPUT}"
+        if [ "${code}" -ge 2 ]; then
+          echo "::error::reviewrules could not run (exit code ${code})"
+          exit "${code}"
+        fi
+
+    - name: Post findings
+      uses: actions/github-script@v7
+      env:
+        REPORT: ${{ steps.review.outputs.report }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const postReview = require(`${process.env.GITHUB_ACTION_PATH}/post-review.js`);
+          await postReview({ github, context, core, reportPath: process.env.REPORT });
+
+    - name: Save the report and the model sessions
+      if: always() && steps.review.outputs.output != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: reviewrules-attempt-${{ github.run_attempt }}
+        path: ${{ steps.review.outputs.output }}
+        if-no-files-found: ignore
